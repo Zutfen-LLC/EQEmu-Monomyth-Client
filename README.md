@@ -171,7 +171,7 @@ The `PacketObserver` module (`src/packet_observer.h` / `src/packet_observer.cpp`
 - It does **not** define opcode-specific behavior.
 - It logs the first 50 observed receive packets, then every 500th packet, plus the final observed count on shutdown.
 - Log lines start with `PacketObserverRecv` and include opcode/message id, `opcode_name`, and payload length.
-- Introspection logs default to the allowlisted opcode `0x7dfc`, and the allowlist can be overridden locally with `MONOMYTH_RECV_INTROSPECT_OPCODES=0x7dfc,0x213f` or `MONOMYTH_RECV_INTROSPECT_OPCODES=0x7dfc,0x2958` for targeted experiments.
+- Introspection logs default to the allowlisted opcode `0x7dfc` / `OP_ClientUpdate`, and the allowlist can be overridden locally with exact opcode names and/or numeric values such as `MONOMYTH_RECV_INTROSPECT_OPCODES=OP_ClientUpdate,OP_SendAATable` or `MONOMYTH_RECV_INTROSPECT_OPCODES=0x7dfc,0x2958` for targeted experiments.
 - High-volume opcode `0x5089` is intentionally not in the default allowlist, so it remains metadata-only unless a developer explicitly overrides the local allowlist.
 
 Future receive-only observation must continue to route through this module, remain gated on `packet_hooks_allowed`, and stay strictly non-mutating.
@@ -202,7 +202,7 @@ To opt in to bounded payload-prefix introspection on top of the metadata hook, s
 $env:MONOMYTH_ENABLE_RECV_INTROSPECTION = "1"
 ```
 
-`MONOMYTH_ENABLE_RECV_INTROSPECTION=1` is optional and separate. Without it, the hook remains metadata-only and does not touch packet bytes. With it, bounded payload-prefix reads are still fail-closed and limited to the allowlisted opcode set. The allowlist defaults to `0x7dfc` and can be overridden locally with `MONOMYTH_RECV_INTROSPECT_OPCODES=0x7dfc,0x213f` or `MONOMYTH_RECV_INTROSPECT_OPCODES=0x7dfc,0x2958` for targeted experiments.
+`MONOMYTH_ENABLE_RECV_INTROSPECTION=1` is optional and separate. Without it, the hook remains metadata-only and does not touch packet bytes. With it, bounded payload-prefix reads are still fail-closed and limited to the allowlisted opcode set. The allowlist defaults to `0x7dfc` / `OP_ClientUpdate` and can be overridden locally with exact opcode names and/or numeric values such as `MONOMYTH_RECV_INTROSPECT_OPCODES=OP_ClientUpdate`, `MONOMYTH_RECV_INTROSPECT_OPCODES=OP_SendAATable,OP_ManaUpdate,0x7dfc`, or `MONOMYTH_RECV_INTROSPECT_OPCODES=0x7dfc,0x2958`. Invalid tokens are ignored and logged during initialization; if every configured token is invalid, introspection stays enabled but the configured allowlist is empty.
 
 The packet-hook opt-in is not sufficient by itself. The hook installs only when DirectInput proxy bootstrap is ready, the ROF2 fingerprint guard passes, receive dispatcher discovery validates the known candidate, and `MONOMYTH_ENABLE_PACKET_HOOKS=1` is present. If any gate fails, if the detour cannot be installed cleanly, or if the dispatcher prologue is ambiguous, packet observation is disabled and the DLL continues proxy-only behavior where possible.
 

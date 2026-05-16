@@ -560,4 +560,23 @@ std::wstring_view LookupRof2OpcodeName(std::uint32_t opcode) noexcept {
     return it->name;
 }
 
+bool TryLookupRof2OpcodeValue(std::wstring_view name, std::uint32_t* opcode) noexcept {
+    if (opcode == nullptr || name.empty()) {
+        return false;
+    }
+
+    const auto it = std::find_if(
+        kRof2OpcodeNames.begin(),
+        kRof2OpcodeNames.end(),
+        [name](const OpcodeNameEntry& entry) {
+            return entry.name == name;
+        });
+    if (it == kRof2OpcodeNames.end()) {
+        return false;
+    }
+
+    *opcode = it->opcode;
+    return true;
+}
+
 }  // namespace monomyth::opcode_reference

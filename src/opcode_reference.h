@@ -6,5 +6,6 @@
 namespace monomyth::opcode_reference {
 
 std::wstring_view LookupRof2OpcodeName(std::uint32_t opcode) noexcept;
+bool TryLookupRof2OpcodeValue(std::wstring_view name, std::uint32_t* opcode) noexcept;
 
 }  // namespace monomyth::opcode_reference
