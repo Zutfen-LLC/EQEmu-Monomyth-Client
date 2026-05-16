@@ -6,6 +6,7 @@
 
 #include "hook_manager.h"
 #include "logger.h"
+#include "runtime_capabilities.h"
 
 namespace monomyth::proxy {
 namespace {
@@ -13,9 +14,15 @@ namespace {
 INIT_ONCE g_init_once = INIT_ONCE_STATIC_INIT;
 HMODULE g_real_module = nullptr;
 HRESULT g_init_result = E_FAIL;
+bool g_proxy_loaded = false;
 bool g_proxy_ready = false;
 bool g_hooks_started = false;
+bool g_fingerprint_checked = false;
 monomyth::fingerprint::Result g_fingerprint = {};
+monomyth::runtime::Manifest g_capabilities = monomyth::runtime::BuildDisabledCapabilityManifest(
+    false,
+    false,
+    L"initialization pending");
 
 DirectInput8CreateFn g_direct_input8_create = nullptr;
 DllCanUnloadNowFn g_dll_can_unload_now = nullptr;
@@ -23,11 +30,6 @@ DllGetClassObjectFn g_dll_get_class_object = nullptr;
 DllRegisterServerFn g_dll_register_server = nullptr;
 DllUnregisterServerFn g_dll_unregister_server = nullptr;
 GetdfDIJoystickFn g_getdf_dijoystick = nullptr;
-
-void LogBoolField(std::wstring* message, const wchar_t* field, bool value) {
-    message->append(field);
-    message->append(value ? L"true" : L"false");
-}
 
 std::wstring BuildSystemDinputPath() noexcept {
     wchar_t system_dir[MAX_PATH] = {};
@@ -67,6 +69,11 @@ BOOL CALLBACK InitializeOnce(PINIT_ONCE, PVOID, PVOID*) {
     const std::wstring system_path = BuildSystemDinputPath();
     if (system_path.empty()) {
         monomyth::logger::Log(L"proxy: failed to build system dinput8 path");
+        g_capabilities = monomyth::runtime::BuildDisabledCapabilityManifest(
+            false,
+            false,
+            L"failed to build system dinput8 path");
+        monomyth::runtime::LogCapabilityManifest(g_capabilities);
         g_init_result = HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND);
         return TRUE;
     }
@@ -74,36 +81,41 @@ BOOL CALLBACK InitializeOnce(PINIT_ONCE, PVOID, PVOID*) {
     g_real_module = LoadLibraryW(system_path.c_str());
     if (g_real_module == nullptr) {
         monomyth::logger::Log(L"proxy: failed to load real dinput8.dll");
+        g_capabilities = monomyth::runtime::BuildDisabledCapabilityManifest(
+            false,
+            false,
+            L"failed to load real system dinput8.dll");
+        monomyth::runtime::LogCapabilityManifest(g_capabilities);
         g_init_result = HRESULT_FROM_WIN32(GetLastError());
         return TRUE;
     }
 
     monomyth::logger::Log(L"proxy: loaded real system dinput8.dll");
+    g_proxy_loaded = true;
     if (!ResolveExports()) {
+        g_capabilities = monomyth::runtime::BuildDisabledCapabilityManifest(
+            g_proxy_loaded,
+            false,
+            L"failed to resolve required dinput8 exports");
+        monomyth::runtime::LogCapabilityManifest(g_capabilities);
         g_init_result = HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
         return TRUE;
     }
 
     g_proxy_ready = true;
     g_fingerprint = monomyth::fingerprint::Evaluate();
+    g_fingerprint_checked = true;
+    g_capabilities = monomyth::runtime::BuildCapabilityManifest(
+        g_proxy_loaded,
+        g_proxy_ready,
+        g_fingerprint_checked,
+        g_fingerprint);
+    monomyth::runtime::LogCapabilityManifest(g_capabilities);
 
-    std::wstring fingerprint_message = L"fingerprint: ";
-    LogBoolField(&fingerprint_message, L"hooks_allowed=", g_fingerprint.hooks_allowed);
-    fingerprint_message += L" ";
-    LogBoolField(&fingerprint_message, L"process_name_match=", g_fingerprint.process_name_match);
-    fingerprint_message += L" ";
-    LogBoolField(&fingerprint_message, L"version_strings_checked=", g_fingerprint.version_strings_checked);
-    fingerprint_message += L" ";
-    LogBoolField(&fingerprint_message, L"version_strings_match=", g_fingerprint.version_strings_match);
-    fingerprint_message += L" reason=\"";
-    fingerprint_message += g_fingerprint.reason;
-    fingerprint_message += L"\"";
-    monomyth::logger::Log(fingerprint_message);
-
-    if (g_fingerprint.hooks_allowed) {
-        g_hooks_started = monomyth::hooks::Initialize();
+    if (g_capabilities.hooks_allowed) {
+        g_hooks_started = monomyth::hooks::Initialize(g_capabilities);
     } else {
-        monomyth::logger::Log(L"hook_manager: skipped because fingerprint guard denied hook capability");
+        monomyth::logger::Log(L"hook_manager: skipped because capability manifest denied hook capability");
     }
 
     g_init_result = S_OK;
@@ -134,6 +146,10 @@ void Shutdown() noexcept {
 
 const monomyth::fingerprint::Result& GetFingerprintResult() noexcept {
     return g_fingerprint;
+}
+
+const monomyth::runtime::Manifest& GetCapabilityManifest() noexcept {
+    return g_capabilities;
 }
 
 DirectInput8CreateFn GetDirectInput8Create() noexcept {

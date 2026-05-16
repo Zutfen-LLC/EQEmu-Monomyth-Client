@@ -1,6 +1,6 @@
 # Monomyth Client Bootstrap
 
-This repository contains a fresh minimal `dinput8.dll` bootstrap for the EverQuest ROF2 client used by Monomyth. This slice is intentionally narrow: it proxies the system `dinput8.dll`, records low-noise startup diagnostics, applies a fail-closed ROF2 fingerprint guard, and exposes a future hook lifecycle with no active hooks.
+This repository contains a fresh minimal `dinput8.dll` bootstrap for the EverQuest ROF2 client used by Monomyth. This slice is intentionally narrow: it proxies the system `dinput8.dll`, records low-noise startup diagnostics, applies a fail-closed ROF2 fingerprint guard, centralizes runtime capability state in one internal manifest, and exposes a future hook lifecycle with no active hooks.
 
 Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 
@@ -16,6 +16,7 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
   - `DllUnregisterServer`
   - `GetdfDIJoystick`
 - Writes a small log with DLL load/proxy/fingerprint status.
+- Builds a single internal runtime capability manifest that centralizes proxy, host, fingerprint, and future enhancement state.
 - Checks the host process name and, when version resources are present, looks for ROF2 markers `May 10 2013` and `23:30:08`.
 - Exposes a no-op `HookManager` lifecycle and emits one inert post-guard heartbeat when hooks would be allowed.
 
@@ -23,7 +24,8 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 
 - DirectInput proxying is always the primary responsibility.
 - Fingerprint failure never blocks normal DirectInput behavior.
-- Hook capability is fail-closed and computed before any future hook install point.
+- Hook capability is fail-closed and computed in the runtime capability manifest before any future hook install point.
+- Packet and UI hook capabilities remain intentionally disabled in this slice.
 - This slice does not patch memory, install detours, or implement gameplay/UI behavior.
 
 ## Non-goals in this slice
@@ -64,8 +66,10 @@ Startup logs include:
 - DLL attach and detach
 - Real `dinput8.dll` load result
 - Export resolution result
-- Fingerprint result and reason
+- One structured `CapabilityManifest ...` summary line with proxy, host, fingerprint, hook, packet, and UI capability state plus the reason string
 - Inert post-guard heartbeat when hooks are allowed
+
+The capability manifest is currently internal and log-only. This slice does not emit any external JSON or config artifact.
 
 ## Test checklist
 
@@ -85,4 +89,4 @@ Startup logs include:
 
 ## Future slices
 
-Future work can add versioned Monomyth client/server projection and guarded hook installation behind the existing capability gate. That work should remain explicit, versionable, and separate from server-authoritative gameplay logic.
+Future work can add versioned Monomyth client/server projection and guarded hook installation behind the internal capability manifest. Packet and UI capabilities should remain disabled until a future slice explicitly enables them. That work should remain explicit, versionable, and separate from server-authoritative gameplay logic.

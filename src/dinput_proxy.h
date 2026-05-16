@@ -4,12 +4,14 @@
 #include <windows.h>
 
 #include "fingerprint.h"
+#include "runtime_capabilities.h"
 
 namespace monomyth::proxy {
 
 HRESULT EnsureInitialized() noexcept;
 void Shutdown() noexcept;
 const monomyth::fingerprint::Result& GetFingerprintResult() noexcept;
+const monomyth::runtime::Manifest& GetCapabilityManifest() noexcept;
 
 using DirectInput8CreateFn = HRESULT(WINAPI*)(HINSTANCE, DWORD, REFIID, LPVOID*, LPUNKNOWN);
 using DllCanUnloadNowFn = HRESULT(STDAPICALLTYPE*)();
