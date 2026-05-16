@@ -19,6 +19,7 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - Builds a single internal runtime capability manifest that centralizes proxy, host, fingerprint, and future enhancement state.
 - Checks the host process name and, when version resources are present, looks for ROF2 markers `May 10 2013` and `23:30:08`.
 - Exposes a no-op `HookManager` lifecycle and emits one inert post-guard heartbeat when hooks would be allowed.
+- Initializes an inert `PacketObserver` scaffold that is disabled by capability manifest (`packet_hooks_allowed=false`) and emits one startup state log line.
 
 ## Safety model
 
@@ -26,13 +27,14 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - Fingerprint failure never blocks normal DirectInput behavior.
 - Hook capability is fail-closed and computed in the runtime capability manifest before any future hook install point.
 - Packet and UI hook capabilities remain intentionally disabled in this slice.
+- The `PacketObserver` scaffold is inert: it does not install packet hooks, intercept, decode, mutate, or log any packet bytes. It exists only to provide a safe, capability-gated lifecycle boundary for future receive-only work.
 - This slice does not patch memory, install detours, or implement gameplay/UI behavior.
 
 ## Non-goals in this slice
 
 - No MQ2 runtime.
 - No THJ patch bundle.
-- No packet hooks or `OP_ServerAuthStats`.
+- No packet hooks or `OP_ServerAuthStats`. The `PacketObserver` module is scaffolded but entirely inert — no ROF2 offsets, no detours, no opcode handling.
 - No labels, overlays, class displays, `/notify`, pet controls, or UI automation.
 - No copied THJ decompiled code and no wholesale fork of other DLL projects.
 
@@ -68,6 +70,7 @@ Startup logs include:
 - Export resolution result
 - One structured `CapabilityManifest ...` summary line with proxy, host, fingerprint, hook, packet, and UI capability state plus the reason string
 - Inert post-guard heartbeat when hooks are allowed
+- One `PacketObserver scaffold state=...` line indicating current observer state (currently always `disabled_by_capability`)
 
 The capability manifest is currently internal and log-only. This slice does not emit any external JSON or config artifact.
 
@@ -86,6 +89,17 @@ The capability manifest is currently internal and log-only. This slice does not 
    - `DirectInput8Create` proxying succeeds.
    - `monomyth-client.log` shows startup state.
    - Fingerprint failure, if any, reports `hooks_allowed=false` without breaking input.
+
+## Packet observer scaffold
+
+The `PacketObserver` module (`src/packet_observer.h` / `src/packet_observer.cpp`) provides a lifecycle boundary for future receive-only packet work. In this slice it is completely inert:
+
+- It does **not** install packet hooks, detours, or callbacks into the ROF2 client.
+- It does **not** intercept, read, decode, mutate, or log any packet bytes.
+- It does **not** define ROF2 offsets or opcode-specific behavior.
+- `packet_hooks_allowed` remains `false` in the capability manifest; the observer reports `disabled_by_capability` on every startup.
+
+Future receive-only observation must be routed through this scaffold, gated on `packet_hooks_allowed` becoming `true` in the manifest, and must remain strictly non-mutating.
 
 ## Future slices
 

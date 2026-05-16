@@ -6,6 +6,7 @@
 
 #include "hook_manager.h"
 #include "logger.h"
+#include "packet_observer.h"
 #include "runtime_capabilities.h"
 
 namespace monomyth::proxy {
@@ -112,6 +113,8 @@ BOOL CALLBACK InitializeOnce(PINIT_ONCE, PVOID, PVOID*) {
         g_fingerprint);
     monomyth::runtime::LogCapabilityManifest(g_capabilities);
 
+    monomyth::packet_observer::Initialize(g_capabilities);
+
     if (g_capabilities.hooks_allowed) {
         g_hooks_started = monomyth::hooks::Initialize(g_capabilities);
     } else {
@@ -134,6 +137,8 @@ void Shutdown() noexcept {
         monomyth::hooks::Shutdown();
         g_hooks_started = false;
     }
+
+    monomyth::packet_observer::Shutdown();
 
     if (g_real_module != nullptr) {
         FreeLibrary(g_real_module);
