@@ -1,8 +1,8 @@
 LIBRARY dinput8
 EXPORTS
     DirectInput8Create
-    DllCanUnloadNow
-    DllGetClassObject
-    DllRegisterServer
-    DllUnregisterServer
+    DllCanUnloadNow PRIVATE
+    DllGetClassObject PRIVATE
+    DllRegisterServer PRIVATE
+    DllUnregisterServer PRIVATE
     GetdfDIJoystick
