@@ -1,0 +1,433 @@
+============================================================
+Function: dataWindow @ 100d5920
+Signature: undefined4 __cdecl dataWindow(uint * param_1, undefined4 * param_2)
+Callers:
+  101588ac | <none>
+  Entry Point | <none>
+  100d676f | InitializeMQ2Data
+Callees:
+  10111da0 | FindMQ2Window
+Instructions:
+  100d5920 | MOV EAX,dword ptr [ESP + 0x4]
+  100d5924 | CMP byte ptr [EAX],0x0
+  100d5927 | JZ 0x100d594a
+  100d5929 | PUSH EAX
+  100d592a | CALL 0x10111da0
+  100d592f | MOV ECX,dword ptr [ESP + 0xc]
+  100d5933 | ADD ESP,0x4
+  100d5936 | MOV dword ptr [ECX + 0x4],EAX
+  100d5939 | TEST EAX,EAX
+  100d593b | JZ 0x100d594a
+  100d593d | MOV EAX,[0x1017c0c0]
+  100d5942 | MOV dword ptr [ECX],EAX
+  100d5944 | MOV EAX,0x1
+  100d5949 | RET
+  100d594a | XOR EAX,EAX
+  100d594c | RET
+Decompile:
+
+
+undefined4 __cdecl dataWindow(uint *param_1,undefined4 *param_2)
+
+{
+  int iVar1;
+  
+                    /* 0xd5920  1062  dataWindow */
+  if ((char)*param_1 != '\0') {
+    iVar1 = FindMQ2Window(param_1);
+    param_2[1] = iVar1;
+    if (iVar1 != 0) {
+      *param_2 = pWindowType;
+      return 1;
+    }
+  }
+  return 0;
+}
+
+
+
+============================================================
+Function: FUN_1001d020 @ 1001d020
+Signature: undefined4 * __fastcall FUN_1001d020(undefined4 * param_1)
+Callers:
+  100e6220 | InitializeMQ2DataTypes
+Callees:
+  1000f4d0 | FUN_1000f4d0
+  1000f350 | FUN_1000f350
+Instructions:
+  1001d020 | PUSH EBP
+  1001d021 | MOV EBP,ESP
+  1001d023 | AND ESP,0xfffffff8
+  1001d026 | PUSH ECX
+  1001d027 | PUSH ESI
+  1001d028 | PUSH 0x1013e7e4
+  1001d02d | MOV ESI,ECX
+  1001d02f | CALL 0x1000f350
+  1001d034 | PUSH 0x1013e7b0
+  1001d039 | PUSH 0x1
+  1001d03b | MOV ECX,ESI
+  1001d03d | MOV dword ptr [ESI],0x1013f7a8
+  1001d043 | CALL 0x1000f4d0
+  1001d048 | PUSH 0x1013e7ec
+  1001d04d | PUSH 0x2
+  1001d04f | MOV ECX,ESI
+  1001d051 | CALL 0x1000f4d0
+  1001d056 | PUSH 0x1013e7f4
+  1001d05b | PUSH 0x3
+  1001d05d | MOV ECX,ESI
+  1001d05f | CALL 0x1000f4d0
+  1001d064 | PUSH 0x1013e800
+  1001d069 | PUSH 0x4
+  1001d06b | MOV ECX,ESI
+  1001d06d | CALL 0x1000f4d0
+  1001d072 | PUSH 0x1013e80c
+  1001d077 | PUSH 0x5
+  1001d079 | MOV ECX,ESI
+  1001d07b | CALL 0x1000f4d0
+  1001d080 | PUSH 0x1013e818
+  1001d085 | PUSH 0x6
+  1001d087 | MOV ECX,ESI
+  1001d089 | CALL 0x1000f4d0
+  1001d08e | PUSH 0x1013e824
+  1001d093 | PUSH 0x7
+  1001d095 | MOV ECX,ESI
+  1001d097 | CALL 0x1000f4d0
+  1001d09c | PUSH 0x1013e830
+  1001d0a1 | PUSH 0x8
+  1001d0a3 | MOV ECX,ESI
+  1001d0a5 | CALL 0x1000f4d0
+  1001d0aa | PUSH 0x1013e83c
+  1001d0af | PUSH 0x9
+  1001d0b1 | MOV ECX,ESI
+  1001d0b3 | CALL 0x1000f4d0
+  1001d0b8 | PUSH 0x1013e848
+  1001d0bd | PUSH 0xa
+  1001d0bf | MOV ECX,ESI
+  1001d0c1 | CALL 0x1000f4d0
+  1001d0c6 | PUSH 0x1013e854
+  1001d0cb | PUSH 0xc
+  1001d0cd | MOV ECX,ESI
+  1001d0cf | CALL 0x1000f4d0
+  1001d0d4 | PUSH 0x1013d6a8
+  1001d0d9 | PUSH 0xd
+  1001d0db | MOV ECX,ESI
+  1001d0dd | CALL 0x1000f4d0
+  1001d0e2 | PUSH 0x1013e860
+  1001d0e7 | PUSH 0xe
+  1001d0e9 | MOV ECX,ESI
+  1001d0eb | CALL 0x1000f4d0
+  1001d0f0 | PUSH 0x1013d65c
+  1001d0f5 | PUSH 0xf
+  1001d0f7 | MOV ECX,ESI
+  1001d0f9 | CALL 0x1000f4d0
+  1001d0fe | PUSH 0x1013d660
+  1001d103 | PUSH 0x10
+  1001d105 | MOV ECX,ESI
+  1001d107 | CALL 0x1000f4d0
+  1001d10c | PUSH 0x1013d740
+  1001d111 | PUSH 0x11
+  1001d113 | MOV ECX,ESI
+  1001d115 | CALL 0x1000f4d0
+  1001d11a | PUSH 0x1013e86c
+  1001d11f | PUSH 0x12
+  1001d121 | MOV ECX,ESI
+  1001d123 | CALL 0x1000f4d0
+  1001d128 | PUSH 0x1013e874
+  1001d12d | PUSH 0x13
+  1001d12f | MOV ECX,ESI
+Decompile:
+
+
+undefined4 * __fastcall FUN_1001d020(undefined4 *param_1)
+
+{
+  FUN_1000f350(param_1,"window");
+  *param_1 = MQ2WindowType::vftable;
+  FUN_1000f4d0(param_1,1,(uint *)&DAT_1013e7b0);
+  FUN_1000f4d0(param_1,2,(uint *)"Child");
+  FUN_1000f4d0(param_1,3,(uint *)"VScrollMax");
+  FUN_1000f4d0(param_1,4,(uint *)"VScrollPos");
+  FUN_1000f4d0(param_1,5,(uint *)"VScrollPct");
+  FUN_1000f4d0(param_1,6,(uint *)"HScrollMax");
+  FUN_1000f4d0(param_1,7,(uint *)"HScrollPos");
+  FUN_1000f4d0(param_1,8,(uint *)"HScrollPct");
+  FUN_1000f4d0(param_1,9,(uint *)"Children");
+  FUN_1000f4d0(param_1,10,(uint *)"Siblings");
+  FUN_1000f4d0(param_1,0xc,(uint *)"FirstChild");
+  FUN_1000f4d0(param_1,0xd,(uint *)&DAT_1013d6a8);
+  FUN_1000f4d0(param_1,0xe,(uint *)"Minimized");
+  FUN_1000f4d0(param_1,0xf,(uint *)&DAT_1013d65c);
+  FUN_1000f4d0(param_1,0x10,(uint *)&DAT_1013d660);
+  FUN_1000f4d0(param_1,0x11,(uint *)"Height");
+  FUN_1000f4d0(param_1,0x12,(uint *)"Width");
+  FUN_1000f4d0(param_1,0x13,(uint *)"MouseOver");
+  FUN_1000f4d0(param_1,0x14,(uint *)"BGColor");
+  FUN_1000f4d0(param_1,0x15,(uint *)&DAT_1013e888);
+  FUN_1000f4d0(param_1,0x16,(uint *)"Tooltip");
+  FUN_1000f4d0(param_1,0x17,(uint *)&DAT_1013e898);
+  FUN_1000f4d0(param_1,0x18,(uint *)"Checked");
+  FUN_1000f4d0(param_1,0x19,(uint *)"Style");
+  FUN_1000f4d0(param_1,0x1a,(uint *)"Enabled");
+  FUN_1000f4d0(param_1,0x1b,(uint *)"Highlighted");
+  FUN_1000f4d0(param_1,0x1c,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(param_1,0x1d,(uint *)"ScreenID");
+  FUN_1000f4d0(param_1,0x1e,(uint *)&DAT_1013d208);
+  FUN_1000f4d0(param_1,0x1f,(uint *)"Items");
+  FUN_1000f4d0(param_1,0x20,(uint *)"HisTradeReady");
+  FUN_1000f4d0(param_1,0x21,(uint *)"MyTradeReady");
+  return param_1;
+}
+
+
+
+============================================================
+Function: FUN_1001d2a0 @ 1001d2a0
+Signature: bool __stdcall FUN_1001d2a0(int * param_1, uint * param_2)
+Callers:
+  1013f7ac | <none>
+Callees:
+  10111da0 | FindMQ2Window
+Instructions:
+  1001d2a0 | PUSH dword ptr [ESP + 0x8]
+  1001d2a4 | CALL 0x10111da0
+  1001d2a9 | MOV ECX,dword ptr [ESP + 0x8]
+  1001d2ad | ADD ESP,0x4
+  1001d2b0 | TEST EAX,EAX
+  1001d2b2 | MOV dword ptr [ECX],EAX
+  1001d2b4 | SETNZ AL
+  1001d2b7 | RET 0x8
+Decompile:
+
+
+bool FUN_1001d2a0(int *param_1,uint *param_2)
+
+{
+  int iVar1;
+  
+  iVar1 = FindMQ2Window(param_2);
+  *param_1 = iVar1;
+  return iVar1 != 0;
+}
+
+
+
+============================================================
+Function: FindMQ2Window @ 10111da0
+Signature: int __cdecl FindMQ2Window(uint * param_1)
+Callers:
+  10158340 | <none>
+  Entry Point | <none>
+  100ca42f | WindowState
+  100d592a | dataWindow
+  10110dc5 | SendWndNotification
+  10110f19 | SendListSelect
+  10111b30 | SendWndClick
+  100c95cb | CombineCmd
+  10005c57 | FUN_100059f0
+  101104de | FUN_101100a0
+  1001d2a4 | FUN_1001d2a0
+Callees:
+  1009c5e0 | __strnicmp
+  100ff9d0 | FindContainerForContents
+  10007090 | FUN_10007090
+  10088b58 | FUN_10088b58
+  10065e13 | _tolower
+  1002f140 | FUN_1002f140
+  1003d4c0 | FUN_1003d4c0
+  10081b25 | FUN_10081b25
+  1008431e | FUN_1008431e
+Instructions:
+  10111da0 | PUSH EBP
+  10111da1 | MOV EBP,ESP
+  10111da3 | AND ESP,0xfffffff8
+  10111da6 | SUB ESP,0x1c
+  10111da9 | MOV EDX,dword ptr [EBP + 0x8]
+  10111dac | MOV ECX,EDX
+  10111dae | PUSH EBX
+  10111daf | PUSH ESI
+  10111db0 | PUSH EDI
+  10111db1 | MOV dword ptr [ESP + 0x10],0x0
+  10111db9 | LEA ESI,[ECX + 0x1]
+  10111dbc | MOV dword ptr [ESP + 0x20],0x0
+  10111dc4 | MOV dword ptr [ESP + 0x24],0xf
+  10111dcc | NOP dword ptr [EAX]
+  10111dd0 | MOV AL,byte ptr [ECX]
+  10111dd2 | INC ECX
+  10111dd3 | TEST AL,AL
+  10111dd5 | JNZ 0x10111dd0
+  10111dd7 | SUB ECX,ESI
+  10111dd9 | PUSH ECX
+  10111dda | PUSH EDX
+  10111ddb | LEA ECX,[ESP + 0x18]
+  10111ddf | CALL 0x10007090
+  10111de4 | CMP dword ptr [ESP + 0x24],0x10
+  10111de9 | LEA ECX,[ESP + 0x10]
+  10111ded | MOV EDX,dword ptr [ESP + 0x10]
+  10111df1 | LEA EAX,[ESP + 0x10]
+  10111df5 | MOV ESI,dword ptr [ESP + 0x20]
+  10111df9 | LEA EBX,[ESP + 0x10]
+  10111dfd | CMOVNC ECX,EDX
+  10111e00 | CMOVNC EAX,EDX
+  10111e03 | ADD ESI,ECX
+  10111e05 | CMP dword ptr [ESP + 0x24],0x10
+  10111e0a | CMOVNC EBX,EDX
+  10111e0d | CMP EBX,ESI
+  10111e0f | JZ 0x10111e29
+  10111e11 | MOV EDI,EAX
+  10111e13 | SUB EDI,EBX
+  10111e15 | MOVSX EAX,byte ptr [EBX]
+  10111e18 | PUSH EAX
+  10111e19 | CALL 0x10065e13
+  10111e1e | MOV byte ptr [EBX + EDI*0x1],AL
+  10111e21 | ADD ESP,0x4
+  10111e24 | INC EBX
+  10111e25 | CMP EBX,ESI
+  10111e27 | JNZ 0x10111e15
+  10111e29 | LEA EAX,[ESP + 0x10]
+  10111e2d | PUSH EAX
+  10111e2e | CALL 0x1002f140
+  10111e33 | MOV EAX,dword ptr [EAX]
+  10111e35 | TEST EAX,EAX
+  10111e37 | JNZ 0x10111f06
+  10111e3d | MOV EBX,dword ptr [EBP + 0x8]
+  10111e40 | PUSH 0x4
+  10111e42 | PUSH 0x10146fc4
+  10111e47 | PUSH EBX
+  10111e48 | CALL 0x1009c5e0
+  10111e4d | ADD ESP,0xc
+  10111e50 | TEST EAX,EAX
+  10111e52 | JNZ 0x10111e85
+  10111e54 | LEA EAX,[EBX + 0x4]
+  10111e57 | PUSH EAX
+  10111e58 | CALL 0x10088b58
+  10111e5d | ADD ESP,0x4
+  10111e60 | TEST EAX,EAX
+  10111e62 | JZ 0x10111f6b
+  10111e68 | CMP EAX,0x18
+  10111e6b | JA 0x10111f6b
+  10111e71 | MOV ECX,dword ptr [0x10185268]
+  10111e77 | MOV ECX,dword ptr [ECX]
+  10111e79 | MOV ECX,dword ptr [ECX + 0x1ea8]
+  10111e7f | MOV EAX,dword ptr [ECX + EAX*0x4 + -0x4]
+  10111e83 | JMP 0x10111ef5
+  10111e85 | PUSH 0x4
+  10111e87 | PUSH 0x10146fcc
+  10111e8c | PUSH EBX
+  10111e8d | CALL 0x1009c5e0
+  10111e92 | ADD ESP,0xc
+  10111e95 | TEST EAX,EAX
+  10111e97 | JNZ 0x10111ed2
+Decompile:
+
+
+int __cdecl FindMQ2Window(uint *param_1)
+
+{
+  LPVOID pvVar1;
+  char ****ppppcVar2;
+  int iVar3;
+  int *piVar4;
+  uint uVar5;
+  uint *puVar6;
+  char ****ppppcVar7;
+  char ****ppppcVar8;
+  int iVar9;
+  char ***local_20 [4];
+  int local_10;
+  uint local_c;
+  
+                    /* 0x111da0  715  FindMQ2Window */
+  local_20[0] = (char ***)0x0;
+  local_10 = 0;
+  local_c = 0xf;
+  puVar6 = param_1;
+  do {
+    uVar5 = *puVar6;
+    puVar6 = (uint *)((int)puVar6 + 1);
+  } while ((char)uVar5 != '\0');
+  FUN_10007090(local_20,param_1,(int)puVar6 - ((int)param_1 + 1));
+  ppppcVar2 = local_20;
+  if (0xf < local_c) {
+    ppppcVar2 = (char ****)local_20[0];
+  }
+  ppppcVar8 = (char ****)((int)ppppcVar2 + local_10);
+  ppppcVar7 = local_20;
+  if (0xf < local_c) {
+    ppppcVar7 = (char ****)local_20[0];
+  }
+  if (ppppcVar7 != ppppcVar8) {
+    iVar9 = (int)ppppcVar2 - (int)ppppcVar7;
+    do {
+      iVar3 = _tolower((int)*(char *)ppppcVar7);
+      *(char *)((int)ppppcVar7 + iVar9) = (char)iVar3;
+      ppppcVar7 = (char ****)((int)ppppcVar7 + 1);
+    } while (ppppcVar7 != ppppcVar8);
+  }
+  piVar4 = FUN_1002f140((uint *)local_20);
+  if (*piVar4 == 0) {
+    iVar9 = __strnicmp((char *)param_1,"bank",4);
+    if (iVar9 == 0) {
+      uVar5 = FUN_10088b58((byte *)(param_1 + 1));
+      if ((uVar5 != 0) && (uVar5 < 0x19)) {
+        iVar9 = *(int *)(*(int *)(*ppCharData + 0x1ea8) + -4 + uVar5 * 4);
+        goto LAB_10111ef5;
+      }
+    }
+    else {
+      iVar9 = __strnicmp((char *)param_1,"pack",4);
+      if (iVar9 == 0) {
+        uVar5 = FUN_10088b58((byte *)(param_1 + 1));
+        if ((uVar5 != 0) && (uVar5 < 0xb)) {
+          iVar9 = *(int *)(*(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x20) + 0x58 +
+                          uVar5 * 4);
+LAB_10111ef5:
+          if (iVar9 != 0) {
+            iVar3 = FindContainerForContents(iVar9);
+            goto LAB_10111f6d;
+          }
+        }
+      }
+      else {
+        iVar9 = FUN_10081b25((byte *)param_1,(byte *)"enviro");
+        if (iVar9 == 0) {
+          iVar9 = *(int *)(*ppContainerMgr + 0x8c);
+          goto LAB_10111ef5;
+        }
+      }
+    }
+  }
+  else {
+    iVar9 = *piVar4 * 4 + -4;
+    pvVar1 = *(LPVOID *)(iVar9 + DAT_10193bc4);
+    if (pvVar1 != (LPVOID)0x0) {
+      iVar3 = *(int *)((int)pvVar1 + 0x80);
+      if (iVar3 != 0) goto LAB_10111f6d;
+      if (*(int **)((int)pvVar1 + 0x84) != (int *)0x0) {
+        iVar3 = **(int **)((int)pvVar1 + 0x84);
+        goto LAB_10111f6d;
+      }
+      piVar4 = FUN_1002f140((uint *)local_20);
+      *piVar4 = 0;
+      FUN_1003d4c0(pvVar1);
+      *(undefined4 *)(iVar9 + DAT_10193bc4) = 0;
+    }
+    piVar4 = FUN_1002f140((uint *)local_20);
+    *piVar4 = 0;
+  }
+  iVar3 = 0;
+LAB_10111f6d:
+  if (0xf < local_c) {
+    ppppcVar2 = (char ****)local_20[0];
+    if ((0xfff < local_c + 1) &&
+       (ppppcVar2 = (char ****)local_20[0][-1],
+       (char *)0x1f < (char *)((int)local_20[0] + (-4 - (int)ppppcVar2)))) {
+                    /* WARNING: Subroutine does not return */
+      FUN_1008431e();
+    }
+    FUN_1003d4c0(ppppcVar2);
+  }
+  return iVar3;
+}
+
+
+

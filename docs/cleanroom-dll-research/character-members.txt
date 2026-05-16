@@ -1,0 +1,188 @@
+MQ2CharacterType member table from FUN_1001b360
+ID | Name | Address
+---|---|---
+  1 | ID | 1013d650
+  2 | Name | 1013d654
+  3 | Level | 1013abec
+  4 | Exp | 1013d93c
+  5 | Spawn | 1013d22c
+  6 | Dar | 1013d940
+  7 | AAExp | 1013d944
+  8 | AAPoints | 1013d94c
+ 10 | CurrentHPs | 1013d6ec
+ 11 | MaxHPs | 1013d6f8
+ 12 | HPRegen | 1013d958
+ 13 | PctHPs | 1013d700
+ 14 | CurrentMana | 1013d8d8
+ 15 | MaxMana | 1013d8e4
+ 16 | ManaRegen | 1013d960
+ 17 | PctMana | 1013d96c
+ 18 | Buff | 1013d974
+ 19 | Song | 1013d97c
+ 20 | Book | 1013d984
+ 21 | Skill | 1013d234
+ 22 | Ability | 1013d98c
+ 23 | Surname | 1013d71c
+ 24 | Cash | 1013d994
+ 25 | CashBank | 1013d99c
+ 26 | PlatinumShared | 1013d9a8
+ 27 | Grouped | 1013d9b8
+ 28 | HPBonus | 1013d9c0
+ 29 | ManaBonus | 1013d9c8
+ 30 | GukEarned | 1013d9d4
+ 31 | MMEarned | 1013d9e0
+ 32 | RujEarned | 1013d9ec
+ 33 | TakEarned | 1013d9f8
+ 34 | MirEarned | 1013da04
+ 35 | LDoNPoints | 1013da10
+ 36 | CurrentFavor | 1013da1c
+ 37 | CareerFavor | 1013da2c
+ 38 | Endurance | 1013da38
+ 39 | Inventory | 1013da44
+ 40 | Bank | 1013da50
+ 42 | Combat | 1013da58
+ 43 | FreeInventory | 1013da60
+ 44 | Gem | 1013da70
+ 45 | SpellReady | 1013da74
+ 46 | GroupLeaderExp | 1013da80
+ 47 | RaidLeaderExp | 1013da90
+ 48 | GroupLeaderPoints | 1013daa0
+ 49 | RaidLeaderPoints | 1013dab4
+ 50 | Drunk | 1013dac8
+ 51 | STR | 1013dad0
+ 52 | STA | 1013dad4
+ 53 | CHA | 1013dad8
+ 54 | DEX | 1013dadc
+ 55 | INT | 1013dae0
+ 56 | AGI | 1013dae4
+ 57 | WIS | 1013dae8
+ 58 | svMagic | 1013daec
+ 59 | svFire | 1013daf4
+ 60 | svCold | 1013dafc
+ 61 | svPoison | 1013db04
+ 62 | svDisease | 1013db10
+ 63 | Hunger | 1013db1c
+ 64 | Thirst | 1013db24
+ 65 | BaseSTR | 1013db2c
+ 66 | BaseSTA | 1013db34
+ 67 | BaseCHA | 1013db3c
+ 68 | BaseDEX | 1013db44
+ 69 | BaseINT | 1013db4c
+ 70 | BaseAGI | 1013db54
+ 71 | BaseWIS | 1013db5c
+ 72 | PracticePoints | 1013db64
+ 73 | PctExp | 1013db74
+ 74 | PctAAExp | 1013db7c
+ 75 | Moving | 1013d8a8
+ 76 | AbilityReady | 1013db88
+ 77 | PetBuff | 1013db98
+ 78 | Platinum | 1013dba0
+ 79 | Gold | 1013dbac
+ 80 | Silver | 1013dbb4
+ 81 | Copper | 1013dbbc
+ 82 | PlatinumBank | 1013dbc4
+ 83 | GoldBank | 1013dbd4
+ 84 | SilverBank | 1013dbe0
+ 85 | CopperBank | 1013dbec
+ 86 | PctGroupLeaderExp | 1013dbf8
+ 87 | PctRaidLeaderExp | 1013dc0c
+ 88 | Stunned | 1013d8c4
+ 89 | RangedReady | 1013dc20
+ 90 | AltTimerReady | 1013dc2c
+ 91 | MaxEndurance | 1013d900
+ 92 | PctEndurance | 1013dc3c
+ 93 | AltAbility | 1013d23c
+ 94 | AltAbilityReady | 1013dc4c
+ 95 | AltAbilityTimer | 1013dc5c
+ 96 | CombatAbility | 1013dc6c
+ 97 | CombatAbilityTimer | 1013dc7c
+ 98 | LargestFreeInventory | 1013dc90
+ 99 | TargetOfTarget | 1013dca8
+100 | RaidAssistTarget | 1013dcb8
+101 | GroupAssistTarget | 1013dccc
+102 | RaidMarkNPC | 1013dce0
+103 | GroupMarkNPC | 1013dcec
+104 | CountBuffs | 1013dcfc
+105 | LanguageSkill | 1013dd08
+106 | EnduranceBonus | 1013dd18
+107 | CombatEffectsBonus | 1013dd28
+108 | ShieldingBonus | 1013dd3c
+109 | SpellShieldBonus | 1013dd4c
+110 | AvoidanceBonus | 1013dd60
+111 | AccuracyBonus | 1013dd70
+112 | StunResistBonus | 1013dd80
+113 | StrikeThroughBonus | 1013dd90
+114 | AttackBonus | 1013dda4
+115 | HPRegenBonus | 1013ddb0
+116 | ManaRegenBonus | 1013ddc0
+117 | DamageShieldBonus | 1013ddd0
+118 | DoTShieldBonus | 1013dde4
+119 | AttackSpeed | 1013ddf4
+120 | GroupList | 1013de00
+121 | AmIGroupLeader | 1013de0c
+122 | CurrentEndurance | 1013d8ec
+123 | EnduranceRegen | 1013de1c
+124 | FreeBuffSlots | 1013de2c
+125 | CurrentWeight | 1013de3c
+126 | AAPointsSpent | 1013de4c
+127 | AAPointsTotal | 1013de5c
+128 | TributeActive | 1013de6c
+129 | CombatAbilityReady | 1013de7c
+130 | Running | 1013de90
+131 | GroupSize | 1013de98
+132 | TributeTimer | 1013dea4
+133 | RadiantCrystals | 1013deb4
+134 | EbonCrystals | 1013dec4
+135 | Shrouded | 1013ded4
+136 | AutoFire | 1013dee0
+137 | Language | 1013deec
+138 | Aura | 1013ab78
+139 | LAMarkNPC | 1013def8
+140 | LANPCHealth | 1013df04
+141 | LADelegateMA | 1013df10
+142 | LADelegateMarkNPC | 1013df20
+143 | LAInspectBuffs | 1013df34
+144 | LASpellAwareness | 1013df44
+145 | LAOffenseEnhancement | 1013df58
+146 | LAManaEnhancement | 1013df70
+147 | LAHealthEnhancement | 1013df84
+148 | LAHealthRegen | 1013df98
+149 | LAFindPathPC | 1013dfa8
+150 | LAHoTT | 1013dfb8
+151 | ActiveFavorCost | 1013dfc0
+152 | CombatState | 1013dfd0
+153 | svCorruption | 1013dfdc
+154 | svPrismatic | 1013dfec
+155 | svChromatic | 1013dff8
+156 | Doubloons | 1013e004
+157 | Orux | 1013e010
+158 | Phosphenes | 1013e018
+159 | Phosphites | 1013e024
+160 | Fellowship | 1013e030
+161 | Downtime | 1013e03c
+162 | DamageShieldMitigationBonus | 1013e048
+163 | HeroicSTRBonus | 1013e064
+164 | HeroicINTBonus | 1013e074
+165 | HeroicWISBonus | 1013e084
+166 | HeroicAGIBonus | 1013e094
+167 | HeroicDEXBonus | 1013e0a4
+168 | HeroicSTABonus | 1013e0b4
+169 | HeroicCHABonus | 1013e0c4
+170 | HealAmountBonus | 1013e0d4
+171 | SpellDamageBonus | 1013e0e4
+172 | ClairvoyanceBonus | 1013e0f8
+173 | EnduranceRegenBonus | 1013e10c
+174 | Counters | 1013e120
+175 | Faycites | 1013e12c
+176 | Chronobines | 1013e138
+177 | Mercenary | 1013e144
+178 | XTarget | 1013e150
+179 | Haste | 1013e158
+180 | MercenaryStance | 1013e160
+181 | SkillCap | 1013e170
+182 | GemTimer | 1013e17c
+183 | HaveExpansion | 1013e188
+184 | PctAggro | 1013e198
+185 | SecondaryPctAggro | 1013e1a4
+186 | SecondaryAggroPlayer | 1013e1b8
+187 | AggroLock | 1013e1d0

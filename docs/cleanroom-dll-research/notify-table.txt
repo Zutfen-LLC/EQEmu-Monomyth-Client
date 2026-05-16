@@ -1,0 +1,139 @@
+INFO  Using log config file: jar:file:/home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Framework/Generic/lib/Generic.jar!/generic.log4j.xml (LoggingInitialization)  
+INFO  Using log file: /home/zutfen/.config/ghidra/ghidra_12.1_PUBLIC/application.log (LoggingInitialization)  
+INFO  Loading user preferences: /home/zutfen/.config/ghidra/ghidra_12.1_PUBLIC/preferences (Preferences)  
+INFO  Searching for classes... (ClassSearcher)  
+INFO  Class search complete (690 ms) (ClassSearcher)  
+INFO  Initializing SSL Context (DefaultSSLContextInitializer)  
+INFO  Initializing Random Number Generator... (SecureRandomFactory)  
+INFO  Random Number Generator initialization complete: NativePRNGNonBlocking (SecureRandomFactory)  
+INFO  Trust manager disabled, cacerts have not been set (DefaultTrustManagerFactory)  
+INFO  Headless startup complete (1461 ms) (AnalyzeHeadless)  
+INFO  Class searcher loaded 59 extension points (20 false positives) (ClassSearcher)  
+INFO  HEADLESS Script Paths:
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/PDB/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/SwiftDemangler/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Processors/JVM/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Processors/PIC/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/BSim/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Debug/Debugger/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/BytePatterns/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/SystemEmulation/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/WildcardAssembler/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Processors/DATA/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/VersionTracking/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Debug/Debugger-rmi-trace/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/PyGhidra/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/MicrosoftCodeAnalyzer/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Processors/8051/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/DecompilerDependent/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/FunctionID/ghidra_scripts
+    /home/zutfen/ghidra-work/scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/FileFormats/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Processors/Atmel/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/GnuDemangler/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/Base/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/Decompiler/ghidra_scripts (HeadlessAnalyzer)  
+INFO  HEADLESS: execution starts (HeadlessAnalyzer)  
+INFO  Opening existing project: /home/zutfen/ghidra-work/projects/dinput8_triage (HeadlessAnalyzer)  
+INFO  Opening project: /home/zutfen/ghidra-work/projects/dinput8_triage (HeadlessProject)  
+INFO  REPORT: Processing project file: /dinput8.dll (HeadlessAnalyzer)  
+INFO  ANALYZING all memory and code: /dinput8.dll (HeadlessAnalyzer)  
+WARN  Ignoring leading '_' chars on no-return name '___raise_securityfailure' specified in file: /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/Base/data/PEFunctionsThatDoNotReturn (NoReturnFunctionAnalyzer)  
+WARN  Ignoring leading '_' chars on no-return name '___report_rangecheckfailure' specified in file: /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/Base/data/PEFunctionsThatDoNotReturn (NoReturnFunctionAnalyzer)  
+INFO  Skipping PDB processing: failed to locate PDB file in configured locations (PdbUniversalAnalyzer)  
+INFO  Use a script to set the PDB file location. I.e.,
+    PdbAnalyzer.setPdbFileOption(currentProgram, new File("/path/to/pdb/file.pdb")); or
+    PdbUniversalAnalyzer.setPdbFileOption(currentProgram, new File("/path/to/pdb/file.pdb"));
+Or set the symbol server search configuration using:    PdbPlugin.saveSymbolServerServiceConfig(...);
+ This must be done using a pre-script (prior to analysis). (PdbUniversalAnalyzer)  
+INFO  Packed database cache: /var/tmp/zutfen-ghidra/packed-db-cache (PackedDatabaseCache)  
+INFO  Applied data type archive: windows_vs12_32 (ApplyDataArchiveAnalyzer)  
+INFO  -----------------------------------------------------
+    ASCII Strings                              0.423 secs
+    Apply Data Archives                        0.329 secs
+    Call Convention ID                         0.038 secs
+    Call-Fixup Installer                       0.034 secs
+    Create Address Tables                      0.503 secs
+    Create Function                            0.001 secs
+    Data Reference                             0.518 secs
+    Decompiler Parameter ID                   18.328 secs
+    Decompiler Switch Analysis                12.108 secs
+    Demangler Microsoft                        0.128 secs
+    Disassemble Entry Points                   0.418 secs
+    Embedded Media                             0.014 secs
+    External Entry References                  0.005 secs
+    Function ID                                2.769 secs
+    Function Start Pre Search                  0.042 secs
+    Function Start Search                      0.750 secs
+    Function Start Search After Code           0.332 secs
+    Function Start Search After Data           0.281 secs
+    Non-Returning Functions - Discovered       1.464 secs
+    Non-Returning Functions - Known            0.050 secs
+    PDB Universal                              0.012 secs
+    Reference                                  0.570 secs
+    Scalar Operand References                  1.464 secs
+    Shared Return Calls                        0.704 secs
+    Stack                                      1.173 secs
+    Subroutine References                      0.604 secs
+    Windows x86 PE Exception Handling          0.322 secs
+    Windows x86 PE RTTI Analyzer               0.000 secs
+    Windows x86 Thread Environment Block (TEB) Analyzer     0.000 secs
+    WindowsResourceReference                   0.275 secs
+    X86 Function Callee Purge                  0.065 secs
+    x86 Constant Reference Analyzer            5.840 secs
+-----------------------------------------------------
+     Total Time   49 secs
+-----------------------------------------------------
+ (AutoAnalysisManager)  
+INFO  REPORT: Analysis succeeded for file: /dinput8.dll (HeadlessAnalyzer)  
+INFO  REPORT: Execute script: DumpNotifyTable.java  (HeadlessAnalyzer)  
+INFO  SCRIPT: /home/zutfen/ghidra-work/scripts/DumpNotifyTable.java (HeadlessAnalyzer)  
+INFO  DumpNotifyTable.java> Notify verb table at 10135530 (GhidraScript)  
+INFO  DumpNotifyTable.java> Index | Pointer | String | Xrefs (GhidraScript)  
+INFO  DumpNotifyTable.java> ---------------------------------------------- (GhidraScript)  
+INFO  DumpNotifyTable.java> 00 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 01 | 10146bd8 | leftmouse (GhidraScript)  
+INFO  DumpNotifyTable.java> 02 | 101388b8 | leftmouseup (GhidraScript)  
+INFO  DumpNotifyTable.java> 03 | 10146c04 | rightmouse (GhidraScript)  
+INFO  DumpNotifyTable.java> 04 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 05 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 06 | 1014711c | enter (GhidraScript)  
+INFO  DumpNotifyTable.java> 07 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 08 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 09 | 1013be40 | help (GhidraScript)  
+INFO  DumpNotifyTable.java> 10 | 1013c658 | close (GhidraScript)  
+INFO  DumpNotifyTable.java> 11 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 12 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 13 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 14 | 10147124 | newvalue (GhidraScript)  
+INFO  DumpNotifyTable.java> 15 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 16 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 17 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 18 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 19 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 20 | 10147130 | contextmenu (GhidraScript)  
+INFO  DumpNotifyTable.java> 21 | 1014713c | mouseover (GhidraScript)  
+INFO  DumpNotifyTable.java> 22 | 10147148 | history (GhidraScript)  
+INFO  DumpNotifyTable.java> 23 | 10147150 | leftmousehold (GhidraScript)  
+INFO  DumpNotifyTable.java> 24 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 25 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 26 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 27 | 10147160 | link (GhidraScript)  
+INFO  DumpNotifyTable.java> 28 | 00000000 | <memerr:Address ram:00000000 does not exist in memory> (GhidraScript)  
+INFO  DumpNotifyTable.java> 29 | 10147168 | resetdefaultposition (GhidraScript)  
+INFO  DumpNotifyTable.java> 
+References to table base: (GhidraScript)  
+INFO  DumpNotifyTable.java>   101105b0 | FUN_101100a0 (GhidraScript)  
+INFO  DumpNotifyTable.java> 
+Click verb table at 10135a00 (GhidraScript)  
+INFO  DumpNotifyTable.java> 00 | 10146bd8 | leftmouse (GhidraScript)  
+INFO  DumpNotifyTable.java> 01 | 101388b8 | leftmouseup (GhidraScript)  
+INFO  DumpNotifyTable.java> 02 | 10146be4 | leftmouseheld (GhidraScript)  
+INFO  DumpNotifyTable.java> 03 | 10146bf4 | leftmouseheldup (GhidraScript)  
+INFO  DumpNotifyTable.java> 04 | 10146c04 | rightmouse (GhidraScript)  
+INFO  DumpNotifyTable.java> 05 | 10146c10 | rightmouseup (GhidraScript)  
+INFO  DumpNotifyTable.java> 06 | 10146c20 | rightmouseheld (GhidraScript)  
+INFO  DumpNotifyTable.java> 07 | 10146c30 | rightmouseheldup (GhidraScript)  
+INFO  ANALYZING changes made by post scripts: /dinput8.dll (HeadlessAnalyzer)  
+INFO  REPORT: Post-analysis succeeded for file: /dinput8.dll (HeadlessAnalyzer)  
+INFO  REPORT: Save succeeded for processed file: /dinput8.dll (HeadlessAnalyzer)  

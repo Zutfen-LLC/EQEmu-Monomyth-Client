@@ -1,0 +1,179 @@
+============================================================
+Function: dataTarget @ 100d5ab0
+Signature: undefined4 __cdecl dataTarget(undefined4 param_1, undefined4 * param_2)
+Callers:
+  101588a4 | <none>
+  Entry Point | <none>
+  100d6715 | InitializeMQ2Data
+Callees:
+Instructions:
+  100d5ab0 | MOV EAX,[0x10187734]
+  100d5ab5 | MOV EAX,dword ptr [EAX]
+  100d5ab7 | TEST EAX,EAX
+  100d5ab9 | JZ 0x100d5acf
+  100d5abb | MOV ECX,dword ptr [ESP + 0x8]
+  100d5abf | MOV dword ptr [ECX + 0x4],EAX
+  100d5ac2 | MOV EAX,[0x1017c0c8]
+  100d5ac7 | MOV dword ptr [ECX],EAX
+  100d5ac9 | MOV EAX,0x1
+  100d5ace | RET
+  100d5acf | XOR EAX,EAX
+  100d5ad1 | RET
+Decompile:
+
+
+undefined4 __cdecl dataTarget(undefined4 param_1,undefined4 *param_2)
+
+{
+                    /* 0xd5ab0  1060  dataTarget */
+  if (*ppTarget != 0) {
+    param_2[1] = *ppTarget;
+    *param_2 = pTargetType;
+    return 1;
+  }
+  return 0;
+}
+
+
+
+============================================================
+Function: dataSpawn @ 100d5d20
+Signature: undefined4 __cdecl dataSpawn(byte * param_1, undefined4 * param_2)
+Callers:
+  10158890 | <none>
+  Entry Point | <none>
+  100d6706 | InitializeMQ2Data
+Callees:
+  100c0920 | __alloca_probe
+  10088b58 | FUN_10088b58
+  100589d0 | _memset
+  100c1910 | GetSpawnByID
+  1010aea0 | SearchThroughSpawns
+  1010ac50 | ParseSearchSpawn
+Instructions:
+  100d5d20 | MOV EAX,0x28c8
+  100d5d25 | CALL 0x100c0920
+  100d5d2a | PUSH ESI
+  100d5d2b | MOV ESI,dword ptr [ESP + 0x28d0]
+  100d5d32 | MOV AL,byte ptr [ESI]
+  100d5d34 | TEST AL,AL
+  100d5d36 | JZ 0x100d5dfc
+  100d5d3c | MOV ECX,ESI
+  100d5d3e | CMP AL,0x2d
+  100d5d40 | JNZ 0x100d5d50
+  100d5d42 | MOV AL,byte ptr [ESI + 0x1]
+  100d5d45 | LEA ECX,[ESI + 0x1]
+  100d5d48 | TEST AL,AL
+  100d5d4a | JZ 0x100d5d64
+  100d5d4c | NOP dword ptr [EAX]
+  100d5d50 | CMP AL,0x30
+  100d5d52 | JL 0x100d5d58
+  100d5d54 | CMP AL,0x39
+  100d5d56 | JLE 0x100d5d5c
+  100d5d58 | CMP AL,0x2e
+  100d5d5a | JNZ 0x100d5d7d
+  100d5d5c | MOV AL,byte ptr [ECX + 0x1]
+  100d5d5f | INC ECX
+  100d5d60 | TEST AL,AL
+  100d5d62 | JNZ 0x100d5d50
+  100d5d64 | PUSH ESI
+  100d5d65 | CALL 0x10088b58
+  100d5d6a | MOV ECX,dword ptr [0x1018a66c]
+  100d5d70 | ADD ESP,0x4
+  100d5d73 | MOV ECX,dword ptr [ECX]
+  100d5d75 | PUSH EAX
+  100d5d76 | CALL 0x100c1910
+  100d5d7b | JMP 0x100d5dda
+  100d5d7d | PUSH 0x28c4
+  100d5d82 | LEA EAX,[ESP + 0x8]
+  100d5d86 | PUSH 0x0
+  100d5d88 | PUSH EAX
+  100d5d89 | CALL 0x100589d0
+  100d5d8e | MOVAPS XMM0,xmmword ptr [0x10147980]
+  100d5d95 | LEA EAX,[ESP + 0x10]
+  100d5d99 | ADD ESP,0xc
+  100d5d9c | MOV dword ptr [ESP + 0x8],0x6e
+  100d5da4 | MOV dword ptr [ESP + 0xc],0x0
+  100d5dac | MOV dword ptr [ESP + 0x281c],0xffff
+  100d5db7 | MOVUPS xmmword ptr [ESP + 0x2894],XMM0
+  100d5dbf | PUSH EAX
+  100d5dc0 | PUSH ESI
+  100d5dc1 | CALL 0x1010ac50
+  100d5dc6 | MOV EAX,[0x1018dde8]
+  100d5dcb | PUSH dword ptr [EAX]
+  100d5dcd | LEA EAX,[ESP + 0x10]
+  100d5dd1 | PUSH EAX
+  100d5dd2 | CALL 0x1010aea0
+  100d5dd7 | ADD ESP,0x10
+  100d5dda | MOV ECX,dword ptr [ESP + 0x28d4]
+  100d5de1 | MOV dword ptr [ECX + 0x4],EAX
+  100d5de4 | TEST EAX,EAX
+  100d5de6 | JZ 0x100d5dfc
+  100d5de8 | MOV EAX,[0x1017c108]
+  100d5ded | MOV dword ptr [ECX],EAX
+  100d5def | MOV EAX,0x1
+  100d5df4 | POP ESI
+  100d5df5 | ADD ESP,0x28c8
+  100d5dfb | RET
+  100d5dfc | XOR EAX,EAX
+  100d5dfe | POP ESI
+  100d5dff | ADD ESP,0x28c8
+  100d5e05 | RET
+Decompile:
+
+
+/* WARNING: Function: __alloca_probe replaced with injection: alloca_probe */
+
+undefined4 __cdecl dataSpawn(byte *param_1,undefined4 *param_2)
+
+{
+  byte bVar1;
+  uint uVar2;
+  EQPlayer *pEVar3;
+  byte *pbVar4;
+  uint local_28c8 [2566];
+  undefined4 local_b0;
+  undefined4 local_38;
+  undefined4 uStack_34;
+  undefined4 uStack_30;
+  undefined4 uStack_2c;
+  undefined4 uStack_4;
+  
+                    /* 0xd5d20  1055  dataSpawn */
+  uStack_4 = 0x100d5d2a;
+  bVar1 = *param_1;
+  if (bVar1 != 0) {
+    pbVar4 = param_1;
+    if (bVar1 != 0x2d) goto LAB_100d5d50;
+    bVar1 = param_1[1];
+    while (pbVar4 = pbVar4 + 1, bVar1 != 0) {
+LAB_100d5d50:
+      if ((((char)bVar1 < '0') || ('9' < (char)bVar1)) && (bVar1 != 0x2e)) {
+        _memset(local_28c8,0,0x28c4);
+        local_28c8[1] = 0x6e;
+        local_28c8[2] = 0;
+        local_b0 = 0xffff;
+        local_38 = 0;
+        uStack_34 = 0x40c38800;
+        uStack_30 = 0;
+        uStack_2c = 0x40c38800;
+        ParseSearchSpawn((char *)param_1,local_28c8);
+        pEVar3 = (EQPlayer *)SearchThroughSpawns((int)local_28c8,*ppCharSpawn);
+        goto LAB_100d5dda;
+      }
+      bVar1 = pbVar4[1];
+    }
+    uVar2 = FUN_10088b58(param_1);
+    pEVar3 = EQClasses::EQPlayerManager::GetSpawnByID((EQPlayerManager *)*ppSpawnManager,uVar2);
+LAB_100d5dda:
+    param_2[1] = pEVar3;
+    if (pEVar3 != (EQPlayer *)0x0) {
+      *param_2 = pSpawnType;
+      return 1;
+    }
+  }
+  return 0;
+}
+
+
+

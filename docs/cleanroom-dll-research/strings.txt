@@ -1,0 +1,8979 @@
+!This program cannot be run in DOS mode.
+?PAS^>
+RichS^>
+.text
+`.rdata
+@.data
+.fptable
+.rsrc
+@.reloc
+G(_^][Y
+_^][Y
+]_^[Y
+_^][Y
+_^][Y
+l$$_^[
+l$$_^[
+l$$_^[
+D$ _^]
+D$ _^]
+D$ _^]
+L$,;D$(u
+;|$,t
+D$8PhPa
+D$8QP
+:< td
+D48< t)
+D$8PhPa
+<"u	3
+][_^Y
+][_^Y
+][_^Y
+][_^Y
++D$<@P
+$_^][
+9~(v%
+G;~(r
+CD$8f
+D$8_^
+~D$@f
+CD$ f
+(L$ f
+T$ SU
+w0_^Y
+t$QPR
+|$$WPVU
+CD$(+
+CT$(+
+D$8@P
+97v*f
+CL$8PQ
+CL$8PQ
+D$$j@P
+D$$j@P
+D$ j@P
+D$ j@P
+~D$Pf
+CD$$PRQ
+uej@j
+]_^[Y
+Ct$ +
+CD$<PQR
+CD$$P
+D$<QPS
+CD$$P
+CD$ )t$
+D$(PS
+CL$(;
+Ct$(+
+CD$DPQR
+CD$,P
+D$DQPS
+CD$,P
+CD$()t$
+D$0PS
+D$$SPV
+t$0VPW
+$_^][
+t$$VPW
+SUVWj
+D$0_^[
+SUVWj
+SUVWj
+SUVWj
+_^][Y
+;_^][Y
+_^][Y
+;_^][Y
+_^][Y
+;_^][Y
+l$$_^[
+0SUVW
+L$0_^[
+D$0;/
+l$$_^[
+$SUVW
+D$,;/}';
+WP+D$4+
+*9.|H
+;T$(r
+);.|3
+l$(uz;
+D$ ;(}"
+(~qS@
+ _^[]Y
+}TSVW
+@Fj,P
+QSVWh
+QSVWh
+t9<-u
+D$ QP
+D$ ht
+t_kD$PL
+@Fj,P
+_^][Y
+l$$_^[
+L$@If
+L$@If
+L$@If
+L$ If
+|$ Of
+L$ If
+L$ If
+L$ If
+D$Dh|$
+D$@VW
+D$DhH%
+D$Dh\%
+D$Dh<&
+D$DhT&
+QSUVW
+SVWhx
+l$$_^[
+l$$_^[
+UVWPj
+D$$hL
+SVWPSQRVW
+_^ZY[X_^[]
+97v*f
+D$0QP
+L$0QP
+t#)|$
+F(^][
+QSVWh
+L$ _^]
+E ;EP
+U ;UP
+UP;U }"
+M,;M sl
+M ;MP
+E ;EP
+UP;U } 
+\$ ;\$
+D$ RP
+;|$(sF
+u,;|$(t|;
+;|$(u7
+}8UVf
+D$ hxt
+9(vhh
+G(_^][
+F _^][
+F _^][
+F ^][
+9D$$u
+L$,9\$
+9\$$t
+_^][Y
+_^][Y
+D$ 8]
+l$$_^[
+|$,r%
+t$tPi
+l$TVW;
+D$qQP
+D$H9D$0
+~D$Pf
+l$P:U
+L$ PU
+D$qQP
+L$PPR
+D$@9D$X
+D$X9D$@
+l$$;|$h
+L$0PW
+D$X9D$@
+D$LSUVW
+L$@PR
+ _^][Y
+_^][Y
+L$8PR
+D$09D$H
+AH9T$T
+OH_^[
+5ineI
+5Genu
+Y__^[
+QQSWj
+<xt><Xu=
+<xt <Xt
+<xt"<Xu!
+$_^[]
+PPPPPWS
+G_^[]
+G_^[]
+G_^[]
+G_^[]
+$_^[]
+$_^[]
+tC97u?j4
+tC97u?j4
+tI97uEjD
+tI97uEjD
+RWQSV
+RWQSV
+	w(;]
+	w(;]
+M$+E4@Pj
+89}4w
+u4PRQ
+9}4wk
+u4PRQ
+M$+E4@Pj
+89}4w
+u4PRQ
+9}4wk
+u4PRQ
+f9>t	
+Bf98u
+<:t2<,t.</u2
+<:t2<,t.</u2
+<:t2<,t.</u2
+<:t2<,t.</u2
+tI97uEjD
+	w(;]
+M$+E4@Pj
+89}4w
+u4PRQ
+9}4we
+u4PRQ
+W@PRQ
+u#PPS
+VVSWj	
+t VVV
+QQSVWd
+SVWUj
+UQPXY]Y[
+VC20XC00
+BVj(j
+URPQQh 
+>	t,W
+	w!AP
+<$u.W
+<$u W
+9:t*R
+V<0|M<9
+<0| <9
+tF<0|
+t.<A|&<P
+(SVW3
+8@uW@
+$u;8H
+97t	W
+97t	W
+8_SVW
+<_usj
+8?u'@
+	w'AP
+$uf8Q
+9$u?A
+ukWj<
+8@u$@
+<0|$<9
+<0|]<8
+8@t4V
+8@u(@
+y9SVW
+jdh`a
+uf_^[
+@_^[]
+9p u"
+ft&9q
+@_^[]
+PVVVVV
+PPPPP
+PWWWWW
+VVVVV
+f9<H_}
+f9<H_}
+f9<H_}
+f9<H_}
+f9<H_}
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+SSSSS
+v*@PW
+VSSSSS
+VPPPPP
+u$VQ;
+VPPPPP
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+,0<	w
+,0<	w
+QQSVW
+PPPPP
+j:Xf;
+j0Xf;
+j:Yf;
+SSSSS
+SSSSS
+9^$}	
+SSSSS
+SSSSS
+SSSSS
+9^$}	
+SSSSS
+SSSSS
+j0Z9^4t
+SSSSS
+9^$}	
+j0Z9^4t
+SSSSS
+j0Z9^4t
+SSSSS
+j0Z9^4t
+SSSSS
+9^$}	
+j0Z9^4t
+SSSSS
+j0Z9^4t
+SSSSS
+SSSSS
+9^$}	
+SSSSS
+SSSSS
+SSSSS
+9^$}	
+SSSSS
+SSSSS
+j0Z9^4t
+SSSSS
+9^$}	
+j0Z9^4t
+SSSSS
+j0Z9^4t
+SSSSS
+j0Z9^4t
+SSSSS
+9^$}	
+j0Z9^4t
+SSSSS
+j0Z9^4t
+SSSSS
+SSSSS
+9^$}	
+SSSSS
+SSSSS
+SSSSS
+9^$}	
+SSSSS
+SSSSS
+j0Z9^4t
+SSSSS
+9^$}	
+j0Z9^4t
+SSSSS
+j0Z9^4t
+SSSSS
+j0Z9^4t
+SSSSS
+9^$}	
+j0Z9^4t
+SSSSS
+j0Z9^4t
+G0_^[]
+G0_^[]
+G0_^[]
+G0_^[]
+G0_^[]
+G0_^[]
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+QQSVW
+G0_^[
+j0Zf;
+SSSSS
+SSSSS
+PPPPP
+SSSSS
+t#9^$}
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+PPPPP
+SSSSS
+t#9^$}
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+sj*Xf;
+9j*Xf;
+QQQQQ
+SSSSS
+f9F.t
+f9F.t
+PPPPP
+SSSSS
+vj*Xf;
+=j*Xf;
+sj*Xf;
+9j*Xf;
+QQQQQ
+SSSSS
+f9F.t
+f9F.t
+t#9^$}
+SSSSS
+vj*Xf;
+=j*Xf;
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+SSSSS
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+A-<Fu
+RRRRR
+<ItC<Lt3<Tt#<h
+A<lt'<tt
+A-<Fu
+RRRRR
+<ItC<Lt3<Tt#<h
+A<lt'<tt
+A-<Fu
+RRRRR
+<ItC<Lt3<Tt#<h
+A<lt'<tt
+A-<Fu
+RRRRR
+<ItC<Lt3<Tt#<h
+A<lt'<tt
+A-<Fu
+RRRRR
+<ItC<Lt3<Tt#<h
+A<lt'<tt
+A-<Fu
+RRRRR
+<ItC<Lt3<Tt#<h
+A<lt'<tt
+RRRRR
+jjZf;
+Tt)jhZf;
+JjlZf;
+RRRRR
+jjZf;
+Tt)jhZf;
+JjlZf;
+RRRRR
+jjZf;
+Tt)jhZf;
+JjlZf;
+RRRRR
+jjZf;
+Tt)jhZf;
+JjlZf;
+RRRRR
+jjZf;
+Tt)jhZf;
+JjlZf;
+RRRRR
+jjZf;
+Tt)jhZf;
+JjlZf;
+F +F4+
+~2Pj0
+F +F4+
+~2Pj0
+F +F4+
+~2Pj0
+V +V4+
+V +V4+
+V +V4+
+ow:t/
+N.jxXf;
+jXXf;
+t	f;M
+F +F4+
+N09^4
+~!QPj XP
+ow:t/
+N.jxXf;
+jXXf;
+t	f;M
+F +F4+
+N09^4
+~!QPj XP
+ow:t/
+N.jxXf;
+jXXf;
+t	f;M
+F +F4+
+N09^4
+~!QPj XP
+ow:t/
+V.jx_f;
+jXXf;
+F +F4+
+N09^4
+ow:t/
+V.jx_f;
+jXXf;
+F +F4+
+N09^4
+ow:t/
+V.jx_f;
+jXXf;
+F +F4+
+N09^4
+^j4Yt
+7QRPV
+^j4Yt
+^j4Yt
+^j4Yt
+7QRPV
+^j4Yt
+^j4Yt
+^j4Yt
+7QRPV
+^j4Yt
+^j4Yt
+^j4Yt
+7QRPV
+^j4Yt
+^j4Yt
+C-<at
+SWVQP
+C-<at
+r$SWVPQ
+C-<at
+SWVQP
+C-<at
+SWVQP
+C-<at
+r$SWVPQ
+C-<at
+SWVQP
+jg^jG
+SWVQP
+jgZf;
+jg_BjG^
+r$SWVPQ
+jgYf;
+jGYf;
+jg^jG
+SWVQP
+jgZf;
+jg^jG
+SWVQP
+jgZf;
+jg_BjG^
+r$SWVPQ
+jgYf;
+jGYf;
+jg^jG
+SWVQP
+jgZf;
+PPPPP
+WWWWW
+PPPPP
+PPPPP
+WWWWW
+PPPPP
+PPPPP
+WWWWW
+PPPPP
+PPPPP
+WWWWW
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PRRRRR
+PRRRRR
+PRRRRR
+WWWWW
+WWWWW
+WWWWW
+WWWWW
+ug,0<	wT
+8$u*9
+PPPPP
+ug,0<	wT
+8$u*9
+PPPPP
+j$Yf9
+x j$Xf9
+PPPPP
+j$Yf9
+x j$Xf9
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+j0Yf;
+8_^[]
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+SVWj	[3
+xK;5h
+SVj03
+xK;5h
+SVj83
+xK;5h
+SVj03
+xK;5h
+VWj	Y3
+WWWSHSh
+WWWSHSh
+WWWSHSh
+V4_^[
+WWWSHSh
+V,_^[
+WPWWWS
+WPWWWS
+WPWWWS
+WPWWWS
+t3h,5
+t"h85
+:u"f9z
+Vt^j.
+tLh 5
+t7h,5
+t&h85
+PPPPP
+VVVVV
+VVVVV
+PVVVVV
+PVVVVV
+WWWWW
+PPPPP
+PPPPPPPP
+PPPPP
+PPPPP
+PPPPP
+QPPPPP
+PPPPP
+PPPPP
+,0<	w
+,0<	w
+PPPPP
+j:Xf;
+j0Xf;
+j:Yf;
+PPPPP
+,0<	w
+,0<	w
+PPPPP
+j0Yf;
+j:Zf;
+,0<	w
+,0<	w
+j-[f;
+u!j0^f;
+j0Yf;
+j:^f;
+j:^f;
+j0^f;
+j:Xf;
+j-Xf9E
+,0<	v
+Sj)[f;
+w"r7J
+wIPS3
+SSSSS
+SSSSS
+,0<	w
+<et	<pu
+,0<	w
+j-Yf;
+u3j0Z
+j:Zf;
+j:^f;
+j0Zf;
+j:Yf;
+j-Xf;
+,0<	w
+<et	<pu
+,0<	w
+j-Yf;
+u3j0Z
+j:Zf;
+j:^f;
+j0Zf;
+j:Yf;
+j-Xf;
+,0<	v
+,0<	v
+Fj)[f;
+Fj)[f;
+PSSSSS
+,0<	w
+,0<	w
+PSSSSS
+j0Zf;
+j:_f;
+;},slPQ
+PSSSSS
+,0<	w
+,0<	w
+PSSSSS
+j0Zf;
+j:_f;
+;},slPQ
+W8^&ul
+W8^.uc
+W8^(uc
+W8^0uc
+W8^&un
+W8^.ue
+W8^(ue
+W8^0ue
+j%_f99u`
+f98tX
+f;F$t
+f;F,t
+owCt8
+owCt8
+Tt0jh[f;
+Ejl_f;
+j^Xf9E
+SSSSS
+SSSSS
+;1t+;u
+t!hpE
+< t1<	t-
+j"^f92
+j _f;
+j	_f;
+j [f;
+j"Xf;
+j"_f9z
+j [f;
+t"j	[f;
+PPPPP
+PPPPP
+SSSSj
+tASVj
+PPPPj
+PPPPP
+SSSSS
+WWWWW
+ARPRQh
+PPPPP
+uSSSSj
+PPPPP
+PPPPP
+WSh0N
+WSh0N
+WSh0N
+WSh0N
+Yj0X3
+VWh<N
+u SVW
+VWh<N
+u SVW
+VWh0N
+u SVW
+9p t 
+Fj0Y3
+RWQRP
+SVWQRP
+RSVWQRP
+PPPPP
+PPPPP
+,SVW3
+WWWWW
+wf91t
+PVVVVV
+PVVVVV
+SSSSS
+PPPPP
+Af;:u
+PPPPP
+PPPPP
+SWt@jU
+PPPPP
+VVVVV
+QQSVW
+j.Yf;
+PVj@W
+j.Xf;
+_t^PVj@
+u>PVj
+u/j,Xf;
+SSSSS
+u,f9F
+PPPPP
+SSSSS
+F _^[
+PPPPP
+j;Xf9
+j;Xf9
+PPPPP
+PPPPP
+PPPPP
+SSSSS
+SSSSS
+SSSSS
+D8(Ht
+^f93u
+D8(HXtIf
+D8(Ht5F
+_f9;u
+PPPPPWV
+PPPSW
+PP9E u
+PPSWP
+M,j"^QRRRRR
+j0Xu3
+Vj0XPW
+M$j"^Q
+QQQQQ
+-jd_;
+QQQQQ
+PPPPP
+QQSVW
+SSSSS
+u0St:
+VPPPPP
+u Vhl
+VQSj	
+PVVVVV
+QQQQQ
+PPPPP
+SSSSj
+SSSSS
+PPPPP
+QQSVj8j@
+Y_[^]
+xi;5h
+xg;5h
+f9<H}
+<=upG8
+Swvtb+
+_^tWh
+_^tWh
+xE;5h
+PVVVVV
+xK;5h
+{ WPV
+{(WPV
+RQWPV
+WVVV3
+VVVVV
+^[kE$<
+PPPPP
+j:Xf;
+j:Xf;
+j0Zf;
+j-Xf9E
+VVVVV
+Af95n
+VVVVV
+f98t	P
+PPPPP
+j@Xj 
+SSSSj
+PPPPP
+t^j*Yf
+PPPPP
+WWWWW
+PPPPP
+SSSPSQ
+SSSPSW
+9wLt	
+f9:t!V
+SSSSS
+SSSSS
+PPPPP
+PPPPP
+[PVVVVV
+j"[WVVVV
+PVVVVV
+_PSSSSS
+j"_VSSSS
+WVVVVV
+VSRSQV
+RVVVj
+WWWWW
+C PjPW
+C$PjQW
+C*PjTW
+C+PjUW
+C,PjVW
+C-PjWW
+C.PjRW
+C/PjSW
+CHPjPW
+CLPjQW
+Y_^[]
+WWWWW
+NX9F`t1
+PSjUR
+PPPPP
+SSSSS
+j	PjYV
+QQSVW
+Y9CXu>Wj@h
+tjj_S
+PPPPP
+9C`u99C\t4
+u29K\t-
+:f;>u
+:f;>u
+WHPh(e
+tVWjU
+^PQQQQQ
+E ^PQQQQ
+7;1u"3
+PPPPP
+YY^[]
+PPPPP
+F@j:f
+SSSSS
+SSSSS
+PPPPP
+PPPPP
+tRSVWP
+PPPPP
+PPPPP
+PPPPP
+PPPPP
+PPPPPPPP
+PRPQh
+r5SPV
+WWWWW
+QQQQQ
+PPPPP
+PSSSSS
+xc;5h
+^PQQQ
+QQSVW
+VVVVV
+QQSVW
+Y__^[
+v	N+D$
+v	N+D$
+SUVWhpB
+Pj@jdS
+%08XP
+D$$Pj@tOj
+D$ hL
+t(j\V
+t$@Uf
+~D$<f
+|$$F;
+D$Dh(
+D$,PS
+L$$Q;F
+~D$4f
+L$$QP
+t.VWS
+UVPj@
+t$ VW
+t$4WV
+SUVWh
+u3VPRQ
+pTjXP
+t%fff
+]_^[Y
+]_^[Y
+]_^[Y
+]_^[Y
+{P_^[
+SVWtph
+<	u5F
+<"u	3
+tI<"u?3
+<"u	3
+tI<"u?3
+<"u	3
+tI<"u?3
+<"u	3
+SUVWh@
+D$th4
+D$DPh
+D$hht
+D$hh@
+<"u	3
+5<"u	3
+<"u	3
+D$ Ph\a
+D$$h 
+D$ h0
+tI<"u?3
+<"u	3
+tI<"u?3
+<"u	3
+tI<"u?3
+<"u	3
+D$,Ph
+D$,Ph
+D$<VP
+tI<"u?3
+<"u	3
+tI<"u?3
+<"u	3
+tI<"u?3
+<"u	3
+u%Shp
+7<"u	3
+7<"u	3
+tH<"u>3
+<"u	3
+t Wh(
+D$ hD
+1<"u	3
+tI<"u?3
+<"u	3
+D$ Ph\a
+D$$GPW
+D$$PW
+tE<"u;3
+<"u	3
+D$<WP
+T$8< t
+D$@Ph\a
+D$<VP
+<"u	3
+D$<VP
+T$8< t
+D$@Ph\a
+1<"u	3
+D$8hp
+D$8hT
+D$8ht
+D$<VP
+-<"u	3
+<"u	3
+<	u5A
+<"u	3
+<"u	3
+SUVWh
+D$$Sh
+D$ Sh
+D$ hp
+<"u	3
+F<"u	3
+tI<"u?3
+<"u	3
+tE<"u;3
+<"u	3
+D$ h|
+D$(WP
+tI<"u?3
+<"u	3
+D$$Ph\a
+D$ WP
+tI<"u?3
+<"u	3
+D$$Ph\a
+|$ 9>
+D$Th@
+D$Hhp
+D$LVP
+D$$Ph\a
+tA<"u73
+<"u	3
+D$@PV
+D$@QWP
+t&<-u
+SUVWh
+D$4VP
+T$0< t
+D$<Ph\a
+1<"u	3
+T$0< t
+D$<Ph\a
+<"u	3
+D$4VP
++T$ RV
+tI<"u?3
+<"u	3
+,Gj,W
+D$ QP
+D$ ht
+L$ QP
+L$ QP
+L$ QP
+L$ QP
+SUVWh
+\t)j:W
+|)< t
+tF<"u<3
+<"u	3
+t&<-u
+D$(PS
+D$(PS
+T$0WRS
+|$0F3
+L$0WQ
+D$0WP
+T$0WRS
+L$0WQ
+D$0WP
+T$0WRS
+L$ _^
+L$ _^
+L$ _^
+L$ _^
+L$ _^
+SUVWh
+L$ _^]
+t$F;w
+Hh+H`
+Hl+Hd
+tt"=q
+~8j'W
+D$8PW
+D$8PW
+D$8PW
+D$8PW
+D$8PW
+D$8PW
+D$8PW
+D$8PW
+D$8PW
+\$ j,S
+\$0j,W
+|%< t
+tE<"u;3
+<"u	3
+t&<-u
+					
+																					
+																																																																		
+D$ Ph\a
+D$DVP
+D$HPh\a
+D$8PW
+D$DPh
+D$@j[P
+<"u	3
+D$ Ph\a
+D$ Ph\a
+t%;-X
+pBjJP
+L$Dfff
+@;D$0v
+L$$;L$D
+D$(+D$,
+D$,9D$
+D$,@;D$4v
+D$0@;D$4v
+L$(;L$$
+D$,+D$4
+D$(9D$
+D$0@;D$4v
+L$<Qj@j
+D$0@;D$4v
+L$(;L$$
+D$,+D$4
+D$(9D$
+D$0@;D$4v
+D$0@;D$4v
+L$(;L$$
+D$,+D$4
+D$(9D$
+D$0@;D$4v
+D$@Pj@j
+D$HPj@j
+D$L_^][
+D$$PV
+\4$Pj@WS
+pBjJP
+t$ SVhX
+_^][Y
+@;D$0v
+L$$;L$@
+D$(+D$,
+D$,9D$
+D$,@;D$4v
+D$0@;D$4v
+L$(;L$$
+D$,+D$4
+D$(9D$
+D$0@;D$4v
+D$<Pj@j
+D$0@;D$4v
+L$(;L$$
+D$,+D$4
+D$(9D$
+D$0@;D$4v
+D$0@;D$4v
+L$(;L$$
+D$,+D$4
+D$(9D$
+D$0@;D$4v
+D$@Pj@j
+D$D_^][
+@;D$,v
+L$ ;L$4
+D$$+D$(
+D$(9D$
+D$(@;D$4v
+D$,@;D$4v
+L$$;L$ 
+D$(+D$4
+D$$9D$
+D$,@;D$4v
+D$@Pj@j
+@;D$,v
+L$ ;L$4
+D$$+D$(
+D$(9D$
+D$(@;D$4v
+;t$8t
+t$,;]
+D$$+D$(
+D$(9D$
+D$(@;D$,v
+;t$4t
+t$0;]
+@;D$$v
+L$ ;L$,
+D$ _^]
+@;D$ v
+AFjJV
+M<;Mpu1
+t{UPP
+XX]XZY
+SVWhx
+t&VPh
+					
+																					
+																																																																		
+<"u	3
+t)h\7
+t)h\7
+@<"u	3
+D$$VP
+D$,Ph\a
+tI<"u?3
+<"u	3
+tI<"u?3
+<"u	3
+tI<"u?3
+<"u	3
+D$0h|
+D$8h84
+D$$VP
+T$ < t
+D$,Ph\a
+<"u	3
+D$(h@
+D$8WP
+tE<"u;3
+<"u	3
+D$4Ph\a
+D$0WP
+tI<"u?3
+<"u	3
+D$4Ph\a
+D$0WP
+tE<"u;3
+<"u	3
+D$4Ph\a
+D$ VP
+D$(Ph\a
+tD<"u:3
+<"u	3
+D$ <+t
+^_][Y
+_^][Y
+_^][Y
+W;5Td
+tI<"u?3
+<"u	3
+D$ Ph\a
+tI<"u?3
+<"u	3
+D$ Ph\a
+tI<"u?3
+<"u	3
+D$ Ph\a
+tJUVW
+					
+																					
+																																																																		
+QSVWh
+SUVWhDC
+PQhhC
+D$DVP
+										
+SUVWh
+D$(h,Z
+D$(h,Z
+D$(h,Z
+D$(h,Z
+D$(h,Z
+D$(h,Z
+D$(h,Z
+D$(h,Z
+D$$hx
+D$(hDZ
+D$$hXZ
+t	kD$
+$SVWh
+>NBSP
+T$,Ph
+;l$0txUh
+>&AMP
+>&PCT
+>&LT;
+>&GT;
+>&QUOf
+><BR>
+YYXY]
+QSUVW
+_^][Y
+t&<-u
+					
+																					
+																																																																		
+L$@If
+D$LVP
+L$@If
+D$LVP
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+D$LVP
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+|$@Of
+L$@If
+|$@Of
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+L$@If
+tS;|$ vu
+D$$Vj
+tS;|$ vu
+D$$Vj
+9t$ v(
+F;t$ r
+L$ F;
+tmPVh
+,0<	w'S
+tG9|$
+<"u	3
+PVhH`
+D$4SVWh
+D$@Qh(\
+D$Dhl\
+D$Dht\
+D$$CP
+tS;|$
+D$ Vj
+D$A-w
+|$@Of
+L$@If
+L$@If
+|$@Of
+L$@If
+t><"u43
+<"u	3
+<"u	3
+t><"u43
+<"u	3
+<"u	3
+<"u	3
+<"u	3
+<"u	3
+<"u	3
+<"u	3
+<"u	3
+<"u	3
+<"u	3
+<"u	3
+<"u	3
+<"u	3
+<"u	3
+PPPPPj
+<"u	3
+PPPPPj
+<"u	3
+HC_^][
+_^][Y
+_^][Y
+_^][Y
+_^][Y
+WQh(`
+_^][Y
+QSUVW
+:L$0t4
+_^][Y
+_^][Y
+<"u	3
+$SUVWh
+T$8< t
+D$@Ph\a
+tI<"u?3
+<"u	3
+tI<"u?3
+<"u	3
+tI<"u?3
+<"u	3
+D$<Ph
+|$80t
+D$8ht
+D$8Ph
+D$<Ph
+SUVWh
+tI<"u?3
+<"u	3
+tI<"u?3
+<"u	3
+tI<"u?3
+<"u	3
+t4hh!
+tc<0t_
+L$ +L$
+uNVh\m
+D$0h|m
+D$8Ph
+D$(h|m
+D$0Ph
+t+<0t'
+L$ +L$
+D$ ;D$<
+D$`QP
+D$ ;D$<
+D$`QP
+D$ ;D$<
+D$`QP
+D$`QP
+D$`QP
+D$`QP
+D$`QP
+D$ PR
+J$;J(tG
+J$;J(tG
+J$;J(tG
+J$;J(tG
+J$;J(tG
+J$;J(tG
+t$8QW
+|$(]t
+l$$;\$Lt	
+t$,Pt'
+|$(]t
+|$4u+
+0SUVW
+Ct$(3
+]	fff
+I;l$$
+;;uBf
+QSUVWh
+f-00f=
+f-00f=
+f- 8f=
+<$tmf
+<$tmf
+<$t6f
+<$tIf
+<$tIf
+<$tMf
+f-00f=
+f-00f=
+f- 8f=
+SleepConditionVariableCS
+WakeAllConditionVariable
+bad allocation
+bad function call
+regex_error(error_collate): The expression contained an invalid collating element name.
+regex_error(error_ctype): The expression contained an invalid character class name.
+regex_error(error_escape): The expression contained an invalid escaped character, or a trailing escape.
+regex_error(error_backref): The expression contained an invalid back reference.
+regex_error(error_brack): The expression contained mismatched [ and ].
+regex_error(error_paren): The expression contained mismatched ( and ).
+regex_error(error_brace): The expression contained mismatched { and }.
+regex_error(error_badbrace): The expression contained an invalid range in a { expression }.
+regex_error(error_range): The expression contained an invalid character range, such as [b-a] in most encodings.
+regex_error(error_space): There was insufficient memory to convert the expression into a finite state machine.
+regex_error(error_badrepeat): One of *?+{ was not preceded by a valid regular expression.
+regex_error(error_complexity): The complexity of an attempted match against a regular expression exceeded a pre-set level.
+regex_error(error_stack): There was insufficient memory to determine whether the regular expression could match the specified character sequence.
+regex_error(error_parse)
+regex_error(error_syntax)
+regex_error
+address family not supported
+address in use
+address not available
+already connected
+argument list too long
+argument out of domain
+bad address
+bad file descriptor
+bad message
+broken pipe
+connection aborted
+connection already in progress
+connection refused
+connection reset
+cross device link
+destination address required
+device or resource busy
+directory not empty
+executable format error
+file exists
+file too large
+filename too long
+function not supported
+host unreachable
+identifier removed
+illegal byte sequence
+inappropriate io control operation
+interrupted
+invalid argument
+invalid seek
+io error
+is a directory
+message size
+network down
+network reset
+network unreachable
+no buffer space
+no child process
+no link
+no lock available
+no message available
+no message
+no protocol option
+no space on device
+no stream resources
+no such device or address
+no such device
+no such file or directory
+no such process
+not a directory
+not a socket
+not a stream
+not connected
+not enough memory
+not supported
+operation canceled
+operation in progress
+operation not permitted
+operation not supported
+operation would block
+owner dead
+permission denied
+protocol error
+protocol not supported
+read only file system
+resource deadlock would occur
+resource unavailable try again
+result out of range
+state not recoverable
+stream timeout
+text file busy
+timed out
+too many files open in system
+too many files open
+too many links
+too many symbolic link levels
+value too large
+wrong protocol type
+unknown error
+0123456789abcdefghijklmnopqrstuvwxyz
+					
+generic
+0123456789abcdefghijklmnopqrstuvwxyz
+:Sun:Sunday:Mon:Monday:Tue:Tuesday:Wed:Wednesday:Thu:Thursday:Fri:Friday:Sat:Saturday
+:Jan:January:Feb:February:Mar:March:Apr:April:May:May:Jun:June:Jul:July:Aug:August:Sep:September:Oct:October:Nov:November:Dec:December
+%b %d %H : %M : %S %Y
+%m / %d / %y
+:AM:am:PM:pm
+%I : %M : %S %p
+%H : %M
+%H : %M : %S
+%d / %m / %y
+0123456789-
+%.0Lf
+0123456789-
+0123456789-
+0123456789-+Ee
+0123456789ABCDEFabcdef-+Xx
+0123456789-
+0123456789-+Ee
+0123456789ABCDEFabcdef-+Xx
+0123456789ABCDEFabcdef-+XxPp
+0123456789ABCDEFabcdef-+XxPp
++v$x+v$xv$+xv+$xv$+x+$vx+$vx$v+x+$vx$+vx+v $+v $v $+v +$v $++$ v+$ v$ v++$ v$+ v+xv$+ v$v$ +v+ $v$ ++x$v+ $v$v ++ $v$ +v
+raB3G
+0123456789-
+0123456789-
+FlsAlloc
+FlsFree
+FlsGetValue
+FlsSetValue
+InitializeCriticalSectionEx
+InitOnceExecuteOnce
+CreateEventExW
+CreateSemaphoreW
+CreateSemaphoreExW
+CreateThreadpoolTimer
+SetThreadpoolTimer
+WaitForThreadpoolTimerCallbacks
+CloseThreadpoolTimer
+CreateThreadpoolWait
+SetThreadpoolWait
+CloseThreadpoolWait
+FlushProcessWriteBuffers
+FreeLibraryWhenCallbackReturns
+GetCurrentProcessorNumber
+CreateSymbolicLinkW
+GetCurrentPackageId
+GetTickCount64
+GetFileInformationByHandleEx
+SetFileInformationByHandle
+GetSystemTimePreciseAsFileTime
+InitializeConditionVariable
+WakeConditionVariable
+InitializeSRWLock
+AcquireSRWLockExclusive
+TryAcquireSRWLockExclusive
+ReleaseSRWLockExclusive
+SleepConditionVariableSRW
+CreateThreadpoolWork
+SubmitThreadpoolWork
+CloseThreadpoolWork
+CompareStringEx
+GetLocaleInfoEx
+LCMapStringEx
+imagehlp.dll
+ImagehlpApiVersionEx
+SymInitialize
+SymSetOptions
+SymGetOptions
+SymLoadModule
+SymGetModuleInfo
+SymGetSymFromName
+BindImage
+.detour
+__based(
+__cdecl
+__pascal
+__stdcall
+__thiscall
+__fastcall
+__vectorcall
+__clrcall
+__eabi
+__swift_1
+__swift_2
+__ptr64
+__restrict
+__unaligned
+restrict(
+ delete
+operator
+`vftable'
+`vbtable'
+`vcall'
+`typeof'
+`local static guard'
+`string'
+`vbase destructor'
+`vector deleting destructor'
+`default constructor closure'
+`scalar deleting destructor'
+`vector constructor iterator'
+`vector destructor iterator'
+`vector vbase constructor iterator'
+`virtual displacement map'
+`eh vector constructor iterator'
+`eh vector destructor iterator'
+`eh vector vbase constructor iterator'
+`copy constructor closure'
+`udt returning'
+`RTTI
+`local vftable'
+`local vftable constructor closure'
+ new[]
+ delete[]
+`omni callsig'
+`placement delete closure'
+`placement delete[] closure'
+`managed vector constructor iterator'
+`managed vector destructor iterator'
+`eh vector copy constructor iterator'
+`eh vector vbase copy constructor iterator'
+`dynamic initializer for '
+`dynamic atexit destructor for '
+`vector copy constructor iterator'
+`vector vbase copy constructor iterator'
+`managed vector copy constructor iterator'
+`local static thread guard'
+operator "" 
+operator co_await
+operator<=>
+ Type Descriptor'
+ Base Class Descriptor at (
+ Base Class Array'
+ Class Hierarchy Descriptor'
+ Complete Object Locator'
+`anonymous namespace'
+template-parameter-
+`template-parameter-
+generic-type-
+`generic-type-
+`non-type-template-parameter
+`template-type-parameter-
+`generic-class-parameter-
+`generic-method-parameter-
+nullptr
+`template-parameter
+`vtordispex{
+`vtordisp{
+`adjustor{
+`local static destructor helper'
+`template static data member constructor helper'
+`template static data member destructor helper'
+static 
+virtual 
+private: 
+protected: 
+public: 
+[thunk]:
+extern "C" 
+char 
+short 
+long 
+unsigned 
+void 
+volatile 
+volatile
+std::nullptr_t 
+std::nullptr_t
+<ellipsis>
+,<ellipsis>
+ noexcept
+short
+double
+__int8
+__int16
+__int32
+__int64
+__int128
+<unknown>
+char8_t
+char16_t
+char32_t
+wchar_t
+decltype(auto)
+__w64 
+signed 
+const
+ volatile
+`unknown ecsu'
+union 
+struct 
+class 
+coclass 
+cointerface 
+enum 
+const 
+cli::array<
+cli::pin_ptr<
+{flat}
+{for 
+bad exception
+(null)
+[aOni*{
+eLK(w
+~ $s%r
+@b;zO]
+iu+-,
+obwQ4
+v2!L.2
+^<V7w
+INITY
+inity
+SNAN)
+snan)
+IND)ind)S
+INITY
+inity
+INITY
+inity
+SNAN)
+snan)
+IND)ind)S
+SNAN)
+snan)
+IND)ind)
+CorExitProcess
+ !"#$%&'()*+,-./0123456789:;<=>?@abcdefghijklmnopqrstuvwxyz[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}~
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
+Sunday
+Monday
+Tuesday
+Wednesday
+Thursday
+Friday
+Saturday
+January
+February
+March
+April
+August
+September
+October
+November
+December
+MM/dd/yy
+dddd, MMMM dd, yyyy
+HH:mm:ss
+NAN(SNAN)
+nan(snan)
+NAN(IND)
+nan(ind)
+e+000
+AreFileApisANSI
+EnumSystemLocalesEx
+FlsGetValue2
+GetActiveWindow
+GetDateFormatEx
+GetTempPath2W
+GetFileInformationByName
+GetEnabledXStateFeatures
+GetLastActivePopup
+GetProcessWindowStation
+GetTimeFormatEx
+GetUserDefaultLocaleName
+GetUserObjectInformationW
+GetXStateFeaturesMask
+IsValidLocaleName
+LCIDToLocaleName
+LocaleNameToLCID
+LocateXStateFeature
+MessageBoxA
+MessageBoxW
+RoInitialize
+RoUninitialize
+AppPolicyGetProcessTerminationMethod
+AppPolicyGetThreadInitializationType
+AppPolicyGetShowDeveloperDiagnostic
+AppPolicyGetWindowingModel
+SetThreadStackGuarantee
+SystemFunction036
+UTF-8
+UTF-16LEUNICODE
+log10
+atan2
+floor
+ldexp
+_cabs
+_hypot
+frexp
+_logb
+_nextafter
+SunMonTueWedThuFriSat
+JanFebMarAprMayJunJulAugSepOctNovDec
+1#INF
+1#QNAN
+1#SNAN
+1#IND
+?X&eB
+?h6_~
+?7Tf(
+=\uI=
+]vQ<)8
+|)P!?Ua0
+Eb2]A=
+hb?O2
+2ieO=
+|W8A=
+np?z 
+u?^p?o4
+Pex?0
+y1~?|"
+V%A+=
+?|I7Z#
+>,'1D=
+?g)([|X>=
+?IT$7
+:h"?bC
+@H#?43
+Ax#?uN}*
+r7Yr7=
+.K="=
+F0$?3=1
+H`$?h|
+&?~YK|
+sU0&?W
+:]=O>
+CqTR;
+AiFC.
+<{Q}<
+hI{L[
+<8bunz8
+?(FN\
+K<<H!
+m1WY$
+?#%X.y
+F||<##
+T~OXu
+<@En[vP
+log10
+?5Wg4p
+BC .=
+%S#[k
+"B <1=
+#.X'=
+Warrior
+Cleric
+Paladin
+Ranger
+Shadowknight
+Druid
+Rogue
+Shaman
+Necromancer
+Wizard
+Enchanter
+Beastlord
+Berserker
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+6@uwj5
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+6@uwj5
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+6@uwj5
+Qkkbal
+wn>Jj
+6@uwj5
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+6@uwj5
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+Qkkbal
+wn>Jj
+6@uwj5
+Qkkbal
+wn>Jj
+6@uwj5
+Unknown exception
+bad array new length
+map/set too long
+string too long
+FALSE
+Highpass Hold
+highpass
+injecting race %s gender %d id %d
+loaded race %s gender %d as id %d
+interiorwalltest
+injecting zone %s id %d
+loaded zone %s id %d
+Is Shield Detour
+Defaults
+UseLuclin
+0123456789
+MQ2CpuSpeedFix adjusting CPU ticks per ms from %llu to %llu
+eqgame.exe
+%s\dinput8.dll
+MQ2Main.dll
+MQ2 Detected
+Successfully unloaded MQ2
+Taunt
+InventoryWindow
+AltCurr_CreateItemButton
+leftmouseup
+AltCurr_DisplayMissingButton
+Recieved Waypoint Packet
+TrainAllButton
+applying mq2 injects
+disabling heroic stats
+enabling old model mount support
+enabling AA pre 51
+enabling spell data crc
+spells_us.txt
+disabling patchme
+disabling food drink spam
+mq2 prevention enabled
+applying gamma restore on crash fix
+kernel32.dll
+GetModuleFileNameA
+gdi32.dll
+SetDeviceGammaRamp
+%s\Edge.ini
+%s\eqgame.ini
+23:30:08
+May 10 2013
+Expected Client version: %s %s
+    Real Client version: %s %s
+Incorrect client version
+InitOffsets returned false - thread aborted.
+eqclient.ini
+ParseINIFile returned false - thread aborted.
+UNKNOWN0x10d
+UNKNOWN0x10e
+UNKNOWN0x10f
+UNKNOWN0x110
+CHAT_SEMICOLON
+CHAT_SLASH
+UNKNOWN0x113
+UNKNOWN0x114
+INSTANT_CAMP
+UNKNOWN0x116
+UNKNOWN0x117
+CHAT_EMPTY
+TOGGLE_WINDOWMODE
+UNKNOWN0x11a
+UNKNOWN0x11b
+CHANGEFACE
+UNKNOWN0x11d
+UNKNOWN0x11e
+UNKNOWN0x11f
+UNKNOWN0x120
+UNKNOWN0x121
+UNKNOWN0x122
+UNKNOWN0x123
+initializing mq2 hooks
+\dinput8.dll
+\eqgame.ini
+DirectInput8Create
+DllCanUnloadNow
+DllGetClassObject
+DllRegisterServer
+DllUnregisterServer
+GetdfDIJoystick
+list too long
+vector too long
+-qZ~C
+Fc8/gH
+la^iEE
+K$ZQH
+70q)G
+#ddMb
+t{i3[
+$3VeK
+Y3@)A
+]$C9"D
+1"EYg-
+PDNya
+iun8r3
+la^iEE
+<!|D'
+7F4\	
+3!XI-X
+.\!R}9
+unordered_map/set too long
+invalid hash bucket count
+CreateDevice Hook called
+%s tells you, '%s'
+* %s has entered channel 
+* %s has left channel 
+, %s:%d
+%s:%d
+Initializing chat hook
+Core is loading...
+Detoured Finish Zone
+EQPlayNice.dll
+Compat_DrawIndicator
+Initializing Display Hooks
+Shutting down Display Hooks
+} and { seen on the same line without an else present
+no command or { following else
+Flow ran into another subroutine.
+DoCommand - Couldn't parse '%s'
+CCommandHook::Detour(%s)
+AddCommand(%s,0x%X)
+RemoveCommand: Command not found '%s'
+AddAlias(%s,%s)
+AddSubstitute(%s,%s)
+Initializing Commands
+/whotarget
+/location
+/help
+/target
+/charinfo
+/filter
+/doability
+/cast
+/outputfile
+/superwho
+/duel
+/tell
+/anonymous
+/consider
+/channel
+/feedback
+/fastdrop
+/loadspells
+/load
+/bazaar
+/gsay
+/guildsay
+/keys
+/reply
+/say #petcmd
+/petcmd
+/say #attackmode
+/attackmode
+/say #autoskill
+/autoskill
+/say #tim
+/newif
+%s\macroquest.ini
+Aliases
+invalid string position
+LDoN Recruiter
+LDoN Merchant
+Destructible Object
+Tribute Master
+Guild Tribute Master
+Guild Banker
+DoN Merchant
+Fellowship Registrar
+Merchant
+Mercenary Liaison
+Banner
+Campfire
+ticks
+Hours
+Minutes
+Seconds
+TotalMinutes
+TotalSeconds
+Ticks
+TimeHMS
+Level
+Distance
+Light
+Guild
+Class
+Holding
+Trader
+ConColor
+macro
+class
+heading
+target
+iostream
+bad cast
+bad locale name
+false
+ios_base::badbit set
+ios_base::failbit set
+ios_base::eofbit set
+%s\*%s*.*
+%s\*.*
+Couldn't find any macros
+Macro list
+----------------
+Items on the ground:
+---------------------------
+   Item found - %d: DropID %d %s (%s)
+%s: %1.2f away to the %s
+No items found.
+%d item%s found.
+Item '%s' targeted.
+notarget
+Couldn't find '%s' to target.
+Doors:
+%d: %s: %1.2f away to the %s
+No Doors found.
+%d door%s found.
+DoorTarget: id specified but no number provided.
+Door %d '%s' targeted.
+Couldn't find door '%s' to target.
+The location of your bind is: %1.2f, %1.2f, %1.2f
+   New Item found - %d: %s
+   Opening Pack
+      New Item found - %d: %s
+%d	%s
+Mem a Spell
+Macro will display a list of MacroQuest commands.
+Help - Displaying Core help
+Core - %s
+List of commands
+------------------------------------------
+Lastname
+Sneak
+NPCTag
+SpawnID
+invisible
+Invisible
+Usage: /whofilter <lastname|class|race|body|level|gm|guild|ld|sneak|lfg|npctag|spawnid|trader|afk|anon|distance|light|holding|concolor|invisible> [on|off]
+increase
+enhanced
+macroended
+skills, target, money, encumber, food, name, zrange, macros, mq, debug
+skills
+macros
+money
+encumber
+debug
+zrange
+Increase
+Filtering of skills is set to: %s
+Filtering of skills changed to: %s
+FilterSkills
+Usage: /filter skills [all|increase|none]
+Filtering of macros is set to: %s
+Filtering of macros changed to: %s
+FilterMacro
+Usage: /filter macros [all|enhanced|none|macroended]
+Filtering of MQ is set to: %s
+Filtering of MQ changed to: %s
+FilterMQ
+Usage: /filter mq [on|off]
+edgedata
+Filtering of MQ2Data Errors is set to: %s
+FilterEdgeData
+Usage: /filter mq2data [on|off]
+Filtering of target lost messages is set to: %s
+Filtering of target lost messages changed to: %s
+FilterTarget
+Usage: /filter target [on|off]
+Filtering of debug messages is set to: %s
+Filtering of debug messages changed to: %s
+FilterDebug
+Usage: /filter debug [on|off]
+Filtering of money messages is set to: %s
+Filtering of money messages changed to: %s
+FilterMoney
+Usage: /filter money [on|off]
+Filtering of encumber messages is set to: %s
+Filtering of encumber messages changed to: %s
+FilterEncumber
+Usage: /filter encumber [on|off]
+Filtering of food messages is set to: %s
+Filtering of food messages changed to: %s
+FilterFood
+Usage: /filter food [on|off]
+Names currently filtered:
+   %s
+Filtering of custom messages changed to: %s
+FilterCustom
+remove
+Remove what?
+Cleared all name filters.
+Stopped filtering on: %s
+Add what?
+Name '%s' is already being filtered.
+Started filtering on: %s
+Usage: /filter name on|off|add|remove <name>
+Z range is not currently set.
+Z range is set to: %1.2f
+Syntax: /spewfile [on|off]
+Debug Spew is being logged to a file.
+Debug Spew is not being logged to a file.
+You must be holding an item to identify it.
+Identify - %s
+Item: %s (Slot: %s, Weight: %d.%d, Value: %dcp, Type: %s)
+Item: %s (Slot: %s, Weight: %d.%d, Value: %dcp)
+Lore Name: %s
+Flags: 
+LORE 
+NODROP 
+NORENT 
+MAGIC 
+(Light: 
+*Unknown%d
+Container: %d Slot %s, %d%% Reduction, Combine=%s
+Item: 
+AC%d 
+%dDam 
+%dDly 
+%dRng 
+%dHP 
+%dMana 
+%dSTR 
+%dSTA 
+%dDEX 
+%dAGI 
+%dWIS 
+%dINT 
+%dCHA 
+%dSvM 
+%dSvD 
+%dSvP 
+%dSvF 
+%dSvC 
+%dSvCorruption 
+Stack size = %d 
+Your Location is %3.2f, %3.2f, %3.2f, and are heading %s.
+clear
+No alerts active.
+Current alerts:
+%d alerts listed.
+Couldn't create alert.
+Alert - Unable to allocate memory for new alert.
+Alert would have cause recursion: %s
+Added alert for: %s
+Alert - %s
+Usage: /alert [clear #] [list #] [add # [pc|npc|corpse|any] [radius radius] [zradius radius] [range min max] spawn]
+You must have a target selected for /whotarget.
+SuperWhoTarget - %s
+instant_camp
+level
+distance
+guild
+concolor
+SuperWho - filtering %s
+${Time.Date} ${Time}
+%s\MacroQuest.log
+%s\%s.log
+Log path doesn't appear valid: %s
+Couldn't open log file: %s
+Cleared log.
+[${Time.Date} ${Time.Time24}] %s
+MacroLog - %s
+predict
+nolook
+location
+Face: loc specified but <y>,<x> not found.
+Face: item specified but no item targetted.
+Face: door specified but no door targetted.
+Face: heading specified but angle not found.
+Usage: /face [spawn] [item] [door] [id #] [heading <ang>] [loc <y>,<x>] [away] [alert #]
+There were no matches for: %s
+away from 
+Facing %s'%s'...
+Face - %s
+/look -- Angle %f out of range.
+The closest '%s' is a level %d %s %s and %1.2f away to the %s, Z difference = %1.2f
+Where - %s
+Abilities & Combat Skills:
+Combat Abilities:
+you do not have this skill
+You do not seem to have that ability available
+Spell favorites list:
+--------------------------
+%d) %s
+Unable to find favorite list '%s'
+Favorite list '%s':
+Spells:
+%d. <Empty>
+%d. %s
+Cast: szArg1 = %s szArg2 = %s
+cast test slot %d = %s
+Item '%s' not found.
+SpellName = %s
+pChar = %x SpellName = %s %s
+You do not seem to have that spell memorized.
+myself
+mycorpse
+%s's Corpse
+Target cleared.
+There are no spawns matching: %s
+Target - %s selected
+Unable to target, address = 0
+Skills
+-----------------------
+%s: Trainable
+%s: Unknown(253)
+%s: %d
+No skills matched '%s'.
+Skills - %d skills listed
+%d skills displayed.
+MQPauseOnChat
+Macros will %spause while in chat mode.
+You cannot pause a macro when one isn't running.
+Syntax: /mqpause [on|off] [chat [on|off]]
+paused
+running
+Macro is already %s.
+running again
+Macro is %s.
+%s.%s
+AutoRun
+Set autorun to: '%s'
+%s: %s
+No aliases defined.
+%d alias%s displayed.
+Usage: /alias name [delete|command], or /alias list
+delete
+Alias '%s' deleted.
+Alias '%s' not found.
+updat
+Alias '%s' %sed.
+Substitutions
+%s	----	%s
+No Substitutions defined.
+%d substitution%s displayed.
+Usage: /substitute <orig> <new>, /substitute <orig> delete, or /substitute list
+Substitution for '%s' deleted.
+Substitution for '%s' not found.
+Substitution for '%s' %sed.
+/ini input -- %s %s %s %s
+%s\%s
+IniOutput ERROR -- during WritePrivateProfileString: %s
+IniOutput Write Successful!
+/banklist -- Bad offset: CharInfo
+Listing of Bank Inventory
+-------------------------
+Slot %d: %dx %s (%s)
+- Slot %d: %dx %s (%s)
+close
+Window '%s' is now closed.
+Window '%s' is now open.
+closed
+Window '%s' is currently %s
+Usage: /windowstate <window> [open|close]
+Unable to retrieve login name.
+Login name: 
+Opening %s %s %s
+Application Paths
+/exec [application "parameters"] [fg | bg]
+Usage: /multiline <delimiter> <command>[delimiter<command>[delimiter<command>[. . .]]]
+Invalid spawn ID.  Use /ranged with no parameters, or with a spawn ID
+No target for ranged attack
+Usage: /loadcfg <filename>
+Could not /loadcfg '%s'
+Usage: /squelch <command>
+Usage: /docommand <command>
+Usage: /alt <command>
+Usage: /shift <command>
+Usage: /ctrl <command>
+Usage: /nomodkey <command>
+Socials: (page,number) name
+(%2d,%2d) %s 
+  %d: %s
+Invalid Argument(s): %s
+Usage: /dosocial <list|"social name">
+Usage: /timed <deciseconds> <command>
+Usage: /combine <pack>
+Window '%s' not open
+Window '%s' not container window
+Usage: /hud <normal|underui|always>
+Note: 'always' forces 'underui' also. The Network Status indicator is not 'always' drawn and is toggled with F11.
+normal
+Normal
+HUDMode
+underui
+UnderUI
+always
+Always
+Usage: /caption <list|type <value>|update #|MQCaptions <on|off>>
+yPlayer1
+yPlayer2
+yPlayer3
+yPlayer4
+yPlayer5
+yPlayer6
+yCorpse
+Player1
+Player2
+Player3
+Player4
+Player5
+Player6
+Corpse
+Update
+Captions
+x nearest spawns will have their caption updated each pass.
+MQCaptions
+MQCaptions are now 
+Invalid caption type '%s'
+x caption set.
+Usage: /noparse <command>
+Usage: /aa list [all|timers], /aa info [ability name], or /aa act [ability name]
+Alternative Abilities (Complete List)
+-------------------------------------
+[ %d: %s ]
+timers
+Alternative Abilities With Timers
+---------------------------------
+[ %d: %s ] (Reuse Time: %d seconds) <Ready>
+[ %d: %s ] (Reuse Time: %d seconds) <Ready in %d seconds>
+Alternative Advancement Ability Information
+-------------------------------------------
+[ %d: %s ] %s
+Min Level: %d, Cost: %d, Max Rank: %d, Type: %d, Reuse Time: %d seconds
+Casts Spell: %s
+Ready: No (%d seconds until refresh)
+Ready: Not Purchased
+Ready: Yes
+Min Level: %d, Cost: %d, Max Rank: %d, Type: %d
+/alt act %d
+Usage: /aa list [all|timers|ready], /aa info [ability name], or /aa act [ability name]
+[Core]
+Echo - %s
+missingspells
+%s-MissingSpells.txt
+Outputfile Complete: %s
+Outputfile Failed: %s (failed to open)
+Outputfile Failed: Not in game
+iostream stream error
+charm
+Due to complete misuse of the String Top-Level Object, it has been removed.
+Bug in array logic
+Float
+Heading
+NearestSpawn
+LineOfSight
+Spawn
+Skill
+AltAbility
+Spell
+InvSlot
+Target
+Group
+Switch
+Ground
+Window
+Macro
+MacroQuest
+String
+Cursor
+GameTime
+Defined
+LastSpawn
+FindItem
+FindItemBank
+SelectedItem
+FindItemCount
+FindItemBankCount
+NamingSpawn
+SpawnCount
+Plugin
+Select
+DoorTarget
+ItemTarget
+DynamicZone
+Friends
+Nothing to parse
+No such '%s' member '%s'
+Encountered typecast without object to cast
+Encountered unmatched parenthesis
+Unknown type '%s'
+Invalid character found after typecast ')%s'
+Unmatched bracket or invalid character following bracket found in index: '%s'
+Encountered member access without object
+*UNKNOWN BODYTYPE
+Poison
+Circle_of
+Guardian_Circle
+Earthen_Strength
+Reverse
+string
+Right
+Length
+Upper
+Lower
+Compare
+CompareCS
+Equal
+NotEqual
+EqualCS
+NotEqualCS
+Count
+Token
+Replace
+float
+Centi
+Milli
+Precision
+spawn
+DistanceX
+DistanceY
+DistanceZ
+Distance3D
+DistancePredict
+Speed
+Levitating
+Sneaking
+HeadingTo
+State
+CurrentHPs
+MaxHPs
+PctHPs
+Deity
+CleanName
+Surname
+GuildStatus
+Master
+Gender
+Height
+MaxRange
+AARank
+Casting
+Mount
+FeetWet
+Underwater
+Animation
+DistanceN
+DistanceW
+DistanceU
+Invis
+Linkdead
+Standing
+Sitting
+Ducking
+Feigning
+Binding
+Invited
+MaxRangeTo
+DisplayName
+AATitle
+GroupLeader
+Assist
+Anonymous
+Roleplaying
+HeadingToLoc
+Title
+Suffix
+Fleeing
+Named
+Buyer
+Moving
+StandState
+Stunned
+Hovering
+CurrentMana
+MaxMana
+CurrentEndurance
+MaxEndurance
+LocYX
+Owner
+Following
+character
+AAExp
+AAPoints
+HPRegen
+ManaRegen
+PctMana
+Ability
+CashBank
+PlatinumShared
+Grouped
+HPBonus
+ManaBonus
+GukEarned
+MMEarned
+RujEarned
+TakEarned
+MirEarned
+LDoNPoints
+CurrentFavor
+CareerFavor
+Endurance
+Inventory
+Combat
+FreeInventory
+SpellReady
+GroupLeaderExp
+RaidLeaderExp
+GroupLeaderPoints
+RaidLeaderPoints
+Drunk
+svMagic
+svFire
+svCold
+svPoison
+svDisease
+Hunger
+Thirst
+BaseSTR
+BaseSTA
+BaseCHA
+BaseDEX
+BaseINT
+BaseAGI
+BaseWIS
+PracticePoints
+PctExp
+PctAAExp
+AbilityReady
+PetBuff
+Platinum
+Silver
+Copper
+PlatinumBank
+GoldBank
+SilverBank
+CopperBank
+PctGroupLeaderExp
+PctRaidLeaderExp
+RangedReady
+AltTimerReady
+PctEndurance
+AltAbilityReady
+AltAbilityTimer
+CombatAbility
+CombatAbilityTimer
+LargestFreeInventory
+TargetOfTarget
+RaidAssistTarget
+GroupAssistTarget
+RaidMarkNPC
+GroupMarkNPC
+CountBuffs
+LanguageSkill
+EnduranceBonus
+CombatEffectsBonus
+ShieldingBonus
+SpellShieldBonus
+AvoidanceBonus
+AccuracyBonus
+StunResistBonus
+StrikeThroughBonus
+AttackBonus
+HPRegenBonus
+ManaRegenBonus
+DamageShieldBonus
+DoTShieldBonus
+AttackSpeed
+GroupList
+AmIGroupLeader
+EnduranceRegen
+FreeBuffSlots
+CurrentWeight
+AAPointsSpent
+AAPointsTotal
+TributeActive
+CombatAbilityReady
+Running
+GroupSize
+TributeTimer
+RadiantCrystals
+EbonCrystals
+Shrouded
+AutoFire
+Language
+LAMarkNPC
+LANPCHealth
+LADelegateMA
+LADelegateMarkNPC
+LAInspectBuffs
+LASpellAwareness
+LAOffenseEnhancement
+LAManaEnhancement
+LAHealthEnhancement
+LAHealthRegen
+LAFindPathPC
+LAHoTT
+ActiveFavorCost
+CombatState
+svCorruption
+svPrismatic
+svChromatic
+Doubloons
+Phosphenes
+Phosphites
+Fellowship
+Downtime
+DamageShieldMitigationBonus
+HeroicSTRBonus
+HeroicINTBonus
+HeroicWISBonus
+HeroicAGIBonus
+HeroicDEXBonus
+HeroicSTABonus
+HeroicCHABonus
+HealAmountBonus
+SpellDamageBonus
+ClairvoyanceBonus
+EnduranceRegenBonus
+Counters
+Faycites
+Chronobines
+Mercenary
+XTarget
+Haste
+MercenaryStance
+SkillCap
+GemTimer
+HaveExpansion
+PctAggro
+SecondaryPctAggro
+SecondaryAggroPlayer
+AggroLock
+spell
+ResistAdj
+Range
+AERange
+PushBack
+CastTime
+FizzleTime
+MyCastTime
+RecoveryTime
+RecastTime
+Duration
+SpellType
+TargetType
+ResistType
+CastOnYou
+CastOnAnother
+WearOff
+CounterType
+CounterNumber
+Stacks
+StacksPet
+WillStack
+MyRange
+NoDrop
+NoRent
+Magic
+Value
+Weight
+Stack
+Charges
+LDoNTheme
+DMGBonusType
+BuyPrice
+Attack
+DamShield
+WeightReduction
+SizeCapacity
+Combinable
+Avoidance
+SpellShield
+StrikeThrough
+StunResist
+Shielding
+FocusID
+ProcRate
+Quality
+LDoNCost
+AugRestrictions
+AugType
+AugSlot1
+AugSlot2
+AugSlot3
+AugSlot4
+AugSlot5
+Damage
+DMGBonus
+RecommendedLevel
+RecommendedSkill
+Delay
+BaneDMG
+SkillModValue
+InstrumentType
+InstrumentMod
+RequiredLevel
+BaneDMGType
+Summoned
+Artifact
+PendingLore
+LoreText
+Items
+Container
+Stackable
+SellPrice
+WornSlot
+WornSlots
+EffectType
+Tribute
+Attuneable
+Timer
+ItemDelay
+TimerReady
+StackSize
+StackCount
+FreeStack
+MerchQuantity
+Classes
+Races
+Deities
+Evolving
+Power
+MaxPower
+Purity
+Accuracy
+CombatEffects
+DoTShielding
+HeroicSTR
+HeroicINT
+HeroicWIS
+HeroicAGI
+HeroicDEX
+HeroicSTA
+HeroicCHA
+HeroicSvMagic
+HeroicSvFire
+HeroicSvCold
+HeroicSvDisease
+HeroicSvPoison
+HeroicSvCorruption
+HealAmount
+Clairvoyance
+DamageShieldMitigation
+SpellDamage
+Tradeskills
+switch
+DefaultX
+DefaultY
+DefaultZ
+DefaultHeading
+ground
+corpse
+merchant
+Markup
+window
+Child
+VScrollMax
+VScrollPos
+VScrollPct
+HScrollMax
+HScrollPos
+HScrollPct
+Children
+Siblings
+FirstChild
+Minimized
+Width
+MouseOver
+BGColor
+Tooltip
+Checked
+Style
+Enabled
+Highlighted
+ScreenID
+HisTradeReady
+MyTradeReady
+RunTime
+Paused
+Return
+Params
+Param
+ShortName
+currentzone
+Gravity
+SkyType
+SafeY
+SafeX
+SafeZ
+MinClip
+MaxClip
+SafeN
+SafeW
+SafeU
+macroquest
+GameState
+LoginName
+Server
+LastCommand
+LastTell
+Error
+SyntaxError
+MQ2DataError
+MouseX
+MouseY
+BuildDate
+ChatChannels
+ChatChannel
+ViewportX
+ViewportY
+ViewportXMax
+ViewportYMax
+ViewportXCenter
+ViewportYCenter
+LClickedObject
+PureCaster
+CanCast
+DruidType
+NecromancerType
+ShamanType
+ClericType
+PetClass
+HealerType
+Minute
+Second
+DayOfWeek
+Month
+Time12
+Time24
+Night
+SecondsSinceMidnight
+%02d:%02d:%02d
+Member
+Degrees
+Clock
+DegreesCCW
+invslot
+plugin
+Version
+skill
+ReuseTime
+MinLevel
+AltTimer
+Activated
+altability
+Description
+RequiresAbility
+RequiresAbilityPoints
+MaxRank
+AARankRequired
+MyReuseTime
+timer
+OriginalValue
+array
+Dimensions
+group
+Members
+Leader
+MainTank
+MainAssist
+Puller
+groupmember
+TotalLevels
+AverageLevel
+LootType
+Looter
+Looters
+Locked
+raidmember
+RaidLeader
+ExpPct
+ExpOn
+MaxLevel
+dynamiczone
+MaxMembers
+dzmember
+Status
+fellowship
+CampfireDuration
+CampfireY
+CampfireX
+CampfireZ
+CampfireZone
+fellowshipmember
+LastOn
+friend
+Friend
+BuffCount
+BuffDuration
+xtarget
+GetDistance3D(%1.0f,%1.0f,%1.0f,%1.0f,%1.0f,%1.0f)
+%d:%02d:%02d
+%d:%02d
+Untargetable
+Chest
+Trigger
+Object
+Flyer
+HOVER
+MOUNT
+STAND
+FEIGN
+UNKNOWN
+GREEN
+LIGHT BLUE
+WHITE
+YELLOW
+%.2f, %.2f
+%.0f, %.0f
+mystical attuning
+Embrace of the Dark Reign
+Embrace of the Keepers
+PW_CombatStateAnim
+COMBAT
+DEBUFFED
+COOLDOWN
+ACTIVE
+RESTING
+SUSPENDED
+Corruption
+Prismatic
+Chromatic
+Disease
+Unresistable
+Unknown
+Beneficial(Group)
+Beneficial
+Detrimental
+Group v2
+AE PC v2
+AE Summoned
+AE Undead
+Targeted AE Tap
+Uber Dragons
+Uber Giants
+Plant
+LifeTap
+Undead
+Animal
+Targeted AE
+Single
+PB AE
+Group v1
+AE PC v1
+Line of Sight
+Curse
+*UnknownType%d
+*UnknownCombine%d
+Spell Scroll
+Click Worn
+Click Inventory
+Click Unknown
+List: index is %d
+CHARSELECT
+INGAME
+%s\MQ2Main.dll
+%d%d%d
+%02d/%02d/%04d
+pack%d
+bank%d
+sharedbank%d
+loot%d
+trade%d
+enviro%d
+merchant%d
+bazaar%d
+inspect%d
+ability %d not found
+Online
+Offline
+In Dynamic Zone
+Link Dead
+global
+outer
+local
+Usage: /declare <varname|varname[array extents]> [type] [global|outer|local] [default value]
+/declare '%s' failed.  No macro in execution and no variable scope given
+/declare array failed.  To declare an array use: /declare name[size] <type> <scope> <default element value>
+Example: /declare MyStringArray[25] string local ARRAY-UNDEFINED-ELEMENT
+Cannot /declare an array of timers
+/declare '%s' failed.  Name already in use.
+Usage: /deletevar <varname|* global>
+* global
+Variable '%s' does not exist
+Usage: /varset <varname> <new value>
+/varset failed, variable '%s' not found
+/varset '%s' failed, array form on non-array
+/varset '%s[%d]' failed, out of bounds on array
+/varset '%s[%d]' failed, array element type rejected new value
+/varset '%s' failed, variable type rejected new value
+Usage: /varcalc <varname> <formula>
+/varcalc '%s' failed.  Could not calculate '%s'
+/varcalc failed, variable '%s' not found
+/varcalc '%s' failed, array form on non-array
+/varcalc '%s[%d]' failed, out of bounds on array
+/varcalc '%s[%d]' failed, array element type rejected new value
+/varcalc '%s' failed, variable type rejected new value
+Usage: /vardata <varname> <new mq2data value>
+/vardata '%s' failed, variable not found
+/vardata '%s' failed, MQ2Data portion '%s' unparsable
+/vardata '%s' failed, array form on non-array
+/vardata '%s[%d]' failed, out of bounds on array
+/vardata '%s[%d]'failed, array element type rejected new value
+/vardata '%s' failed, variable type rejected new value
+AddDetour(0x%X,0x%X,0x%X,0x%X)
+Address 0x%x already detoured.
+Detour failed.
+Detour success.
+Illegal AddDetourf call
+RemoveDetour(%X)
+Detour removed.
+Detour not found in RemoveDetour()
+RemoveOurDetours()
+RemoveOurDetours() -- Removing %X
+HookMemChecker - %satching
+Crash Detected
+The game has crashed. If you report this as a bug in Discord under #bugs, please include your dbg.log and debug.dmp from your /Logs/ directory in the bug report.
+The Heroes' Journey
+THJ Test
+[THJ Development]
+south
+south by southeast
+southeast
+east by southeast
+east by northeast
+northeast
+north by northeast
+north
+north by northwest
+northwest
+west by northwest
+west by southwest
+southwest
+south by southwest
+Small
+Large
+Giant
+player
+Senior Officer
+Officer
+Active Member
+Junior Member
+Initiate
+Recruit
+female
+neuter
+unknown
+neutral
+1H Blunt
+1H Slashing
+2H Blunt
+2H Slashing
+Abjuration
+Alteration
+Apply Poison
+Archery
+Backstab
+Bind Wound
+Block
+Brass Instruments
+Channeling
+Conjuration
+Defense
+Disarm
+Disarm Traps
+Divination
+Dodge
+Double Attack
+Dragon Punch
+Dual Wield
+Eagle Strike
+Evocation
+Feign Death
+Flying Kick
+Forage
+Hand To Hand
+Meditate
+Offense
+Parry
+Pick Lock
+Piercing
+Riposte
+Round Kick
+Safe Fall
+Sense Heading
+Specialize Abjure
+Specialize Alteration
+Specialize Conjuration
+Specialize Divination
+Specialize Evocation
+Pick Pockets
+Stringed Instruments
+Swimming
+Throwing
+Tiger Claw
+Tracking
+Wind Instruments
+Fishing
+Make Poison
+Tinkering
+Research
+Alchemy
+Baking
+Tailoring
+Sense Traps
+Blacksmithing
+Fletching
+Brewing
+Alcohol Tolerance
+Begging
+Jewelry Making
+Pottery
+Percussion Instruments
+Intimidation
+Berserking
+Frenzy
+Remove Trap
+Triple Attack
+Harm Touch
+Lay Hands
+Inspect
+Reveal Trap
+Throw Stone
+Awareness
+Bash Door
+Breathe Fire
+Harmony
+Infravision
+No Bash
+Regeneration
+Surprise
+Ultravision
+Regular
+Medicine
+Research ???
+Quest
+Mixing
+Firing
+Research WIZ
+Research MAG
+Research NEC
+Research ENC
+Research Practice
+Tailoring Halfling
+Fletching WoodElf
+Throwingv1
+Shield
+Armor
+Lockpicks
+Drink
+Bandages
+Throwingv2
+Scroll
+Potion
+Wind Instrument
+Stringed Instrument
+Brass Instrument
+Percussion Instrument
+Arrow
+Jewelry
+Skull
+Keyv1
+2H Piercing
+Fishing Pole
+Fishing Bait
+Alcohol
+Keyv2
+Compass
+Martial
+All Instruments
+Charm
+Augmentation
+Original EQ
+Kunark
+Velious
+Luclin
+Planes of Power
+Legacy of Ykesha
+Lost Dungeons of Norrath
+Gates of Discord
+Omens of War
+*Lava Rock
+*Red Mushroom
+*Blue Mushroom
+*Green Leaf
+Something
+1H Sword
+2H Sword
+Dagger
+Flute
+2H Staff
+Dwarven Axe
+War Hammer
+Trumpet
+Spear
+Short Spear
+Morning Star
+Rapier
+Halberd
+2H Hammer
+2H Battle Axe
+Icy Blade(P)
+Dark Book
+Writhing Staff
+Spike Club
+Broom
+Hamm Flat
+Shortsword
+Scepter
+Torch
+Cudgel
+Scythe
+Harvester
+Scimitar
+Falchion
+Crystal Staff
+Bone Wand
+Lantern
+Gold Scepter
+Shovel
+Flamberge
+Stein
+Broad Sword
+Bastard Sword
+Mining Pick
+Battle Axe
+Flame Sword
+Generic (sm)
+Generic (lg)
+Letter
+Forge
+Manastone
+Brew Barrel
+Claws
+Stone
+Pottery Wheel
+Wooden Crook
+Vah Shir Sword
+Executioner Axe
+Lamentation
+Fer'Esh
+Silver 2H Axe
+Great Cleaver
+Serrated Sword
+Ykesha SS
+Swarmcaller
+Sword Passage
+Wurmslayer
+Duster/Sapper
+Ykesha TB
+Tooth
+Bladecatcher
+Sheer Blade
+Ketchata
+Partisan Spear
+KunzarKu'juch
+Shan'Tok
+Legchopper
+Mallet
+Lupine Dagger
+Black Translucent Blade
+White Translucent Blade
+Velium 2H Staff
+Sarnak Skull Staff
+Wood Staff
+Defiance
+Harpoon
+Ragebringer
+War Epic 1H Blue
+War Epic 1H Red
+Bard Epic
+Ranger Epic
+Druid Epic
+Mage Epic
+Necro Epic
+Shaman Epic
+Wizard Epic
+Cleric Epic
+Enc Epic
+Monk Epic
+Paladin Epic
+Red Jeweled Sword
+Blue Jeweled Sword
+Green Jeweled Sword
+Jeweled Dirk
+Velium Sword
+Velium 2H Axe
+Velium Axe
+Velium Spear
+Velium Alt Hammer
+Velium Hammer
+Crystal Sword
+Gold Hammer
+Velium Great Staff
+Velium Long Sword
+Velium Morning Star
+Velium 2H Sword
+Velium Short Sword
+Velium Scimitar
+Velium Warhammer
+Velium Dagger
+Velium Rapier
+Velium Lance
+Crossbow
+Qeynos Shield
+Wooden Shield
+Kite Shield
+Sm Round Shield
+Darkwood Shield
+Bone Shield
+Dark Shield
+Marrs Promise
+Shell Shield1
+Shimmer Orb
+Unicorn Shield
+Nautilus Shield
+Mistmoore Shield
+Chitin Shield
+Fear Shield
+Iks Targ Shield
+Frogskin Shield
+Scale Shield
+Shell Shield2
+Sarnak Shield
+Ornate Runed Shield
+Grey Shield
+Velium Round Shield
+Vah Shir Shield
+Humanoid
+Lycanthrope
+Construct
+Extraplanar
+Magical
+Undead Pet
+Bane Giant
+Vampyre
+Atenha Ra
+Greater Akheva
+Khati Sha
+*UNKNOWN BODYTYPE 17
+Draz Nurakk
+Luggald
+Insect
+Monster
+Elemental
+Dragon
+Summoned Creature
+Bane Dragon
+Familiar
+Proc Pet
+Muramite
+*UNKNOWN BODYTYPE 35
+*UNKNOWN BODYTYPE 36
+*UNKNOWN BODYTYPE 37
+*UNKNOWN BODYTYPE 38
+*UNKNOWN BODYTYPE 39
+*UNKNOWN BODYTYPE 40
+*UNKNOWN BODYTYPE 41
+*UNKNOWN BODYTYPE 42
+*UNKNOWN BODYTYPE 43
+*UNKNOWN BODYTYPE 44
+*UNKNOWN BODYTYPE 45
+*UNKNOWN BODYTYPE 46
+*UNKNOWN BODYTYPE 47
+*UNKNOWN BODYTYPE 48
+*UNKNOWN BODYTYPE 49
+*UNKNOWN BODYTYPE 50
+*UNKNOWN BODYTYPE 51
+*UNKNOWN BODYTYPE 52
+*UNKNOWN BODYTYPE 53
+*UNKNOWN BODYTYPE 54
+*UNKNOWN BODYTYPE 55
+*UNKNOWN BODYTYPE 56
+*UNKNOWN BODYTYPE 57
+*UNKNOWN BODYTYPE 58
+*UNKNOWN BODYTYPE 59
+*UNKNOWN BODYTYPE 60
+*UNKNOWN BODYTYPE 61
+*UNKNOWN BODYTYPE 62
+*UNKNOWN BODYTYPE 63
+*UNKNOWN BODYTYPE 64
+*UNKNOWN BODYTYPE 68
+*UNKNOWN BODYTYPE 69
+*UNKNOWN BODYTYPE 70
+*UNKNOWN BODYTYPE 71
+*UNKNOWN BODYTYPE 72
+*UNKNOWN BODYTYPE 73
+*UNKNOWN BODYTYPE 74
+*UNKNOWN BODYTYPE 75
+*UNKNOWN BODYTYPE 76
+*UNKNOWN BODYTYPE 77
+*UNKNOWN BODYTYPE 78
+*UNKNOWN BODYTYPE 79
+*UNKNOWN BODYTYPE 80
+*UNKNOWN BODYTYPE 81
+*UNKNOWN BODYTYPE 82
+*UNKNOWN BODYTYPE 83
+*UNKNOWN BODYTYPE 84
+*UNKNOWN BODYTYPE 85
+*UNKNOWN BODYTYPE 86
+*UNKNOWN BODYTYPE 87
+*UNKNOWN BODYTYPE 88
+*UNKNOWN BODYTYPE 89
+*UNKNOWN BODYTYPE 90
+*UNKNOWN BODYTYPE 91
+*UNKNOWN BODYTYPE 92
+*UNKNOWN BODYTYPE 93
+*UNKNOWN BODYTYPE 94
+*UNKNOWN BODYTYPE 95
+*UNKNOWN BODYTYPE 96
+*UNKNOWN BODYTYPE 97
+*UNKNOWN BODYTYPE 98
+*UNKNOWN BODYTYPE 99
+Armor Only
+Weapons Only
+1H Weapons Only
+2H Weapons Only
+1H Slash Only
+1H Blunt Only
+Piercing Only
+Hand to Hand Only
+2H Slash Only
+2H Blunt Only
+2H Pierce Only
+Bows Only
+Shields Only
+leftear
+rightear
+shoulder
+leftwrist
+rightwrist
+ranged
+hands
+mainhand
+offhand
+leftfinger
+rightfinger
+chest
+waist
+powersource
+pack1
+pack2
+pack3
+pack4
+pack5
+pack6
+pack7
+pack8
+pack9
+pack10
+cursor
+The Ruins of Kunark
+The Scars of Velious
+The Shadows of Luclin
+The Planes of Power
+The Legacy of Ykesha
+Dragons of Norrath
+Depths of Darkhollow
+Prophecy of Ro
+The Serpent's Spine
+The Buried Sea
+Secrets of Faydwer
+Seeds of Destruction
+Underfoot
+House of Thule
+Veil of Alaris
+Rain of Fear
+GOD DAMN 
+FUCKING 
+MOTHER FUCKING 
+ FUCKER
+ MOTHER FUCKER
+ ASSHOLE
+ FUCKTARD
+ FUCKING RETARDED MONKEY
+ GOD DAMN SHORT BUS PASSENGER
+ ASSMONKEY
+ PIGFUCKER
+ PEEN
+ FUCKING IDIOT
+ STUPID FUCKER
+ DUMBASS
+ FUCKING DUMBASS
+ STUPID FUCK
+CHRIST 
+JESUS FUCK 
+JESUS FUCKING CHRIST 
+FUCKING CHRIST 
+GKFJDGJKFDGJKDF 
+%edont you know how to use a simple %acommand%y
+%ei'm pretty sure you're on %acrack%y%egood job%y, cant you do anything %aright%y
+%ewhatever you're %asmoking, pass it %aalong%y
+%e%aRTFM%y
+%e%aRTFM%y, until then fuck off%y
+%eget a %abrain%y
+%eyou fucking broke it%y
+%egood job%y. what's next? your head on a %astick thats %awhat%y
+%ewhy dont you %aread the %areference%y
+%eget a %aclue%y
+%e%aread the %areference%y
+%e%aread the %areference%y, until then fuck off%y
+<BR><c "#00FFFF">
+FF0000
+00FF00
+Clicky
+FF00FF
+FFFF00
+9F9F00
+Focus
+9F9F9F
+<BR><c "#%s">Spell Info for %s effect: %s<br>
+ID: %04d&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+Duration: Permanent<br>
+Duration: Unknown<br>
+Duration: %1.1f minutes<br>
+RecoveryTime: %1.2f&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RecastTime: %1.2f <br>
+Range: %1.0f
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+PushBack: %1.1f
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+AERange: %1.0f<br>
+Resist: Corruption
+Resist: Prismatic[Avg]
+Resist: Chromatic[Low]
+Resist: Disease
+Resist: Poison
+Resist: Cold/Ice
+Resist: Fire
+Resist: Magic
+Resist: Unresistable
+&nbsp;&nbsp;&nbsp;(Resist Adj.: %d)<br>
+%s(%d)
+<br><br>
+Cast on you: %s<br>
+Cast on another: %s<br>
+Wears off: %s<br>
+Item ID: %d<br>
+Base DPS: %5.3f<br>
+Stackable Count: %d<br>
+Value:
+ %dpp
+ %dgp
+ %dsp
+ %dcp
+Item Timer: <c "#20FF20">Ready</c><br>
+Item Timer: %d:%02d:%02d<br>
+Item Timer: %d:%02d<br>
+Item Lore: %s<BR>
+Procs at level 1 (Proc rate modifier: %d)<BR>
+<c "#FF4040">
+%sProcs at level %d%s (Proc rate modifier: %d)<BR>
+(Combat)
+Proc rate Modifier: %d<BR>
+Clickable at level 1<br>
+%sClickable at level %d%s<BR>
+Container Type: %s<BR>
+Champion
+Myrmidon
+Warlord
+Overlord
+Vanquisher
+Imperator
+Vicar
+Templar
+High Priest
+Archon
+Prelate
+Exemplar
+Cavalier
+Knight
+Crusader
+Lord Protector
+Holy Defender
+Pathfinder
+Outrider
+Warder
+Forest Stalker
+Plainswalker
+Huntmaster
+Shadow Knight
+Reaver
+Revenant
+Grave Lord
+Dread Lord
+Scourge Knight
+Bloodreaver
+Wanderer
+Preserver
+Hierophant
+Storm Warden
+Natureguard
+Stormcaller
+Disciple
+Grandmaster
+Transcendent
+Stone Fist
+Ashenhand
+Minstrel
+Troubadour
+Virtuoso
+Maestro
+Herald
+Lyricist
+Blackguard
+Assassin
+Deceiver
+Nemesis
+Shadowblade
+Mystic
+Luminary
+Oracle
+Prophet
+Soothsayer
+Spiritwatcher
+Heretic
+Defiler
+Warlock
+Arch Lich
+Wraith
+Deathcaller
+Channeler
+Evoker
+Sorceror
+Arcanist
+Grand Arcanist
+Arch Arcanist
+Magician
+Elementalist
+Conjurer
+Arch Mage
+Arch Convoker
+Arch Magus
+Grand Summoner
+Illusionist
+Beguiler
+Phantasmist
+Coercer
+Bedazzler
+Entrancer
+Primalist
+Animist
+Savage Lord
+Feral Lord
+Wildblood
+Arch Animist
+Brawler
+Vehement
+Rager
+Ravager
+Juggernaut
+Follow
+Guard
+Unknown Class
+DoodooHead
+ERROR
+(Legendary)
+(Enchanted)
+Glamour-Stone
+GetSpellLevelNeeded: Unable to get Class Data
+Warrior/
+Cleric/
+Paladin/
+Ranger/
+Shadow Knight/
+Druid/
+Monk/
+Bard/
+Rogue/
+Shaman/
+Necromancer/
+Wizard/
+Magician/
+Enchanter/
+Beastlord/
+Berserker/
+If you see this, report it as a bug! GetEQStr_Detour: caller: %p, arg1 %d
+[%4] - [ANON %2 %3 (%5)] %6 %7 %8 %9 %1
+[%2] - [ANONYMOUS] %3 %4 %1
+[%2] - [ANONYMOUS] %3 %1
+[%4] - [%2 %3 (%5)] %6 %7 %8 %9 %1
+No Value
+You prepare your camp instantly due to being in a safe place and out of combat.
+Enables/disables map functions
+Displays PCs
+PCConColor
+Displays PCs in consider colors
+Displays group members in a specific color
+Displays mounts
+Displays NPCs
+NPCConColor
+Displays NPCs in consider colors
+Displays Untargetable NPCs
+Displays pets
+Displays corpses
+Displays chestesses
+Displays hidden triggers
+Displays hidden traps
+Displays hidden timers
+Displays ground items
+Displays your target
+TargetLine
+Displays a line to your target
+TargetRadius
+Sets radius of a circle around your target to # (omit or set to 0 to disable)
+TargetMelee
+Draws a melee-range circle around your target
+Vector
+Displays heading vectors
+Custom
+Sets custom filter (omit to disable)
+CastRadius
+Sets radius of casting circle to # (omit or set to 0 to disable)
+NormalLabels
+Toggles non-MQ2 label display
+Allows display of right-click context menu
+SpellRadius
+Sets radius of 2nd casting circle to # (omit or set to 0 to disable)
+Displays Auras
+Displays inanimate objects
+Displays banners
+Displays campfires
+PCCorpse
+Displays PC corpses, when corpse setting is on
+NPCCorpse
+Displays NPC corpses, when corpse setting is on
+Displays mercenaries
+Displays named NPCs
+TargetPath
+Draws EQ Path to selected target
+/mapfilter
+'%s' requires '%s' option.  Please enable this option first.
+%s: Off
+%s (Color: %d %d %d)
+%s is now set to: %s
+%s is now set to: Off
+%s is now set to: %d
+Map Filters
+Map filtering settings:
+Map filtering options:
+%s%s: %s
+'option' color [r g b]: Set display color for 'option' (Omit to reset to default)
+color
+Option '%s' does not have a color.
+Option '%s' color set to: %d %d %d
+%s-Color
+Usage: /mapfilter [option|help]
+Usage: /highlight [reset|spawnfilter|[color # # #]]
+Highlight color: %d %d %d
+reset
+Highlighting reset
+%d mapped spawns highlighted
+Usage: /maphide [spawnfilter|reset]
+Map spawns regenerated
+%d mapped spawns hidden
+Usage: /mapshow [spawnfilter|reset]
+%d previously hidden spawns shown
+Normal naming string: %s
+Target naming string: %s
+Naming Schemes
+Usage: /mapnames <target|normal> [value|reset]
+shift
+Invalid
+Usage: /mapclick <list|<key[+key[...]]> <clear|command>>
+%d special right-click commands
+Invalid combo '%s'
+KeyCombo%d
+Right Click
+%s cleared
+Value extracted for %s was %s
+Clicking mouse by relative offset
+Clicking mouse at absolute position
+'%s' mouse click is either invalid or should be done using /notify
+You must have a target selected for /click x target.
+right
+center
+%d %d
+Usage: /click <left|right>
+Bad command: %s
+InitializeParser()
+ShutdownParser()
+Failed to parse /delay condition '%s', non-numeric encountered
+/delay ending early, conditions met
+Reached end of macro.
+tallon
+vallon
+sullon
+rallos
+GetGameState()=%d vs %d
+character creation instance found
+CC_Solo_Button
+CC_SelfFound_Button
+CC_Hardcore_Button
+CC_Help
+Characters in Solo Mode cannot group with other players under any circumstances - they must face the trials of their journey alone. While it is possible to leave Solo Mode during your adventure, you cannot enter it after character creation. Solo adventurers will find that their enemies tend to drop slightly more gear - and gear of somewhat higher quality - than those encountered by others. Solo Mode may be combined with Self-Found and/or Hardcore Modes for an even greater challenge.
+Characters in Self-Found Mode must rely entirely on what they earn themselves. They may not trade with other players, purchase items from Bazaar traders, receive parcels, or loot corpses they did not personally help defeat. They also have no access to most account-level benefits, including global flags, veteran rewards, or unlocked waypoints. Self-Found adventurers will find that their enemies tend to drop slightly more gear - and gear of somewhat higher quality - than those encountered by others. Self-Found Mode may be combined with Solo and/or Hardcore Modes for an even greater challenge.
+Characters in Hardcore Mode face permanent consequences. If a character in this mode dies, they immediately lose access to Hardcore Mode and are removed from the Hardcore leaderboard. Characters in Hardcore Mode are ranked on an out-of-game leaderboard that can also be accessed in-game through a command. Hardcore adventurers will find that their enemies tend to drop slightly more gear - and gear of somewhat higher quality - than those encountered by others. Hardcore Mode may be combined with Solo and/or Self-Found Modes for an even greater challenge.
+SOLO MODE ENABLED
+Default color for PCs
+PCCon
+PCs by con color
+PCPVPTeam
+PCs by PVP team color
+PCRaid
+Raid members
+PCClass
+PCs by class color(raid settings)
+PCGroup
+Group members
+PCTrader
+Traders
+NPC default color
+NPCCon
+NPCs by con color
+NPCClass
+NPCs by class color (raid settings)
+NPCMerchant
+NPC Merchants
+NPCBanker
+NPC Bankers
+NPCAssist
+NPCs from main assist
+NPCMark
+Marked NPCs
+PetNPC
+Pet with NPC owner
+PetPC
+Pet with PC owner
+Pet by class color (raid settings)
+Corpses
+CorpseClass
+Corpse by class color (raid settings)
+Initializing Spawn-related Hooks
+Caption Colors
+Shutting Down Spawn-related Hooks
+Usage: /captioncolor <list|<name off|on|#>>
+Caption Color Settings
+----------------------
+%s %s (%s)
+%s ON Color: %d %d %d. (%s)
+Invalid option '%s' while '%s' is off.
+Hate by 
+Stop Rain
+Remove in Combat
+Sacrifice
+Silence
+Maximum Mana by 
+Haste v2 by 
+Hitpoints v2 by 
+Complete Heal: With Recast Blocker Buff
+Fearless
+Call Pet
+Translocate to 
+Bind Point
+Anti-Gate
+Summon Warder: %s
+Summon Familiar: %s
+Summon Item Into Bag: 
+Increase All Resists
+Effective Casting Level by 
+Summon Horse: %s
+Aggro Multiplier by 
+Food/Water
+Curse Counter by 
+Make Weapons Magical
+Singing Skill by 
+Haste v3 by 
+Healing Effectiveness by 
+Reverse Damage Shield (%d)
+Stacking Modifier: %d
+Spell Damage by 
+Healing by 
+Spell Resist Rate by %d
+Spell Haste by 
+Spell Duration by 
+Spell Range by 
+Spell/Bash Hate by 
+Decrease Chance of Using Reagent by 
+Spell Mana Cost by 
+Limit: Max Level(%d) (lose %d%c per level over cap)
+Limit: Max Level(%d)
+Limit: Resist 
+Cold/Ice
+ allowed
+ excluded
+Limit: Target(
+Limit: Effect(
+Limit: 
+Detrimental Spells Only
+Beneficial Spells Only
+Beneficial Group Spells Only
+Unknown%03d
+Limit: Spell(
+Limit: Min Duraction(%d sec)
+Limit: Instant spells only
+Limit: Minimum Level (%d)
+Limit: Minimum Cast Time (%.1f sec)
+Teleport to %d, %d, %d in %s facing %s
+Hitpoints by %d (%d percent max)
+Stacking: Block new spell if slot %d is effect '
+' and < 
+Stacking: Overwrite existing spell if slot %d is effect '
+Death Save (
+300 Hit Point Heal
+8000 Hit Point Heal
+Suspended Minion (
+Current HP Only
+Current HP, Buffs, Weapons
+Summon Pets: %s x%d for %d seconds
+Balance Party Health with %d percent penalty
+Dispel Detrimental
+Illusion: Target
+Spell-Damage Shield for %d
+Chance to Reflect Spell by 
+All Stats by %d percent
+Drunk if Alcholol Tolerance is below %d
+Mitigate Spell Damage by %d percent until %d absorbed
+Mitigate Melee Damage by %d percent until %d absorbed
+Absorb Damage (melee or spell, calc unknown)
+Attempt Sense (Cursed) Trap(%d,%d)
+Attempt Disarm (Cursed) Trap(%d,%d)
+Attempt Destroy (Cursed) Lock(%d,%d)
+Increase Pet Power (%d)
+Melee Mitigation by %d percent
+All Skills
+Chance to Critical Hit for %s by %d%%
+Chance to Critical Cast by %d percent
+Chance to Crippling Blow by %d percent
+Chance to Avoid Melee by %d percent
+Chance to Riposte by %d percent
+Chance to Dodge by %d percent
+Chance to Parry by %d percent
+Dual Wield by %d percent
+Increase Double Attack by %d percent
+Instrument Modifier (%d)
+Chance to Resist Spells by %d percent
+Increase Chance to Resist Fear Spell by %d percent
+Hundred Hands Effect
+Increase Melee Skill Check by %d percent
+Increase Chance to Hit by %d percent with %s
+All Skills Damage Modifier by %d%%
+All Skills Minimum Damage Modifier by %d%%
+Chance to block by %d percent
+Endurance by %d per tick
+Endurance Pool by %d
+Hate by %d percent
+Skill Attack (%d)
+Fade Memories
+Stun Resist (%d)
+Strikethrough (%d)
+Skill Damage Taken (%d)
+Endurance by %d
+Increase Proc Modifier by %d percent
+Ranged Proc (%d)
+Illusion Other
+Mass Group Buff
+Group Fear Immunity (%d0.00 sec)
+Rampage
+AE Taunt
+Flesh to Bone
+Cancel Magic - Benefical Only(%d)
+Pet Shield (%d.00 sec)
+AE Melee (%d)
+Frenzied Devastation (%d0.00 sec)
+Max HP change by (%d)
+Accuracy by %d percent
+Slay Undead(%d)
+Reduce Skill Timer(%d)
+Divine Save (%d)
+Triple Backstab (%d)
+Add Instrument Modifier(%d)
+UnknownStat(%d)
+ Cap by %d
+Add Attack Chance(%d)
+Critical DoT (%d)
+Critical Heal (%d)
+Flurry Chance (%d)
+Additional Damage to Spell(%d)
+Improved Spell Effect: %s
+Purify (%d)
+Spell Crit Chance (%d)
+Increase Incoming Spell Damage by %d percent
+Empathy
+Decrease Height by %d percent
+Wake the Dead (%d)
+Doppleganger
+Wake the Dead 2 (%d)
+Zone Suspend minion
+Gate to Casters Bindpoint
+Decrease Reuse Timer by %d.00 sec
+Limit: Spells Only, No Disciplines
+Observer (%d)
+Set Duration Invis
+Set Duration Invis to Undead
+Reduce Target Hate (%d)
+Gate to Starting City
+Add Defensive Proc: %s
+Hp to Mana (%d)
+Mana Absorb percent Damage (%d)
+Critical Damage Mob(%d)
+Summon to Corpse
+Trigger Effect: %s on Fade
+Decrease Hitpoints by %d (L%d) to %d(L%d)
+Increase experience rate by %d percent.
+Focus: Trigger [%s] on Spell Cast (%d%% Chance)
+Cast DD as Well(%d%% Chance, Spell: %s)
+Limit: Minimum Mana Cost (%d)
+Chance to Trigger on Non-Trivial Killshot: %s
+Chance to Create Essence Emerald on Non-Trivial Killshot
+Change Body Type to 
+ Corruption Counter by 
+Corruption Resist by 
+Focus: Reduce Spell Cast Time by %d (No Cap)
+Focus: Reduce Spell Cast Time by %.1f seconds
+FearStun target for %.1f seconds up to level %d
+ melee damage by %d percent if you are located 
+behind your opponent
+in front of your opponent 
+ melee damage by %d if you are located 
+ incoming melee damage by %d percent if the attacker is located 
+behind you
+in front of you 
+ incoming melee damage by %d if the attacker is located 
+Focus: Spell Heal Damage and DoT (%d percent)
+Focus: Spell Heal Damage and DoT Amount (%d)
+Health Transfer
+Focus: Incoming Resist Modifier (%d)
+Limit: Focus Reuse Timer (%d seconds)
+Maximum Proc Rate: %d per %d seconds
+Modify AC Avoidance by %d percent. (Stackable)
+Modify AC Mitigation by %d percent. (Stackable)
+Modify Melee Accuracy by %d percent. (Stackable)
+Reduces incoming melee damage by %d percent, consuming Endurance
+Mana by %d percent of Maximum Mana or %d (whichever is least)
+Endurance by %d percent of Maximum Endurance or %d (whichever is least)
+Hit Points by %d percent of Maximum Hit Points or %d (whichever is least)
+%d (L%d) to 
+%d (L%d)
+%d (L1) to 
+%d to %d (random)
+UnknownCalc%03d
+%s\Configs\%s
+FindInvSlotForContents(0x%08X) (0x%08X)
+pInvSlotMgr->SlotArray[%d] Contents==0x%08X
+%d slot %d wnd %d %d %d
+Illegal arithmetic in calculation
+Divide by zero in calculation
+Modulus by zero in calculation
+Unparsable in Calculation: '%c'
+Defender
+Soulbinder
+Eye of
+Diaku
+mount
+trigger
+untargetable
+mercenary
+flyer
+(%d-%d) %s
+ Race:%s
+ Class:%s
+ Body:%s
+ Guild:%s
+ at %1.2f,%1.2f
+ Radius:%1.2f
+%1.2f
+ NoPC:%1.2f
+ ID:%d
+ NotID:%d
+ Alert:%d
+ NoAlert:%d
+ NearAlert:%d
+ NotNearAlert:%d
+ Trader
+ Light
+nopet
+npccorpse
+pccorpse
+object
+banner
+campfire
+noguild
+trader
+named
+tribute
+knight
+healer
+slower
+targetable
+range
+radius
+light
+GUILD
+alert
+noalert
+notnearalert
+nearalert
+zradius
+notid
+nopcnear
+Alert list %d cleared.
+%s, a
+%s, an
+%s, the
+Unknown Guild
+y*GM*
+-y*Guide Applicant*
+-y*Guide*
+g*RP*
+g*Anon*
+g<LD>
+g<Sneak>
+g<AFK>
+g<LFG>
+g<Trader>
+ <PET>
+ <NPC>
+x%1.2f %s
+x %1.2fZ
+Pri: 
+Off: 
+r*CHEST*
+r*TRAP*
+r*TRIGGER*
+r*TIMER*
+r*UNTARGETABLE*
+List of matching spawns
+--------------------------------
+There %s 
+x %s%s in %s.
+ was not found.
+%s%d/%d
+Drop%04d/%d
+%s is: %s
+SWho Filter
+Filter Names
+Filter%d
+Deepest Guk
+Miragul's
+Mistmoore
+Rujarkian
+Takish
+INVALID_SKILL
+%s\DebugSpew.log
+GetNextArg - No matching quote, returning empty string
+GetArg - No matching quote, returning entire string
+Source = %s
+Dest = %s
+\wineq\
+\testeqgame.exe
+\eqgame.exe
+<c "#%06X">
+<c "#%s">
+EQUALSIGN
+SEMICOLON
+LEFTBRACKET
+UNKNOWN_ZONE
+Common
+Common Tongue
+Barbarian
+Erudian
+Elvish
+Dark Elvish
+Dwarvish
+Troll
+Gnomish
+Halfling
+Thieves Cant
+Old Erudian
+Elder Elvish
+Froglok
+Goblin
+Gnoll
+Combine Tongue
+Elder Tier'Dal
+Lizardman
+Orcish
+Faerie
+Elder Dragon
+Dark Speech
+Vah Shir
+Unknown Spell
+%c0%s%s%c
+GetItemLink() returns '%s'
+%s\equname.txt
+equname = %s
+equname.txt
+Hitpoints
+Attack Speed
+Mana Regeneration
+Pacify
+Mesmerize
+Summon Item
+Summon Pet
+Disease Counter
+Poison Counter
+Invunerability
+Fire Resist
+Cold Resist
+Poison Resist
+Disease Resist
+Magic Resist
+Damage Shield
+Max Hitpoints
+Summon Skeleton Pet
+Reaction Radius
+Complete Heal (with duration)
+Curse Counter
+Screech
+Percentage Heal
+Corruption Counter
+Corruption Resist
+UndefinedEffect%03d
+Slot %d: 
+Decrease 
+Increase 
+Hitpoints by 
+ per tick
+AC by 
+ATK by 
+Movement by 
+STR by 
+DEX by 
+AGI by 
+STA by 
+INT by 
+WIS by 
+CHA by 
+Attack Speed by 
+Invisibility
+See Invisible
+Water Breathing
+Mana by 
+Not Implemented
+Faction by 
+Blindness
+Stun target for %.1f seconds up to level %d
+Charm target up to level %d
+Fear up to level %d
+Stamina Loss by 
+Bind Affinity
+ (Secondary Bind Point)
+Gate to Secondary Bind Point
+Cancel Magic
+Invisibility versus Undead
+Invisibility versus Animal
+Modify NPC Aggro Radius by %d up to level %d
+Mesmerize target up to level %d
+Unknown%d
+Summon Item: 
+Summon Pet: %s
+Disease Counter by 
+Poison Counter by 
+Block Twincast
+Invulnerability
+Destroy Target
+Shadowstep
+Allow crippling blows, regardless of HP or Class
+Lycanthropy
+Heal for %d percent of your melee damage on target.
+Fire Resist by 
+Cold Resist by 
+Poison Resist by 
+Disease Resist by 
+Magic Resist by 
+Sense Undead
+Sense Summoned
+Sense Animals
+Absorb Damage by 
+True North
+Levitate
+Illusion: 
+Damage Shield by 
+Identify
+%d percent chance to wipe target's hate list
+SpinStun target for %.1f seconds up to level %d
+Eye Of Zomm
+Kills your pet and restores 75 percent of its mana cost
+Maximum Hitpoints by 
+Summon Skeleton Pet: %s
+Bind Sight
+Voice Graft
+Locate Corpse
+Absorb Magic Damage by 
+HP when cast by 
+Resurrect and restore %d&pct experience
+Summon Player
+Gate to 
+Teleport Group to 
+%d, %d, %d in %s facing %s
+Toss Down(%d)
+Toss Up(%d)
+Add Proc: '%s' id: %d
+Adjust Reaction Radius %d, up level %d
+Magnification by 
+Evacuate to %d, %d, %d in %s facing %s
+Player Size by 
+Summon Corpse
+leftmouse
+leftmouseheld
+leftmouseheldup
+rightmouse
+rightmouseup
+rightmouseheld
+rightmouseheldup
+Updating WndNotification target '%s'
+Adding WndNotification target '%s'
+XMLRead(%s)
+EQUI.xml
+MQUI.xml
+Initializing MQ2 Windows
+world%d
+/windows
+/notify
+/itemnotify
+/itemslots
+Shutting down MQ2 Windows
+GenerateMQUI::Not Generating MQUI.xml, no files in our list
+default
+%s\uifiles\%s\EQUI.xml
+%s\uifiles\%s\MQUI.xml
+GenerateMQUI::Generating %s
+GenerateMQUI::could not open %s
+</Composite>
+GenerateMQUI::Inserting our xml files
+GenerateMQUI::Inserting %s
+<Include>%s</Include>
+%s\UI_%s_%s.ini
+UISkin
+GenerateMQUI::could not open %s (non-fatal)
+GenerateMQUI::giving up
+DestroyMQUI: removing file %s
+%s\uifiles\%s\%s
+UI file %s not found in either uifiles\%s or uifiles\default.  Please copy it there, reload the UI, and reload this plugin.
+Adding XML File %s
+UI file %s added, you must reload your UI for this to take effect.
+Removing XML File %s
+enviro
+Window '%s' not available.
+Window '%s' child '%s' not found.
+Window '%s' child '%s' cannot accept this notification.
+x] [Custom UI-specific: 
+List of available windows
+%d available windows
+Window '%s' not available
+Listing child windows of '%s'
+%d child windows
+enter
+newvalue
+contextmenu
+mouseover
+history
+leftmousehold
+resetdefaultposition
+Syntax: /notify <window|"item"> <control|0> <notification> [notification data]
+WndNotify: link found, Data = 1
+listselect
+tabselect
+Could not send notification to %s %s
+Invalid notification '%s'
+Syntax: /itemnotify <slot|#> <notification>
+     or /itemnotify in <bag slot> <slot # in bag> <notification>
+sharedbank
+trade
+Invalid item slot '%s'
+SLOT IS NULL: Could not send notification to %s %s
+ItemNotify: Calling SendWndClick
+List of available item slots
+%d %d %d
+%d available item slots
+invalid stof argument
+stof argument out of range
+.\thj.ini
+Syntax: /fov 45-90
+Fov changed to 
+Camera
+EqGraphicsDX9.dll
+0123456789ABCDEFabcdef-+Xx
+0123456789ABCDEFabcdef-+XxPp
+0123456789-+Ee
+%s will be ready in %d seconds.
+MapFilterWnd
+PC_Checkbox
+NPC_Checkbox
+Group_Checkbox
+Pets_Checkbox
+Corpses_Checkbox
+Constructor for MapFilterWnd
+On Show
+Found PC Checkbox
+Found NPC Checkbox
+Found Group Checkbox
+Found Pets Checkbox
+Found Corpses Checkbox
+MapFiltersBtn
+Detoured Map WndNotification
+The ability will be ready in %d seconds.
+WaypointsWnd
+ContinentsList
+WaypointsList
+SelectedWaypointButton
+MyExpeditionButton
+GroupCheckbox
+PortGroupLabel
+AutoAcceptCheckbox
+To enable this feature, speak to Tearel.
+You are not part of an expedition.
+Your group will be transported with you.
+Transport yourself directly to your Expedition.
+Antonica
+Faydwer
+The Planes
+Taelosia
+Discord
+IW_AltCurrPage
+Stored Page
+Stored Create Button
+Second Click - Main Hook
+First Click - Main Hook
+Loading XML Files
+THJ_MapFilterWnd.xml
+THJ_WaypointsWnd.xml
+Cleaning UI up
+THJ_Waypoints.xml
+@?fff?
+333333
+?333333
+6@33S@
+UUUUUU
+333333
+?333333
+?UUUUUU
+?$rxxx
+UUUUUU
+?333333
+?333333
+?UUUUUU
+?$rxxx
+RUUUUU
+TUUUU
+UUUUUU
+?UUUUUU
+m0_$@
+UUUUUU
+?UUUUUU
+m0_$@
+m0_$@
+m0_$@
+atan2
+4lkQg
+?ju!4
+?V:e:
+5SmT4
+*+xi(
+?ZEM-'^
+?>6)}
+?{yK+;
+?765@Z
+D<xZu
+?l$G~
+^\sY0
+7Z8>	
+?e')lW
+?asin
+i^^?(>
+Y:/(A6>
+MVx:>
+[j&,>
+?6FID
+?5L$.
+F\IE>
+?A%My
+B'=>>
+?QNT	
+in]D>
+F"VM>
+30}->
+0)LK>
+?43-s
+?P`E5
+?uZEeu
+uZEeu
+uZEeu
+?uZEeu
+?UUUUUU
+|u?!u$
+Nu?-HF
+d? cf>	
+&2@UUUUUU
+#wi#:
++*tsJ
+s{c|H
+UUUUUU
+>o3fW
+s{c|H
++*tsJ
+?c3y?
+#wi#:=
+?."S-
+A]?VJ
+&2@UUUUUU
+Nu?-HF
+ cf>	
+UUUUUU
+333333
+?333333
+?UUUUUU
+?$rxxx
+UUUUUU
+?333333
+?333333
+?UUUUUU
+?$rxxx
+RUUUUU
+TUUUU
+UUUUUU
+?UUUUUU
+m0_$@
+UUUUUU
+?UUUUUU
+m0_$@
+m0_$@
+m0_$@
+RSDS<
+C:\Users\catapultam\Documents\GitHub\THJ\eqemupatcher\rof\dinput8.pdb
+.text
+.text$di
+.text$mn
+.text$x
+.text$yd
+.idata$5
+.00cfg
+.CRT$XCA
+.CRT$XCC
+.CRT$XCL
+.CRT$XCU
+.CRT$XCZ
+.CRT$XIA
+.CRT$XIC
+.CRT$XIZ
+.CRT$XLA
+.CRT$XLZ
+.CRT$XPA
+.CRT$XPX
+.CRT$XPXA
+.CRT$XPZ
+.CRT$XTA
+.CRT$XTZ
+.rdata
+.rdata$CastGuardVftablesA
+.rdata$CastGuardVftablesC
+.rdata$T
+.rdata$r
+.rdata$sxdata
+.rdata$voltmd
+.rdata$zzzdbg
+.rtc$IAA
+.rtc$IZZ
+.rtc$TAA
+.rtc$TZZ
+.tls$
+.tls$ZZZ
+.xdata$x
+.edata
+.idata$2
+.idata$3
+.idata$4
+.idata$6
+.data
+.data$r
+.data$rs
+.fptable
+.rsrc$01
+.rsrc$02
+dinput8.dll
+??0CChatWindow@EQClasses@@QAE@PAVCXWnd@1@@Z
+??0CMapViewWnd@EQClasses@@QAE@PAVCXWnd@1@@Z
+??0CSidlScreenWnd@EQClasses@@QAE@PAVCXWnd@1@PAVCXStr@1@HHPAD@Z
+??0CSidlScreenWnd@EQClasses@@QAE@PAVCXWnd@1@VCXStr@1@@Z
+??0CSidlScreenWnd@EQClasses@@QAE@XZ
+??0CXRect@EQClasses@@QAE@HHHH@Z
+??0CXRect@EQClasses@@QAE@XZ
+??0CXStr@EQClasses@@QAE@ABV01@@Z
+??0CXStr@EQClasses@@QAE@PBD@Z
+??0CXStr@EQClasses@@QAE@XZ
+??0EQItemList@EQClasses@@QAE@XZ
+??0EQPlayer@EQClasses@@QAE@PAV01@EIEPAD@Z
+??0KeyCombo@EQClasses@@QAE@E_N00@Z
+??0KeyCombo@EQClasses@@QAE@XZ
+??1CSidlScreenWnd@EQClasses@@QAE@XZ
+??1CXStr@EQClasses@@QAE@XZ
+??1EQPlayer@EQClasses@@QAE@XZ
+??4CCXStr@EQClasses@@QAEAAV01@PBD@Z
+??4CXStr@EQClasses@@QAEAAV01@ABV01@@Z
+??4CXStr@EQClasses@@QAEAAV01@PBD@Z
+??8KeyCombo@EQClasses@@QAEHABV01@@Z
+??YCXStr@EQClasses@@QAEXPBD@Z
+??_VCChatWindow@EQClasses@@SAXPAX@Z
+?AddColumn@CListWnd@EQClasses@@QAEHVCXStr@2@HII@Z
+?AddColumn@CListWnd@EQClasses@@QAEHVCXStr@2@PAVCTextureAnimation@2@HII11@Z
+?AddLine@CListWnd@EQClasses@@QAEHPBVSListWndLine@2@@Z
+?AddString@CListWnd@EQClasses@@QAEHABVCXStr@2@KIPBVCTextureAnimation@2@PBD@Z
+?AddString@CListWnd@EQClasses@@QAEHPBDKIPBVCTextureAnimation@2@0@Z
+?AppendSTML@CStmlWnd@EQClasses@@QAE?AVCXSize@2@VCXStr@2@@Z
+?AttachAltKeyToEqCommand@KeypressHandler@EQClasses@@QAE_NABVKeyCombo@2@I@Z
+?AttachKeyToEqCommand@KeypressHandler@EQClasses@@QAE_NABVKeyCombo@2@I@Z
+?BringToTop@CXWnd@EQClasses@@QAEX_N@Z
+?CalcFillRect@CGaugeWnd@EQClasses@@QBE?AVCXRect@2@PAV32@H@Z
+?CalcLinesFillRect@CGaugeWnd@EQClasses@@QBE?AVCXRect@2@PAV32@H@Z
+?CalculateFirstVisibleLine@CListWnd@EQClasses@@QAEXXZ
+?CalculateHSBRange@CSidlScreenWnd@EQClasses@@QAEXXZ
+?CalculateHSBRange@CStmlWnd@EQClasses@@QAEXH@Z
+?CalculateVSBRange@CListWnd@EQClasses@@QAEXXZ
+?CalculateVSBRange@CSidlScreenWnd@EQClasses@@QAEXXZ
+?CalculateVSBRange@CStmlWnd@EQClasses@@QAEXH@Z
+?CanBreakAtCharacter@CStmlWnd@EQClasses@@SA_NG@Z
+?CanDrop@EQ_Item@EQClasses@@QAEH_NHHH@Z
+?CanEquip@EQ_Character@EQClasses@@QAEHPAKKK@Z
+?CanStartMemming@CSpellBookWnd@EQClasses@@QAE_NH@Z
+?CastSpell@EQ_Character1@EQClasses@@QAEEEHPAPAVEQ_Item@2@HHHHHH_NH@Z
+?Center@CXWnd@EQClasses@@QAEXXZ
+?CenterPoint@CXRect@EQClasses@@QBE?AVCXPoint@2@XZ
+?ChangeBoneStringSprite@EQPlayer@EQClasses@@QAEPAUS3D_STRINGSPRITE@2@PAUT3D_DAG@2@PAD@Z
+?CharSelectClassNameFunc@EQ_Character1@EQClasses@@QAEXI@Z
+?CleanGameUI@CDisplay@EQClasses@@QAEXXZ
+?Clear@CChatWindow@EQClasses@@QAEXXZ
+?Clear@KeyCombo@EQClasses@@QAEXXZ
+?Clear@MapViewMap@EQClasses@@QAEXXZ
+?ClearAllSel@CListWnd@EQClasses@@QAEXXZ
+?ClearCommandStateArray@KeypressHandler@EQClasses@@QAEXXZ
+?ClickedPlayer@CEverQuest@EQClasses@@QAEPAVEQPlayer@2@HH@Z
+?CloseAndUpdateEditWindow@CListWnd@EQClasses@@QAEXXZ
+?ClrFocus@CXWnd@EQClasses@@QAEXXZ
+?ConvertToRes@CSidlScreenWnd@EQClasses@@QAEHHHHH@Z
+?CreateChildrenFromSidl@CSidlScreenWnd@EQClasses@@QAEXXZ
+?CreateItemTagString@EQ_Item@EQClasses@@QAEPADPADH@Z
+?Cur_Endurance@EQ_Character1@EQClasses@@QAEHH@Z
+?Cur_HP@EQ_Character1@EQClasses@@QAEHHE@Z
+?Cur_Mana@EQ_Character1@EQClasses@@QAEHH@Z
+?Cur_Mana@EQ_Character@EQClasses@@QAEHXZ
+?DamageDisplay@EQ_Character1@EQClasses@@QAEXHHHH@Z
+?DeleteAll@CComboWnd@EQClasses@@QAEXXZ
+?DeleteAll@CListWnd@EQClasses@@QAEXXZ
+?DestroyHeldItemOrMoney@EQ_PC@EQClasses@@QAEXXZ
+?DisplayBuyOrSellPrice@CMerchantWnd@EQClasses@@QAEX_NPAVEQ_Item@2@@Z
+?DisplayText@CTextOverlay@EQClasses@@QAEXPADHHHHHH@Z
+DllRegisterServer
+DllUnregisterServer
+?DoAllDrawing@CXWnd@EQClasses@@QBEHXZ
+?DoAttack@EQPlayer@EQClasses@@QAEHEEPAV12@@Z
+?DoCombatAbility@EQ_Character@EQClasses@@QAE_NHH@Z
+?DoHotButton@CHotButtonWnd@EQClasses@@QAEXHH@Z
+?DoTellWindow@CEverQuest@EQClasses@@QAEXPAD00PAXH_N@Z
+?DrawChildren@CXWnd@EQClasses@@QBEHXZ
+?DrawColoredRect@CXWnd@EQClasses@@SAHVCXRect@2@K0@Z
+?DrawCurrentPage@CTabWnd@EQClasses@@QBEHXZ
+?DrawCursor@CXWndManager@EQClasses@@QBEHXZ
+?DrawSidlPiece@CSidlScreenWnd@EQClasses@@QBEHPAVCScreenPieceTemplate@2@VCXRect@2@1@Z
+?DrawTab@CTabWnd@EQClasses@@QBEHH@Z
+?DrawTooltip@CInvSlotWnd@EQClasses@@QBEHPBVCXWnd@2@@Z
+?DrawTooltip@CXWnd@EQClasses@@QBEHPBV12@@Z
+?DrawTooltipAtPoint@CXWnd@EQClasses@@QBEXVCXPoint@2@@Z
+?DrawWindows@CXWndManager@EQClasses@@QBEHXZ
+?DrawWrappedText@CTextureFont@EQClasses@@QBEHPAVCXStr@2@HHHPAVCXRect@2@KGH@Z
+?DropHeldItemOnGround@CEverQuest@EQClasses@@QAEXH@Z
+?Emote@CEverQuest@EQClasses@@QAEXXZ
+?EnableIniStorage@CSidlScreenWnd@EQClasses@@QAEXHPAD@Z
+?EnableLine@CListWnd@EQClasses@@QAEXH_N@Z
+?EnsureVisible@CListWnd@EQClasses@@QAEXH@Z
+?EnterZone@CEverQuest@EQClasses@@QAEXPAUHWND__@@@Z
+?ExtendSel@CListWnd@EQClasses@@QAEXH@Z
+?FastForwardToEndOfTag@CStmlWnd@EQClasses@@QAEGAAVCXStr@2@PAV32@PAHD@Z
+?FindInvSlot@CInvSlotMgr@EQClasses@@QAEPAVCInvSlot@2@HH@Z
+?FindMemberByName@CGuild@EQClasses@@QAEPAVGuildMember@2@PAD@Z
+?FindScreenPieceTemplate@CSidlManager@EQClasses@@QAEPAVCScreenPieceTemplate@2@PAD@Z
+?FindScreenPieceTemplate@CSidlManager@EQClasses@@QBEPAVCScreenPieceTemplate@2@PAVCXStr@2@@Z
+?ForceParseNow@CStmlWnd@EQClasses@@QAEXXZ
+?GetAACastingTimeModifier@EQ_Character1@EQClasses@@QAE?BHPBVEQ_Spell@2@@Z
+?GetActiveFavorCost@EQMisc@EQClasses@@QAEHXZ
+?GetAltAbility@AltAdvManager@EQClasses@@QAEPAU_ALTABILITY@EQData@@H@Z
+?GetAltAbilityIndex@EQ_PC@EQClasses@@QAEHH@Z
+?GetAltCurrency@PlayerPointManager@EQClasses@@QAEKKK@Z
+?GetBodyTypeDesc@CEverQuest@EQClasses@@QAEPADH@Z
+?GetBorderFrame@CXWnd@EQClasses@@QBEPBVCTAFrameDraw@2@XZ
+?GetCalculatedTimer@AltAdvManager@EQClasses@@QAEKPAVEQ_PC@2@PAU_ALTABILITY@EQData@@@Z
+?GetCharIndexPt@CEditWnd@EQClasses@@QBE?AVCXPoint@2@H@Z
+?GetChildItem@CSidlScreenWnd@EQClasses@@QAEPAVCXWnd@2@ABVCXStr@2@@Z
+?GetChildItem@CSidlScreenWnd@EQClasses@@QAEPAVCXWnd@2@PAD@Z
+?GetChildItem@CXWnd@EQClasses@@QAEPAV12@ABVCXStr@2@@Z
+?GetChildItem@CXWnd@EQClasses@@QAEPAV12@PAD@Z
+?GetChildWndAt@CXWnd@EQClasses@@QBEPAV12@VCXPoint@2@@Z
+?GetClassDesc@CEverQuest@EQClasses@@QAEPADH@Z
+?GetClassThreeLetterCode@CEverQuest@EQClasses@@QAEPADH@Z
+?GetClickedActor@CDisplay@EQClasses@@QAEPAUT3D_tagACTORINSTANCE@2@KKKPAX0@Z
+?GetClientClipRect@CXWnd@EQClasses@@QBE?AVCXRect@2@XZ
+?GetColumnMinWidth@CListWnd@EQClasses@@QBEHH@Z
+?GetColumnWidth@CListWnd@EQClasses@@QBEHH@Z
+?GetCombatAbility@EQ_PC@EQClasses@@QAEHH@Z
+?GetCombatAbilityTimer@EQ_PC@EQClasses@@QAEKH@Z
+?GetConLevel@EQ_Character@EQClasses@@QAEKPAVEQPlayer@2@@Z
+?GetCurChoice@CComboWnd@EQClasses@@QBEHXZ
+?GetCurSel@CListWnd@EQClasses@@QBEHXZ
+?GetCurrentPage@CTabWnd@EQClasses@@QBEPAVCPageWnd@2@XZ
+?GetDeityDesc@CEverQuest@EQClasses@@QAEPADH@Z
+?GetEQStr@EQ_Character1@EQClasses@@QAEPAXHH@Z
+?GetFocusCastingTimeModifier@EQ_Character1@EQClasses@@QAE?BHPBVEQ_Spell@2@PAPAVEQ_Equipment@2@H@Z
+?GetFocusRangeModifier@EQ_Character1@EQClasses@@QAE?BHPBVEQ_Spell@2@PAPAVEQ_Equipment@2@@Z
+?GetFriendName@CChatService@EQClasses@@QAEPADH@Z
+?GetItemAtPoint@CListWnd@EQClasses@@QBEHVCXPoint@2@@Z
+?GetItemAtPoint@CListWnd@EQClasses@@QBEXVCXPoint@2@PAH1@Z
+?GetItemBase@CInvSlot@EQClasses@@QAEXPAPAU_CONTENTS@EQData@@@Z
+?GetItemData@CListWnd@EQClasses@@QBEIH@Z
+?GetItemHeight@CListWnd@EQClasses@@QBEHH@Z
+?GetItemIcon@CListWnd@EQClasses@@QBEPBVCTextureAnimation@2@HH@Z
+?GetItemRect@CListWnd@EQClasses@@QBE?AVCXRect@2@HH@Z
+?GetItemText@CListWnd@EQClasses@@QBEPAVCXStr@2@PAV32@HH@Z
+?GetItemTimerValue@EQ_PC@EQClasses@@QAEKPAVEQ_Item@2@@Z
+?GetKey@KeyCombo@EQClasses@@QBEIXZ
+?GetKeyboardFlags@CXWndManager@EQClasses@@QBEIXZ
+?GetLangDesc@CEverQuest@EQClasses@@QAEPADH@Z
+?GetLineForPrintableChar@CEditWnd@EQClasses@@QBEHH@Z
+?GetListRect@CComboWnd@EQClasses@@QBE?AVCXRect@2@XZ
+?GetMagicItem@EQ_Character@EQClasses@@QAEHPAKK@Z
+?GetNextTagPiece@CStmlWnd@EQClasses@@QAEGAAVCXStr@2@PAV32@PAHP6A_NG@Z_N@Z
+?GetNumBankSlots@CBankWnd@EQClasses@@QBEHXZ
+?GetNumberOfFriends@CChatService@EQClasses@@QAEHXZ
+?GetPageInnerRect@CTabWnd@EQClasses@@QBE?AVCXRect@2@XZ
+?GetRGBAFromIndex@CChatManager@EQClasses@@QAEKH@Z
+?GetRaceDesc@CEverQuest@EQClasses@@QAEPADH@Z
+?GetSTMLSafeText@CEditWnd@EQClasses@@QAE?AVCXStr@2@XZ
+?GetSTMLText@CStmlWnd@EQClasses@@QBE?AVCXStr@2@XZ
+?GetScreenClipRect@CXWnd@EQClasses@@QBE?AVCXRect@2@XZ
+?GetScreenRect@CXWnd@EQClasses@@QBE?AVCXRect@2@XZ
+?GetSelStartPt@CEditWnd@EQClasses@@QBE?AVCXPoint@2@XZ
+?GetSeparatorRect@CListWnd@EQClasses@@QBE?AVCXRect@2@H@Z
+?GetSidlPiece@CSidlScreenWnd@EQClasses@@QBEPAVCScreenPieceTemplate@2@PAVCXStr@2@H@Z
+?GetSkillCap@CSkillMgr@EQClasses@@QAEKPAVEQ_Character@2@HHH_N11@Z
+?GetSpawnByID@EQPlayerManager@EQClasses@@QAEPAVEQPlayer@2@H@Z
+?GetSpawnByName@EQPlayerManager@EQClasses@@QAEPAVEQPlayer@2@PAD@Z
+?GetSpellLevelNeeded@EQ_Spell@EQClasses@@QBEEI@Z
+?GetString@CDBStr@EQClasses@@QAEPADHHPAH@Z
+?GetTabInnerRect@CTabWnd@EQClasses@@QBE?AVCXRect@2@H@Z
+?GetTabRect@CTabWnd@EQClasses@@QBE?AVCXRect@2@H@Z
+?GetTextRect@CComboWnd@EQClasses@@QBE?AVCXRect@2@XZ
+?GetTooltipRect@CXWnd@EQClasses@@SA?AVCXRect@2@VCXSize@2@@Z
+?GetType@CSidlScreenWnd@EQClasses@@QAE?AW4UIType@EQUIStructs@@XZ
+?GetType@CXWnd@EQClasses@@QAE?AW4UIType@EQUIStructs@@XZ
+?GetUserDefinedColor@CDisplay@EQClasses@@SAKH@Z
+?GetValue@CSliderWnd@EQClasses@@QBEHXZ
+?GetVisibleText@CStmlWnd@EQClasses@@QBE?AVCXStr@2@AAV32@VCXRect@2@@Z
+?GetWindowTextA@CXWnd@EQClasses@@QBE?AVCXStr@2@XZ
+?GetWorldFilePath@CDisplay@EQClasses@@QAE?B_NPADPBD@Z
+?GetXMLData@CSidlScreenWnd@EQClasses@@QAEPAVCXMLData@2@XZ
+?GetXMLData@CXMLDataManager@EQClasses@@QAEPAVCXMLData@2@HH@Z
+?GetXMLData@CXWnd@EQClasses@@QAEPAVCXMLData@2@XZ
+?HandleBazaarMsg@CBazaarSearchWnd@EQClasses@@QAEXPADH@Z
+?HandleCombine@CContainerWnd@EQClasses@@QAEXXZ
+?HandleKeyDown@KeypressHandler@EQClasses@@QAE_NABVKeyCombo@2@@Z
+?HandleKeyUp@KeypressHandler@EQClasses@@QAE_NABVKeyCombo@2@@Z
+?HandleKeyboardMsg@CXWndManager@EQClasses@@QAEHI_N@Z
+?HandleLButtonDown@CXWnd@EQClasses@@QAEHPAVCXPoint@2@I@Z
+?HandleLButtonHeld@CXWnd@EQClasses@@QAEHPAVCXPoint@2@I@Z
+?HandleLButtonUp@CXWnd@EQClasses@@QAEHPAVCXPoint@2@I@Z
+?HandleLButtonUpAfterHeld@CXWnd@EQClasses@@QAEHPAVCXPoint@2@I@Z
+?HandleRButtonDown@CXWnd@EQClasses@@QAEHPAVCXPoint@2@I@Z
+?HandleRButtonHeld@CXWnd@EQClasses@@QAEHPAVCXPoint@2@I@Z
+?HandleRButtonUp@CInvSlot@EQClasses@@QAEXPAVCXPoint@2@@Z
+?HandleRButtonUp@CXWnd@EQClasses@@QAEHPAVCXPoint@2@I@Z
+?HandleRButtonUpAfterHeld@CXWnd@EQClasses@@QAEHPAVCXPoint@2@I@Z
+?HasLoreItem@EQ_PC@EQClasses@@QAEKPAVEQ_Item@2@@Z
+?Init@CSidlScreenWnd@EQClasses@@QAEXHPAVCXStr@2@HHH@Z
+?InitContextMenu@CChatManager@EQClasses@@QAEHPAVCChatWindow@2@@Z
+?InitializeWindowVariables@CStmlWnd@EQClasses@@QAEXXZ
+?InsertChoice@CComboWnd@EQClasses@@QAEXPAD@Z
+?InsertChoice@CComboWnd@EQClasses@@QAEXPAVCXStr@2@K@Z
+?InsertPage@CTabWnd@EQClasses@@QAEXPAVCPageWnd@2@H@Z
+?InterpretCmd@CEverQuest@EQClasses@@QAEXPAVEQPlayer@2@PAD@Z
+?IsAbilityReady@AltAdvManager@EQClasses@@QAE_NPAVEQ_PC@2@PAU_ALTABILITY@EQData@@PAHH@Z
+?IsActive@CXWnd@EQClasses@@QBE_NXZ
+?IsAvailable@CSkillMgr@EQClasses@@QAE_NH@Z
+?IsBodyType@EQPlayer@EQClasses@@QAE_NIHH@Z
+?IsDescendantOf@CXWnd@EQClasses@@QBE_NPBV12@@Z
+?IsExpansionFlag@EQ_Character1@EQClasses@@QAEHH@Z
+?IsReallyVisible@CXWnd@EQClasses@@QBE_NXZ
+?IsSpellcaster@EQ_Character@EQClasses@@QAEHXZ
+?IsStackable@EQ_Item@EQClasses@@QAE_NXZ
+?IsValid@CXWnd@EQClasses@@QBE_NXZ
+?LMouseUp@CEverQuest@EQClasses@@QAEXHH@Z
+?LeftClickedOnPlayer@CEverQuest@EQClasses@@QAEXPAVEQPlayer@2@@Z
+?LoadIniListWnd@CSidlScreenWnd@EQClasses@@QAEXPAVCListWnd@2@PAD@Z
+?LoadSidlScreen@CSidlScreenWnd@EQClasses@@QAEXXZ
+?MakeStmlColorTag@CStmlWnd@EQClasses@@SA?AVCXStr@2@K@Z
+?MakeWndNotificationTag@CStmlWnd@EQClasses@@SA?AVCXStr@2@IAAV32@0@Z
+?Max_Endurance@EQ_Character1@EQClasses@@QAEHH@Z
+?Max_HP@EQ_Character1@EQClasses@@QAEHHH@Z
+?Max_Mana@EQ_Character1@EQClasses@@QAEHH@Z
+?MemorizeSet@CSpellBookWnd@EQClasses@@QAEXPAHH@Z
+?Move@CXWnd@EQClasses@@QAEHVCXPoint@2@@Z
+?Move@CXWnd@EQClasses@@QAEHVCXRect@2@@Z
+?MoveItem@CInvSlotMgr@EQClasses@@QAE_NPAVCMoveItemData@2@0HHHH@Z
+?OnMinimizeBox@CXWnd@EQClasses@@QAEHXZ
+?OnResize@CXWnd@EQClasses@@QAEHHH@Z
+?ProcessTransition@CXWnd@EQClasses@@QAEHXZ
+?RMouseUp@CEverQuest@EQClasses@@QAEXHH@Z
+?Refade@CXWnd@EQClasses@@QAEXXZ
+?ReloadUI@CDisplay@EQClasses@@QAEX_N@Z
+?RemoveLine@CListWnd@EQClasses@@QAEXH@Z
+?RemoveWnd@CXWndManager@EQClasses@@QAEHPAVCXWnd@2@@Z
+?RequestBuyItem@CMerchantWnd@EQClasses@@QAEXH@Z
+?RequestSellItem@CMerchantWnd@EQClasses@@QAEXH@Z
+?Resize@CXWnd@EQClasses@@QAEHHH@Z
+?Right@CXWnd@EQClasses@@QAEXXZ
+?RightClickedOnPlayer@CEverQuest@EQClasses@@QAEXPAVEQPlayer@2@H@Z
+?SaveEx@MapViewMap@EQClasses@@QAEXPADH@Z
+?SaveKeymapping@KeypressHandler@EQClasses@@QAEXIABVKeyCombo@2@H@Z
+?SelectBuySellSlot@CMerchantWnd@EQClasses@@QAEXHPAVCTextureAnimation@2@@Z
+?SelectableCharFromPoint@CEditWnd@EQClasses@@QBEHVCXPoint@2@@Z
+?SetCheck@CButtonWnd@EQClasses@@QAEX_N@Z
+?SetChoice@CComboWnd@EQClasses@@QAEXH@Z
+?SetColors@CComboWnd@EQClasses@@QAEXKKK@Z
+?SetColors@CListWnd@EQClasses@@QAEXKKK@Z
+?SetColumnJustification@CListWnd@EQClasses@@QAEXHH@Z
+?SetColumnWidth@CListWnd@EQClasses@@QAEXHH@Z
+?SetCurSel@CListWnd@EQClasses@@QAEXH@Z
+?SetEditable@CEditWnd@EQClasses@@QAEX_N@Z
+?SetFocus@CXWnd@EQClasses@@QAEPAV12@XZ
+?SetFont@CXWnd@EQClasses@@QAEHPAX@Z
+?SetGameState@CEverQuest@EQClasses@@QAEXH@Z
+?SetItemColor@CListWnd@EQClasses@@QAEXHHK@Z
+?SetItemData@CListWnd@EQClasses@@QAEXHI@Z
+?SetItemText@CListWnd@EQClasses@@QAEXHHAAVCXStr@2@@Z
+?SetKeyTooltip@CXWnd@EQClasses@@QAEXHH@Z
+?SetMaxChars@CEditBaseWnd@EQClasses@@QAEXH@Z
+?SetMouseOver@CXWnd@EQClasses@@QAEX_N@Z
+?SetNameSpriteState@EQPlayer@EQClasses@@QAEH_N@Z
+?SetNameSpriteTint@EQPlayer@EQClasses@@QAE_NXZ
+?SetNumTicks@CSliderWnd@EQClasses@@QAEXH@Z
+?SetPage@CTabWnd@EQClasses@@QAEXH_N@Z
+?SetPageRect@CTabWnd@EQClasses@@QAEXVCXRect@2@@Z
+?SetProgressBar@EQ_LoadingS@EQClasses@@QAEXHPBD@Z
+?SetSTMLText@CStmlWnd@EQClasses@@QAEXVCXStr@2@_NPAVSLinkInfo@2@@Z
+?SetSel@CEditBaseWnd@EQClasses@@QAEXHH@Z
+?SetSpell@CItemDisplayWnd@EQClasses@@QAEXH_NH@Z
+?SetVScrollPos@CXWnd@EQClasses@@QAEHH@Z
+?SetValue@CSliderWnd@EQClasses@@QAEXH@Z
+?SetWindowTextA@CXWnd@EQClasses@@QAEXAAVCXStr@2@@Z
+?ShiftColumnSeparator@CListWnd@EQClasses@@QAEXHH@Z
+?Show@CXWnd@EQClasses@@QAEH_N00@Z
+?SliderComplete@CInvSlot@EQClasses@@QAEXH@Z
+?StartFade@CXWnd@EQClasses@@QAEXEI@Z
+?StoreIniVis@CSidlScreenWnd@EQClasses@@QAEXXZ
+?StripFirstSTMLLines@CStmlWnd@EQClasses@@QAEXH@Z
+?ToggleSel@CListWnd@EQClasses@@QAEXH@Z
+?TotalEffect@EQ_Character1@EQClasses@@QAEHH_NH00@Z
+?UpdateHistoryString@CStmlWnd@EQClasses@@QAEXHAAVCXStr@2@@Z
+?UpdatePage@CTabWnd@EQClasses@@QAEXXZ
+?UpdateStrings@CItemDisplayWnd@EQClasses@@QAEXXZ
+?UseSkill@EQ_Character1@EQClasses@@QAEXEPAVEQPlayer@2@@Z
+?UsesAlt@KeyCombo@EQClasses@@QBE_NXZ
+?UsesCtrl@KeyCombo@EQClasses@@QBE_NXZ
+?UsesShift@KeyCombo@EQClasses@@QBE_NXZ
+?WhoClassName@EQ_Character1@EQClasses@@QAEPAXHHHD@Z
+?WndNotification@CChatWindow@EQClasses@@QAEHPAVCXWnd@2@IPAX@Z
+?WndNotification@CSidlScreenWnd@EQClasses@@QAEHPAVCXWnd@2@IPAX@Z
+?WndNotification@CXWnd@EQClasses@@QAEHPAV12@IPAX@Z
+?WriteTextHD2@CDisplay@EQClasses@@SAHPBDHHH@Z
+?XMLRead@CXMLSOMDocumentBase@EQClasses@@QAE_NPAVCXStr@2@00@Z
+?ZoneMainUI@CDisplay@EQClasses@@QAEXXZ
+?doLoot@CEverQuest@EQClasses@@QAEXXZ
+?dsp_chat@CEverQuest@EQClasses@@QAEXPBDH_N1@Z
+?dsp_chat@CEverQuest@EQClasses@@QAEXPBDH_N@Z
+?getString@StringTable@EQClasses@@QAEPADKPA_N@Z
+ActorDefList
+AddAlias
+AddCommand
+AddDetour
+AddDetourf
+AddFilter
+AddMQ2Data
+AddMQ2DataVariable
+AddMQ2DataVariableFromData
+AddMQ2Type
+AddNewAlertList
+AddSubstitute
+AddWindow
+AddXMLFile
+Alert
+Alias
+AltAbility
+AltAdvManager__GetAltAbility
+AltAdvManager__GetCalculatedTimer
+AltAdvManager__IsAbilityReady
+AmdPowerXpressRequestHighPerformance
+AppendCXStr
+AttackRanged
+BankList
+BuffStackTest
+BuyItem
+CBankWnd__GetNumBankSlots
+CBazaarSearchWnd__HandleBazaarMsg
+CButtonWnd__SetCheck
+CChatManager__GetRGBAFromIndex
+CChatManager__InitContextMenu
+CChatService__GetFriendName
+CChatService__GetNumberOfFriends
+CChatWindow__CChatWindow
+CChatWindow__Clear
+CChatWindow__WndNotification
+CComboWnd__DeleteAll
+CComboWnd__Draw
+CComboWnd__GetCurChoice
+CComboWnd__GetListRect
+CComboWnd__GetTextRect
+CComboWnd__InsertChoice
+CComboWnd__SetChoice
+CComboWnd__SetColors
+CContainerWnd__HandleCombine
+CContainerWnd__vftable
+CDBStr__GetString
+CDisplay__CleanGameUI
+CDisplay__GetClickedActor
+CDisplay__GetUserDefinedColor
+CDisplay__GetWorldFilePath
+CDisplay__ReloadUI
+CDisplay__WriteTextHD2
+CDisplay__ZoneMainUI
+CDisplay__is3dON
+CEditBaseWnd__SetSel
+CEditWnd__DrawCaret
+CEditWnd__GetCharIndexPt
+CEditWnd__GetDisplayString
+CEditWnd__GetHorzOffset
+CEditWnd__GetLineForPrintableChar
+CEditWnd__GetSTMLSafeText
+CEditWnd__GetSelStartPt
+CEditWnd__PointFromPrintableChar
+CEditWnd__SelectableCharFromPoint
+CEditWnd__SetEditable
+CEverQuest__ClickedPlayer
+CEverQuest__DoTellWindow
+CEverQuest__DropHeldItemOnGround
+CEverQuest__Emote
+CEverQuest__EnterZone
+CEverQuest__GetBodyTypeDesc
+CEverQuest__GetClassDesc
+CEverQuest__GetClassThreeLetterCode
+CEverQuest__GetDeityDesc
+CEverQuest__GetLangDesc
+CEverQuest__GetRaceDesc
+CEverQuest__InterpretCmd
+CEverQuest__LMouseUp
+CEverQuest__LeftClickedOnPlayer
+CEverQuest__RMouseUp
+CEverQuest__RightClickedOnPlayer
+CEverQuest__SetGameState
+CEverQuest__UPCNotificationFlush
+CEverQuest__dsp_chat
+CGaugeWnd__CalcFillRect
+CGaugeWnd__CalcLinesFillRect
+CGaugeWnd__Draw
+CGuild__FindMemberByName
+CHotButtonWnd__DoHotButton
+CInvSlotMgr__FindInvSlot
+CInvSlotMgr__MoveItem
+CInvSlotWnd__DrawTooltip
+CInvSlot__GetItemBase
+CInvSlot__HandleRButtonUp
+CInvSlot__SliderComplete
+CInventoryWindow__Activate
+CInventoryWindow__OnProcessFrame
+CInventoryWindow__WndNotification
+CItemDisplayWnd__SetSpell
+CItemDisplayWnd__UpdateStrings
+CLabel__Draw
+CListWnd__AddColumn
+CListWnd__AddColumn1
+CListWnd__AddLine
+CListWnd__AddString
+CListWnd__CalculateFirstVisibleLine
+CListWnd__CalculateVSBRange
+CListWnd__ClearAllSel
+CListWnd__CloseAndUpdateEditWindow
+CListWnd__Compare
+CListWnd__Draw
+CListWnd__DrawColumnSeparators
+CListWnd__DrawHeader
+CListWnd__DrawItem
+CListWnd__DrawLine
+CListWnd__DrawSeparator
+CListWnd__EnableLine
+CListWnd__EnsureVisible
+CListWnd__ExtendSel
+CListWnd__GetColumnMinWidth
+CListWnd__GetColumnWidth
+CListWnd__GetCurSel
+CListWnd__GetItemAtPoint
+CListWnd__GetItemAtPoint1
+CListWnd__GetItemData
+CListWnd__GetItemHeight
+CListWnd__GetItemIcon
+CListWnd__GetItemRect
+CListWnd__GetItemText
+CListWnd__GetSelList
+CListWnd__GetSeparatorRect
+CListWnd__RemoveLine
+CListWnd__SetColors
+CListWnd__SetColumnJustification
+CListWnd__SetColumnWidth
+CListWnd__SetCurSel
+CListWnd__SetItemColor
+CListWnd__SetItemData
+CListWnd__SetItemText
+CListWnd__ShiftColumnSeparator
+CListWnd__Sort
+CListWnd__ToggleSel
+CMapViewWnd__CMapViewWnd
+CMapViewWnd__WndNotification
+CMerchantWnd__DisplayBuyOrSellPrice
+CMerchantWnd__RequestBuyItem
+CMerchantWnd__RequestSellItem
+CMerchantWnd__SelectBuySellSlot
+CObfuscator__doit
+CRaces_AddModel
+CSidlManager__CreateLabel
+CSidlManager__FindScreenPieceTemplate1
+CSidlScreenWnd__CSidlScreenWnd1
+CSidlScreenWnd__CSidlScreenWnd2
+CSidlScreenWnd__CalculateHSBRange
+CSidlScreenWnd__CalculateVSBRange
+CSidlScreenWnd__ConvertToRes
+CSidlScreenWnd__CreateChildrenFromSidl
+CSidlScreenWnd__DrawSidlPiece
+CSidlScreenWnd__EnableIniStorage
+CSidlScreenWnd__GetChildItem
+CSidlScreenWnd__GetSidlPiece
+CSidlScreenWnd__Init1
+CSidlScreenWnd__LoadIniInfo
+CSidlScreenWnd__LoadIniListWnd
+CSidlScreenWnd__LoadSidlScreen
+CSidlScreenWnd__StoreIniInfo
+CSidlScreenWnd__StoreIniVis
+CSidlScreenWnd__WndNotification
+CSidlScreenWnd__dCSidlScreenWnd
+CSkillMgr__GetSkillCap
+CSkillMgr__IsAvailable
+CSliderWnd__GetValue
+CSliderWnd__SetNumTicks
+CSliderWnd__SetValue
+CSpellBookWnd__CanStartMemming
+CSpellBookWnd__MemorizeSet
+CStmlWnd__AppendSTML
+CStmlWnd__CalculateHSBRange
+CStmlWnd__CalculateVSBRange
+CStmlWnd__CanBreakAtCharacter
+CStmlWnd__FastForwardToEndOfTag
+CStmlWnd__ForceParseNow
+CStmlWnd__GetNextTagPiece
+CStmlWnd__GetSTMLText
+CStmlWnd__GetVisibleText
+CStmlWnd__InitializeWindowVariables
+CStmlWnd__MakeStmlColorTag
+CStmlWnd__MakeWndNotificationTag
+CStmlWnd__SetSTMLText
+CStmlWnd__StripFirstSTMLLines
+CStmlWnd__UpdateHistoryString
+CTabWnd__Draw
+CTabWnd__DrawCurrentPage
+CTabWnd__DrawTab
+CTabWnd__GetCurrentPage
+CTabWnd__GetPageInnerRect
+CTabWnd__GetTabInnerRect
+CTabWnd__GetTabRect
+CTabWnd__InsertPage
+CTabWnd__SetPage
+CTabWnd__SetPageRect
+CTabWnd__UpdatePage
+CTextOverlay__DisplayText
+CTextureFont__DrawWrappedText
+CXMLDataManager__GetXMLData
+CXMLSOMDocumentBase__XMLRead
+CXStr__CXStr
+CXStr__CXStr1
+CXStr__CXStr3
+CXStr__dCXStr
+CXStr__operator_equal
+CXStr__operator_equal1
+CXStr__operator_plus_equal1
+CXWndManager__DrawCursor
+CXWndManager__DrawWindows
+CXWndManager__GetKeyboardFlags
+CXWndManager__HandleKeyboardMsg
+CXWndManager__RemoveWnd
+CXWnd__BringToTop
+CXWnd__Center
+CXWnd__ClrFocus
+CXWnd__DoAllDrawing
+CXWnd__DrawChildren
+CXWnd__DrawColoredRect
+CXWnd__DrawTooltip
+CXWnd__DrawTooltipAtPoint
+CXWnd__GetBorderFrame
+CXWnd__GetChildItem
+CXWnd__GetChildWndAt
+CXWnd__GetClientClipRect
+CXWnd__GetScreenClipRect
+CXWnd__GetScreenRect
+CXWnd__GetTooltipRect
+CXWnd__GetWindowTextA
+CXWnd__IsActive
+CXWnd__IsDescendantOf
+CXWnd__IsReallyVisible
+CXWnd__IsType
+CXWnd__Move
+CXWnd__Move1
+CXWnd__ProcessTransition
+CXWnd__Refade
+CXWnd__Resize
+CXWnd__Right
+CXWnd__SetFocus
+CXWnd__SetFont
+CXWnd__SetKeyTooltip
+CXWnd__SetMouseOver
+CXWnd__StartFade
+Calculate
+CaptionCmd
+CaptionColorCmd
+CastRay
+CharInfo
+CharacterZoneClient__HasSkill
+CheckAlertForRecursion
+CheckChatForEvent
+CleanupName
+ClearErrorsCmd
+ClearMQ2DataVariables
+ClearSearchSpawn
+Click
+CombineCmd
+CompareTimes
+ConColor
+ConvertCR
+ConvertHotkeyNameToKeyName
+ConvertItemTags
+CountMatchingSpawns
+CrashDetected
+DI8__Keyboard
+DI8__Main
+DI8__Mouse
+DataTypeTemp
+DebugSpew
+DebugSpewAlways
+DebugSpewFile
+DebugSpewNoFile
+DefaultFilters
+DegToRad
+DeleteMQ2DataVariable
+DescribeKeyCombo
+DirectInput8Create
+DisplayLoginName
+DisplayOverlayText
+DistanceToPoint
+DistanceToSpawn3D
+DllCanUnloadNow
+DllGetClassObject
+DoAbility
+DoAltCmd
+DoCommandCmd
+DoCtrlCmd
+DoShiftCmd
+DoSocial
+DoTimedCmd
+DoTimedCommands
+DoorEnviroTarget
+DoorTarget
+Doors
+DrawHUD
+DrawHUDParams
+DrawHUDText
+DrawNetStatus
+DropCmd
+DropTimers
+EQADDR_ATTACK
+EQADDR_CMDLIST
+EQADDR_CONVERTITEMTAGS
+EQADDR_DIKEYBOARD
+EQADDR_DIMAIN
+EQADDR_DIMOUSE
+EQADDR_DOABILITYLIST
+EQADDR_ENCRYPTPAD0
+EQADDR_ENCRYPTPAD1
+EQADDR_ENCRYPTPAD2
+EQADDR_ENCRYPTPAD3
+EQADDR_ENCRYPTPAD4
+EQADDR_GWORLD
+EQADDR_HWND
+EQADDR_LASTTELL
+EQADDR_MEMCHECK0
+EQADDR_MEMCHECK1
+EQADDR_MEMCHECK2
+EQADDR_MEMCHECK3
+EQADDR_MEMCHECK4
+EQADDR_MOUSE
+EQADDR_MOUSECLICK
+EQADDR_NOTINCHATMODE
+EQADDR_RUNWALKSTATE
+EQADDR_SERVERHOST
+EQADDR_SERVERNAME
+EQDestroyHeldItemOrMoney
+EQGetTime
+EQItemList__EQItemList
+EQItemList__FreeItemList
+EQItemList__add_item
+EQItemList__delete_item
+EQMappableCommandList
+EQMisc__GetActiveFavorCost
+EQP_DistArray
+EQPlayerManager__GetSpawnByID
+EQPlayerManager__GetSpawnByName
+EQPlayer__ChangeBoneStringSprite
+EQPlayer__DoAttack
+EQPlayer__EQPlayer
+EQPlayer__IsBodyType_j
+EQPlayer__IsTargetable
+EQPlayer__SetNameSpriteState
+EQPlayer__SetNameSpriteTint
+EQPlayer__dEQPlayer
+EQ_CanUseAbility
+EQ_CharSelectClassNameFunc
+EQ_Character__CanEquip
+EQ_Character__CastRay
+EQ_Character__CastSpell
+EQ_Character__Cur_Endurance
+EQ_Character__Cur_HP
+EQ_Character__Cur_Mana
+EQ_Character__GetAACastingTimeModifier
+EQ_Character__GetCharInfo2
+EQ_Character__GetConLevel
+EQ_Character__GetFocusCastingTimeModifier
+EQ_Character__GetFocusRangeModifier
+EQ_Character__GetMagicItem
+EQ_Character__GetUsableClasses
+EQ_Character__IsExpansionFlag
+EQ_Character__IsSpellcaster
+EQ_Character__IsSpellcaster_2
+EQ_Character__IsSpellcaster_3
+EQ_Character__Max_Endurance
+EQ_Character__Max_HP
+EQ_Character__Max_Mana
+EQ_Character__TotalEffect
+EQ_Character__UseSkill
+EQ_Character__doCombatAbility
+EQ_DamageDisplay
+EQ_GetDisciplineReuseTimer
+EQ_GetEQStr
+EQ_Item__CanDrop
+EQ_Item__CreateItemTagString
+EQ_Item__IsStackable
+EQ_LoadingS__Array
+EQ_LoadingS__SetProgressBar
+EQ_PC__DestroyHeldItemOrMoney
+EQ_PC__GetAltAbilityIndex
+EQ_PC__GetCombatAbility
+EQ_PC__GetCombatAbilityTimer
+EQ_PC__GetItemTimerValue
+EQ_PC__HasLoreItem
+EQ_SetDisciplineReuseTimer
+EQ_SkillButton1
+EQ_SkillButton2
+EQ_SkillButton3
+EQ_Spell__GetSpellLevelNeeded
+EQ_WhoClassName
+EnduranceGained
+EnviroTarget
+EstimatedDistanceToSpawn
+EventMsg
+ExecuteCmd
+Expansion_HoT
+FatalError
+Filter
+FindContainerForContents
+FindInvSlot
+FindInvSlotForContents
+FindMQ2Data
+FindMQ2DataType
+FindMQ2DataVariable
+FindMQ2Window
+FindMappableCommand
+FindNextInvSlot
+FindSpeed
+FindSpellListByName
+FindVariableScope
+FixStringTable
+FormatSearchSpawn
+FreeAlertList
+FreeAlerts
+GetAAIndexByID
+GetAAIndexByName
+GetAlert
+GetArg
+GetBuffID
+GetCXStr
+GetClosestAlert
+GetDeityTeamByID
+GetEQPath
+GetEnviroContainer
+GetFastTime
+GetFilenameFromFullPath
+GetFriendlyNameForGroundItem
+GetFullZone
+GetGameDate
+GetGameState
+GetGameTime
+GetGuildByID
+GetGuildIDByName
+GetItemContentsByName
+GetItemContentsBySlotID
+GetItemFromContents
+GetItemLink
+GetItemLinkHash
+GetItemTimer
+GetLDoNTheme
+GetLabelFromEQ
+GetLanguageIDByName
+GetLightForSpawn
+GetLoginName
+GetMeleeRange
+GetNextArg
+GetParentWnd
+GetShortBuffID
+GetShortZone
+GetSkillIDFromName
+GetSkillNameFromID
+GetSpellByName
+GetSpellDuration
+GetSpellGemTimer
+GetSpellNameByID
+GetSubFromLine
+_GetXtargetType@4
+GetZoneID
+GetdfDIJoystick
+HasExpansion
+HealthGained
+HideDoCommand
+HudCmd
+Identify
+InHoverState
+IniOutput
+InitializeChatHook
+InitializeDisplayHook
+InitializeMQ2Commands
+InitializeMQ2Data
+InitializeMQ2DataTypes
+InitializeMQ2Detours
+InitializeMQ2ItemDisplay
+InitializeMQ2Labels
+InitializeMQ2Pulse
+InitializeMQ2Spawns
+InitializeMQ2Windows
+InitializeMapPlugin
+InitializeParser
+InitializeTHJCam
+InitializeTHJCmd
+InitializeTHJDiscTimers
+InitializeTHJSkillTimers
+InitializeTHJTracking
+InitializeTHJWindows
+IsAlert
+IsInGroup
+IsInRaid
+IsMouseWaiting
+IsMouseWaitingForButton
+IsNamed
+IsPCNear
+IsTargetable
+ItemSlotMap
+ItemTarget
+Items
+KeypressHandler__AttachAltKeyToEqCommand
+KeypressHandler__AttachKeyToEqCommand
+KeypressHandler__ClearCommandStateArray
+KeypressHandler__HandleKeyDown
+KeypressHandler__HandleKeyUp
+KeypressHandler__SaveKeymapping
+LightBrightness
+ListMacros
+LoH_HT_Ready
+LoadCfgCommand
+LoadCfgFile
+LoadSpells
+Location
+LootAll
+MQ2DataError
+MQMsgBox
+MQToSTML
+MacroBeep
+MacroError
+MacroLog
+MacroPause
+ManaGained
+MapViewMap__Clear
+MapViewMap__SaveEx
+MemSpell
+MultilineCommand
+NewDeclareVar
+NewDeleteVarCmd
+NewUIINI
+NewVarcalc
+NewVardata
+NewVarset
+NoModKeyCmd
+NoParseCmd
+NthNearestSpawn
+NvOptimusEnablement
+OnAddSpawn
+Outputfile
+PVPServer
+ParseKeyCombo
+ParseMQ2DataPortion
+ParseMacroData
+ParseMacroParameter
+ParseSearchSpawn
+ParseSearchSpawnArgs
+PcZoneClient__GetPcSkillLimit
+PlayerHasAAAbility
+PlayerPointManager__GetAltCurrency
+PluginCmdSort
+PluginCommand
+PopupText
+ProcessGameEvents
+RemoveAlias
+RemoveCommand
+RemoveDetour
+RemoveMQ2Data
+RemoveMQ2Type
+RemoveSubstitute
+RemoveWindow
+RemoveXMLFile
+RewriteAliases
+RewriteSubstitutions
+STMLToPlainText
+SWhoFilter
+SearchThroughSpawns
+SellItem
+SendListSelect
+SendWndClick
+SendWndClick2
+SendWndNotification
+SetAutoRun
+SetCXStr
+SetDisplaySWhoFilter
+SetError
+SetNameSpriteState
+ShowSpellSlotInfo
+ShutdownChatHook
+ShutdownDisplayHook
+ShutdownMQ2Commands
+ShutdownMQ2Data
+ShutdownMQ2DataTypes
+ShutdownMQ2Detours
+ShutdownMQ2Pulse
+ShutdownMQ2Spawns
+ShutdownMQ2Windows
+ShutdownParser
+Skills
+SlotValueCalculate
+SpawnByName
+SpawnMatchesSearch
+SquelchCommand
+StateHeightMultiplier
+StringTable__getString
+StripMQChat
+Substitute
+SuperWho
+SuperWhoTarget
+SyntaxError
+Target
+ThreadID
+TimedCommand
+UpdateItemInfo
+UpdateMQ2SpawnSort
+UseAbility
+Util__FastTime
+WereWeZoning
+Where
+WindowState
+WriteChatColor
+WriteChatf
+WriteFilterNames
+__AC1
+__AC2
+__AC3
+__AC4
+__AC5
+__AC6
+__AC7
+__ActualVersionDate
+__ActualVersionTime
+__AltTimerReady
+__Attack
+__Autofire
+__BindList
+__CastRay
+__Clicks
+__CommandList
+__ConvertItemTags
+__CurrentMapLabel
+__CurrentSocial
+__DoAbilityList
+__DrawHandler
+__EQGetTime
+__EncryptPad0
+__EncryptPad1
+__EncryptPad2
+__EncryptPad3
+__EncryptPad4
+__ExecuteCmd
+__GetGaugeValueFromEQ
+__GetLabelFromEQ
+__GetXTargetType
+__Guilds
+__HWnd
+__HotkeyPage
+__InChatMode
+__LMouseHeldTime
+__LastTell
+__LoadFrontEnd
+__MemChecker0
+__MemChecker1
+__MemChecker2
+__MemChecker3
+__MemChecker4
+__Mouse
+__MouseEventTime
+__MouseLook
+__NetStatusToggle
+__NewUIINI
+__PCNames
+__ProcessGameEvents
+__RMouseHeldTime
+__RangeAttackReady
+__RunWalkState
+__ScreenMode
+__ScreenX
+__ScreenXMax
+__ScreenY
+__ScreenYMax
+__ServerHost
+__ServerName
+__ShiftKeyDown
+__ShowNames
+__Socials
+__do_loot
+__gWorld
+__get_melee_range
+bAllErrorsDumpStack
+bAllErrorsFatal
+bAllErrorsLog
+bAllowCommandParse
+bDetMouse
+bLaxColor
+bRunNextCommand
+baseAddress
+bmBeginZone
+bmCalculate
+bmEndZone
+bmParseMacroParameter
+bmPluginsCleanUI
+bmPluginsDrawHUD
+bmPluginsIncomingChat
+bmPluginsOnZoned
+bmPluginsPulse
+bmPluginsReloadUI
+bmPluginsSetGameState
+bmUpdateSpawnCaptions
+bmUpdateSpawnSort
+bmWriteChatColor
+cmdCast
+cmdCharInfo
+cmdDoAbility
+cmdFace
+cmdFilter
+cmdHelp
+cmdLocation
+cmdOutputfile
+cmdTarget
+cmdWho
+cmdWhoTarget
+dataAltAbility
+dataBool
+dataCharacter
+dataCorpse
+dataCursor
+dataDefined
+dataDoorTarget
+dataDynamicZone
+dataFindItem
+dataFindItemBank
+dataFindItemBankCount
+dataFindItemCount
+dataFloat
+dataFriends
+dataGameTime
+dataGroundItem
+dataGroup
+dataHeading
+dataIf
+dataIni
+dataInt
+dataInvSlot
+dataItemTarget
+dataLastSpawn
+dataLineOfSight
+dataMacro
+dataMacroQuest
+dataMath
+dataMerchant
+dataNamingSpawn
+dataNearestSpawn
+dataPlugin
+dataRaid
+dataSelect
+dataSelectedItem
+dataSkill
+dataSpawn
+dataSpawnCount
+dataSpell
+dataString
+dataSwitch
+dataTarget
+dataTime
+dataWindow
+dataZone
+do_ranged
+dsp_chat_no_events
+gDelay
+gDelayCondition
+gDelayedCommands
+gDiKeyID
+gDiKeyName
+gEventChat
+gEventFunc
+gEventQueue
+gFaceAngle
+gFilterCustom
+gFilterDebug
+gFilterEncumber
+gFilterFood
+gFilterMQ
+gFilterMQ2DataErrors
+gFilterMacro
+gFilterMoney
+gFilterSWho
+gFilterSkillsAll
+gFilterSkillsIncrease
+gFilterTarget
+gGameState
+gInClick
+gItemDB
+gKeepKeys
+gLClickedObject
+gLastFind
+gLookAngle
+gMQCaptions
+gMQPauseOnChat
+gMacroBlock
+gMacroPause
+gMacroStack
+gMacroSubLookupMap
+gMaxSpawnCaptions
+gMaxTurbo
+gMouseClickInProgress
+gMouseData
+gReturn
+gRunning
+gSpawnCount
+gSpewToFile
+gStringTableFixed
+gTimer
+gTurbo
+gZFilter
+gZoning
+g_Item
+g_Loaded
+g_bInDXMouse
+g_ppDrawHandler
+gbAlwaysDrawMQHUD
+gbDoAutoRun
+gbExactSearchCleanNames
+gbHUDUnderUI
+gbInChat
+gbInDAcquire
+gbInDInput
+gbInDState
+gbInZone
+gbMQ2LoadingMsg
+gbMoving
+gbUnload
+get_melee_range
+ghInstance
+ghModule
+gnNormalEQMappableCommands
+gpAlertList
+gpAutoFire
+gpFilters
+gpHook
+gpMouseEventTime
+gpPCNames
+gpShiftKeyDown
+gpShowNames
+gpbAltTimerReady
+gpbRangedAttackReady
+gpbShowNetStatus
+gszEQPath
+gszINIFilename
+gszINIPath
+gszItemDB
+gszLastMQ2DataError
+gszLastNormalError
+gszLastSyntaxError
+gszLogPath
+gszMacroName
+gszMacroPath
+gszSpawnCorpseName
+gszSpawnNPCName
+gszSpawnPetName
+gszSpawnPlayerName
+gszVersion
+instCRaid
+instDynamicZone
+instEQMisc
+instEQZoneInfo
+instExpeditionLeader
+instExpeditionName
+instKeypressHandler
+instTributeActive
+nColorAdjective
+nColorAdjectiveYou
+nColorExpletive
+nColorFatalError
+nColorMQ2DataError
+nColorMacroError
+nColorSyntaxError
+pAliases
+pAltAbilityType
+pArgbType
+pArrayType
+pBodyType
+pBoolType
+pBuffType
+pByteType
+pCharacterType
+pClassType
+pCommands
+pCorpseType
+pCurrentZoneType
+pDZMemberType
+pDefines
+pDeityType
+pDoorTarget
+pDynamicZone
+pDynamicZoneType
+pEQMisc
+pEventBlech
+pEventList
+pEvolvingItemType
+pFellowshipMemberType
+pFellowshipType
+pFloatType
+pFriendsType
+pGlobalVariables
+pGroundTarget
+pGroundType
+pGroupMemberType
+pGroupType
+pGuild
+pGuildList
+pHeadingType
+pIntType
+pInvSlotType
+pItemType
+pMQ2Blech
+pMacroQuestType
+pMacroType
+pMacroVariables
+pMathType
+pMerchantType
+pMouseLook
+pNamingSpawn
+pPluginType
+pPlugins
+pRaceType
+pRaid
+pRaidMemberType
+pRaidType
+pScreenMode
+pScreenX
+pScreenXMax
+pScreenY
+pScreenYMax
+pSkillType
+pSocialList
+pSpawnType
+pSpellSets
+pSpellType
+pStringType
+pSubs
+pSwitchType
+pTargetType
+pTicksType
+pTimeType
+pTimerType
+pTributeActive
+pTypeType
+pWHOSORTCompare
+pWindowType
+pXMLFiles
+pXTargetType
+pZoneInfo
+pZoneType
+pgCurrentSocial
+pgHotkeyPage
+pinstActiveBanker
+pinstActiveCorpse
+pinstActiveGMaster
+pinstActiveMerchant
+pinstAggroInfo
+pinstAltAdvManager
+pinstAuraMgr
+pinstBandageTarget
+pinstCAAWnd
+pinstCActionsWnd
+pinstCAdventureLeaderboardWnd
+pinstCAdventureRequestWnd
+pinstCAdventureStatsWnd
+pinstCAlarmWnd
+pinstCAltStorageWnd
+pinstCAudioTriggersWindow
+pinstCAuraWnd
+pinstCAvaZoneWnd
+pinstCBandolierWnd
+pinstCBankWnd
+pinstCBarterMerchantWnd
+pinstCBarterSearchWnd
+pinstCBarterWnd
+pinstCBazaarSearchWnd
+pinstCBazaarWnd
+pinstCBlockedBuffWnd
+pinstCBlockedPetBuffWnd
+pinstCBodyTintWnd
+pinstCBookWnd
+pinstCBreathWnd
+pinstCBuffWindowNORMAL
+pinstCBuffWindowSHORT
+pinstCBugReportWnd
+pinstCCastSpellWnd
+pinstCCastingWnd
+pinstCCharacterSelect
+pinstCChatManager
+pinstCColorPickerWnd
+pinstCCombatAbilityWnd
+pinstCCombatSkillSelectWnd
+pinstCCompassWnd
+pinstCConfirmationDialog
+pinstCContainerMgr
+pinstCContextMenuManager
+pinstCCursorAttachment
+pinstCDBStr
+pinstCDisplay
+pinstCDynamicZoneWnd
+pinstCEQMainWnd
+pinstCEditLabelWnd
+pinstCEverQuest
+pinstCFacePick
+pinstCFeedbackWnd
+pinstCFellowshipWnd
+pinstCFileSelectionWnd
+pinstCFindLocationWnd
+pinstCFriendsWnd
+pinstCGemsGameWnd
+pinstCGiveWnd
+pinstCGroupSearchFiltersWnd
+pinstCGroupSearchWnd
+pinstCGroupWnd
+pinstCGuildBankWnd
+pinstCGuildMgmtWnd
+pinstCHotButtonWnd
+pinstCHotButtonWnd1
+pinstCHotButtonWnd2
+pinstCHotButtonWnd3
+pinstCHotButtonWnd4
+pinstCHtmlWnd
+pinstCInspectWnd
+pinstCInvSlotMgr
+pinstCInventoryWnd
+pinstCItemDisplayManager
+pinstCItemExpTransferWnd
+pinstCJournalCatWnd
+pinstCJournalTextWnd
+pinstCLFGuildWnd
+pinstCLoadskinWnd
+pinstCLootWnd
+pinstCMIZoneSelectWnd
+pinstCMailAddressBookWnd
+pinstCMailCompositionWnd
+pinstCMailWnd
+pinstCMapToolbarWnd
+pinstCMapViewWnd
+pinstCMerchantWnd
+pinstCMusicPlayerWnd
+pinstCNoteWnd
+pinstCOptionsWnd
+pinstCPetInfoWnd
+pinstCPetitionQWnd
+pinstCPlayerNotesWnd
+pinstCPlayerWnd
+pinstCPopupWndManager
+pinstCPotionBeltWnd
+pinstCProgressionSelectionWnd
+pinstCPvPStatsWnd
+pinstCQuantityWnd
+pinstCRaidOptionsWnd
+pinstCRaidWnd
+pinstCRespawnWnd
+pinstCSelectorWnd
+pinstCServerListWnd
+pinstCSidlManager
+pinstCSkillsSelectWnd
+pinstCSkillsWnd
+pinstCSocialEditWnd
+pinstCSoulmarkWnd
+pinstCSpellBookWnd
+pinstCStoryWnd
+pinstCSystemInfoDialogBox
+pinstCTargetWnd
+pinstCTaskTemplateSelectWnd
+pinstCTextEntryWnd
+pinstCTextOverlay
+pinstCTimeLeftWnd
+pinstCTipWndCONTEXT
+pinstCTipWndOFDAY
+pinstCTitleWnd
+pinstCTrackingWnd
+pinstCTradeWnd
+pinstCTrainWnd
+pinstCVideoModesWnd
+pinstCVoiceMacroWnd
+pinstCXWndManager
+pinstCamActor
+pinstCharData
+pinstCharSpawn
+pinstCharacterCreation
+pinstControlledMissile
+pinstControlledPlayer
+pinstDZMember
+pinstDZTimerInfo
+pinstEQItemList
+pinstEQSoundManager
+pinstGroup
+pinstImeManager
+pinstLocalPlayer
+pinstMercenaryData
+pinstModelPlayer
+pinstPCData
+pinstSkillMgr
+pinstSpawnManager
+pinstSpellManager
+pinstSpellSets
+pinstStringTable
+pinstSwitchManager
+pinstTarget
+pinstTargetObject
+pinstTargetSwitch
+pinstTaskMember
+pinstTrackTarget
+pinstTradeTarget
+pinstViewActor
+pinstWorldData
+ppAAWnd
+ppActionsWnd
+ppActiveBanker
+ppActiveCorpse
+ppActiveGMaster
+ppActiveMerchant
+ppAggroInfo
+ppAlarmWnd
+ppAltAdvManager
+ppAuraMgr
+ppBankWnd
+ppBazaarSearchWnd
+ppBazaarWnd
+ppBodyTintWnd
+ppBookWnd
+ppBreathWnd
+ppBuffWindowNORMAL
+ppBuffWindowSHORT
+ppBugReportWnd
+ppCDBStr
+ppCSkillMgr
+ppCastSpellWnd
+ppCastingWnd
+ppCharData
+ppCharSpawn
+ppCharacterCreation
+ppChatManager
+ppColorPickerWnd
+ppCombatAbilityWnd
+ppCompassWnd
+ppConnection
+ppContainerMgr
+ppContextMenuManager
+ppControlledPlayer
+ppCurrentMapLabel
+ppCursorAttachment
+ppDZMember
+ppDZTimerInfo
+ppDisplay
+ppEQChatMgr
+ppEditLabelWnd
+ppEverQuest
+ppFacePick
+ppFeedbackWnd
+ppFileSelectionWnd
+ppFriendsWnd
+ppGemsGameWnd
+ppGiveWnd
+ppGroupSearchFiltersWnd
+ppGroupSearchWnd
+ppGroupWnd
+ppGuildMgmtWnd
+ppHotButtonWnd
+ppInspectWnd
+ppInvSlotMgr
+ppInventoryWnd
+ppItemList
+ppJournalCatWnd
+ppJournalTextWnd
+ppKeypressHandler
+ppLoadskinWnd
+ppLocalPlayer
+ppLootWnd
+ppMapToolbarWnd
+ppMapViewWnd
+ppMercInfo
+ppMerchantWnd
+ppMusicPlayerWnd
+ppNoteWnd
+ppOptionsWnd
+ppPCData
+ppPetInfoWnd
+ppPetitionQWnd
+ppPlayerNotesWnd
+ppPlayerWnd
+ppPotionBeltWnd
+ppQuantityWnd
+ppRaidOptionsWnd
+ppRaidWnd
+ppSelectorWnd
+ppSidlMgr
+ppSkillMgr
+ppSkillsSelectWnd
+ppSkillsWnd
+ppSocialEditWnd
+ppSoulmarkWnd
+ppSpawnManager
+ppSpellBookWnd
+ppSpellMgr
+ppStoryWnd
+ppStringTable
+ppSwitchMgr
+ppTarget
+ppTargetWnd
+ppTaskMember
+ppTextEntryWnd
+ppTextOverlay
+ppTimeLeftWnd
+ppTrackingWnd
+ppTradeTarget
+ppTradeWnd
+ppTrainWnd
+ppVideoModesWnd
+ppWndMgr
+ppWorldData
+szAugRestrictions
+szBodyType
+szColorAdjective
+szColorAdjectiveYou
+szColorExpletive
+szColorFatalError
+szColorMQ2DataError
+szColorMacroError
+szColorSyntaxError
+szCombineTypes
+szDeityTeam
+szDmgBonusType
+szEQMappableCommands
+szExpansions
+szGender
+szGuildStatus
+szHeading
+szHeadingNormal
+szHeadingNormalShort
+szHeadingShort
+szInnates
+szItemName
+szItemName4xx
+szItemSlot
+szItemTypes
+szLastCommand
+szLights
+szSize
+szSkills
+szSpawnType
+_thrMsgBox@4
+GetModuleHandleA
+GetModuleFileNameA
+GetFileSizeEx
+VirtualProtect
+GetCurrentProcess
+GetSystemDirectoryA
+LoadLibraryA
+QueryPerformanceFrequency
+CloseHandle
+K32GetModuleBaseNameA
+GetProcAddress
+ReadProcessMemory
+FreeLibrary
+FlushInstructionCache
+K32EnumProcessModules
+OutputDebugStringA
+EnterCriticalSection
+LeaveCriticalSection
+InitializeCriticalSection
+DeleteCriticalSection
+GetPrivateProfileStringA
+GetTickCount
+FindFirstFileA
+FindNextFileA
+FindClose
+WritePrivateProfileStringA
+CreateThread
+FileTimeToSystemTime
+WriteProcessMemory
+VirtualProtectEx
+WritePrivateProfileSectionA
+Sleep
+KERNEL32.dll
+MessageBoxA
+GetWindowTextA
+USER32.dll
+ShellExecuteA
+SHELL32.dll
+CoUninitialize
+ole32.dll
+GetAdaptersInfo
+IPHLPAPI.DLL
+InitializeCriticalSectionAndSpinCount
+SetEvent
+ResetEvent
+WaitForSingleObjectEx
+CreateEventW
+GetModuleHandleW
+IsProcessorFeaturePresent
+IsDebuggerPresent
+UnhandledExceptionFilter
+SetUnhandledExceptionFilter
+GetStartupInfoW
+QueryPerformanceCounter
+GetCurrentProcessId
+GetCurrentThreadId
+GetSystemTimeAsFileTime
+InitializeSListHead
+TerminateProcess
+FormatMessageA
+WideCharToMultiByte
+SwitchToThread
+GetExitCodeThread
+GetNativeSystemInfo
+InitializeCriticalSectionEx
+EncodePointer
+DecodePointer
+LocalFree
+MultiByteToWideChar
+LCMapStringEx
+InitializeSRWLock
+ReleaseSRWLockExclusive
+AcquireSRWLockExclusive
+TryEnterCriticalSection
+InitializeConditionVariable
+WakeConditionVariable
+WakeAllConditionVariable
+SleepConditionVariableCS
+SleepConditionVariableSRW
+SetFileInformationByHandle
+FlsAlloc
+FlsGetValue
+FlsSetValue
+FlsFree
+InitOnceExecuteOnce
+CreateEventExW
+CreateSemaphoreExW
+FlushProcessWriteBuffers
+GetCurrentProcessorNumber
+GetTickCount64
+FreeLibraryWhenCallbackReturns
+CreateThreadpoolWork
+SubmitThreadpoolWork
+CloseThreadpoolWork
+CreateThreadpoolTimer
+SetThreadpoolTimer
+WaitForThreadpoolTimerCallbacks
+CloseThreadpoolTimer
+CreateThreadpoolWait
+SetThreadpoolWait
+CloseThreadpoolWait
+GetFileInformationByHandleEx
+CreateSymbolicLinkW
+GetLocaleInfoEx
+GetStringTypeW
+CompareStringEx
+GetCPInfo
+SetLastError
+VirtualQuery
+RaiseException
+InterlockedPushEntrySList
+InterlockedFlushSList
+RtlUnwind
+GetLastError
+TlsAlloc
+TlsGetValue
+TlsSetValue
+TlsFree
+LoadLibraryExW
+ReadFile
+CreateFileW
+GetDriveTypeW
+GetFileInformationByHandle
+GetFileType
+PeekNamedPipe
+SystemTimeToTzSpecificLocalTime
+ExitThread
+ResumeThread
+FreeLibraryAndExitThread
+GetModuleHandleExW
+ExitProcess
+GetModuleFileNameW
+SetFilePointerEx
+GetCurrentThread
+GetConsoleMode
+ReadConsoleW
+GetStdHandle
+HeapFree
+HeapAlloc
+GetTempPathW
+IsThreadAFiber
+GetDateFormatW
+GetTimeFormatW
+CompareStringW
+LCMapStringW
+GetLocaleInfoW
+IsValidLocale
+GetUserDefaultLCID
+EnumSystemLocalesW
+SetCurrentDirectoryW
+GetCurrentDirectoryW
+GetFullPathNameW
+SetStdHandle
+FlushFileBuffers
+WriteFile
+GetConsoleOutputCP
+CreateDirectoryW
+GetFileAttributesExW
+GetTimeZoneInformation
+DeleteFileW
+FindFirstFileExW
+FindNextFileW
+IsValidCodePage
+GetACP
+GetOEMCP
+GetCommandLineA
+GetCommandLineW
+GetEnvironmentStringsW
+FreeEnvironmentStringsW
+SetEnvironmentVariableW
+GetProcessHeap
+SetConsoleCtrlHandler
+HeapReAlloc
+HeapSize
+OutputDebugStringW
+SetEndOfFile
+WriteConsoleW
+                          
+abcdefghijklmnopqrstuvwxyz
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+                          
+abcdefghijklmnopqrstuvwxyz
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+/zone
+/gate
+/fade
+/findpath
+/warp
+Augmentation Sealer
+Pottery Wheel
+Forge
+Brewing Barrel
+Bottle
+Forge
+Forge
+Leaf Pile
+Bones
+Books
+Please report this
+Books
+Num_0
+Num_1
+Num_2
+Num_3
+Num_4
+Num_5
+Num_6
+Num_7
+Num_8
+Num_9
+Num_Enter
+Num_Del
+Num_Slash
+Num_Minus
+Num_Plus
+Num_Asterisk
+Right
+Page_Up
+Page_Down
+Insert
+Delete
+Enter
+Backspace
+Space
+Right_Ctrl
+Shift
+Right_Shift
+Right_Alt
+Num_Lock
+Scroll_Lock
+Caps_Lock
+Prnt_Scrn
+Left_Windows
+Right_Windows
+Application
+Prev_Track
+Next_Track
+Calculator
+Play/Pause
+Media_Stop
+Volume_-
+Volume_+
+Web/Home
+Pause
+Power
+Sleep
+Search
+Favorites
+Refresh
+Web_Stop
+Forward
+My_Computer
+Media
+Mouse_Mid
+Mouse_Aux1
+Mouse_Aux2
+Mouse_Aux3
+Mouse_Aux4
+Mouse_Aux5
+${If[${NamingSpawn.Mark},"${NamingSpawn.Mark} - ",]}${If[${NamingSpawn.Assist},">> ",]}${NamingSpawn.DisplayName}${If[${NamingSpawn.Assist}," - ${NamingSpawn.PctHPs}%<<",]}${If[${NamingSpawn.Surname.Length},
+(${NamingSpawn.Surname}),]}
+${If[${NamingSpawn.Mark},"${NamingSpawn.Mark} - ",]}${If[${NamingSpawn.Assist},">> ",]}${NamingSpawn.DisplayName}${If[${NamingSpawn.Assist}," - ${NamingSpawn.PctHPs}%<<",]}${If[${NamingSpawn.Master.Type.Equal[PC]},
+(${NamingSpawn.Master}),]}
+${NamingSpawn.DisplayName}'s corpse
+September 23, 2004
+${If[${NamingSpawn.Mark},"${NamingSpawn.Mark} - ",]}${If[${NamingSpawn.Trader},"Trader ",]}${If[${NamingSpawn.Invis},(${NamingSpawn.DisplayName}),${NamingSpawn.DisplayName}]}${If[${NamingSpawn.AFK}," AFK",]}${If[${NamingSpawn.Linkdead}," LD",]}${If[${NamingSpawn.LFG}," LFG",]}${If[${NamingSpawn.GroupLeader}," LDR",]}
+${If[${NamingSpawn.Mark},"${NamingSpawn.Mark} - ",]}${If[${NamingSpawn.Trader},"Trader ",]}${If[${NamingSpawn.Invis},(${NamingSpawn.DisplayName}),${NamingSpawn.DisplayName}]}${If[${NamingSpawn.Surname.Length}," ${NamingSpawn.Surname}",]}${If[${NamingSpawn.AFK}," AFK",]}${If[${NamingSpawn.Linkdead}," LD",]}${If[${NamingSpawn.LFG}," LFG",]}${If[${NamingSpawn.GroupLeader}," LDR",]}
+${If[${NamingSpawn.Mark},"${NamingSpawn.Mark} - ",]}${If[${NamingSpawn.Trader},"Trader ",]}${If[${NamingSpawn.Invis},(${NamingSpawn.DisplayName}),${NamingSpawn.DisplayName}]}${If[${NamingSpawn.Surname.Length}," ${NamingSpawn.Surname}",]}${If[${NamingSpawn.AFK}," AFK",]}${If[${NamingSpawn.Linkdead}," LD",]}${If[${NamingSpawn.LFG}," LFG",]}${If[${NamingSpawn.GroupLeader}," LDR",]}${If[${NamingSpawn.Guild.Length},
+<${If[${NamingSpawn.GuildStatus.NotEqual[member]},"${NamingSpawn.GuildStatus} of ",]}${NamingSpawn.Guild}>,]}
+${If[${NamingSpawn.Mark},"${NamingSpawn.Mark} - ",]}${If[${NamingSpawn.Trader},"Trader ",]}${If[${NamingSpawn.AARank},"${NamingSpawn.AATitle} ",]}${If[${NamingSpawn.Invis},(${NamingSpawn.DisplayName}),${NamingSpawn.DisplayName}]}${If[${NamingSpawn.Surname.Length}," ${NamingSpawn.Surname}",]}${If[${NamingSpawn.Suffix.Length}," ${NamingSpawn.Suffix}",]}${If[${NamingSpawn.AFK}," AFK",]}${If[${NamingSpawn.Linkdead}," LD",]}${If[${NamingSpawn.LFG}," LFG",]}${If[${NamingSpawn.GroupLeader}," LDR",]}${If[${NamingSpawn.Guild.Length},
+<${If[${NamingSpawn.GuildStatus.NotEqual[member]},"${NamingSpawn.GuildStatus} of ",]}${NamingSpawn.Guild}>,]}
+${If[${NamingSpawn.Mark},"${NamingSpawn.Mark} - ",]}${If[${NamingSpawn.Trader},"Trader ",]}${If[${NamingSpawn.AARank},"${NamingSpawn.AATitle} ",]}${If[${NamingSpawn.Invis},(${NamingSpawn.DisplayName}),${NamingSpawn.DisplayName}]}${If[${NamingSpawn.Suffix.Length}," ${NamingSpawn.Suffix}",]}${If[${NamingSpawn.AFK}," AFK",]}${If[${NamingSpawn.Linkdead}," LD",]}${If[${NamingSpawn.LFG}," LFG",]}${If[${NamingSpawn.GroupLeader}," LDR",]}
+${If[${NamingSpawn.Mark},"${NamingSpawn.Mark} - ",]}${If[${NamingSpawn.Trader},"Trader ",]}${If[${NamingSpawn.AARank},"${NamingSpawn.AATitle} ",]}${If[${NamingSpawn.Invis},(${NamingSpawn.DisplayName}),${NamingSpawn.DisplayName}]}${If[${NamingSpawn.Surname.Length}," ${NamingSpawn.Surname}",]}${If[${NamingSpawn.Suffix.Length}," ${NamingSpawn.Suffix}",]}${If[${NamingSpawn.AFK}," AFK",]}${If[${NamingSpawn.Linkdead}," LD",]}${If[${NamingSpawn.LFG}," LFG",]}${If[${NamingSpawn.GroupLeader}," LDR",]}
+/maphide id %i
+/highlight id %i
+.?AVlogic_error@std@@
+.?AVlength_error@std@@
+.?AVoverflow_error@std@@
+.?AVbad_function_call@std@@
+.?AVregex_error@std@@
+.?AVbad_exception@std@@
+.?AVbad_alloc@std@@
+.?AVexception@std@@
+.?AVbad_array_new_length@std@@
+.?AVbad_cast@std@@
+.?AV_System_error@std@@
+.?AVfailure@ios_base@std@@
+.?AVruntime_error@std@@
+.?AVsystem_error@std@@
+.?AVout_of_range@std@@
+.?AVinvalid_argument@std@@
+.?AVtype_info@@
+.?AV_Locimp@locale@std@@
+.?AV_Generic_error_category@std@@
+.?AVstl_critical_section_interface@details@Concurrency@@
+.?AVstl_critical_section_vista@details@Concurrency@@
+.?AVstl_critical_section_win7@details@Concurrency@@
+.?AVstl_condition_variable_interface@details@Concurrency@@
+.?AVstl_condition_variable_vista@details@Concurrency@@
+.?AVstl_condition_variable_win7@details@Concurrency@@
+.?AV?$codecvt@_WDU_Mbstatet@@@std@@
+.?AV?$codecvt@GDU_Mbstatet@@@std@@
+.?AV?$ctype@_W@std@@
+.?AV?$ctype@G@std@@
+.?AUmessages_base@std@@
+.?AUmoney_base@std@@
+.?AUtime_base@std@@
+.?AV?$num_get@_WV?$istreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@
+.?AV?$num_put@_WV?$ostreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@
+.?AV?$numpunct@_W@std@@
+.?AV?$collate@_W@std@@
+.?AV?$messages@_W@std@@
+.?AV?$money_get@_WV?$istreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@
+.?AV?$money_put@_WV?$ostreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@
+.?AV?$moneypunct@_W$0A@@std@@
+.?AV?$_Mpunct@_W@std@@
+.?AV?$moneypunct@_W$00@std@@
+.?AV?$time_get@_WV?$istreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@
+.?AV?$time_put@_WV?$ostreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@
+.?AV?$num_get@GV?$istreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@
+.?AV?$num_put@GV?$ostreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@
+.?AV?$numpunct@G@std@@
+.?AV?$collate@G@std@@
+.?AV?$messages@G@std@@
+.?AV?$money_get@GV?$istreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@
+.?AV?$money_put@GV?$ostreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@
+.?AV?$moneypunct@G$0A@@std@@
+.?AV?$_Mpunct@G@std@@
+.?AV?$moneypunct@G$00@std@@
+.?AV?$time_get@GV?$istreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@
+.?AV?$time_put@GV?$ostreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@
+.?AV?$collate@D@std@@
+.?AV?$messages@D@std@@
+.?AV?$money_get@DV?$istreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@
+.?AV?$money_put@DV?$ostreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@
+.?AV?$moneypunct@D$0A@@std@@
+.?AV?$_Mpunct@D@std@@
+.?AV?$moneypunct@D$00@std@@
+.?AV?$time_get@DV?$istreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@
+.?AV?$time_put@DV?$ostreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@
+.?AVDNameNode@@
+.?AVcharNode@@
+.?AVpcharNode@@
+.?AVpDNameNode@@
+.?AVDNameStatusNode@@
+.?AVpairNode@@
+.?AUIClassFactory@@
+.?AUIUnknown@@
+.?AVm_IClassFactory@@
+.?AVm_IDirectInputDevice8A@@
+.?AVAddressLookupTableObject@@
+.?AUIDirectInputDevice8A@@
+.?AUIDirectInput8A@@
+.?AVIDirectInput8Hook@@
+.?AVm_IDirectInputDevice8W@@
+.?AUIDirectInputDevice8W@@
+.?AUIDirectInputEffect@@
+.?AVm_IDirectInputEffect@@
+.?AVIDirectInputDevice8Hook@@
+.?AVm_IDirectInput8W@@
+.?AUIDirectInput8W@@
+.?AVm_IDirectInput8A@@
+.?AUctype_base@std@@
+.?AV?$basic_ios@DU?$char_traits@D@std@@@std@@
+.?AVfacet@locale@std@@
+.?AVMQ2Type@MQ2Internal@@
+.?AV?$basic_ostream@DU?$char_traits@D@std@@@std@@
+.?AVMQ2TicksType@@
+.?AV?$num_put@DV?$ostreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@
+.?AV?$basic_filebuf@DU?$char_traits@D@std@@@std@@
+.?AV?$codecvt@DDU_Mbstatet@@@std@@
+.?AVios_base@std@@
+.?AVerror_category@std@@
+.?AV?$ctype@D@std@@
+.?AVcodecvt_base@std@@
+.?AV_Facet_base@std@@
+.?AU_Crt_new_delete@std@@
+.?AV?$_Iosb@H@std@@
+.?AV_Iostream_error_category2@std@@
+.?AV?$basic_ofstream@DU?$char_traits@D@std@@@std@@
+.?AV?$numpunct@D@std@@
+.?AV?$basic_streambuf@DU?$char_traits@D@std@@@std@@
+.?AVMQ2IntType@@
+.?AVMQ2FellowshipMemberType@@
+.?AVMQ2CharacterType@@
+.?AVMQ2DynamicZoneType@@
+.?AVMQ2DZMemberType@@
+.?AVMQ2ClassType@@
+.?AVMQ2WindowType@@
+.?AVMQ2SwitchType@@
+.?AVMQ2TypeType@@
+.?AVMQ2PluginType@@
+.?AVMQ2FellowshipType@@
+.?AVMQ2ByteType@@
+.?AVMQ2GroupType@@
+.?AVMQ2StringType@@
+.?AVMQ2FriendsType@@
+.?AVMQ2FloatType@@
+.?AVMQ2GroundType@@
+.?AVMQ2InvSlotType@@
+.?AVMQ2ItemType@@
+.?AVMQ2CorpseType@@
+.?AVMQ2EvolvingItemType@@
+.?AVMQ2DeityType@@
+.?AVMQ2BoolType@@
+.?AVMQ2CurrentZoneType@@
+.?AVMQ2HeadingType@@
+.?AVMQ2RaidType@@
+.?AVMQ2ArgbType@@
+.?AVMQ2TimeType@@
+.?AVMQ2RaidMemberType@@
+.?AVMQ2AltAbilityType@@
+.?AVMQ2RaceType@@
+.?AVMQ2BodyType@@
+.?AVMQ2SpellType@@
+.?AVMQ2ZoneType@@
+.?AVMQ2MerchantType@@
+.?AVMQ2ArrayType@@
+.?AVMQ2MathType@@
+.?AVMQ2MacroType@@
+.?AVMQ2MacroQuestType@@
+.?AVMQ2TargetType@@
+.?AVMQ2XTargetType@@
+.?AVMQ2BuffType@@
+.?AVMQ2GroupMemberType@@
+.?AVMQ2SkillType@@
+.?AVMQ2TimerType@@
+.?AVMQ2SpawnType@@
+.?AV?$basic_stringstream@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@
+.?AV?$basic_stringbuf@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@
+.?AV?$basic_iostream@DU?$char_traits@D@std@@@std@@
+.?AV?$basic_istream@DU?$char_traits@D@std@@@std@@
+.?AV?$basic_istringstream@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@
+.?AV?$num_get@DV?$istreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@
+<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+<assembly xmlns='urn:schemas-microsoft-com:asm.v1' manifestVersion='1.0'>
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel level='asInvoker' uiAccess='false' />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+</assembly>
+1!2F2h8p8{8
+9 9'9,91979>9C9H9M9T9Y9^9d9k9p9
+;6<;<
+<F=K=v=
+>K>v>{>
+?-?j?
+0'1B1o1
+1!2M2
+4b6s6K7
+<&<R<p<
+=+=H=R=h=
+>!>'>,>2><>X>k>
+?(?;?X?k?
+0!0+010;0A0K0Q0[0a0k0q0{0
+1!1+111;1A1K1Q1[1a1k1q1{1
+2!2+212;2A2K2Q2[2a2k2q2{2
+3!3+313;3A3K3Q3[3a3k3q3{3
+4!4+414;4A4K4Q4[4a4k4q4{4
+5!5+515;5A5K5Q5[5a5k5q5{5
+6!6+616;6A6K6Q6[6a6k6q6{6
+7!7+717;7A7K7Q7[7a7k7q7{7
+8!8+818;8A8K8Q8[8a8k8q8{8
+9!9+919;9A9K9Q9[9a9k9q9{9
+:!:+:1:;:A:K:Q:[:a:k:q:{:
+;!;+;1;;;A;K;Q;[;a;k;q;{;
+<!<+<1<;<A<K<Q<[<a<k<q<{<
+=!=+=1=;=A=K=Q=[=a=k=q={=
+>!>+>1>;>A>K>Q>[>a>k>q>{>
+?!?+?1?;?A?K?Q?[?a?k?q?{?
+0!0+010;0A0K0Q0[0a0k0q0{0
+1!1+111;1A1K1Q1[1a1k1q1{1
+2!2+212;2A2K2Q2[2a2k2q2{2
+3!3+313;3A3K3Q3[3a3k3q3{3
+4!4+414;4A4K4Q4[4a4k4q4{4
+5!5+515;5A5K5Q5[5a5k5q5{5
+6!6+616;6A6K6Q6[6a6k6q6{6
+7!7+717;7A7K7Q7[7a7k7q7{7
+8!8+818;8A8K8Q8[8a8k8q8{8
+9!9+919;9A9K9Q9[9a9k9q9{9
+:!:+:1:;:A:K:Q:[:a:k:q:{:
+;!;+;1;;;A;K;Q;[;a;k;q;{;
+<!<+<1<;<A<K<Q<[<a<k<q<{<
+=!=+=1=;=A=K=Q=[=a=k=q={=
+>!>+>1>;>A>K>Q>[>a>k>q>{>
+?!?+?1?;?A?K?Q?[?a?k?q?{?
+0!0+010;0A0K0Q0[0a0k0q0{0
+111;1Q1[1q1{1
+2(2;2Q2W2_2i2w2
+3+3a4
+6(6c6x6
+7<7\7v7
+7Q8a8
+929E9X9`9}:
+;7;Y;
+<?<S<d<x<}<
+=5=H=
+>\>r>
+1'1t1~1
+2`2|2
+2t3~3
+7^7m7
+;$=.=M=R=
+4"7+717R7[7a7
+7v<b>k>q>
+3>6a7
+1r<{<
+0&000@0k0r0x0
+6|7!8
+72787>7G7m7}7
+:<:H:r:x:~:
+;C;L;|;
+<B<H<Z<
+=;=B=H=U=|=
+=6>@>P>{>
+?-?=?{?
+0N1c1q1
+1.2C2Q2
+464X4u4
+5U5]5
+6M6m6
+6c7o7
+:0;B;T;
+203Y3`3
+3>4c4j4p5
+7%7/797G7U7c7q7
+>!?4?K?q?
+1&121J1
+3:3@3
+4:5k5
+5F6b6
+6H8t8
+9f9p9u9
+9C:R:
+;5;a;t;
+=1=D=
+=;=j=}=
+6$7D7W7
+7-8@8
+8I9Q9
+02255;5
+;L;z>
+;D<J<^<e<k<p<
+=*=t=z=
+=$>?>Z>
+2"2)2T2
+;&<A<
+1<2D2g2n2
+4F:r;
+>(?E?\?a?h?t?
+030E0K0P0W0h0m0
+151L1Q1X1d1
+2#252;2@2G2X2]2z2
+3'313=3K3Q3V3\3~3
+4!4&4,4N4\4a4g4
+4b6o6
+6	7=7i7u7
+7)858?8I8W8e8s8
+:+:9:G:U:c:q:
+<2<X<`<y<
+=!=/===K=Y=g=u=
+>+>9>G>U>c>q>
+?'?5?C?Q?_?m?{?
+0#010?0M0[0i0w0
+1-1;1I1W1e1s1
+2+3i3u3
+4#414?4M4[4i4w4
+5-5;5I5W5e5s5
+6)676E6S6a6o6}6
+7%737A7O7]7k7y7
+8!8/8=8K8Y8g8u8
+9+999G9U9c9q9
+:':5:C:Q:b:s:
+;.;?;P;a;r;
+<-<><O<`<q<
+=,===N=_=p=
+>+><>b>
+>9?E?O?Y?g?u?
+0+090G0U0c0q0
+222X2
+293E3O3Y3g3u3
+4+494G4U4c4q4
+5'555C5Q5_5m5{5
+6#616?6M6[6i6w6
+7-7;7I7W7e7s7
+8)878E8S8a8o8}8
+9%939A9O9]9k9y9
+:!:/:=:N:_:
+;Y;e;o;y;
+<!<B<
+=)=7=E=S=a=o=}=
+=)>i>u>
+>9?E?O?Y?g?u?
+)050?0I0W0e0s0
+1)171E1S1a1o1}1
+262=2N2V2x2
+3!3B3R3^3
+384N4U4c4
+5)575E5S5a5
+6)676E6S6a6o6}6
+7%737A7b7
+8+898G8U8c8q8
+:):7:R:
+;,;3;
+=%=B=]=
+>%>/>9>R>
+?#?B?T?b?j?
+)050?0I0W0e0s0
+1)252?2I2b2
+3%333A3O3r3
+4%4/494G4U4c4q4
+5Y5e5o5y5
+5(6_6
+74787<7y7
+9!9/9R9
+:":8:y:
+;%;B;
+;"<><
+="=F=M=^=f=
+>!>,>
+?%?/?9?G?U?c?q?
+090E0O0Y0g0u0
+1"111H1
+3I3U3_3i3w3
+3,434u4
+555U5u5
+656U6u6
+757U7u7
+858U8u8
+959U9u9
+9!<'<}<
+0=0B0y0
+6!616
+91:a;t<~<
+=T=^=}=
+?r?{?
+1!1A1R1[1a1
+585Z5d5w5
+5E6\6b6s6x6~6
+7n7u7}7
+8.8A8I8V8
+<$<B<I<Q<Y<{<
+=+=2=:=C=]=d=l=t=|=
+>7>k>}>
+>K?R?Z?}?
+0n0u0
+1a1u1{1
+2+323:3B3J3R3s3z3
+4\4k4
+5B6I6~6
+6T7k7r7z7
+8	8+828:8C8L8k8r8z8
+9$9,949N9
+:-:l:t:
+;);~;
+<%<P<T<X<\<`<d<h<l<p<t<x<|<
+<U=Z=a=
+182|2
+2,3y3
+3$444Y4
+4)5K5y5
+6G6}6
+1;1m1
+2'2L2h2|2
+5B5M5_5j5
+727:7J7l7t7
+8"828T8\8n8
+9"9D9L9^9
+:4:<:N:p:x:
+; ;<;J;l;t;|;
+<4<<<L<y<
+<+=4=G=u=~=
+>,>Z>a>j>s>
+? ?N?U?_?i?{?
+0)0x0
+0'171<1P1f1y1
+2<2A2H2}2
+3$343U3]3m3
+494A4T4u4}4
+5)515D5e5m5
+6!646U6]6g6
+'0k0u0
+0'1v1
+:[;|;
+3#3-363C3Q3^3q3
+4!4.474K4b4
+5$5?5]5
+6!6o6
+7$7*70767<7B7H7N7T7Z7d7h7l7p7t7x7|7
+7#8Y8
+9V:$;.;M;R;
+7B72;;;A;q;
+01070F0K0S0b0k0y0
+1T1e1j1
+273R3c3
+5)5_5
+8,9\9|9
+?2?I?\?g?s?
+2080=0I0e0k0
+1)171R1u1
+2'212=2K2Q2V2\2~2
+3+3V5`5
+6[6 7
+7*8;8C8L8c8
+8'9[9
+9?:z:
+0>2&3
+0"1'1
+9h=p=
+2(3s5
+9<9m9
+9g;\<
+1a1q1
+9 :v;
+5K5a6
+\=e=j=v={=
+>/>?>D>I>V>`>i>r>}>
+>[?d?
++01070=0C0I0O0U0[0a0g0m0s0y0
+3&353L3R3X3^3d3j3p3
+3+484`4r4
+5'5-52585C5I5T5[5`5i5w5|5
+6 61686`6h6u6~6
+8D8L8
+8/9A9
+:=:W:
+<!<*<Y<b<k<y<
+>^>d>
+>R?W?m?r?
+0"0'0G0W0\0j0t0
+1>1G1N1T1Z1
+2#21272=2C2I2O2V2]2d2k2r2y2
+3)373=3C3I3O3U3\3c3j3q3x3
+4$4+42494@4G4N4U4]4e4m4x4}4
+5'5.5M5l5
+656T6q6
+7*7;7R7
+838`8
+9"9&9*9.92969:9>9Q9n9
+:.:=:L:T:d:
+;#;+;;;D;k;
+;"<A<
+=,=<=[=
+>0>7>?>U>q>
+?O?w?
+0%0^0v0
+0 1F1L1|1
+2*262
+=)>Y>
+0?1Q1
+7%8P8m8
+9+9?9_9s9
+<"<J<r<
+?"?<?[?i?t?
+1#1C1g1r1
+3 3'373>3M3g3
+4.4L4
+4*5e5
+85<k=
+1B2L2i2~2
+3l3v3
+4(4=4B4
+4+555R5g5l5
+6U6_6|6
+7&7+7
+8;8P8U8
+8>9H9e9z9
+:h:r:
+;$;9;>;
+;'<1<N<c<h<
+<Q=[=x=
+>">'>{>
+?7?L?Q?
+:0D0a0v0{0
+121U1
+3H3W3
+4:4w4
+555]5
+626K6o6
+727K7V7v7
+8:8c8
+9b9i9v9
+:#:.:9:D:O:Z:e:p:x:
+;/;6;=;
+1!1D1g1
+252X2{2
+3<3K3j3y3
+4$434R4a4
+4$5G5j5*7r7
+3R3y3
+3"4I4
+5l5z5
+5"6u6
+7+7l7
+7<8c8
+9,:v:{:
+:k<)?
+8%9m9
+=5?o?
+1o2-3
+2(3m3
+5]7J8
+:,:X:
+;7;k;
+;(<M<
+<%=3=M=
+='>m>
+>B?]?
+0!050h0
+1Y1~1
+2#2V2d2~2
+3-3X3
+4%5,5k5y5
+7Y8B9e9
+5O5]5
+=7=O=g=
+3t4o5
+9.;\< =
+5C687
+8f8b9
+0T1*2y2
+8^9c=I>s?
+2c2h2p2F3w3
+4*5H5
+6Q7A8X8
+9+9t9
+: :;;Y;
+<w<c=
+7?:c:
+;:;r;
+<7<[<
+?A?b?
+0:0^0[1
+1	2V2
+3N3o3
+3&4G4!5>5
+5U6j6o6
+7X7b7
+8)8.8
+9!9>9S9X9
+9A:K:h:}:
+: ;N;u;
+<E<^<i<
+>2>Q>`>
+0F0m0
+0(161Y1
+2.3e3
+4	5`5
+6.737
+1M2v2
+2.3U3i3
+3/4>4k4
+585h5
+0r0g1
+2*242?2
+9+:0:8:
+;=;N;{;
+=">S>
+?0?T?x?
+0"0'0-03080>0D0I0O0U0Z0`0f0k0q0w0|0
+1!1&1,12171=1C1H1N1T1Y1_1e1j1p1v1{1
+2 2%2+21262<2B2G2M2S2X2^2d2i2n2u2z2
+3$383F3T3b3s3{3
+4"434G4^4u4
+6O7j7
+>n>w>m?
+1)3>3Q3b3[5
+616>6`6
+<R=->D>
+42G2e2s2!4X4_4d4h4l4p4
+;K;P;T;X;\;
+15=9===A=E=I=M=Q=U=Y=]=a=e=i=m=q=u=y=}=
+0y;};
+<,=S=c=
+?(?\?y?
+0(0<0X0c0q0w0
+1*111:1H1O1U1n1u1
+2&3+3V3[3
+3@4K4
+4K5`5
+6#6O6d6
+7:7t7
+9U:d:{:
+=^>m>
+0&0,0X1d1
+2!2Y2y2
+6%6.696
+:M:Y;
+=P=^=l=z=
+>*>;>I>T>b>
+?2?8?d?s?
+070<0O0_0z0
+091H1j1
+2[2y2{3
+4?4h4
+5,5F5g5}5
+5;6s6
+6%7N7a7m7
+8$8D8u8
+8(9,9094989<9@9D9H9`9d9h9l9p9t9x9|9
+:':-:=:K:R:
+=t=z=
+>5?j?
+0=2n2~2
+3-3=3W3h3
+4#4E4
+5	5b5q5
+6<6w6
+617B7
+798B8R8
+999A9O9
+97:y:
+:5;c;k;
+;"<B<V<k<
+>7><>b>
+0	1\1
+1Q2c2y2
+5;5B5
+6U6c6
+7'7[7
+9*959R9]9x9
+:2:6:::>:B:F:J:f:j:n:r:
+=2=G=a=s=
+>E>_>n>~>
+>??F?N?
+111~1
+1F2X2
+2!3v3
+4H4Z4
+6L6k6
+8Z8n8
+909U9
+9#:8:N:h:}:
+;4;S;n;|;
+<J<U<`<h<q<
+=$=)=
+?8?r?
+0!0<0F0Y0^0
+0n1y1
+2:2b2w2
+3'4A4Q4
+5 5:5\5h5
+808A8Y8
+:9:D:w:
+;!;4;L;_;k;x;
+<&<?<O<
+=(>->
+1^1m1M2z4
+:&:,:J:
+0v1{1
+192K2U2
+343;3B3L3
+4#404
+4]5b5g5w5|5
+6 6/6G6p6
+7,7A7K7W7s7
+8'83888=8[8e8q8v8{8
+9<;p;
+5@:H:N:
+9$9G9a9
+:7:Q:s:
+;%;=;
+1<:><B<F<J<N<R<V<Z<
+?"?&?*?.?
+7r8v:z:~:
+1Z3^3b3f3j3n3r3v3 4
+c2r2Z6i6`:o:W>f>
+6#;2;j?y?
+:#:):R:Y:v:z:~:
+: :|:
+<	=d=
+=$>3>
+0<1K1
+;a<p<
+=g?v?
+0m2|2
+8V:h:g<y<x>
+8(8\9
+;$;^<
+%0N0i0
+2 3;3
+3#4e4
+575K5
+9/;B;
+<!<2<C<
+=0=A=R=
+20>0L0_0
+1,24292B2
+2?3b3i3w3~3
+3g4z435x5
+7G8Z8
+:G;Z;
+=g>z>'?:?
+2(3@3
+3H4`4
+=&>@>E>
+6i6q6x6
+8/8D8Z8g8u8
+8/92=
+76?6o6w6
+6,757
+:X:`:
+=#='=+=
+1)202
+0B4+636d6k6
+< <&<0<5<:<?<O<U<d<q<z<
+3:4B4
+4n5w5
+5=6F6
+9#9;:D:J;R;
+<	<><F<x<
+4'4+4/4H4O4u4y4}417r7v7z7~7
+8Z8^8b8f8j8n8r8v8z8~8
+9\;n;u;
+<1=G=P=
+=J>U>a>
+>4?J?i?}?
+5	6#6>6
+7$777
+8E9T9
+9=:[:h:w:
+;e;x;
+;Q<X<j<|<
+=-=>=t=
+=o>~>
+>B?K?
++000x0
+686B6{6
+<K<f<1=7===C=I=O=
+>)>/>=>M>S>m>
+>N?]?
+2e2p2
+3&4;4F4N4Y4_4j4p4~4
+5!5&5R5c5h5
+:9:@:`:
+ 3*343
+5C6a6
+>#?I?s?
+1F1p1=2H2
+4I5x5
+7"7&7*7.7n8j:
+9B:O:z:
+:);6;
+<)=c=
+?0???
+3)3B3T3`3u3
+3!4/4A4L4u4
+5 5K5Y5
+6$6f6k6u6
+708I8N8W8
+=,=4=<=
+>,?M?
+;P;`;;=j?
+0d0C1
+4o5{5
+8G8U8`8
+:I:f:
+;3;t;
+;K<n<q=
+>+>P>n>
+0=0W0
+4F4P4s4}4
+5Q5W5#;.>N>
+3r465Q5p507
+<-<s<
+1H1z1
+1&383>3
+4.454;4C4
+5C5H5N5T5\5l5w5
+6#64696>6M6^6c6h6x6
+7$757:7?7O7`7e7j7z7
+8&878<8A8Q8b8g8l8|8
+9(999>9C9S9d9i9n9~9
+:*:;:@:E:U:f:k:p:
+:+;>;y;
+<"<<<U<w<
+=$=@=V=d=i=n=
+>)>C>Q>V>[>x>
+>*?b?n?x?
+0#090G0L0Q0u0
+1'1,111O1^1
+2!2:2@2\2s2
+333g3
+4+494>4C4[4k4y4~4
+6(656G6L6Q6g6u6z6
+717=7
+8/8b8$9e9
+<P<{<
+5a6f7
+7>9E9~:
+; ;I;P;g;};
+<8<K<U<n<
+</=E=
+>e>o>
+>9?]?{?
+415@5
+<(<F<
+0]1r1
+1F2e2o2
+2A3t3
+4q465|5
+7;7\7
+3?5`5g5~5
+5&6k6
+<#<-<A<H<}<v=
+1#2u2
+3(3H3
+7F7r7
+919a:f:
+=&=3=<=E=T=e=l=v=
+>W?b?
+0-040A0U0Z0`0
+2&41484>4M4X4^4d4x4
+405;5H5T5
+5e5q5
+6T7b7l7
+8W8+9L9e9
+<9<G<N<
+5T6v6
+::<U<_<
+=R>Y>`>g>
+>0?C?h?
+1?2Y2k2
+3&393G3U3[3
+569;9A9F9Q9W9]9c9i9o9u9
+;C<{<
+0=0K0R0h0r0F1
+6"7Z7p7x7
+8$878c8h8q8
+9_9f9m9t9
+9P:U:Z:_:z:
+=7>C>V>k>
+?&?;?@?
+8U9f:&;
+;#<+<\<e<p<
+=3=<=E=
+=.>B>
+0/0_0g0
+1!1,1o1
+1;2B2
+5K6x6
+8G8d8x8
+:F;f;v;
+;;<<=L=]=e=u=
+=S>m>~>
+0"0z0
+202`2
+3/4A4S4e4w4
+4X588
+9;9L9]9
+=_>h>
+>&?s?
+2.3W3l3
+4!5+5
+053&4.4_4f4
+7x<<=r=y=
+273d3
+889S9a9
+:!:/:i:n:
+:G;b<
+:@:h:
+3@4y4]9
+X0G5t6
+7'8-8T8
+98:G:
+?%?.?h?w?
+0 0i0r0{0
+1D1I1Q1u1!4)41494A4_4g4
+7)80868E8
+9!:_:l:
+<'<]<
+=9>O>
+0D1U1t1z1
+2 2.2?2W2]2i2
+7$8H8S8`8
+?!?)?G?O?
+	0P0z0
+0b1h1n1t1z1
+2"2(2.242:2@2F2L2R2X2^2d2j2p2v2|2
+3$3*30363<3B3H3N3T3Z3`3f3l3r3x3~3
+4 4&4,42484>4D4J4P4V4\4b4h4n4t4z4
+5=5s5v7{7
+>!>1>A>Q>a>q>
+?!?1?A?Q?a?q?
+0!010A0Q0a0q0
+1!111A1Q1a1q1
+2!212A2Q2a2q2
+3!313A3Q3a3q3
+4!414A4Q4a4q4
+5!515A5Q5a5q5
+6!616A6Q6a6q6
+7!717A7Q7a7q7
+8!8Q8a8q8
+9!919A9Q9a9q9
+:!:1:A:Q:a:q:
+;A;Q;a;q;
+<!<1<A<Q<a<q<
+=!=1=A=Q=a=q=
+>!?1?A?Q?a?q?
+2/3_3
+4Q4q4
+5%5+5<5J5O5~5
+6 6%6,62676>6P6V6\6
+787A7F7K7V7\7a7n7s7
+8!8&8+8Q8f8
+9$9(9.92989<9B9F9L9P9V9Z9`9d9j9n9t9x9~9
+:#:):4:<:C:I:T:\:c:i:t:|:
+;#;(;.;8;B;G;M;W;\;b;l;q;w;
+<#<.<:<X<a<f<k<v<|<
+=!=&=,=6=;=A=K=
+>*>3>;>E>P>Y>a>k>v>
+?&?=?^?h?
+0/060;0D0\0~0
+121c1
+1'2X2
+3M3~3
+4"4C4M4d4
+4-5^5
+6@6J6a6
+6'727T7]7t7
+7	8.878?8U8y8
+9&9H9Q9[9r9
+9(:\:
+;0;9;Q;p;y;
+<(<><\<r<
+=E=v=
+>!>,>1><>^>g>~>
+?<?W?w?
+0"0*0/0=0D0L0Q0
+1 1]1
+2B2Q2V2`2
+3*3B3
+4+444;4O4
+4!5g5
+526]6h6-7G7P7f7r7
+8F8M8V8h8
+839c:m:
+;:=k=
+= >L>
+2	3"3:3G3U3_3
+4b4j4o4y4
+5$5.5A5F5P5
+5A6F6P6
+7a7f7p7
+8*8a8f8p8
+9?9k9
+4o5F7m7
+<-<U<}<
+> >7>E>S>a>o>!?
+0#0,020;0B0R0b0h0m0s0{0
+1B1c1
+22282>2H2d2m2
+3!333w3
+535w5
+737{7
+:	;M;
+;P<^<m<~<
+<P=^=m=~=
+=P>^>m>~>
+?<?M?Z?`?s?
+0"0'0,020<0Z0
+1&1\1f1
+2&2\2f2
+30383
+4$4.434=4B4L4Q4[4`4j4o4y4~4
+5]5f5r5
+6 6I6Z6e6k6
+6d7o7
+818=8H8X8e8s8
+9$909;9K9X9f9~9
+:(:D:S:
+;);:;R;o;{;
+<)<\<o<
+<	=+=5=A=b=t=
+>'>I>S>_>
+?4?b?t?
+02070A0F0P0U0_0d0n0s0}0
+1,1>1L1^1i1{1
+2.292?2O2
+2@3K3[3`3f3l3q3
+4#4)4/444=4
+5!5'515<5N5S5X5]5c5i5s5
+8&858R8
+:J:n:
+;;;|;
+1"1(1-1g1
+1+232@2P2b2
+233>3O3
+5"5>5|5
+6'6f6r6
+7_7k7
+8P9[9m9
+9 :+:=:y:
+<0<T<h<
+=i=z=
+>->s>y>
+>A?H?]?i?
+!0,0;0
+171?1M1
+2a2h2}2
+3"3.3
+3 4+4=4Q4
+5,5C5L5U5p5
+6%6/666D6M6Z6i6v6
+7,797E7
+8>8F8W8f8{8
+9-:G:
+;.;};
+<A<^<}<
+=[=r=
+>p?~?
+.0B0b0m0
+1"1:1]1
+4+4A4V4b4
+5!5:5W5c5
+6I6g6
+7"717L7^7d7k7
+8(8N8^8q8
+9'9Q9p9
+:>:a:
+<m=|=
+>'>:>K>
+>D?U?d?
+0H1V1e1
+132w2
+3#3>3
+5 6k6{6
+80898O8U8
+9T9^9j9o9
+:3:C:^:
+;F;P;g;u;
+<'<N<
+=!=\=o=!>/>>>c>
+?I?a?}?
+000c0o0
+0P1^1m1
+3_4h4
+4	50585O5
+6G6R6e6
+8"8B8I8{8
+9$9B9
+: :;:
+:,;y;
+1:1M1V1c1s1~1
+2 20282H2P2
+30393F3V3
+4+4D4]4v4
+5<5f5s5z5
+6%616`6e6q6
+72777C7n7
+8G8[8a8f8l8
+9-93989>9R9k9t9
+:$:=:F:R:
+;$;S;X;d;
+;+<0<<<g<{<
+=)>=>Z>w>
+>R?X?q?
+0"040F0d0z0
+1"1(1<1\1d1k1
+1a2l2{2
+203;3M3^3{3
+4"494S4X4o4
+5+505G5a5f5}5
+696>6U6o6t6
+7-7G7L7c7}7
+9+9<9F9R9^9q9|9
+9":.:@:
+;";.;@;
+<-<Z<
+>c>n>x>
+? ?1?
+0#0(0c0n0x0
+1%2,2
+5Q5W5
+5@6K6]6
+7-7F7
+708>8M8
+: ;5;G;n;z;
+=g=o=}=
+=F>R>j>
+2+252C2q2w2
+3/4;4k4s4
+4-53585a5r5
+7/7R7
+8'828=8R8]8h8v8
+:+:i:
+:A;L;[;k;u;z;
+;)<i<
+101o1
+3+4`4
+777<7W7\7{7
+:%;:;Q;`;
+<'<V<
+>C>[>i>
+?"?o?x?
+020;0U0l0t0
+1-14191n1
+1?2G2
+2=3H3e3l3
+4#4L4\4m4
+5'5W5\5
+7/7B7b7
+8I8_8g8
+9>9Q9c9
+9::e:
+7%7*74797C7H7R7W7a7f7p7u7
+8 8*8/898>8H8M8W8\8f8k8x8}8
+9 9%9/949>9C9M9R9\9a9n9s9}9
+<%<7<<<C<I<`<r<x<}<
+0+060D0J0]0r0x0}0
+2.2F2V2e2}2
+283r3
+3#4G4L4X4
+4E5j5
+6)6E6R6p6
+6$7y7
+8@8V8h8l8p8t8x8
+:$:<:H:`:l:
+:A;H;M;\;a;p;u;
+<+<C<_<o<
+=6=O=
+>">9>L>P>T>X>t>
+?8?T?i?
+0-0@0D0H0L0P0T0X0\0`0r0
+1-2I2]2k2
+384U5
+6)7U7
+898:9
+0*000G0^0u0
+111H1_1p1t1x1|1
+3)363N3u3
+454x4
+7(7A7Z7s7
+8(8O8[8
+9,:U:j:
+: ;$;(;,;0;A;X;
+<I<s<
+>1>@>H>c>k>z>
+?$?:?R?i?
+0$0S0d0h0l0p0t0x0|0
+161\1a1r1
+2#252F2K2g2x2
+3$373]3
+314>4Y4j4w4
+5,5054585<5@5D5H5L5P5T5X5\5`5d5h5l5p5t5x5|5
+666Q6[6k6
+7&7?7I7\7o7
+8D8S8l8
+9K9f9v9
+:$:=:M:
+; ;$;(;,;0;4;8;<;@;D;H;L;z;
+;	< <B<J<l<t<
+=:=B=j=
+>">9>z>
+?)?`?e?z?
+0,080J0\0`0d0h0l0p0t0x0|0
+1h1K2u2
+2-3Z3
+4'4C4f4t4
+5$5O5c5l5q5
+7?7K7Z7_7
+8)878V8b8i8z8
+9>9v9
+:+:K:j:
+< <$<(<,<0<{<
+<&=d={=
+>E>_>
+?T?n?v?
+0J0n0v0
+3;3@3_3
+60686
+747q7
+7"8v8
+><?q?
+1%1N1r1
+272\2
+2!3F3o3
+4.4W4{4
+5?5d5
+6)6N6w6
+767_7
+8F8j8
+9-9Q9z9
+:/:X:}:
+;B;g;
+<,<Q<z<
+=9=b=
+= >I>m>
+?0?T?}?
+0;0d0
+0"1K1o1
+1	2"2
+3 3$3(3,3034383<3@3D3H3L3P3T3X3\3`3d3h3l3p3t3x3|3
+4 4$4(4,4044484<4@4D4H4L4P4T4X4\4`4d4h4l4p4t4x4|4
+5F5W5u5
+6&6@6[6v6
+7#7-7Q7Y7a7v7~7
+8$8,8A8I8[8f8
+9"9,969@9J9T9^9h9r9|9
+:3:R:i:
+;2;P;g;
+<[=e=
+? ?$?(?,?0?4?8?<?@?D?H?L?P?T?X?\?`?d?h?l?p?t?x?|?
+151A1N1w1
+2#262c2
+313N3k3
+3-4X4q4
+5A5d5
+6%7B7_7|7
+8*8G8d8u8
+9*9G9
+9X:u:
+; ;1;M;^;z;
+</<L<]<y<
+<8=P>p>&?-?8?I?i?
+000M0j0
+131R1
+2>2R2k2
+3+3[3t3
+494l4
+415[5e5
+6R6`6
+7B7H7z7
+8"808F8~8
+929@9V9
+;=;c;
+<@=M=
+>T>x>
+?4?a?
+:0S0i0
+3D4P4v4
+405J5g5
+626O6l6
+7#747B7S7a7
+818N8_8{8
+9:9p9
+:0:A:T:e:x:
+;,;=;P;a;t;
+<&<+<9<M<U<i<q<
+<!=j=
+>+><>Z>b>v>{>
+20O0d0
+212I2g2|2
+3 3$3(3,3034383<3@3D3H3L3P3T3X3\3`3d3h3l3p3t3x3|3
+4 4$4(4,4044484<4@4D4H4L4P4T4X4\4`4d4h4l4p4t4x4|4
+5 5$5(5,5054585<5@5D5H5L5P5T5X5\5`5d5h5l5p5t5x5|5
+606\6x6
+7\7n7
+8&8:8J8_8y8
+9$9C9{9
+:*:2:O:
+;B;`;~;
+<<<e<m<
+="='===B=X=]=s=x=
+>0>5>K>P>p>
+?7?>?F?N?b?j?~?
+131D1W1a1t1~1
+2#2M2{2
+3%3-353I3Q3e3m3
+5;5Y5m5
+9 9(9<9F9Z9b9
+:/:L:i:
+;&;:;d;h;l;p;t;x;|;
+< <$<(<,<0<4<8<<<@<D<H<L<P<T<X<\<`<d<h<l<p<t<x<|<
+= =$=(=,=0=4=8=<=@=D=H=L=P=T=p=t=x=|=
+?"?M?X?]?j?w?
+0 0$0(0,000w0
+1%2S2
+5	6 676
+7%7*7B7M7
+7}8y9
+:I:^:o:t:
+;&<z<
+>c>r>|>
+?l?{?
+>0L0X0c0|0
+1(1-1K1
+152:2T2X2\2`2d2
+4'4C4O4e4q4
+515=5S5_5u5
+6+6A6M6c6o6
+7/7;7Q7]7s7
+8)8?8K8a8m8
+9-999O9[9q9}9
+:!:+:5:C:Q:_:p:
+;-;;;I;W;e;s;
+< <1<;<E<O<]<k<y<
+=+=9=G=U=c=q=
+>)>7>E>S>a>r>
+?-?;?I?Z?k?u?
+0+090G0U0c0q0
+1*1;1E1O1Y1g1u1
+2(292C2M2W2e2s2
+3)353?3I3Z3k3u3
+4#4-474A4O4`4q4{4
+5)575H5Y5c5m5w5
+6'656C6T6e6o6y6
+7(797C7M7W7h7y7
+8%838A8O8]8n8
+9)979E9V9g9q9{9
+:":3:=:G:Q:_:m:{:
+;+;<;M;W;a;k;y;
+<#<1<B<S<]<g<q<
+=)=7=E=S=a=o=}=
+>%>/>9>F>W>a>k>u>
+?#?,?2?:?@?H?N?
+0G1.252}2
+3X3\3`3d3h3l3p3t3x3|3f4q4|4
+5=5S5c5q5
+6D7I7
+84888<8@8D8H8L8P8l8T9b9q9
+><?N?a?
+0)0;0
+4-565f6x6
+9 :Z:h:v:
+;!;2;8;C;I;Z;`;k;q;
+<!<><I<p<G=Q=
+1+404
+9[:a:';1;{=
+=Z>_>
+>#?.?<?P?[?
+1$1.191
+4C5L5U5^5g5p5u5
+6'6-686>6P6^6t6{6
+7&7J7[7o7
+8+858H8]8f8l8
+9'969<9M9f9k9q9
+[1`1:2?2
+3;6@6
+7W8a8
+<X<c<
+<P=`=
+4k5p5
+9D<O< =.=p>
+1,353
+4<4J4P4{4
+4+5B5M5R5W5\5a5f5k5p5u5z5
+6$6)6.63686=6B6G6L6Q6V6[6`6e6k6p6u6z6
+7 7%7*7/74797>7C7H7M7R7W7\7a7f7k7p7u7z7
+8 8%8*8/84898>8C8H8M8R8X8^8d8i8n8t8z8
+9$9)9.93989=9B9G9L9Q9V9[9`9e9j9o9t9y9~9
+:$:):.:3:8:=:B:G:L:Q:V:[:`:e:j:o:t:y:~:
+;#;(;-;2;7;<;A;F;K;P;U;Z;_;d;i;n;s;x;};
+<'<2<=<R<]<h<v<
+=#=(=.=7=C=I=M=S=a=f=l=
+1E1[1h1
+3)474|4
+778S8b8
+;);J;
+=H>z>
+0)0O0W0u0
+2"2'2-22272>2D2I2N2U2[2`2e2l2r2w2|2
+3%3/393I3N3T3^3h3x3}3
+4#4(424<4z4
+5\6i6
+9V9L:P:T:X:\:`:d:h:l:p:t:x:
+:h;l;p;t;x;|;
+;;<O<
+=G=}=
+1%141>1V1l1G3g3
+5&5F5f5
+7%7K7w7
+828@8N8\8j8{8
+9,9:9K9\9
+:_;r;
+;/<B<P<^<l<z<
+= =.=<=J=[=l=
+>+><>
+?0R0`0n0|0
+1"101>1L1Z1k1|1
+2L2a2
+3*3A3O3f3t3
+4-4D4R4i4w4
+5"505G5U5l5z5
+6%636J6X6o6}6
+7(767M7[7r7
+8+898P8^8u8
+9.9<9S9a9x9
+:1:?:V:d:{:
+;:;H;e;s;
+<<<J<g<u<
+=!=>=L=i=w=
+>#>@>N>k>y>
+?%?B?P?m?{?
+0'0D0R0o0}0
+1)1F1T1q1
+2+2H2V2s2
+3-3J3X3u3
+4!4/4L4Z4w4
+5#515N5\5y5
+5%6P6{6
+6'7R7}7
+7)8T8
+9+9V9
+:-:X:
+;/;Z;
+<1<\<
+=3=^=
+>5>`>
+?7?b?
+090d0
+1;1f1
+2=2h2
+3?3j3
+4A4l4
+5C5g5
+6-6N6o6
+7$7)7.7<7A7G7U7Z7`7n7s7x7
+8%83888>8L8Q8V8d8i8o8}8
+:%:I:s:
+:!;B;Q;`;i;
+<2<9<h<r<
+=%=,=3=:=A=H=O=V=]=d=k=r=y=
+>h>y>
+?+?G?i?y?
+1!2}2
+4%5r5
+5J6T6]6p6y6
+7&7/777D7W7d7l7y7
+: :/:;:Q:]:i:w:
+;I<e<{<
+>?>P>_>
+?H?R?h?l?
+2"2t2x2|2
+4'434A4R4Z4a4l4y4
+6F6M6T6[6b6i6p6w6~6
+7&7-747;7B7K7Y7
+8$8*8C8W8b8h8|8
+9)999M9
+;(;/;7;?;G;O;W;_;g;o;w;
+;[<o<
+=8=Q=k=
+=Z>_>
+?)?/?;?k?w?
+0=0I0Q0l0
+1"1:1H1V1n1{1
+2#2>2X2|2
+3*3N3e3
+4!515E5y5
+6%6+616=6I6
+7$797Q7W7]7i7t7
+898>8g8s8{8
+929B9Z9h9v9
+: :):7:@:Y:e:m:
+;8;O;
+<&<><R<j<x<
+= =$=(=,=?=a=
+>*>8>F>l>
+?*?8?F?^?r?
+020J0X0f0
+1?1D1b1u1
+5-5y5
+787J7Q7W7d7
+7C8a8x8
+9#9=9F9L9Q9W9j9q9w9|9
+:(:4:Q:Z:f:
+;K;_;u;
+<,<B<U<[<`<e<l<
+>&>b>z>
+>N?n?
+T0_0n0
+0!191
+6A6S6p6
+8(8;8F8K8d8m8
+9M9`9h9{9
+:*:2:G:U:^:y:
+;2;9;h;r;
+;A<L<[<
+=0=7=t=
+>!>3>?>j>q>y>
+?'?<?H?
+@0K0Z0w0
+0P1[1j1
+1@2K2Z2
+3)373A3v3
+5)565
+6!6+6Z6
+7 797R7
+7(838B8~8
+8	9Q9X9b9o9y9
+:*:5:B:]:g:
+<A<Q<q<
+>">+><>P>d>m>~>
+?(?9?L?`?r?
+0 0,0;0A0M0U0[0l0w0
+1+111D1J1\1l1r1
+2"2/242L2Y2z2
+343L3v3
+4H4w4
+4?5O5W5
+646M6[6k6
+7"777l7w7
+8!8A8Z8p8|8
+;+;0;5;B;L;U;[;v;
+<*<<<P<\<j<
+<P=a=p=
+=P>a>p>
+?$?/?4?=?G?P?]?i?{?
+081S1Z1i1q1
+3%313;3F3N3
+4$4T4X4\4`4d4h4
+6K6R6
+8W8m8
+84989<9@9D9H9L9P9T9X9A:
+;R;\;d;v;
+<6<<<F<u<
+=)=.=4=>=C=I=S=X=^=h=m=s=
+>.>:>L>^>i>v>
+?%?7?E?M?Y?_?
+5"686
+7R8`8J9Q9K:
+=%=-=O=
+>9>L>Q>*?1?
+2Q2,3n3R4
+7%8q8
+889<9@9D9H9L9P9T9X9\9`9d9h9l9O:V:k:r:{:
+;";*;2;N;U;];e;n;
+<0<7<?<[<b<k<t<
+=!===D=L=k=r=z=
+>$>@>G>O>X>{>
+?!?>?E?M?V?s?z?
+0k0r0z0
+1 1$1(1,101
+3!4q4
+9*9I9h9
+:2:x:
+;1;R;
+<I<V<p<
+=$=-=V=q=|=
+=Y>`>|>
+2Q2h2
+3Q3n5u5
+6$666H6
+8$828:8G8X8^8}8
+:":+:C:N:U:]:f:
+;#;+;3;<;{;
+<+<2<;<[<b<j<r<
+< ='=0=K=R=[=s={=
+>.>5>>>[>b>k>
+?>?E?N?k?r?{?
+0#0*0N0U0^0{0
+1#1;1B1J1R1Z1
+1	2M2T2\2d2
+2?3F3N3V3r3y3
+434;4B4J4k4r4{4
+6#6*626;6[6b6j6r6z6
+6%7e7
+7K8k8{8
+9&9.969[9b9k9
+:#:*:3:K:S:Z:b:j:s:|:
+;";>;E;M;U;q;x;
+<3<]<d<m<
+=#=*=3=K=S=Z=b=j=
+>0>7>@>[>b>k>
+?+?3?:?B?J?R?n?u?}?
+0"0*030[0b0k0
+1^1i1r1{1
+2#2*222:2C2`2g2o2w2
+4+424:4^4
+5 5'5/575R5
+6+626:6[6b6j6r6
+7#7*727:7B7J7n7u7~7
+8"8:8
+909e9o9
+9.:T:e:
+;+;2;;;S;Z;b;j;s;
+<[<b<k<
+<,=K=R=Z=b=~=
+>">>>E>N>k>r>z>
+?3?:?C?[?c?j?r?z?
+1&1-151=1E1
+2"2`2
+2+3l3
+5+525;5T5e5
+6+626:6B6J6R6
+7"7+7C7J7S7k7s7z7
+8#8*838K8S8Z8b8j8s8
+9L:j:
+:+;2;;;S;Z;c;{;
+; <'<0<K<R<[<t<
+= ===E=O=g=
+>3>9>K>T>
+?#?)?0?8?L?V?
+03090K0T0
+1#1)101C1L1
+1<2`2g2p2
+2<3_3z3
+41484[4b4j4
+5;5B5]5d5l5
+6"6*6K6R6Z6{6
+7%7A7H7P7l7t7
+8+838<8[8c8l8
+90979?9[9b9j9
+:4:P:^:f:o:x:
+;$;@;G;p;
+<"<]<h<p<y<
+="=+=D=b=
+>U>q>
+?"?+?C?
+/0>0G0
+0?1N1W1
+1;2B2J2R2Z2s2z2
+4+525;5S5Z5c5
+6-656?6W6
+6$7e7
+7@8}8
+9X9_9p9
+:#:*:3:D:
+:;;B;K;c;j;s;
+<$<{<
+="=+=C=J=S=d=
+=)>{>
+>	?E?
++020;0S0Z0c0t0
+1k1r1{1
+232:2C2T2
+3[3b3k3
+3%4i4
+4;5B5K5k5r5{5
+5	6E6
+8+929;9[9b9k9|9
+99:y:
+;;;B;K;c;{;
+<+<<<
+<	=I=
+>8>y>
+>5?y?
+0	1E1
+3>3{3
+3F4h4
+4.5d5u5
+6%7R7Z7{7
+8+828;8S8[8b8j8r8z8
+9"9*939L9
+:^:e:n:
+;";*;R;|;
+;!<(<0<8<@<H<p<
+<A=H=Q=Z=
+0N0U0]0e0
+0.151=1E1]1
+2K2R2[2s2z2
+3#383
+4n4u4~4
+4[5b5k5
+7 7$7(7,7074787<7@7D7H7L7P7T7X7\7`7d7h7l7p7t7x7|7
+8 8$8(8,8084888<8@8D8H8L8P8T8X8\8`8d8h8l8p8t8x8|8
+9 9$9(9,9094989<9@9D9H9L9P9T9X9\9`9d9h9l9p9t9x9|9
+: :$:(:,:0:4:8:<:@:D:H:L:P:T:X:\:`:d:h:l:p:t:x:|:
+; ;$;(;,;0;4;8;<;@;D;H;L;P;T;X;\;`;d;h;l;p;t;x;|;
+< <$<(<,<0<4<8<<<@<D<H<L<P<T<X<\<`<d<h<l<p<t<x<|<
+= =$=(=,=0=4=8=<=@=D=H=L=P=T=X=\=`=d=h=l=p=t=x=|=
+> >$>(>,>0>4>8><>@>D>H>L>P>T>X>\>`>d>h>l>p>t>x>|>
+? ?$?(?,?0?4?8?<?@?D?H?L?P?T?X?\?`?d?h?l?p?t?x?|?
+0'030>0L0X011
+616q6{6
+8"8;8T8m8
+959N9g9
+:/:H:a:
+;);_;
+;h<l<p<t<x<|<
+<(=,=0=4=8=<=@=D=a=h=
+>:>D>N>X>b>j>o>
+2K2g2
+6V7w7
+80979^9
+;>;r;
+=.=i=
+>1>>>
+?=?S?
+0(040B0N0
+1#161B1T1_1
+2#2*21282C2^2
+3(4r4
+4.5D5
+5*6z6
+8r8y8
+899E9U9v9q;x;
+=(=-=@=J=O=
+>$>V>[>
+0R0W0^0e0l0s0z0
+1/1?1J1Z1
+2 2$2(2,2024282<2@2D2H2L2P2T2X2\2`2d2
+2/3h3
+4!4O4Y4
+50585D5h5
+6$6>6F6O6
+7%7;7B7}7
+9%9K9R9Z9b9k9
+:":*:3:?:c:k:t:
+:<;E;Q;
+;	<H<
+=#=,=5=k=r=
+>P>a>
+? ?'?/?K?R?Z?c?l?
+0 080<0@0D0H0m0
+1<1^1
+2*2L2n2
+393^3
+4<4a4
+5?5d5
+5 6.696
+7 8.898
+: ;.;9;
+;0<><I<
+<P=^=i=
+=p>~>
+0@1Q1\1
+3	4V4
+4)5v5
+7D8<9
+9/:6:<:C:J:Q:X:\:`:d:h:
+>7>Y>w>
+>1?8?
+#0=0l0p0t0x0
+191?2P2[2
+3n3v3
+4(4_4g4u4
+465B5O5g5
+6S6q6
+7)8?8Y8#919@9{9
+<!<]<
+>\>x>
+>(?Q?
+020F0x0T1b1t1
+102>2M2
+3 3[3
+3.4@4
+4=5t5
+5+6o6<7
+8,878G8R8a8n8y8
+9)9E9Q9[9w9
+:$:@:L:S:[:`:q:v:{:
+=2>^>
+>)?j?
+1H1l1
+2 2$2(2,2024282<2C2o2
+2?3J3Y3d3p3
+4(464?4n4
+5 5)5H5M5R5X5e5n5~5
+6,686K6T6d6u6
+7(757@7`7
+788D8W8`8p8
+9H9[9e9
+:):7:B:Q:h:x:
+;@;x;
+<<<`<
+<(=h=x=|=
+=C>s>
+6%7T7d7s7<8
+: ;0;Z;
+<,<H<M<S<`<e<k<x<}<
+=$>Z?`?q?v?|?
+0"0,040
+1L2R2d2m2x2Y3
+4I4i4
+6%6+616C6I6U6b6
+7^8q8
+:J:c:
+;$;6;H;c;
+<"<,<b<t<
+=)===P=d=w=
+>4>9>O>b>v>
+>'?Z?z?
+0P0b0t0
+2:2Y2x2
+3%3*303>3C3H3t3
+4F4z4Y6
+2+4F4
+8P8u8
+:+<6<
+> ?.?7?
+2.2h2x2
+2A3K3U3r3}3
+3i4r4
+5N5b5
+5A6R6
+6>7i7
+7#828Y8p8x8
+8*929>9
+< <(<4<@<g<
+=J>R>^>
+4/4M4Y4e4q4}4
+505A5J5b5n5z5
+6!7f7r7
+7P8X8
+9 9>9J9`9i9r9
+9!:[:o:
+;<<M<}<
+=3=<=G=
+>Z>f>
+>=?I?
+1Y1u2
+414v4
+7S8[8k8
+?i?w?
+Y0g0y0
+0Y1i1{1
+5'535?5f5
+7	7b7j7v7
+9!919=9F9
+9>:K:W:
+;6<><F<
+=.=:=F=R=~=
+=$>.>6>W>k>
+?#?+?1?H?N?_?v?}?
+0)0N0
+1C2O2
+2G3Y3
+4)454C4b4}4
+636C6S6c6s6
+7#7X7
+8,8^8
+819m9
+:I:{:
+;C;u;
+<=<o<
+=7=i=
+=1>c>
+>#?M?j?
+050R0o0
+3>3m3
+3)4y4
+5%6u6
+919[9
+<?<s<
+1C2w2
+3G3{3
+3#4M4w4
+6C6w6
+758\8
+8$9V9
+<6<`<i=
+?7?a?
+070r0
+1.1U1|1
+2?2f2
+3;3b3
+3%4B4_4|4
+5*5G5d5
+6/6L6i6
+6!7>7e7s7
+7@8e8k8
+9$9.989=9C9Q9V9^9k9
+:1:6:>:K:a:f:n:{:
+:Q;a;q;
+<%</<9<C<
+3 3$3(3,3034383<3@3D3H3L3P3T3X3\3`3d3h3l3p3t3x3|3
+4 4$4(4,4044484<4@4D4H4L4P4T4X4\4`4d4h4l4p4t4x4|4
+5 5$5(5,5054585<5@5D5H5L5P5T5X5\5`5d5h5l5p5t5x5|5
+6 6$6(6,6064686<6@6D6H6L6P6T6X6\6`6d6h6l6p6t6x6|6
+7 7$7(7,7074787<7@7D7H7L7P7T7X7\7`7d7h7l7p7t7x7|7
+8 8$8(8,8084888<8@8D8H8L8P8T8X8\8`8d8h8l8p8t8x8|8
+9 9$9(9,9094989<9@9D9H9L9P9T9X9\9`9d9h9l9p9t9x9|9
+: :$:(:,:0:4:8:<:@:D:H:L:P:T:X:\:`:d:h:l:p:t:x:|:
+; ;$;(;,;0;4;8;<;@;D;H;L;P;T;X;\;`;d;h;l;p;t;x;|;
+;@<D<
+= =$=(=@=D=H=L=P=T=X=\=`=d=h=l=p=t=x=|=
+3 3$3(3,3034383<3@3D3|3
+7$7,747<7D7L7T7\7d7l7t7|7
+8$8,848<8D8L8T8\8d8l8t8|8
+@0D0H0L0P0T0X0\0`0d0h0l0p0t0x0|0
+1 1$1(1,1014181<1@1D1H1L1P1T1X1\1`1h2l2p2t2x2|2
+2h5l5p5t5x5|5
+6 6$6(6,6064686<6@6D6H6L6P6T6X6\6`6d6h6l6p6t6x6|6
+7 7$7(7,7074787<7@7D7H7L7P7T7X7\7`7d7h7l7p7t7x7|7
+8 8$8(8,8084888<8@8D8H8L8P8T8X8\8`8d8h8l8p8t8x8|8
+9 9$9(9,9094989<9@9D9H9L9P9T9X9\9`9d9h9l9p9t9x9|9
+: <$<(<,<0<4<8<<<@<D<H<L<P<T<X<\<`<d<h<l<p<t<x<|<
+= =$=(=,=0=4=8=<=@=D=H=L=P=T=X=\=`=
+3$3,343<3D3L3T3\3d3l3t3|3
+4$4,444<4D4L4T4\4d4l4t4|4
+5$5,545<5D5L5T5\5d5l5t5|5
+6$6,646<6D6L6T6\6d6l6t6|6
+7$7,747<7D7L7T7\7d7l7t7|7
+8$8,848<8D8L8T8\8d8l8t8|8
+9$9,949<9D9L9T9\9d9l9t9|9
+:$:,:4:<:D:L:T:\:d:l:t:|:
+;$;,;4;<;D;L;T;\;d;l;t;|;
+<$<,<4<<<D<L<T<\<d<l<t<|<
+=$=,=4=<=D=L=T=\=d=l=t=|=
+>$>,>4><>D>L>T>\>d>l>t>|>
+?$?,?4?<?D?L?T?\?d?l?t?|?
+0$0,040<0D0L0T0\0d0l0t0|0
+1$1,141<1D1L1T1\1d1l1t1|1
+2$2,242<2D2L2T2\2d2l2t2|2
+3 3(30383@3H3P3X3`3h3p3x3
+4 4(40484@4H4P4X4`4h4p4x4
+5 5(50585@5H5P5X5`5h5p5x5
+6 6(60686@6H6P6X6`6h6
+`0d0h0l0p0t0x0|0
+2,20242
+0 0$0(0,0004080<0@0D0H0L0P0T0X0\0`0d0h0t0x0|0
+5(5054585<5@5D5H5L5P5T5X5\5`5d5h5l5p5t5x5|5
+5$>,>4><>D>L>T>\>d>l>t>|>
+004080<0z1~1
+2$202<2H2T2`2l2x2
+3 3,383D3P3\3h3t3
+4(444@4L4X4d4p4|4
+5(545@5L5X5d5p5|5
+6$606
+0$0,040<0D0L0T0\0d0l0t0|0
+1$1,141<1D1L1T1\1d1l1t1|1
+2$2,242<2D2L2T2\2d2l2t2|2
+3$3,343<3D3L3T3\3d3l3t3|3
+4$4,444<4D4L4T4\4d4l4t4|4
+5$5,545<5D5L5T5\5d5l5t5|5
+6$6,646<6D6L6T6\6d6l6t6|6
+(10181@1H1P1X1`1h1p1x1
+2 2(20282@2H2P2X2`2h2p2x2
+3 3(30383@3H3P3X3`3h3p3x3
+4 4(40484@4H4P4X4`4h4p4x4
+5 5(50585@5H5P5X5`5h5p5x5
+6 6(60686@6H6P6X6`6h6p6x6
+7 7(70787@7H7P7X7`7h7p7x7
+8 8(80888@8
+7 7$70747@7D7P7T7`7d7p7t7
+7 <$<0<4<@<D<P<T<`<d<p<t<
+= =$=
+P2T2`2d2p2t2
+3 3$30343@3D3P3T3
+8(8,888<8H8L8X8\8h8l8x8|8
+80=H=L=X=\=h=l=x=|=
+>(>,>8><>H>L>
+ 3$30343@3D3P3T3`3d3p3t3
+4 4$4`8d8p8t8
+9 9$90949@9D9P9T9`9d9
+> >$>0>4>@>D>P>T>`>d>p>t>
+(8,888<8H8L8X8\8h8l8x8|8
+9(9,9
+>(>,>8><>H>L>X>\>h>l>x>|>
+3 3$30343@3D3P3T3`3d3p3t3
+484<4@4D4H4L4P4T4X4
+9(9,989<9H9L9X9\9h9l9x9|9
+9X>\>h>l>x>|>
+?(?,?8?<?H?L?X?\?
+4 4$40444@4D4P4T4`4d4p4t4
+4p9t9
+: :$:0:4:@:D:P:T:`:d:p:t:
+?(?,?8?<?H?L?X?\?h?l?x?|?
+5 5$50545@5D5P5T5`5d5p5t5
+:(:,:8:<:H:L:X:\:h:l:x:|:
+0(0,080<0H0L0X0\0h0l0x0|0
+00545@5D5P5T5`5d5p5t5
+6 6$60646
+(4,484<4H4L4X4\4h4l4x4|4
+5(5,54585<5H5T5X5h5
+:P:T:`:d:p:t:
+; ;$;0;4;@;D;P;T;
+0 0$00040@0D0P0T0`0d0p0t0
+0h5l5x5|5
+6(6,686<6H6L6X6\6h6l6
+;(;,;8;<;H;L;X;\;h;l;x;|;
+1 1$10141@1D1P1T1`1d1p1t1
+6 6$60646@6D6P6T6`6d6p6t6
+< <$<0<4<@<D<P<T<`<d<p<t<
+0141@1D1P1T1`1d1p1t1
+2 2$20242
+ 3$3(3,3034383<3@3D3H3L3P3T3X3\3`3d3h3l3p3t3x3|3
+4 4$4(4,4044484<4@4D4H4L4P4T4X4\4`4d4h4l4p4t4x4|4
+5 5$5(5,5054585<5@5D5H5L5P5T5X5\5`5d5h5l5p5t5x5|5
+5p:t:x:|:
+1 1$1(1,1014181<1@1D1H1L1P1T1X1\1`1d1h1l1p1
+(3,3034383<3@3D3H3L3P3T3X3\3`3d3h3l3p3t3x3|3
+4 4$4(4,4044484<4@4D4H4L4P4T4X4\4`4d4h4l4p4t4x4|4
+5 5$5(5,5054585<5@5D5H5L5P5T5X5\5`5d5h5l5p5t5x5|5
+6 6$6(6,6064686<6@6D6H6L6P6T6X6\6`6d6h6l6p6t6x6|6
+7 7$7(7,7074787<7@7D7H7L7P7T7X7\7`7d7h7l7p7t7x7|7
+8 8$8(8,8
+X>\>`>d>h>l>p>t>x>|>
+@0D0H0L0P0T0X0\0`0d0h0l0p0t0x0|0
+3H4`4
+505@5D5T5X5\5d5|5
+6,606@6D6H6L6T6l6|6
+7 7074787<7@7H7`7p7t7
+8,8<8@8P8T8X8`8x8
+9 9$9,9D9T9X9h9l9p9t9x9|9
+: :$:(:,:4:L:\:`:p:t:x:|:
+; ;$;(;,;4;L;\;`;p;t;x;|;
+< <$<(<0<H<X<\<l<p<t<x<|<
+= =$=(=0=H=X=\=l=p=t=x=|=
+> >$>(>,>4>L>P>h>x>|>
+? ?$?,?D?T?X?h?l?p?t?x?
+0$0(0,00040<0T0d0h0x0|0
+1 1$1(1,10141<1T1d1h1x1|1
+2 2$2(2,2024282@2X2\2t2
+3 3$3(3,30383P3`3d3t3x3|3
+4 4044484<4@4D4L4d4t4x4
+5 5054585<5@5D5H5P5h5l5
+6,6064686<6@6H6`6p6t6
+7 7$74787<7D7\7l7p7
+8 8(8@8P8T8d8h8l8t8
+9$9(9@9D9X9h9l9|9
+:$:(:,:4:<:T:d:h:x:|:
+; ;4;8;<;D;\;l;|;
+< <0<@<D<H<`<p<
+=(=,=D=T=X=p=
+>$>(>@>P>`>d>h>l>p>x>|>
+?$?(?,?0?4?<?T?X?p?t?
+0$04080<0T0d0t0
+1(181H1X1\1`1d1l1
+2,20242<2D2\2l2p2t2
+303@3D3T3X3\3`3h3l3p3t3
+4 4$484<4@4X4h4l4|4
+5 50545L5P5T5X5`5d5h5l5p5x5
+606@6P6T6X6\6p6t6x6|6
+7$7(7,7D7H7L7`7d7h7l7
+84888<8D8H8P8T8\8`8h8l8t8x8
+9$94989P9T9X9`9x9|9
+:(:8:H:X:\:l:p:
+; ;(;@;D;\;l;p;t;x;
+<$<(<0<H<X<\<l<p<t<
+=(=,=<=@=X=h=l=p=
+>$>(>8><>@>X>h>l>p>
+?0?4?8?<?D?\?`?d?l?
+0$0(080<0@0D0X0h0l0p0
+1014181@1X1h1l1p1
+2(2,2D2T2X2\2p2t2
+3034383L3\3l3p3t3
+4,404H4L4P4d4t4x4
+5(5,5054585<5@5D5H5L5T5X5\5`5d5h5l5p5t5x5
+6(6,6D6H6L6P6T6h6x6|6
+0<0L0X0`0
+1D1T1`1h1
+2L2\2h2p2
+3 3T3d3p3x3
+4 4(4\4l4x4
+5(505d5t5
+6$6,60646<6P6X6l6t6|6
+7 7(70787<7D7L7T7X7`7t7|7
+8$8h8t8
+9t9|9
+:$:D:P:p:|:
+<0<8<X<t<
+=D=L=l=
+>4>@>`>l>
+?$?D?L?T?\?d?l?t?
+0$000P0\0|0
+1 1(10181@1H1P1\1|1
+2 2,2L2T2\2d2p2
+343<3D3L3X3x3
+4(4H4P4\4|4
+545@5d5
+686D6d6l6x6
+7 7(70787D7d7p7
+848<8D8L8X8x8
+9 9@9L9l9x9
+:$:0:P:X:d:
+;<;D;L;T;\;d;l;x;
+<(<H<T<t<|<
+= =(=0=8=@=H=T=t=
+>$>D>L>T>\>h>
+?,?4?<?D?P?p?|?
+0 0@0H0T0t0
+1,181\1|1
+202<2\2d2p2
+3 3(343T3`3
+4 4@4T4
+5$5,545<5H5h5p5|5
+6 6@6H6P6\6|6
+7,787X7d7
+8 8,8L8T8`8
+949<9D9P9t9
+:$:4:<:D:P:p:x:
+;8;D;d;p;
+< <(<0<8<@<H<P<X<`<h<t<
+=,=L=T=\=d=l=t=|=
+> >(>0><>\>d>p>
+?4?<?D?P?p?|?
+0 0,0L0X0x0
+1 1T1X1x1
+2(242<2d2h2
+3 3@3H3T3
+4\4h4
+4 5,5
+5X6d6
+607P7p7
+7(848
+909P9p9
+:0:P:p:
+;0;L;P;l;p;
+<<<@<
+>$>0>P>\>|>
+?,?8?
+080X0x0
+2 2@2
+3 3@3`3
+4 4`4
+5 5@5`5
+6 6<6@6H6L6P6X6l6t6
+7 7(7074787<7@7H7\7d7x7
+2H2X2h2x2
+H1L1P1T1X1\1`1d1h1l1p1
+2(2,2024282<2@2D2H2L2P2T2X2\2`2d2h2l2p2t2x2
+3 3$3(3,303<3@3H3P3T3X3\3h3x3|3
+4,4044484<4@4D4H4L4P4T4\4`4d4h4l4p4t4x4|4
+4P5T5X5\5`5d5h5l5p5t5x5|5
+6 6$6(6
+8 8084888<8@8D8H8P8T8X8\8`8d8p8t8x8|8
+9 9$9(9,9094989<9@9D9H9L9P9T9X9\9`9d9h9l9p9t9x9|9
+: :$:(:,:0:4:8:<:@:D:H:L:P:T:X:\:`:d:h:l:p:t:x:|:
+; ;$;(;,;0;4;8;<;@;D;H;L;P;T;X;\;`;d;h;l;p;t;x;|;
+< <$<(<,<0<4<8<
+@4D4H4L4P4T4X4\4`4d4h4l4p4t4
+5 5$5(5,5054585<5@5D5H5L5P5T5X5\5`5d5h5l5p5t5x5|5
+6 6$6(6,6064686<6@6D6H6L6P6T6X6\6`6d6h6l6p6t6x6|6
+7$7(7074787@7D7H7L7P7T7X7\7d7h7l7p7t7|7
+8 8$8,8084888<8@8D8H8L8P8T8X8\8`8h8l8p8t8|8
+9,989P9\9t9
+:(:4:L:X:p:|:
+;$;0;H;T;l;x;
+< <,<D<P<h<t<
+=(=@=L=d=p=
+6 60646D6H6X6\6l6p6
+7 7$74787H7L7\7`7x7|7
+8(8,888<8H8L8X8\8h8l8x8|8
+9(9,989<9H9L9X9\9h9l9x9|9
+:(:,:8:<:H:L:X:\:h:l:x:|:
+; ;(;
+=4=X=x=
+>4>X>x>
+0$1D1`1
+4L5l5
+6 7t7
+8(9|9
+:4:L:l:
+; ;H;l;
+<<<\<
+>,>H>h>
+>0?P?
+040P0l0
+141T1p1
+2$2@2d2
+343P3l3
+484X4t4

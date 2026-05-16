@@ -1,0 +1,97 @@
+INFO  Using log config file: jar:file:/home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Framework/Generic/lib/Generic.jar!/generic.log4j.xml (LoggingInitialization)  
+INFO  Using log file: /home/zutfen/.config/ghidra/ghidra_12.1_PUBLIC/application.log (LoggingInitialization)  
+INFO  Loading user preferences: /home/zutfen/.config/ghidra/ghidra_12.1_PUBLIC/preferences (Preferences)  
+INFO  Searching for classes... (ClassSearcher)  
+INFO  Class search complete (759 ms) (ClassSearcher)  
+INFO  Initializing SSL Context (DefaultSSLContextInitializer)  
+INFO  Initializing Random Number Generator... (SecureRandomFactory)  
+INFO  Random Number Generator initialization complete: NativePRNGNonBlocking (SecureRandomFactory)  
+INFO  Trust manager disabled, cacerts have not been set (DefaultTrustManagerFactory)  
+INFO  Headless startup complete (1563 ms) (AnalyzeHeadless)  
+INFO  Class searcher loaded 59 extension points (20 false positives) (ClassSearcher)  
+INFO  HEADLESS Script Paths:
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/PDB/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/SwiftDemangler/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Processors/JVM/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Processors/PIC/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/BSim/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Debug/Debugger/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/BytePatterns/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/SystemEmulation/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/WildcardAssembler/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Processors/DATA/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/VersionTracking/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Debug/Debugger-rmi-trace/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/PyGhidra/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/MicrosoftCodeAnalyzer/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Processors/8051/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/DecompilerDependent/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/FunctionID/ghidra_scripts
+    /home/zutfen/ghidra-work/scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/FileFormats/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Processors/Atmel/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/GnuDemangler/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/Base/ghidra_scripts
+    /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/Decompiler/ghidra_scripts (HeadlessAnalyzer)  
+INFO  HEADLESS: execution starts (HeadlessAnalyzer)  
+INFO  Opening existing project: /home/zutfen/ghidra-work/projects/dinput8_triage (HeadlessAnalyzer)  
+INFO  Opening project: /home/zutfen/ghidra-work/projects/dinput8_triage (HeadlessProject)  
+INFO  REPORT: Processing project file: /dinput8.dll (HeadlessAnalyzer)  
+INFO  ANALYZING all memory and code: /dinput8.dll (HeadlessAnalyzer)  
+WARN  Ignoring leading '_' chars on no-return name '___raise_securityfailure' specified in file: /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/Base/data/PEFunctionsThatDoNotReturn (NoReturnFunctionAnalyzer)  
+WARN  Ignoring leading '_' chars on no-return name '___report_rangecheckfailure' specified in file: /home/zutfen/.local/opt/ghidra_12.1_PUBLIC/Ghidra/Features/Base/data/PEFunctionsThatDoNotReturn (NoReturnFunctionAnalyzer)  
+INFO  Skipping PDB processing: failed to locate PDB file in configured locations (PdbUniversalAnalyzer)  
+INFO  Use a script to set the PDB file location. I.e.,
+    PdbAnalyzer.setPdbFileOption(currentProgram, new File("/path/to/pdb/file.pdb")); or
+    PdbUniversalAnalyzer.setPdbFileOption(currentProgram, new File("/path/to/pdb/file.pdb"));
+Or set the symbol server search configuration using:    PdbPlugin.saveSymbolServerServiceConfig(...);
+ This must be done using a pre-script (prior to analysis). (PdbUniversalAnalyzer)  
+INFO  Packed database cache: /var/tmp/zutfen-ghidra/packed-db-cache (PackedDatabaseCache)  
+INFO  Applied data type archive: windows_vs12_32 (ApplyDataArchiveAnalyzer)  
+INFO  -----------------------------------------------------
+    ASCII Strings                              0.557 secs
+    Apply Data Archives                        0.399 secs
+    Call Convention ID                         0.045 secs
+    Call-Fixup Installer                       0.049 secs
+    Create Address Tables                      0.514 secs
+    Create Function                            0.009 secs
+    Data Reference                             0.598 secs
+    Decompiler Parameter ID                   25.179 secs
+    Decompiler Switch Analysis                15.438 secs
+    Demangler Microsoft                        0.208 secs
+    Disassemble Entry Points                   0.492 secs
+    Embedded Media                             0.025 secs
+    External Entry References                  0.008 secs
+    Function ID                                4.065 secs
+    Function Start Pre Search                  0.049 secs
+    Function Start Search                      0.782 secs
+    Function Start Search After Code           0.502 secs
+    Function Start Search After Data           0.368 secs
+    Non-Returning Functions - Discovered       2.497 secs
+    Non-Returning Functions - Known            0.059 secs
+    PDB Universal                              0.010 secs
+    Reference                                  0.812 secs
+    Scalar Operand References                  2.086 secs
+    Shared Return Calls                        1.023 secs
+    Stack                                      1.388 secs
+    Subroutine References                      0.901 secs
+    Windows x86 PE Exception Handling          0.276 secs
+    Windows x86 PE RTTI Analyzer               0.000 secs
+    Windows x86 Thread Environment Block (TEB) Analyzer     0.000 secs
+    WindowsResourceReference                   0.281 secs
+    X86 Function Callee Purge                  0.085 secs
+    x86 Constant Reference Analyzer            8.919 secs
+-----------------------------------------------------
+     Total Time   67 secs
+-----------------------------------------------------
+ (AutoAnalysisManager)  
+INFO  REPORT: Analysis succeeded for file: /dinput8.dll (HeadlessAnalyzer)  
+INFO  REPORT: Execute script: DumpTargetStringAddrs.java  (HeadlessAnalyzer)  
+INFO  SCRIPT: /home/zutfen/ghidra-work/scripts/DumpTargetStringAddrs.java (HeadlessAnalyzer)  
+INFO  DumpTargetStringAddrs.java> 1013d974 | Buff (GhidraScript)  
+INFO  DumpTargetStringAddrs.java> 1013d654 | Name (GhidraScript)  
+INFO  DumpTargetStringAddrs.java> 1013d650 | ID (GhidraScript)  
+INFO  DumpTargetStringAddrs.java> 1013d208 | Type (GhidraScript)  
+INFO  ANALYZING changes made by post scripts: /dinput8.dll (HeadlessAnalyzer)  
+INFO  REPORT: Post-analysis succeeded for file: /dinput8.dll (HeadlessAnalyzer)  
+INFO  REPORT: Save succeeded for processed file: /dinput8.dll (HeadlessAnalyzer)  

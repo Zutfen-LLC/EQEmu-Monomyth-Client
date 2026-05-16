@@ -1,0 +1,4075 @@
+============================================================
+Vtable symbol: MQ2CharacterType::vftable
+Address: 1013f770
+slot 0 (+0x00) | 1013f770 | 1001bef0 | FUN_1001bef0
+slot 1 (+0x04) | 1013f774 | 1001bf20 | FUN_1001bf20
+slot 2 (+0x08) | 1013f778 | 1001beb0 | FUN_1001beb0
+slot 3 (+0x0c) | 1013f77c | 1001bee0 | FUN_1001bee0
+slot 4 (+0x10) | 1013f780 | 100df000 | FUN_100df000
+slot 5 (+0x14) | 1013f784 | 1001be70 | FUN_1001be70
+slot 6 (+0x18) | 1013f788 | 1014fc7c | <no-function>
+slot 7 (+0x1c) | 1013f78c | 1001dfb0 | FUN_1001dfb0
+
+Likely GetMember handler from vtable+0x10:
+Function: FUN_100df000 @ 100df000
+Signature: undefined4 __thiscall FUN_100df000(void * this, int param_1, uint * param_2, byte * param_3, undefined4 * param_4)
+Instructions:
+  100df000 | PUSH EBP
+  100df001 | MOV EBP,ESP
+  100df003 | AND ESP,0xfffffff8
+  100df006 | MOV EAX,0x1008
+  100df00b | CALL 0x100c0920
+  100df010 | PUSH ESI
+  100df011 | MOV ESI,dword ptr [EBP + 0x8]
+  100df014 | PUSH EDI
+  100df015 | TEST ESI,ESI
+  100df017 | JZ 0x100df4c7
+  100df01d | PUSH dword ptr [EBP + 0xc]
+  100df020 | CALL 0x10019c10
+  100df025 | MOV EDI,EAX
+  100df027 | TEST EDI,EDI
+  100df029 | JNZ 0x100df04f
+  100df02b | PUSH dword ptr [EBP + 0x14]
+  100df02e | MOV ECX,dword ptr [0x1017c108]
+  100df034 | PUSH dword ptr [EBP + 0x10]
+  100df037 | PUSH dword ptr [EBP + 0xc]
+  100df03a | MOV EAX,dword ptr [ECX]
+  100df03c | PUSH dword ptr [ESI + 0x2dd0]
+  100df042 | MOV EAX,dword ptr [EAX + 0x10]
+  100df045 | CALL EAX
+  100df047 | POP EDI
+  100df048 | POP ESI
+  100df049 | MOV ESP,EBP
+  100df04b | POP EBP
+  100df04c | RET 0x10
+  100df04f | PUSH 0x800
+  100df054 | LEA EAX,[ESP + 0x14]
+  100df058 | PUSH 0x0
+  100df05a | PUSH EAX
+  100df05b | CALL 0x100589d0
+  100df060 | MOV EAX,dword ptr [EDI]
+  100df062 | ADD ESP,0xc
+  100df065 | DEC EAX
+  100df066 | CMP EAX,0xba
+  100df06b | JA 0x100df4c7
+  100df071 | JMP dword ptr [EAX*0x4 + 0x100e22a4]
+  100df078 | MOV EAX,dword ptr [ESI + 0x2dd0]
+  100df07e | MOV ECX,dword ptr [EBP + 0x14]
+  100df081 | MOV EAX,dword ptr [EAX + 0x148]
+  100df087 | MOV dword ptr [ECX + 0x4],EAX
+  100df08a | MOV EAX,[0x1017c0b0]
+  100df08f | MOV dword ptr [ECX],EAX
+  100df091 | MOV AL,0x1
+  100df093 | POP EDI
+  100df094 | POP ESI
+  100df095 | MOV ESP,EBP
+  100df097 | POP EBP
+  100df098 | RET 0x10
+  100df09b | MOV ECX,dword ptr [EBP + 0x14]
+  100df09e | ADD ESI,0x3228
+  100df0a4 | MOV dword ptr [ECX + 0x4],ESI
+  100df0a7 | MOV EAX,[0x1017c0ec]
+  100df0ac | MOV dword ptr [ECX],EAX
+  100df0ae | MOV AL,0x1
+  100df0b0 | POP EDI
+  100df0b1 | POP ESI
+  100df0b2 | MOV ESP,EBP
+  100df0b4 | POP EBP
+  100df0b5 | RET 0x10
+  100df0b8 | MOV ECX,dword ptr [EBP + 0x14]
+  100df0bb | ADD ESI,0x3268
+  100df0c1 | MOV dword ptr [ECX + 0x4],ESI
+  100df0c4 | MOV EAX,[0x1017c0ec]
+  100df0c9 | MOV dword ptr [ECX],EAX
+  100df0cb | MOV AL,0x1
+  100df0cd | POP EDI
+  100df0ce | POP ESI
+  100df0cf | MOV ESP,EBP
+  100df0d1 | POP EBP
+  100df0d2 | RET 0x10
+  100df0d5 | MOV EAX,[0x10185268]
+  100df0da | MOV ECX,dword ptr [EBP + 0x14]
+  100df0dd | MOV EAX,dword ptr [EAX]
+  100df0df | MOV EAX,dword ptr [EAX + 0x31f0]
+  100df0e5 | MOV EAX,dword ptr [EAX + 0x4]
+  100df0e8 | MOV EAX,dword ptr [EAX + 0x3388]
+  100df0ee | MOV dword ptr [ECX + 0x4],EAX
+  100df0f1 | MOV EAX,[0x1017c0b0]
+  100df0f6 | MOV dword ptr [ECX],EAX
+  100df0f8 | MOV AL,0x1
+  100df0fa | POP EDI
+  100df0fb | POP ESI
+  100df0fc | MOV ESP,EBP
+  100df0fe | POP EBP
+  100df0ff | RET 0x10
+  100df102 | MOV ECX,dword ptr [EBP + 0x14]
+  100df105 | MOV EAX,dword ptr [ESI + 0x2910]
+  100df10b | MOV dword ptr [ECX + 0x4],EAX
+  100df10e | MOV EAX,[0x1017c0b0]
+  100df113 | MOV dword ptr [ECX],EAX
+  100df115 | MOV AL,0x1
+  100df117 | POP EDI
+  100df118 | POP ESI
+  100df119 | MOV ESP,EBP
+  100df11b | POP EBP
+  100df11c | RET 0x10
+  100df11f | MOV EAX,dword ptr [ESI + 0x2910]
+  100df125 | MOVD XMM0,EAX
+  100df129 | CVTDQ2PD XMM0,XMM0
+  100df12d | SHR EAX,0x1f
+  100df130 | ADDSD XMM0,qword ptr [EAX*0x8 + 0x101479a0]
+  100df139 | CVTPD2PS XMM0,XMM0
+  100df13d | DIVSS XMM0,dword ptr [0x101478a8]
+  100df145 | MOV ECX,dword ptr [EBP + 0x14]
+  100df148 | MOVSS dword ptr [ECX + 0x4],XMM0
+  100df14d | MOV EAX,[0x1017c0a8]
+  100df152 | MOV dword ptr [ECX],EAX
+  100df154 | MOV AL,0x1
+  100df156 | POP EDI
+  100df157 | POP ESI
+  100df158 | MOV ESP,EBP
+  100df15a | POP EBP
+  100df15b | RET 0x10
+  100df15e | MOV EAX,dword ptr [ESI + 0x207c]
+  100df164 | MOV ECX,dword ptr [EBP + 0x14]
+  100df167 | MOVD XMM0,EAX
+  100df16b | CVTDQ2PD XMM0,XMM0
+  100df16f | SHR EAX,0x1f
+  100df172 | ADDSD XMM0,qword ptr [EAX*0x8 + 0x101479a0]
+  100df17b | CVTPD2PS XMM0,XMM0
+  100df17f | DIVSS XMM0,dword ptr [0x101478a8]
+  100df187 | MOVSS dword ptr [ECX + 0x4],XMM0
+  100df18c | MOV EAX,[0x1017c0a8]
+  100df191 | MOV dword ptr [ECX],EAX
+  100df193 | MOV AL,0x1
+  100df195 | POP EDI
+  100df196 | POP ESI
+  100df197 | MOV ESP,EBP
+  100df199 | POP EBP
+  100df19a | RET 0x10
+  100df19d | MOV ECX,dword ptr [EBP + 0x14]
+  100df1a0 | MOV EAX,dword ptr [ESI + 0x2dd0]
+  100df1a6 | MOV dword ptr [ECX + 0x4],EAX
+  100df1a9 | MOV EAX,[0x1017c108]
+  100df1ae | MOV dword ptr [ECX],EAX
+  100df1b0 | MOV AL,0x1
+  100df1b2 | POP EDI
+  100df1b3 | POP ESI
+  100df1b4 | MOV ESP,EBP
+  100df1b6 | POP EBP
+  100df1b7 | RET 0x10
+  100df1ba | MOV EAX,[0x10185268]
+  100df1bf | PUSH 0x1
+  100df1c1 | PUSH 0x0
+  100df1c3 | MOV ECX,dword ptr [EAX]
+  100df1c5 | ADD ECX,0x2dc8
+  100df1cb | CALL 0x100c1b10
+  100df1d0 | MOV ECX,dword ptr [EBP + 0x14]
+  100df1d3 | MOV dword ptr [ECX + 0x4],EAX
+  100df1d6 | MOV EAX,[0x1017c0b0]
+  100df1db | MOV dword ptr [ECX],EAX
+  100df1dd | MOV AL,0x1
+  100df1df | POP EDI
+  100df1e0 | POP ESI
+  100df1e1 | MOV ESP,EBP
+  100df1e3 | POP EBP
+  100df1e4 | RET 0x10
+  100df1e7 | MOV ESI,dword ptr [EBP + 0x14]
+  100df1ea | MOV EAX,[0x1017c0b0]
+  100df1ef | PUSH 0x1
+  100df1f1 | PUSH 0x0
+  100df1f3 | MOV dword ptr [ESI],EAX
+  100df1f5 | MOV EAX,[0x10185268]
+  100df1fa | MOV ECX,dword ptr [EAX]
+  100df1fc | ADD ECX,0x2dc8
+  100df202 | CALL 0x100c1f50
+  100df207 | MOV dword ptr [ESI + 0x4],EAX
+  100df20a | MOV AL,0x1
+  100df20c | POP EDI
+  100df20d | POP ESI
+  100df20e | MOV ESP,EBP
+  100df210 | POP EBP
+  100df211 | RET 0x10
+  100df214 | MOV EDI,dword ptr [EBP + 0x14]
+  100df217 | MOV EAX,[0x1017c0b0]
+  100df21c | PUSH 0x1
+  100df21e | PUSH 0x0
+  100df220 | MOV dword ptr [EDI],EAX
+  100df222 | MOV EAX,[0x10185268]
+  100df227 | MOV ECX,dword ptr [EAX]
+  100df229 | ADD ECX,0x2dc8
+  100df22f | CALL 0x100c1b10
+  100df234 | MOV ECX,dword ptr [0x10185268]
+  100df23a | PUSH 0x1
+  100df23c | PUSH 0x0
+  100df23e | IMUL ESI,EAX,0x64
+  100df241 | MOV ECX,dword ptr [ECX]
+  100df243 | ADD ECX,0x2dc8
+  100df249 | CALL 0x100c1f50
+  100df24e | MOV ECX,EAX
+  100df250 | MOV EAX,ESI
+  100df252 | CDQ
+  100df253 | IDIV ECX
+  100df255 | MOV dword ptr [EDI + 0x4],EAX
+  100df258 | MOV AL,0x1
+  100df25a | POP EDI
+  100df25b | POP ESI
+  100df25c | MOV ESP,EBP
+  100df25e | POP EBP
+  100df25f | RET 0x10
+  100df262 | MOV EAX,[0x10185268]
+  100df267 | MOV ECX,dword ptr [EBP + 0x14]
+  100df26a | MOV EAX,dword ptr [EAX]
+  100df26c | MOV EAX,dword ptr [EAX + 0x31f0]
+  100df272 | MOV EAX,dword ptr [EAX + 0x4]
+  100df275 | MOV EAX,dword ptr [EAX + 0x338c]
+  100df27b | MOV dword ptr [ECX + 0x4],EAX
+  100df27e | MOV EAX,[0x1017c0b0]
+  100df283 | MOV dword ptr [ECX],EAX
+  100df285 | MOV AL,0x1
+  100df287 | POP EDI
+  100df288 | POP ESI
+  100df289 | MOV ESP,EBP
+  100df28b | POP EBP
+  100df28c | RET 0x10
+  100df28f | MOV EAX,[0x10185268]
+  100df294 | PUSH 0x1
+  100df296 | MOV ECX,dword ptr [EAX]
+  100df298 | ADD ECX,0x2dc8
+  100df29e | CALL 0x100c1f60
+  100df2a3 | MOV ECX,dword ptr [EBP + 0x14]
+  100df2a6 | MOV dword ptr [ECX + 0x4],EAX
+  100df2a9 | MOV EAX,[0x1017c0b0]
+  100df2ae | MOV dword ptr [ECX],EAX
+  100df2b0 | MOV AL,0x1
+  100df2b2 | POP EDI
+  100df2b3 | POP ESI
+  100df2b4 | MOV ESP,EBP
+  100df2b6 | POP EBP
+  100df2b7 | RET 0x10
+  100df2ba | MOV EAX,[0x10185268]
+  100df2bf | PUSH 0x1
+  100df2c1 | MOV ECX,dword ptr [EAX]
+  100df2c3 | ADD ECX,0x2dc8
+  100df2c9 | CALL 0x100c1f60
+  100df2ce | MOV ESI,dword ptr [EBP + 0x14]
+  100df2d1 | MOV EDI,EAX
+  100df2d3 | TEST EDI,EDI
+  100df2d5 | JZ 0x100df307
+  100df2d7 | MOV ECX,dword ptr [0x10185268]
+  100df2dd | XOR EDX,EDX
+  100df2df | MOV ECX,dword ptr [ECX]
+  100df2e1 | MOV ECX,dword ptr [ECX + 0x31f0]
+  100df2e7 | MOV ECX,dword ptr [ECX + 0x4]
+  100df2ea | IMUL EAX,dword ptr [ECX + 0x338c],0x64
+  100df2f1 | DIV EDI
+  100df2f3 | MOV dword ptr [ESI + 0x4],EAX
+  100df2f6 | MOV EAX,[0x1017c0b0]
+  100df2fb | MOV dword ptr [ESI],EAX
+  100df2fd | MOV AL,0x1
+  100df2ff | POP EDI
+  100df300 | POP ESI
+  100df301 | MOV ESP,EBP
+  100df303 | POP EBP
+  100df304 | RET 0x10
+  100df307 | XOR EAX,EAX
+  100df309 | MOV dword ptr [ESI + 0x4],EAX
+Decompile:
+
+
+/* WARNING: Function: __alloca_probe replaced with injection: alloca_probe */
+
+undefined4 __thiscall
+FUN_100df000(void *this,int param_1,uint *param_2,byte *param_3,undefined4 *param_4)
+
+{
+  char cVar1;
+  int *piVar2;
+  undefined4 uVar3;
+  byte *pbVar4;
+  int iVar5;
+  _ALTABILITY *p_Var6;
+  uint3 extraout_var;
+  uint3 extraout_var_00;
+  uint uVar7;
+  char *pcVar8;
+  int iVar9;
+  uint uVar10;
+  ulong uVar11;
+  EQPlayer *pEVar12;
+  byte bVar13;
+  char *pcVar14;
+  byte *pbVar15;
+  byte *extraout_EDX;
+  byte *extraout_EDX_00;
+  byte *extraout_EDX_01;
+  byte *extraout_EDX_02;
+  byte *extraout_EDX_03;
+  byte *extraout_EDX_04;
+  byte *extraout_EDX_05;
+  byte *extraout_EDX_06;
+  byte *extraout_EDX_07;
+  uint *extraout_EDX_08;
+  uint *puVar16;
+  uint uVar17;
+  byte *extraout_EDX_09;
+  byte *extraout_EDX_10;
+  byte *extraout_EDX_11;
+  byte *extraout_EDX_12;
+  byte *extraout_EDX_13;
+  int extraout_EDX_14;
+  undefined4 *puVar18;
+  byte *extraout_EDX_15;
+  byte *pbVar19;
+  int iVar20;
+  uint uVar21;
+  undefined2 *puVar22;
+  bool bVar23;
+  float fVar24;
+  undefined8 uVar25;
+  byte *local_1010;
+  undefined1 local_100c [4];
+  byte local_1008 [2048];
+  undefined4 local_808 [511];
+  uint uStack_c;
+  
+  uStack_c = 0x100df010;
+  pbVar4 = (byte *)0x1008;
+  if (param_1 == 0) goto switchD_100df071_caseD_6;
+  piVar2 = (int *)FUN_10019c10(this,param_2);
+  if (piVar2 == (int *)0x0) {
+    uVar3 = (**(code **)(*pSpawnType + 0x10))
+                      (*(undefined4 *)(param_1 + 0x2dd0),param_2,param_3,param_4);
+    return uVar3;
+  }
+  _memset(local_1008,0,0x800);
+  pbVar4 = (byte *)(*piVar2 + -1);
+  switch(pbVar4) {
+  case (byte *)0x0:
+    param_4[1] = *(undefined4 *)(*(int *)(param_1 + 0x2dd0) + 0x148);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x1:
+    param_4[1] = param_1 + 0x3228;
+    uVar3 = pStringType;
+    *param_4 = pStringType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (byte *)0x2:
+    param_4[1] = *(undefined4 *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x3388);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x3:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2910);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x4:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2dd0);
+    piVar2 = pSpawnType;
+    *param_4 = pSpawnType;
+    return CONCAT31((int3)((uint)piVar2 >> 8),1);
+  case (byte *)0x6:
+    param_4[1] = *(undefined4 *)(param_1 + 0x207c);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x7:
+    param_4[1] = *(undefined4 *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x8900);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x9:
+    iVar9 = EQClasses::EQ_Character1::Cur_HP((EQ_Character1 *)(*ppCharData + 0x2dc8),0,'\x01');
+    param_4[1] = iVar9;
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xa:
+    *param_4 = pIntType;
+    iVar9 = EQClasses::EQ_Character1::Max_HP((EQ_Character1 *)(*ppCharData + 0x2dc8),0,1);
+    param_4[1] = iVar9;
+    return CONCAT31((int3)((uint)iVar9 >> 8),1);
+  case (byte *)0xb:
+    param_4[1] = HealthGained;
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xc:
+    *param_4 = pIntType;
+    iVar9 = EQClasses::EQ_Character1::Cur_HP((EQ_Character1 *)(*ppCharData + 0x2dc8),0,'\x01');
+    iVar20 = EQClasses::EQ_Character1::Max_HP((EQ_Character1 *)(*ppCharData + 0x2dc8),0,1);
+    iVar20 = (iVar9 * 100) / iVar20;
+    param_4[1] = iVar20;
+    return CONCAT31((int3)((uint)iVar20 >> 8),1);
+  case (byte *)0xd:
+    param_4[1] = *(undefined4 *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x338c);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xe:
+    iVar9 = EQClasses::EQ_Character1::Max_Mana((EQ_Character1 *)(*ppCharData + 0x2dc8),1);
+    param_4[1] = iVar9;
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xf:
+    param_4[1] = ManaGained;
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x10:
+    uVar21 = EQClasses::EQ_Character1::Max_Mana((EQ_Character1 *)(*ppCharData + 0x2dc8),1);
+    if (uVar21 != 0) {
+      param_4[1] = (uint)(*(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x338c) * 100) /
+                   uVar21;
+      uVar21 = pIntType;
+      *param_4 = pIntType;
+      return CONCAT31((int3)(uVar21 >> 8),1);
+    }
+    goto LAB_100df307;
+  case (byte *)0x11:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 == 0) {
+        iVar9 = 0;
+        uVar21 = 0;
+        pbVar19 = extraout_EDX;
+        do {
+          pbVar4 = *(byte **)(*(int *)(*ppCharData + 0x31f0) + 4);
+          uVar10 = *(uint *)(pbVar4 + uVar21 + 200);
+          if ((uVar10 != 0) && (uVar10 < 0xafc9)) {
+            iVar20 = *(int *)(*ppSpellMgr + 0x2c180 + uVar10 * 4);
+            pbVar4 = (byte *)0x0;
+            if ((iVar20 != 0) &&
+               (pbVar4 = (byte *)FUN_10081b25(pbVar19,(byte *)(iVar20 + 0x27a)), pbVar19 = param_3,
+               pbVar4 == (byte *)0x0)) {
+              iVar9 = iVar9 * 0x58;
+              pbVar4 = (byte *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0xc0);
+              goto LAB_100df44f;
+            }
+          }
+          uVar21 = uVar21 + 0x58;
+          iVar9 = iVar9 + 1;
+        } while (uVar21 < 0xe70);
+      }
+      else {
+        uVar21 = FUN_10088b58(extraout_EDX);
+        pbVar4 = (byte *)(uVar21 - 1);
+        if (pbVar4 < (byte *)0x2a) {
+          pbVar4 = (byte *)((int)pbVar4 * 0x58);
+          iVar9 = *(int *)(*(int *)(*ppCharData + 0x31f0) + 4);
+          if (0 < *(int *)(pbVar4 + iVar9 + 200)) {
+            iVar9 = iVar9 + 0xc0;
+            goto LAB_100df44f;
+          }
+        }
+      }
+    }
+    break;
+  case (byte *)0x12:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 == 0) {
+        iVar9 = 0;
+        uVar21 = 0;
+        pbVar4 = extraout_EDX_00;
+        do {
+          uVar10 = *(uint *)(*(int *)(*ppCharData + 0x31f0) + 4);
+          uVar7 = *(uint *)(uVar10 + 0xf38 + uVar21);
+          if ((uVar7 != 0) && (uVar7 < 0xafc9)) {
+            iVar20 = *(int *)(*ppSpellMgr + 0x2c180 + uVar7 * 4);
+            uVar10 = 0;
+            if ((iVar20 != 0) &&
+               (uVar10 = FUN_10081b25(pbVar4,(byte *)(iVar20 + 0x27a)), pbVar4 = param_3,
+               uVar10 == 0)) {
+              iVar9 = iVar9 * 0x58;
+              pbVar4 = (byte *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0xf30);
+              goto LAB_100df44f;
+            }
+          }
+          uVar21 = uVar21 + 0x58;
+          iVar9 = iVar9 + 1;
+          if (0xc07 < uVar21) {
+            return uVar10 & 0xffffff00;
+          }
+        } while( true );
+      }
+      uVar21 = FUN_10088b58(extraout_EDX_00);
+      pbVar4 = (byte *)(uVar21 - 1);
+      if (pbVar4 < (byte *)0x14) {
+        pbVar4 = (byte *)((int)pbVar4 * 0x58);
+        iVar9 = *(int *)(*(int *)(*ppCharData + 0x31f0) + 4);
+        if (0 < *(int *)(pbVar4 + iVar9 + 0xf38)) {
+          iVar9 = iVar9 + 0xf30;
+LAB_100df44f:
+          param_4[1] = pbVar4 + iVar9;
+          uVar3 = pBuffType;
+          *param_4 = pBuffType;
+          return CONCAT31((int3)((uint)uVar3 >> 8),1);
+        }
+      }
+    }
+    break;
+  case (byte *)0x13:
+    if (*param_3 == 0) break;
+    iVar9 = FUN_100e70b0((char *)param_3);
+    if (iVar9 == 0) {
+      iVar9 = 0;
+      uVar21 = 0x2520;
+      pbVar4 = extraout_EDX_06;
+      do {
+        uVar10 = *(uint *)(*(int *)(*ppCharData + 0x31f0) + 4);
+        if (*(int *)(uVar21 + uVar10) != -1) {
+          if ((((ppSpellMgr == (int *)0x0) ||
+               (iVar20 = *(int *)(*ppSpellMgr + 0x2c180 + *(int *)(uVar21 + uVar10) * 4),
+               iVar20 == 0)) || (pcVar8 = (char *)(iVar20 + 0x27a), (byte *)pcVar8 == (byte *)0x0))
+             || (*pcVar8 == 0)) {
+            pcVar8 = "Unknown Spell";
+          }
+          uVar10 = FUN_10081b25((byte *)pcVar8,pbVar4);
+          pbVar4 = param_3;
+          if (uVar10 == 0) {
+LAB_100e018f:
+            param_4[1] = iVar9 + 1;
+            uVar21 = pIntType;
+            *param_4 = pIntType;
+            return CONCAT31((int3)(uVar21 >> 8),1);
+          }
+        }
+        uVar21 = uVar21 + 4;
+        iVar9 = iVar9 + 1;
+        if (0x305f < uVar21) {
+          return uVar10 & 0xffffff00;
+        }
+      } while( true );
+    }
+    pbVar4 = (byte *)FUN_10088b58(extraout_EDX_06);
+    if ((byte *)0x2cf < pbVar4 + -1) break;
+    uVar21 = *(uint *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x2520 +
+                      (int)(pbVar4 + -1) * 4);
+    goto LAB_100e0f7f;
+  case (byte *)0x14:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 == 0) {
+        uVar10 = 0;
+        while (uVar21 = FUN_10081b25(param_3,(&szSkills)[uVar10]), uVar21 != 0) {
+          uVar10 = uVar10 + 1;
+          if (0x62 < uVar10) {
+            return uVar21 & 0xffffff00;
+          }
+        }
+        iVar9 = *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x30a0 + uVar10 * 4);
+        param_4[1] = iVar9;
+        uVar21 = pIntType;
+        *param_4 = pIntType;
+        if ((iVar9 == 0) &&
+           (uVar21 = *(uint *)(*ppSkillMgr + uVar10 * 4), *(char *)(uVar21 + 0x20) != '\0')) {
+          uVar21 = 0;
+          while ((int)uVar21 < 0x28) {
+            if (*(uint *)(uVar21 + EQADDR_DOABILITYLIST) == uVar10) {
+              param_4[1] = 1;
+              return CONCAT31((int3)(uVar21 >> 8),1);
+            }
+            uVar21 = uVar21 + 4;
+            if (param_4[1] != 0) {
+              return CONCAT31((int3)(uVar21 >> 8),1);
+            }
+          }
+        }
+      }
+      else {
+        pbVar4 = (byte *)FUN_10088b58(param_3);
+        pbVar19 = pbVar4 + -1;
+        if ((byte *)0x62 < pbVar19) break;
+        iVar9 = *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x30a0 + (int)pbVar19 * 4);
+        param_4[1] = iVar9;
+        uVar21 = pIntType;
+        *param_4 = pIntType;
+        if ((iVar9 == 0) &&
+           (uVar21 = *(uint *)(*ppSkillMgr + (int)pbVar19 * 4), *(char *)(uVar21 + 0x20) != '\0')) {
+          uVar21 = 0;
+          while ((int)uVar21 < 0x28) {
+            if (*(byte **)(uVar21 + EQADDR_DOABILITYLIST) == pbVar19) {
+              param_4[1] = 1;
+              return CONCAT31((int3)(uVar21 >> 8),1);
+            }
+            uVar21 = uVar21 + 4;
+            if (param_4[1] != 0) {
+              return CONCAT31((int3)(uVar21 >> 8),1);
+            }
+          }
+        }
+      }
+      goto LAB_100df154;
+    }
+    break;
+  case (byte *)0x15:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 == 0) {
+        iVar9 = 0;
+        pbVar4 = (byte *)0x0;
+        pbVar19 = szSkills;
+        if (szSkills != (undefined *)0x0) {
+          do {
+            iVar20 = FUN_10081b25(param_3,pbVar19);
+            if (iVar20 == 0) {
+              uVar21 = 0;
+              do {
+                if (*(int *)(EQADDR_DOABILITYLIST + uVar21 * 4) == iVar9) {
+                  uVar10 = uVar21 + 7;
+                  if (3 < uVar21) {
+                    uVar10 = uVar21 - 3;
+                  }
+                  goto LAB_100df626;
+                }
+                uVar21 = uVar21 + 1;
+              } while (uVar21 < 10);
+            }
+            pbVar19 = (&PTR_s_1H_Slashing_1016b4d4)[iVar9];
+            iVar9 = iVar9 + 1;
+            if (pbVar19 == (byte *)0x0) {
+              return 0;
+            }
+          } while( true );
+        }
+      }
+      else {
+        pbVar4 = (byte *)FUN_10088b58(param_3);
+        if (pbVar4 != (byte *)0x0) {
+          if (pbVar4 < (byte *)0x7) {
+            pbVar4 = pbVar4 + 3;
+          }
+          else {
+            if (&DAT_0000000a < pbVar4) break;
+            pbVar4 = pbVar4 + -7;
+          }
+          pbVar4 = *(byte **)(EQADDR_DOABILITYLIST + (int)pbVar4 * 4);
+          if (pbVar4 != (byte *)0xffffffff) {
+            param_4[1] = (&szSkills)[(int)pbVar4];
+            uVar3 = pStringType;
+            *param_4 = pStringType;
+            return CONCAT31((int3)((uint)uVar3 >> 8),1);
+          }
+        }
+      }
+    }
+    break;
+  case (byte *)0x16:
+    param_4[1] = param_1 + 0x3268;
+    uVar3 = pStringType;
+    *param_4 = pStringType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (byte *)0x17:
+    iVar9 = *(int *)(*(int *)(*ppCharData + 0x31f0) + 4);
+    param_4[1] = *(int *)(iVar9 + 0x33c4) +
+                 (*(int *)(iVar9 + 0x33c0) +
+                 (*(int *)(iVar9 + 0x33bc) + *(int *)(iVar9 + 0x33b8) * 10) * 10) * 10;
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x18:
+    param_4[1] = *(int *)(param_1 + 0x3688) +
+                 (*(int *)(param_1 + 0x3684) +
+                 (*(int *)(param_1 + 0x3680) + *(int *)(param_1 + 0x367c) * 10) * 10) * 10;
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x19:
+    param_4[1] = *(undefined4 *)(param_1 + 0x366c);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x1a:
+    iVar9 = *(int *)(param_1 + 0x31cc);
+    pbVar4 = (byte *)0x0;
+    if (iVar9 == 0) break;
+    if ((((*(int *)(iVar9 + 8) == 0) && (*(int *)(iVar9 + 0xc) == 0)) &&
+        (*(int *)(iVar9 + 0x10) == 0)) &&
+       ((*(int *)(iVar9 + 0x14) == 0 && (*(int *)(iVar9 + 0x18) == 0)))) {
+LAB_100e05cd:
+      uVar3 = 0;
+      goto LAB_100dfd31;
+    }
+    goto LAB_100dfd2c;
+  case (byte *)0x1b:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2dec);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x1c:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2df0);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x23:
+    param_4[1] = *(undefined4 *)(param_1 + 0x20d8);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x24:
+    param_4[1] = *(undefined4 *)(param_1 + 0x20d0);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x25:
+  case (byte *)0x79:
+    param_4[1] = *(undefined4 *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x3390);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x26:
+    if (*param_3 == 0) break;
+    iVar9 = FUN_100e70b0((char *)param_3);
+    if (iVar9 == 0) {
+      iVar9 = 0;
+      pbVar4 = (byte *)0x0;
+      if (szItemSlot == (undefined *)0x0) break;
+      iVar20 = 0;
+      pbVar4 = szItemSlot;
+      pbVar19 = extraout_EDX_01;
+      while ((iVar5 = FUN_10081b25(pbVar19,pbVar4), iVar5 != 0 ||
+             (iVar20 = *(int *)(iVar20 + *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) +
+                                                 0x20)), param_4[1] = iVar20, iVar20 == 0))) {
+        iVar9 = iVar9 + 1;
+        iVar20 = iVar9 * 4;
+        pbVar4 = (&szItemSlot)[iVar9];
+        pbVar19 = param_3;
+        if (pbVar4 == (byte *)0x0) {
+          return 0;
+        }
+      }
+      goto LAB_100dfa57;
+    }
+    pbVar4 = (byte *)FUN_10088b58(extraout_EDX_01);
+    if ((byte *)0x7ff < pbVar4) break;
+    iVar9 = *(int *)(*(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x20) + (int)pbVar4 * 4
+                    );
+    goto LAB_100dfa49;
+  case (byte *)0x27:
+    if (*param_3 == 0) break;
+    iVar9 = FUN_100e70b0((char *)param_3);
+    pbVar4 = (byte *)0x0;
+    if (iVar9 == 0) break;
+    pbVar4 = (byte *)FUN_10088b58(extraout_EDX_02);
+    if (pbVar4 + -1 < (byte *)0x18) {
+      iVar9 = *(int *)(*(int *)(param_1 + 0x1ea8) + (int)(pbVar4 + -1) * 4);
+    }
+    else {
+      if ((byte *)0x1 < pbVar4 + -0x19) break;
+      iVar9 = *(int *)(*(int *)(param_1 + 0x1ee0) + (int)(pbVar4 + -0x19) * 4);
+    }
+LAB_100dfa49:
+    param_4[1] = iVar9;
+    pbVar4 = (byte *)0x0;
+    if (iVar9 != 0) {
+LAB_100dfa57:
+      uVar3 = pItemType;
+      *param_4 = pItemType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+    break;
+  case (byte *)0x29:
+    param_4[1] = (uint)*EQADDR_ATTACK;
+    uVar21 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x2a:
+    if (*param_3 != 0) {
+      uVar21 = FUN_10088b58(param_3);
+      local_1010 = (byte *)0x5c;
+      if (4 < uVar21) {
+        uVar21 = 4;
+      }
+      param_4[1] = 0;
+      do {
+        iVar9 = *(int *)((int)local_1010 +
+                        *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x20));
+        if (iVar9 == 0) {
+          param_4[1] = param_4[1] + 1;
+        }
+        else {
+          iVar5 = *(int *)(iVar9 + 0x9c);
+          iVar20 = iVar5;
+          if (iVar5 == 0) {
+            iVar20 = *(int *)(iVar9 + 0x144);
+          }
+          if (*(char *)(iVar20 + 0x11a) == '\x01') {
+            iVar20 = iVar5;
+            if (iVar5 == 0) {
+              iVar20 = *(int *)(iVar9 + 0x144);
+            }
+            if (uVar21 <= *(byte *)(iVar20 + 0x522)) {
+              if (*(int *)(iVar9 + 0xa8) == 0) {
+                if (iVar5 == 0) {
+                  iVar5 = *(int *)(iVar9 + 0x144);
+                }
+                param_4[1] = param_4[1] + (uint)*(byte *)(iVar5 + 0x521);
+              }
+              else {
+                uVar10 = 0;
+                while( true ) {
+                  iVar20 = iVar5;
+                  if (iVar5 == 0) {
+                    iVar20 = *(int *)(iVar9 + 0x144);
+                  }
+                  if (*(byte *)(iVar20 + 0x521) <= uVar10) break;
+                  if (*(int *)(*(int *)(iVar9 + 0xa8) + uVar10 * 4) == 0) {
+                    param_4[1] = param_4[1] + 1;
+                    iVar5 = *(int *)(iVar9 + 0x9c);
+                  }
+                  uVar10 = uVar10 + 1;
+                }
+              }
+            }
+          }
+        }
+        uVar10 = pIntType;
+        local_1010 = (byte *)((int)local_1010 + 4);
+      } while (local_1010 < 0x84);
+      *param_4 = pIntType;
+      return CONCAT31((int3)(uVar10 >> 8),1);
+    }
+    local_1010 = (byte *)0x5c;
+    param_4[1] = 0;
+    while (((*(byte *)(*ppCharData + 0x364a) & 1) != 0 || (local_1010 < 0x79))) {
+      iVar9 = *(int *)((int)local_1010 +
+                      *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x20));
+      if (iVar9 == 0) {
+        param_4[1] = param_4[1] + 1;
+      }
+      else {
+        iVar5 = *(int *)(iVar9 + 0x9c);
+        iVar20 = iVar5;
+        if (iVar5 == 0) {
+          iVar20 = *(int *)(iVar9 + 0x144);
+        }
+        if (*(char *)(iVar20 + 0x11a) == '\x01') {
+          if (*(int *)(iVar9 + 0xa8) == 0) {
+            if (iVar5 == 0) {
+              iVar5 = *(int *)(iVar9 + 0x144);
+            }
+            param_4[1] = param_4[1] + (uint)*(byte *)(iVar5 + 0x521);
+          }
+          else {
+            uVar21 = 0;
+            while( true ) {
+              iVar20 = iVar5;
+              if (iVar5 == 0) {
+                iVar20 = *(int *)(iVar9 + 0x144);
+              }
+              if (*(byte *)(iVar20 + 0x521) <= uVar21) break;
+              if (*(int *)(*(int *)(iVar9 + 0xa8) + uVar21 * 4) == 0) {
+                param_4[1] = param_4[1] + 1;
+                iVar5 = *(int *)(iVar9 + 0x9c);
+              }
+              uVar21 = uVar21 + 1;
+            }
+          }
+        }
+      }
+      uVar21 = pIntType;
+      local_1010 = (byte *)((int)local_1010 + 4);
+      if (0x83 < local_1010) {
+        *param_4 = pIntType;
+        return CONCAT31((int3)(uVar21 >> 8),1);
+      }
+    }
+LAB_100e17e4:
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x2b:
+    if (*param_3 == 0) break;
+    iVar9 = FUN_100e70b0((char *)param_3);
+    if (iVar9 == 0) {
+      iVar9 = 0;
+      uVar21 = 0x3060;
+      pbVar4 = extraout_EDX_03;
+      do {
+        uVar10 = *(uint *)(*(int *)(*ppCharData + 0x31f0) + 4);
+        uVar7 = *(uint *)(uVar21 + uVar10);
+        if ((uVar7 != 0) && (uVar7 < 0xafc9)) {
+          iVar20 = *(int *)(*ppSpellMgr + 0x2c180 + uVar7 * 4);
+          uVar10 = 0;
+          if ((iVar20 != 0) &&
+             (uVar10 = FUN_10081b25(pbVar4,(byte *)(iVar20 + 0x27a)), pbVar4 = param_3, uVar10 == 0)
+             ) goto LAB_100e018f;
+        }
+        uVar21 = uVar21 + 4;
+        iVar9 = iVar9 + 1;
+        if (0x308f < uVar21) {
+          return uVar10 & 0xffffff00;
+        }
+      } while( true );
+    }
+    pbVar4 = (byte *)FUN_10088b58(extraout_EDX_03);
+    if ((byte *)0xb < pbVar4 + -1) break;
+    uVar21 = *(uint *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x3060 +
+                      (int)(pbVar4 + -1) * 4);
+    goto LAB_100e0f7f;
+  case (byte *)0x2c:
+    pbVar4 = ppCastSpellWnd;
+    if ((*(int *)ppCastSpellWnd != 0) && (*param_3 != 0)) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 == 0) {
+        iVar9 = 0;
+        uVar21 = 0x3060;
+        pbVar4 = extraout_EDX_07;
+        do {
+          uVar10 = *(uint *)(*(int *)(*ppCharData + 0x31f0) + 4);
+          uVar7 = *(uint *)(uVar21 + uVar10);
+          if ((uVar7 != 0) && (uVar7 < 0xafc9)) {
+            iVar20 = *(int *)(*ppSpellMgr + 0x2c180 + uVar7 * 4);
+            uVar10 = 0;
+            if ((iVar20 != 0) &&
+               (uVar10 = FUN_10081b25(pbVar4,(byte *)(iVar20 + 0x27a)), pbVar4 = param_3,
+               uVar10 == 0)) {
+              iVar9 = *(int *)(*(int *)ppCastSpellWnd + 0x234 + iVar9 * 4);
+              uVar21 = 0;
+              if (iVar9 != 0) {
+                param_4[1] = (uint)(*(int *)(iVar9 + 0x2d0) != 1);
+                uVar21 = pBoolType;
+                *param_4 = pBoolType;
+                return CONCAT31((int3)(uVar21 >> 8),1);
+              }
+              goto LAB_100e0e74;
+            }
+          }
+          uVar21 = uVar21 + 4;
+          iVar9 = iVar9 + 1;
+          if (0x308f < uVar21) {
+            return uVar10 & 0xffffff00;
+          }
+        } while( true );
+      }
+      uVar21 = FUN_10088b58(extraout_EDX_07);
+      pbVar4 = (byte *)(uVar21 - 1);
+      if (pbVar4 < (byte *)0xc) {
+        iVar9 = *(int *)(*(int *)ppCastSpellWnd + 0x234 + (int)pbVar4 * 4);
+        uVar21 = 0;
+        if (iVar9 != 0) {
+          uVar21 = (uint)(*(int *)(iVar9 + 0x2d0) != 1);
+        }
+LAB_100e0e74:
+        param_4[1] = uVar21;
+        uVar21 = pBoolType;
+        *param_4 = pBoolType;
+        return CONCAT31((int3)(uVar21 >> 8),1);
+      }
+    }
+    break;
+  case (byte *)0x2d:
+    fVar24 = (float)*(double *)(param_1 + 0x20e8);
+    goto LAB_100df145;
+  case (byte *)0x2e:
+    fVar24 = (float)*(double *)(param_1 + 0x20f0);
+    goto LAB_100df145;
+  case (byte *)0x2f:
+    param_4[1] = *(undefined4 *)(param_1 + 0x20f8);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x30:
+    param_4[1] = *(undefined4 *)(param_1 + 0x20fc);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x31:
+    param_4[1] = *(undefined4 *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x88ec);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x32:
+    param_4[1] = *(undefined4 *)(param_1 + 0x368c);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x33:
+    param_4[1] = *(undefined4 *)(param_1 + 0x3690);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x34:
+    param_4[1] = *(undefined4 *)(param_1 + 0x3694);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x35:
+    param_4[1] = *(undefined4 *)(param_1 + 0x3698);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x36:
+    param_4[1] = *(undefined4 *)(param_1 + 0x369c);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x37:
+    param_4[1] = *(undefined4 *)(param_1 + 0x36a0);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x38:
+    param_4[1] = *(undefined4 *)(param_1 + 0x36a4);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x39:
+    param_4[1] = *(undefined4 *)(param_1 + 0x36ac);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x3a:
+    param_4[1] = *(undefined4 *)(param_1 + 0x36b8);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x3b:
+    param_4[1] = *(undefined4 *)(param_1 + 0x36bc);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x3c:
+    param_4[1] = *(undefined4 *)(param_1 + 0x36a8);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x3d:
+    param_4[1] = *(undefined4 *)(param_1 + 14000);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x3e:
+    param_4[1] = *(undefined4 *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x3404);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x3f:
+    param_4[1] = *(undefined4 *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x3400);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x48:
+    fVar24 = (float)((double)*(int *)(param_1 + 0x2910) +
+                    (double)(&DAT_101479a0)[-(*(int *)(param_1 + 0x2910) >> 0x1f)]) / 3.3;
+    goto LAB_100df145;
+  case (byte *)0x49:
+    param_4[1] = (float)((double)*(int *)(param_1 + 0x207c) +
+                        (double)(&DAT_101479a0)[-(*(int *)(param_1 + 0x207c) >> 0x1f)]) / 3.3;
+    uVar21 = pFloatType;
+    *param_4 = pFloatType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x4a:
+    fVar24 = 0.0;
+    if (((gbMoving == 0) || (*(float *)(*ppCharSpawn + 0x7c) != 0.0)) ||
+       (*(int *)(*(int *)(param_1 + 0x2dd0) + 0x154) != 0)) {
+      iVar9 = *ppCharSpawn;
+      iVar20 = *(int *)(iVar9 + 0x154);
+      if ((*(int *)(iVar9 + 0x154) != 0) || (iVar20 = iVar9, iVar9 != 0)) {
+        fVar24 = (*(float *)(iVar20 + 0x7c) * 10000.0) / 70.0;
+      }
+      if (ABS(fVar24) <= 0.0) goto LAB_100e05cd;
+    }
+LAB_100dfd2c:
+    uVar3 = 1;
+LAB_100dfd31:
+    param_4[1] = uVar3;
+    uVar21 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x4b:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 == 0) {
+        pbVar15 = (byte *)0x0;
+        pbVar4 = (byte *)0x0;
+        pbVar19 = szSkills;
+        if (szSkills != (undefined *)0x0) {
+          do {
+            iVar9 = FUN_10081b25(param_3,pbVar19);
+            if (iVar9 == 0) {
+              pbVar4 = (byte *)0x0;
+              do {
+                pbVar19 = *(byte **)(EQADDR_DOABILITYLIST + (int)pbVar4 * 4);
+                if (pbVar19 == pbVar15) {
+                  if (((pbVar15 < (byte *)0x64) || (pbVar15 == (byte *)0x6f)) ||
+                     ((pbVar15 == (byte *)0x72 ||
+                      ((pbVar15 == (byte *)0x73 || (pbVar15 == (byte *)0x74)))))) goto LAB_100e0c9b;
+                  if ((pbVar15 != (byte *)0x69) && (pbVar15 != (byte *)0x6b))
+                  goto switchD_100df071_caseD_6;
+                  uVar21 = LoH_HT_Ready();
+                  goto LAB_100e0ca8;
+                }
+                pbVar4 = pbVar4 + 1;
+              } while (pbVar4 < &DAT_0000000a);
+            }
+            pbVar19 = (&PTR_s_1H_Slashing_1016b4d4)[(int)pbVar15];
+            pbVar15 = pbVar15 + 1;
+            if (pbVar19 == (byte *)0x0) {
+              return 0;
+            }
+          } while( true );
+        }
+      }
+      else {
+        pbVar4 = (byte *)FUN_10088b58(param_3);
+        if (pbVar4 != (byte *)0x0) {
+          if (pbVar4 < (byte *)0x7) {
+            pbVar4 = pbVar4 + 3;
+          }
+          else {
+            if (&DAT_0000000a < pbVar4) break;
+            pbVar4 = pbVar4 + -7;
+          }
+          pbVar4 = *(byte **)(EQADDR_DOABILITYLIST + (int)pbVar4 * 4);
+          pbVar19 = pbVar4;
+          if (pbVar4 != (byte *)0xffffffff) {
+LAB_100e0c9b:
+            bVar23 = EQClasses::CSkillMgr::IsAvailable((CSkillMgr *)*ppCSkillMgr,(int)pbVar19);
+            uVar21 = (uint)bVar23;
+LAB_100e0ca8:
+            uVar21 = uVar21 & 0xff;
+            goto LAB_100e0cab;
+          }
+        }
+      }
+    }
+    break;
+  case (byte *)0x4c:
+    if ((*param_3 == 0) || (*ppPetInfoWnd == 0)) break;
+    iVar9 = FUN_100e70b0((char *)param_3);
+    if (iVar9 == 0) {
+      iVar9 = 0;
+      uVar21 = 0x5cc;
+      puVar16 = extraout_EDX_08;
+      do {
+        uVar10 = *puVar16;
+        uVar7 = *(uint *)(uVar21 + uVar10);
+        if ((uVar7 != 0) && (uVar7 < 0xafc9)) {
+          iVar20 = *(int *)(*ppSpellMgr + 0x2c180 + uVar7 * 4);
+          uVar10 = 0;
+          if ((iVar20 != 0) &&
+             (uVar10 = FUN_10081b25(param_3,(byte *)(iVar20 + 0x27a)), puVar16 = ppPetInfoWnd,
+             uVar10 == 0)) goto LAB_100e018f;
+        }
+        uVar21 = uVar21 + 4;
+        iVar9 = iVar9 + 1;
+        if (0x74f < uVar21) {
+          return uVar10 & 0xffffff00;
+        }
+      } while( true );
+    }
+    uVar21 = FUN_10088b58(param_3);
+    pbVar4 = (byte *)(uVar21 - 1);
+    if ((((byte *)0x61 < pbVar4) ||
+        (uVar21 = *(uint *)(*ppPetInfoWnd + 0x5cc + (int)pbVar4 * 4), uVar21 == 0xffffffff)) ||
+       (uVar21 == 0)) break;
+LAB_100e0f7f:
+    iVar9 = FUN_100e7530(uVar21);
+    param_4[1] = iVar9;
+    uVar3 = pSpellType;
+    pbVar4 = (byte *)0x0;
+    if (iVar9 != 0) {
+      *param_4 = pSpellType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+    break;
+  case (byte *)0x4d:
+    param_4[1] = *(undefined4 *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x33b8);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x4e:
+    param_4[1] = *(undefined4 *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x33bc);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x4f:
+    param_4[1] = *(undefined4 *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x33c0);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x50:
+    param_4[1] = *(undefined4 *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x33c4);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x51:
+    param_4[1] = *(undefined4 *)(param_1 + 0x367c);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x52:
+    param_4[1] = *(undefined4 *)(param_1 + 0x3680);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x53:
+    param_4[1] = *(undefined4 *)(param_1 + 0x3684);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x54:
+    param_4[1] = *(undefined4 *)(param_1 + 0x3688);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x55:
+    fVar24 = (float)*(double *)(param_1 + 0x20e8) / 10.0;
+    goto LAB_100df145;
+  case (byte *)0x56:
+    fVar24 = (float)*(double *)(param_1 + 0x20f0) / 10.0;
+LAB_100df145:
+    param_4[1] = fVar24;
+    uVar21 = pFloatType;
+    *param_4 = pFloatType;
+LAB_100df154:
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x57:
+    param_4[1] = (uint)(*(char *)(param_1 + 0x32e8) == '\x01');
+    uVar21 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x58:
+    uVar21 = (uint)*gpbRangedAttackReady;
+    goto LAB_100e0cab;
+  case (byte *)0x59:
+    uVar21 = (uint)*gpbAltTimerReady;
+LAB_100e0cab:
+    param_4[1] = uVar21;
+    uVar21 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x5a:
+    iVar9 = EQClasses::EQ_Character1::Max_Endurance((EQ_Character1 *)(*ppCharData + 0x2dc8),1);
+    param_4[1] = iVar9;
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x5b:
+    uVar21 = EQClasses::EQ_Character1::Max_Endurance((EQ_Character1 *)(*ppCharData + 0x2dc8),1);
+    if (uVar21 != 0) {
+      param_4[1] = (uint)(*(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x3390) * 100) /
+                   uVar21;
+      uVar21 = pIntType;
+      *param_4 = pIntType;
+      return CONCAT31((int3)(uVar21 >> 8),1);
+    }
+LAB_100df307:
+    param_4[1] = 0;
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x5c:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      uVar21 = 0;
+      if (iVar9 != 0) {
+        while( true ) {
+          iVar9 = EQClasses::EQ_PC::GetAltAbilityIndex((EQ_PC *)*ppPCData,uVar21);
+          p_Var6 = EQClasses::AltAdvManager::GetAltAbility((AltAdvManager *)*ppAltAdvManager,iVar9);
+          uVar10 = 0;
+          if ((p_Var6 != (_ALTABILITY *)0x0) &&
+             (uVar10 = FUN_10088b58(param_3), *(uint *)(p_Var6 + 0x20) == uVar10)) break;
+          uVar21 = uVar21 + 1;
+          if (299 < uVar21) {
+            return uVar10 & 0xffffff00;
+          }
+        }
+        param_4[1] = p_Var6;
+        uVar3 = pAltAbilityType;
+        *param_4 = pAltAbilityType;
+        return CONCAT31((int3)((uint)uVar3 >> 8),1);
+      }
+      do {
+        iVar9 = EQClasses::EQ_PC::GetAltAbilityIndex((EQ_PC *)*ppPCData,uVar21);
+        p_Var6 = EQClasses::AltAdvManager::GetAltAbility((AltAdvManager *)*ppAltAdvManager,iVar9);
+        uVar10 = 0;
+        if (p_Var6 != (_ALTABILITY *)0x0) {
+          pbVar4 = (byte *)EQClasses::CDBStr::GetString
+                                     ((CDBStr *)*ppCDBStr,*(int *)(p_Var6 + 0x10),1,(int *)0x0);
+          uVar10 = 0;
+          if ((pbVar4 != (byte *)0x0) && (uVar10 = FUN_10081b25(param_3,pbVar4), uVar10 == 0)) {
+            param_4[1] = p_Var6;
+            uVar3 = pAltAbilityType;
+            *param_4 = pAltAbilityType;
+            return CONCAT31((int3)((uint)uVar3 >> 8),1);
+          }
+        }
+        uVar21 = uVar21 + 1;
+        if (299 < uVar21) {
+          return uVar10 & 0xffffff00;
+        }
+      } while( true );
+    }
+    break;
+  case (byte *)0x5d:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      uVar21 = 0;
+      if (iVar9 != 0) {
+        while( true ) {
+          iVar9 = EQClasses::EQ_PC::GetAltAbilityIndex((EQ_PC *)*ppPCData,uVar21);
+          p_Var6 = EQClasses::AltAdvManager::GetAltAbility((AltAdvManager *)*ppAltAdvManager,iVar9);
+          uVar10 = 0;
+          if ((p_Var6 != (_ALTABILITY *)0x0) &&
+             (uVar10 = FUN_10088b58(param_3), *(uint *)(p_Var6 + 0x20) == uVar10)) break;
+          uVar21 = uVar21 + 1;
+          if (299 < uVar21) {
+            return uVar10 & 0xffffff00;
+          }
+        }
+        bVar23 = EQClasses::AltAdvManager::IsAbilityReady
+                           ((AltAdvManager *)*ppAltAdvManager,(EQ_PC *)*ppPCData,p_Var6,(int *)0x0,0
+                           );
+        param_4[1] = (uint)bVar23;
+        uVar21 = pBoolType;
+        *param_4 = pBoolType;
+        return CONCAT31((int3)(uVar21 >> 8),1);
+      }
+      do {
+        iVar9 = EQClasses::EQ_PC::GetAltAbilityIndex((EQ_PC *)*ppPCData,uVar21);
+        p_Var6 = EQClasses::AltAdvManager::GetAltAbility((AltAdvManager *)*ppAltAdvManager,iVar9);
+        uVar10 = 0;
+        if (p_Var6 != (_ALTABILITY *)0x0) {
+          pbVar4 = (byte *)EQClasses::CDBStr::GetString
+                                     ((CDBStr *)*ppCDBStr,*(int *)(p_Var6 + 0x10),1,(int *)0x0);
+          uVar10 = 0;
+          if ((pbVar4 != (byte *)0x0) && (uVar10 = FUN_10081b25(param_3,pbVar4), uVar10 == 0)) {
+            bVar23 = EQClasses::AltAdvManager::IsAbilityReady
+                               ((AltAdvManager *)*ppAltAdvManager,(EQ_PC *)*ppPCData,p_Var6,
+                                (int *)0x0,0);
+            param_4[1] = (uint)bVar23;
+            uVar21 = pBoolType;
+            *param_4 = pBoolType;
+            return CONCAT31((int3)(uVar21 >> 8),1);
+          }
+        }
+        uVar21 = uVar21 + 1;
+        if (299 < uVar21) {
+          return uVar10 & 0xffffff00;
+        }
+      } while( true );
+    }
+    break;
+  case (byte *)0x5e:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      uVar21 = 0;
+      if (iVar9 == 0) {
+        do {
+          iVar9 = EQClasses::EQ_PC::GetAltAbilityIndex((EQ_PC *)*ppPCData,uVar21);
+          p_Var6 = EQClasses::AltAdvManager::GetAltAbility((AltAdvManager *)*ppAltAdvManager,iVar9);
+          uVar10 = 0;
+          if (p_Var6 != (_ALTABILITY *)0x0) {
+            pbVar4 = (byte *)EQClasses::CDBStr::GetString
+                                       ((CDBStr *)*ppCDBStr,*(int *)(p_Var6 + 0x10),1,(int *)0x0);
+            uVar10 = 0;
+            if ((pbVar4 != (byte *)0x0) && (uVar10 = FUN_10081b25(param_3,pbVar4), uVar10 == 0)) {
+              piVar2 = param_4 + 1;
+              EQClasses::AltAdvManager::IsAbilityReady
+                        ((AltAdvManager *)*ppAltAdvManager,(EQ_PC *)*ppPCData,p_Var6,piVar2,0);
+              pbVar4 = (byte *)((uint)extraout_var_00 << 8);
+              if (-1 < *piVar2) {
+                *piVar2 = *piVar2 / 6;
+                uVar3 = pTicksType;
+                *param_4 = pTicksType;
+                return CONCAT31((int3)((uint)uVar3 >> 8),1);
+              }
+              goto switchD_100df071_caseD_6;
+            }
+          }
+          uVar21 = uVar21 + 1;
+          if (299 < uVar21) {
+            return uVar10 & 0xffffff00;
+          }
+        } while( true );
+      }
+      while( true ) {
+        iVar9 = EQClasses::EQ_PC::GetAltAbilityIndex((EQ_PC *)*ppPCData,uVar21);
+        p_Var6 = EQClasses::AltAdvManager::GetAltAbility((AltAdvManager *)*ppAltAdvManager,iVar9);
+        uVar10 = 0;
+        if ((p_Var6 != (_ALTABILITY *)0x0) &&
+           (uVar10 = FUN_10088b58(param_3), *(uint *)(p_Var6 + 0x20) == uVar10)) break;
+        uVar21 = uVar21 + 1;
+        if (299 < uVar21) {
+          return uVar10 & 0xffffff00;
+        }
+      }
+      piVar2 = param_4 + 1;
+      EQClasses::AltAdvManager::IsAbilityReady
+                ((AltAdvManager *)*ppAltAdvManager,(EQ_PC *)*ppPCData,p_Var6,piVar2,0);
+      pbVar4 = (byte *)((uint)extraout_var << 8);
+      if (-1 < *piVar2) {
+        *piVar2 = *piVar2 / 6;
+        uVar3 = pTicksType;
+        *param_4 = pTicksType;
+        return CONCAT31((int3)((uint)uVar3 >> 8),1);
+      }
+    }
+    break;
+  case (byte *)0x5f:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 == 0) {
+        uVar21 = 0;
+        do {
+          uVar10 = EQClasses::EQ_PC::GetCombatAbility((EQ_PC *)*ppPCData,uVar21);
+          if ((uVar10 != 0) && (uVar10 < 0xafc9)) {
+            iVar9 = *(int *)(*ppSpellMgr + 0x2c180 + uVar10 * 4);
+            uVar10 = 0;
+            if ((iVar9 != 0) &&
+               (uVar10 = FUN_10081b25(param_3,(byte *)(iVar9 + 0x27a)), uVar10 == 0)) {
+              param_4[1] = uVar21 + 1;
+              uVar21 = pIntType;
+              *param_4 = pIntType;
+              return CONCAT31((int3)(uVar21 >> 8),1);
+            }
+          }
+          uVar21 = uVar21 + 1;
+          if (299 < uVar21) {
+            return uVar10 & 0xffffff00;
+          }
+        } while( true );
+      }
+      uVar21 = FUN_10088b58(param_3);
+      uVar21 = EQClasses::EQ_PC::GetCombatAbility((EQ_PC *)*ppPCData,uVar21 - 1);
+      iVar9 = FUN_100e7530(uVar21);
+      pbVar4 = (byte *)0x0;
+      if (iVar9 != 0) {
+        param_4[1] = iVar9;
+        uVar3 = pSpellType;
+        *param_4 = pSpellType;
+        return CONCAT31((int3)((uint)uVar3 >> 8),1);
+      }
+    }
+    break;
+  case (byte *)0x60:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 == 0) {
+        uVar21 = 0;
+        while ((((uVar10 = EQClasses::EQ_PC::GetCombatAbility((EQ_PC *)*ppPCData,uVar21),
+                 uVar10 == 0 || (45000 < uVar10)) ||
+                (iVar9 = *(int *)(*ppSpellMgr + 0x2c180 + uVar10 * 4), iVar9 == 0)) ||
+               (uVar10 = FUN_10081b25(param_3,(byte *)(iVar9 + 0x27a)), uVar10 != 0))) {
+          uVar21 = uVar21 + 1;
+          if (299 < uVar21) {
+            return uVar10 & 0xffffff00;
+          }
+        }
+        uVar25 = FUN_10081f25((longlong *)0x0);
+        uVar21 = (uint)uVar25;
+        if ((*(int *)(iVar9 + 0x198) != -1) &&
+           (uVar11 = EQClasses::EQ_PC::GetCombatAbilityTimer
+                               ((EQ_PC *)*ppPCData,*(int *)(iVar9 + 0x198)), uVar21 < uVar11)) {
+          uVar11 = EQClasses::EQ_PC::GetCombatAbilityTimer
+                             ((EQ_PC *)*ppPCData,*(int *)(iVar9 + 0x198));
+LAB_100e0343:
+          param_4[1] = (int)((6 - uVar21) + uVar11) / 6;
+          uVar3 = pTicksType;
+          *param_4 = pTicksType;
+          return CONCAT31((int3)((uint)uVar3 >> 8),1);
+        }
+      }
+      else {
+        uVar21 = FUN_10088b58(extraout_EDX_05);
+        uVar21 = EQClasses::EQ_PC::GetCombatAbility((EQ_PC *)*ppPCData,uVar21 - 1);
+        iVar9 = FUN_100e7530(uVar21);
+        pbVar4 = (byte *)0x0;
+        if (iVar9 == 0) break;
+        uVar25 = FUN_10081f25((longlong *)0x0);
+        uVar21 = (uint)uVar25;
+        if ((*(int *)(iVar9 + 0x198) != -1) &&
+           (uVar11 = EQClasses::EQ_PC::GetCombatAbilityTimer
+                               ((EQ_PC *)*ppPCData,*(int *)(iVar9 + 0x198)), uVar21 < uVar11)) {
+          uVar11 = EQClasses::EQ_PC::GetCombatAbilityTimer
+                             ((EQ_PC *)*ppPCData,*(int *)(iVar9 + 0x198));
+          goto LAB_100e0343;
+        }
+      }
+      param_4[1] = 0;
+      uVar3 = pTicksType;
+      *param_4 = pTicksType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+    break;
+  case (byte *)0x61:
+    uVar21 = 0x5c;
+    param_4[1] = 0;
+    *param_4 = pIntType;
+    do {
+      iVar9 = *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x20);
+      iVar20 = *(int *)(uVar21 + iVar9);
+      if (iVar20 == 0) {
+        param_4[1] = 4;
+        return CONCAT31((int3)((uint)iVar9 >> 8),1);
+      }
+      uVar10 = *(uint *)(iVar20 + 0x9c);
+      uVar7 = uVar10;
+      if (uVar10 == 0) {
+        uVar7 = *(uint *)(iVar20 + 0x144);
+      }
+      if (*(char *)(uVar7 + 0x11a) == '\x01') {
+        uVar7 = uVar10;
+        if (uVar10 == 0) {
+          uVar7 = *(uint *)(iVar20 + 0x144);
+        }
+        uVar7 = (uint)*(byte *)(uVar7 + 0x522);
+        if ((uint)param_4[1] < uVar7) {
+          uVar17 = 0;
+          while( true ) {
+            uVar7 = uVar10;
+            if (uVar10 == 0) {
+              uVar7 = *(uint *)(iVar20 + 0x144);
+            }
+            uVar7 = (uint)*(byte *)(uVar7 + 0x521);
+            if (uVar7 <= uVar17) goto LAB_100e1169;
+            if ((*(int *)(iVar20 + 0xa8) == 0) ||
+               (*(int *)(*(int *)(iVar20 + 0xa8) + uVar17 * 4) == 0)) break;
+            uVar17 = uVar17 + 1;
+          }
+          if (uVar10 == 0) {
+            uVar10 = *(uint *)(iVar20 + 0x144);
+          }
+          uVar7 = (uint)*(byte *)(uVar10 + 0x522);
+          param_4[1] = uVar7;
+        }
+      }
+LAB_100e1169:
+      uVar21 = uVar21 + 4;
+      if (0x83 < uVar21) {
+        return CONCAT31((int3)(uVar7 >> 8),1);
+      }
+    } while( true );
+  case (byte *)0x62:
+    if ((gGameState != 5) || (pbVar4 = (byte *)*ppCharData, *(int *)(pbVar4 + 0x2dd0) == 0)) break;
+    iVar9 = *(int *)(*(int *)(param_1 + 0x2dd0) + 0xe6c);
+    goto LAB_100e152e;
+  case (byte *)0x63:
+    if (((gGameState != 5) || (pbVar4 = (byte *)*ppCharData, *(int *)(pbVar4 + 0x2dd0) == 0)) ||
+       (*param_3 == 0)) break;
+    iVar9 = FUN_100e70b0((char *)param_3);
+    pbVar4 = (byte *)0x0;
+    if (iVar9 == 0) break;
+    uVar21 = FUN_10088b58(extraout_EDX_09);
+    pbVar4 = (byte *)(uVar21 - 1);
+    if ((byte *)0x2 < pbVar4) break;
+    iVar9 = *(int *)(*(int *)(param_1 + 0x2dd0) + 0xe48 + (int)pbVar4 * 4);
+    goto LAB_100e152e;
+  case (byte *)0x64:
+    if ((gGameState != 5) || (pbVar4 = (byte *)*ppCharData, *(int *)(pbVar4 + 0x2dd0) == 0)) break;
+    iVar9 = *(int *)(*(int *)(param_1 + 0x2dd0) + 0xe44);
+    goto LAB_100e152e;
+  case (byte *)0x65:
+    if (((gGameState != 5) || (pbVar4 = (byte *)*ppCharData, *(int *)(pbVar4 + 0x2dd0) == 0)) ||
+       (*param_3 == 0)) break;
+    iVar9 = FUN_100e70b0((char *)param_3);
+    pbVar4 = (byte *)0x0;
+    if (iVar9 == 0) break;
+    uVar21 = FUN_10088b58(extraout_EDX_10);
+    pbVar4 = (byte *)(uVar21 - 1);
+    if ((byte *)0x2 < pbVar4) break;
+    iVar9 = *(int *)(*(int *)(param_1 + 0x2dd0) + 0xe60 + (int)pbVar4 * 4);
+    goto LAB_100e152e;
+  case (byte *)0x66:
+    if (((gGameState != 5) || (pbVar4 = (byte *)*ppCharData, *(int *)(pbVar4 + 0x2dd0) == 0)) ||
+       (*param_3 == 0)) break;
+    iVar9 = FUN_100e70b0((char *)param_3);
+    pbVar4 = (byte *)0x0;
+    if (iVar9 == 0) break;
+    uVar21 = FUN_10088b58(extraout_EDX_11);
+    pbVar4 = (byte *)(uVar21 - 1);
+    if ((byte *)0x2 < pbVar4) break;
+    iVar9 = *(int *)(*(int *)(param_1 + 0x2dd0) + 0xe54 + (int)pbVar4 * 4);
+LAB_100e152e:
+    pEVar12 = EQClasses::EQPlayerManager::GetSpawnByID((EQPlayerManager *)*ppSpawnManager,iVar9);
+    param_4[1] = pEVar12;
+    piVar2 = pSpawnType;
+    pbVar4 = (byte *)0x0;
+    if (pEVar12 != (EQPlayer *)0x0) {
+      *param_4 = pSpawnType;
+      return CONCAT31((int3)((uint)piVar2 >> 8),1);
+    }
+    break;
+  case (byte *)0x67:
+    uVar21 = 0;
+    param_4[1] = 0;
+    do {
+      if (0 < *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 200 + uVar21)) {
+        param_4[1] = param_4[1] + 1;
+      }
+      if (0 < *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x120 + uVar21)) {
+        param_4[1] = param_4[1] + 1;
+      }
+      if (0 < *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x178 + uVar21)) {
+        param_4[1] = param_4[1] + 1;
+      }
+      if (0 < *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x1d0 + uVar21)) {
+        param_4[1] = param_4[1] + 1;
+      }
+      if (0 < *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x228 + uVar21)) {
+        param_4[1] = param_4[1] + 1;
+      }
+      if (0 < *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x280 + uVar21)) {
+        param_4[1] = param_4[1] + 1;
+      }
+      uVar10 = pIntType;
+      uVar21 = uVar21 + 0x210;
+    } while (uVar21 < 0xe70);
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar10 >> 8),1);
+  case (byte *)0x68:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 == 0) {
+        uVar21 = GetLanguageIDByName(extraout_EDX_04);
+      }
+      else {
+        uVar21 = FUN_10088b58(extraout_EDX_04);
+      }
+      pbVar4 = (byte *)(uVar21 - 1);
+      if (pbVar4 < (byte *)0x19) {
+        param_4[1] = (uint)*(byte *)(uVar21 + 0x31f7 + param_1);
+        uVar21 = pIntType;
+        *param_4 = pIntType;
+        return CONCAT31((int3)(uVar21 >> 8),1);
+      }
+    }
+    break;
+  case (byte *)0x69:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2df4);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x6a:
+    uVar21 = *(uint *)(param_1 + 0x2e68);
+    uVar10 = *(uint *)(param_1 + 0x2df8);
+    goto LAB_100df621;
+  case (byte *)0x6b:
+    uVar21 = *(uint *)(param_1 + 0x2e70);
+    uVar10 = *(uint *)(param_1 + 0x2dfc);
+    goto LAB_100df621;
+  case (byte *)0x6c:
+    uVar21 = *(uint *)(param_1 + 0x2e6c);
+    uVar10 = *(uint *)(param_1 + 0x2e00);
+    goto LAB_100df621;
+  case (byte *)0x6d:
+    uVar21 = *(uint *)(param_1 + 0x2e80);
+    uVar10 = *(uint *)(param_1 + 0x2e04);
+    goto LAB_100df621;
+  case (byte *)0x6e:
+    uVar21 = *(uint *)(param_1 + 0x2e84);
+    uVar10 = *(uint *)(param_1 + 0x2e08);
+    goto LAB_100df621;
+  case (byte *)0x6f:
+    uVar21 = *(uint *)(param_1 + 0x2e88);
+    uVar10 = *(uint *)(param_1 + 0x2e0c);
+    goto LAB_100df621;
+  case (byte *)0x70:
+    uVar21 = *(uint *)(param_1 + 0x2e8c);
+    uVar10 = *(uint *)(param_1 + 0x2e10);
+    goto LAB_100df621;
+  case (byte *)0x71:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2ed8);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x72:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2edc);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x73:
+    param_4[1] = *(undefined4 *)(param_1 + 12000);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x74:
+    uVar10 = *(uint *)(param_1 + 0x2ee8);
+    uVar21 = *(uint *)(param_1 + 0x2e74);
+    goto LAB_100df621;
+  case (byte *)0x75:
+    uVar21 = *(uint *)(param_1 + 0x2e78);
+    uVar10 = *(uint *)(param_1 + 0x2e60);
+    goto LAB_100df621;
+  case (byte *)0x76:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2eec);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x77:
+    if (*(int *)(param_1 + 0x31cc) != 0) {
+      local_1010 = (byte *)0x1;
+      do {
+        iVar9 = *(int *)(*(int *)(param_1 + 0x31cc) + 4 + (int)local_1010 * 4);
+        if (iVar9 != 0) {
+          iVar9 = *(int *)(iVar9 + 4);
+          local_808[0]._0_1_ = '\0';
+          if (iVar9 != 0) {
+            pcVar8 = (char *)(iVar9 + 0x14);
+            if (*(int *)(iVar9 + 0xc) == 0) {
+              if (*(uint *)(iVar9 + 8) < 0x800) {
+                pcVar14 = pcVar8;
+                do {
+                  cVar1 = *pcVar14;
+                  pcVar14 = pcVar14 + 1;
+                  pcVar14[(int)(local_1008 + (0x7ff - (int)pcVar8))] = cVar1;
+                } while (cVar1 != '\0');
+              }
+              else {
+                _strncpy((char *)local_808,pcVar8,0x800);
+                uStack_c = uStack_c & 0xffffff;
+              }
+            }
+            else {
+              cVar1 = *pcVar8;
+              for (uVar21 = 0; (cVar1 != '\0' && (uVar21 < 0x7ff)); uVar21 = uVar21 + 1) {
+                cVar1 = *pcVar8;
+                pcVar8 = pcVar8 + 2;
+                *(char *)((int)local_808 + uVar21) = cVar1;
+                cVar1 = *pcVar8;
+              }
+              *(undefined1 *)((int)local_808 + uVar21) = 0;
+            }
+          }
+          pcVar8 = (char *)local_808;
+          do {
+            cVar1 = *pcVar8;
+            pcVar8 = pcVar8 + 1;
+          } while (cVar1 != '\0');
+          uVar21 = (int)pcVar8 - (int)local_808;
+          pcVar8 = local_100c + 3;
+          do {
+            pcVar14 = pcVar8 + 1;
+            pcVar8 = pcVar8 + 1;
+          } while (*pcVar14 != '\0');
+          pcVar14 = (char *)local_808;
+          for (uVar10 = uVar21 >> 2; uVar10 != 0; uVar10 = uVar10 - 1) {
+            *(undefined4 *)pcVar8 = *(undefined4 *)pcVar14;
+            pcVar14 = pcVar14 + 4;
+            pcVar8 = pcVar8 + 4;
+          }
+          for (uVar21 = uVar21 & 3; uVar21 != 0; uVar21 = uVar21 - 1) {
+            *pcVar8 = *pcVar14;
+            pcVar14 = pcVar14 + 1;
+            pcVar8 = pcVar8 + 1;
+          }
+          if ((local_1010 < 5) &&
+             (*(int *)(*(int *)(param_1 + 0x31cc) + 8 + (int)local_1010 * 4) != 0)) {
+            puVar22 = (undefined2 *)(local_100c + 3);
+            do {
+              pcVar8 = (char *)((int)puVar22 + 1);
+              puVar22 = (undefined2 *)((int)puVar22 + 1);
+            } while (*pcVar8 != '\0');
+            *puVar22 = 0x20;
+          }
+        }
+        local_1010 = (byte *)((int)local_1010 + 1);
+      } while ((int)local_1010 < 6);
+      param_4[1] = local_1008;
+      uVar3 = pStringType;
+      *param_4 = pStringType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+    break;
+  case (byte *)0x78:
+    pbVar4 = (byte *)0x0;
+    if (*(int *)(param_1 + 0x31cc) != 0) {
+      iVar9 = *(int *)(*(int *)(param_1 + 0x31cc) + 0x1c);
+      pbVar4 = (byte *)0x0;
+      if (iVar9 != 0) {
+        iVar9 = *(int *)(iVar9 + 4);
+        if (iVar9 != 0) {
+          pbVar4 = (byte *)(iVar9 + 0x14);
+          if (*(int *)(iVar9 + 0xc) == 0) {
+            if (*(uint *)(iVar9 + 8) < 0x800) {
+              pbVar19 = pbVar4;
+              do {
+                bVar13 = *pbVar19;
+                pbVar19 = pbVar19 + 1;
+                pbVar19[(int)(local_1008 + (-1 - (int)pbVar4))] = bVar13;
+              } while (bVar13 != 0);
+            }
+            else {
+              _strncpy((char *)local_1008,(char *)pbVar4,0x800);
+              local_1008[0x7ff] = 0;
+            }
+          }
+          else {
+            bVar13 = *pbVar4;
+            for (uVar21 = 0; (bVar13 != 0 && (uVar21 < 0x7ff)); uVar21 = uVar21 + 1) {
+              bVar13 = *pbVar4;
+              pbVar4 = pbVar4 + 2;
+              local_1008[uVar21] = bVar13;
+              bVar13 = *pbVar4;
+            }
+            local_1008[uVar21] = 0;
+          }
+        }
+        iVar9 = FUN_10081b25(local_1008,(byte *)(param_1 + 0x3228));
+        pcVar8 = "TRUE";
+        if (iVar9 != 0) {
+          pcVar8 = "FALSE";
+        }
+        param_4[1] = pcVar8;
+        uVar3 = pStringType;
+        *param_4 = pStringType;
+        return CONCAT31((int3)((uint)uVar3 >> 8),1);
+      }
+    }
+    break;
+  case (byte *)0x7a:
+    param_4[1] = EnduranceGained;
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x7b:
+    iVar9 = GetAAIndexByName((byte *)"mystical attuning");
+    param_4[1] = iVar9;
+    uVar3 = PlayerHasAAAbility(iVar9);
+    if ((char)uVar3 == '\0') {
+      param_4[1] = 0xf;
+    }
+    else {
+      uVar21 = 0;
+      do {
+        iVar9 = EQClasses::EQ_PC::GetAltAbilityIndex((EQ_PC *)*ppPCData,uVar21);
+        if (iVar9 == param_4[1]) {
+          param_4[1] = *(uint *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x36a8 +
+                                uVar21 * 0xc) / 5 + 0xf;
+          break;
+        }
+        uVar21 = uVar21 + 1;
+      } while (uVar21 < 300);
+    }
+    iVar9 = GetAAIndexByName((byte *)"Embrace of the Dark Reign");
+    if (iVar9 != 0) {
+      param_4[1] = param_4[1] + 1;
+    }
+    iVar9 = GetAAIndexByName((byte *)"Embrace of the Keepers");
+    if (iVar9 != 0) {
+      param_4[1] = param_4[1] + 1;
+    }
+    if (0x47 < *(byte *)(*(int *)(*ppCharData + 0x2dd0) + 0x250)) {
+      param_4[1] = param_4[1] + 1;
+    }
+    if (0x4a < *(byte *)(*(int *)(*ppCharData + 0x2dd0) + 0x250)) {
+      param_4[1] = param_4[1] + 1;
+    }
+    uVar21 = 0;
+    do {
+      if (0 < *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 200 + uVar21)) {
+        param_4[1] = param_4[1] + -1;
+      }
+      if (0 < *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x120 + uVar21)) {
+        param_4[1] = param_4[1] + -1;
+      }
+      if (0 < *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x178 + uVar21)) {
+        param_4[1] = param_4[1] + -1;
+      }
+      if (0 < *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x1d0 + uVar21)) {
+        param_4[1] = param_4[1] + -1;
+      }
+      if (0 < *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x228 + uVar21)) {
+        param_4[1] = param_4[1] + -1;
+      }
+      if (0 < *(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x280 + uVar21)) {
+        param_4[1] = param_4[1] + -1;
+      }
+      uVar10 = pIntType;
+      uVar21 = uVar21 + 0x210;
+    } while (uVar21 < 0xe70);
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar10 >> 8),1);
+  case (byte *)0x7c:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2ddc);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x7d:
+    param_4[1] = *(undefined4 *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x9910);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x7e:
+    iVar9 = *(int *)(*(int *)(*ppCharData + 0x31f0) + 4);
+    param_4[1] = *(int *)(iVar9 + 0x9910) + *(int *)(iVar9 + 0x8900);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x7f:
+    param_4[1] = (uint)*pTributeActive;
+    uVar21 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x80:
+    param_4[1] = 0;
+    uVar21 = pBoolType;
+    *param_4 = pBoolType;
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if ((iVar9 == 0) || (uVar21 = FUN_10088b58(param_3), 299 < (int)(uVar21 - 1))) {
+        uVar21 = 0;
+        do {
+          uVar10 = EQClasses::EQ_PC::GetCombatAbility((EQ_PC *)*ppPCData,uVar21);
+          if ((((uVar10 != 0) && (uVar10 < 0xafc9)) &&
+              (iVar9 = *(int *)(*ppSpellMgr + 0x2c180 + uVar10 * 4), iVar9 != 0)) &&
+             (uVar10 = FUN_10081b25(param_3,(byte *)(iVar9 + 0x27a)), uVar10 == 0)) {
+            uVar25 = FUN_10081f25((longlong *)0x0);
+            uVar10 = (uint)uVar25;
+            if ((*(int *)(iVar9 + 0x198) != -1) &&
+               (uVar10 = EQClasses::EQ_PC::GetCombatAbilityTimer
+                                   ((EQ_PC *)*ppPCData,*(int *)(iVar9 + 0x198)),
+               uVar10 < (uint)uVar25)) goto LAB_100e04be;
+          }
+          uVar21 = uVar21 + 1;
+          if (299 < uVar21) {
+            return CONCAT31((int3)(uVar10 >> 8),1);
+          }
+        } while( true );
+      }
+      uVar21 = FUN_10088b58(param_3);
+      uVar21 = EQClasses::EQ_PC::GetCombatAbility((EQ_PC *)*ppPCData,uVar21 - 1);
+      iVar9 = FUN_100e7530(uVar21);
+      uVar21 = 0;
+      if (iVar9 != 0) {
+        uVar25 = FUN_10081f25((longlong *)0x0);
+        uVar21 = (uint)uVar25;
+        if ((*(int *)(iVar9 + 0x198) != -1) &&
+           (uVar21 = EQClasses::EQ_PC::GetCombatAbilityTimer
+                               ((EQ_PC *)*ppPCData,*(int *)(iVar9 + 0x198)), uVar21 < (uint)uVar25))
+        {
+LAB_100e04be:
+          param_4[1] = 1;
+          return CONCAT31((int3)((uint)param_4 >> 8),1);
+        }
+      }
+    }
+    goto LAB_100df154;
+  case (byte *)0x81:
+    param_4[1] = (uint)*EQADDR_RUNWALKSTATE;
+    uVar21 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x82:
+    param_4[1] = 0;
+    iVar9 = *(int *)(param_1 + 0x31cc);
+    if (iVar9 != 0) {
+      bVar23 = *(int *)(iVar9 + 8) != 0;
+      if (bVar23) {
+        param_4[1] = 1;
+        iVar9 = *(int *)(param_1 + 0x31cc);
+      }
+      uVar21 = (uint)bVar23;
+      if (*(int *)(iVar9 + 0xc) != 0) {
+        uVar21 = uVar21 + 1;
+        param_4[1] = uVar21;
+        iVar9 = *(int *)(param_1 + 0x31cc);
+      }
+      if (*(int *)(iVar9 + 0x10) != 0) {
+        uVar21 = uVar21 + 1;
+        param_4[1] = uVar21;
+        iVar9 = *(int *)(param_1 + 0x31cc);
+      }
+      if (*(int *)(iVar9 + 0x14) != 0) {
+        uVar21 = uVar21 + 1;
+        param_4[1] = uVar21;
+        iVar9 = *(int *)(param_1 + 0x31cc);
+      }
+      if (*(int *)(iVar9 + 0x18) != 0) {
+        uVar21 = uVar21 + 1;
+        param_4[1] = uVar21;
+      }
+      if (uVar21 != 0) {
+        param_4[1] = uVar21 + 1;
+      }
+      goto LAB_100e17e4;
+    }
+    break;
+  case (byte *)0x83:
+    param_4[1] = *(uint *)(param_1 + 0x20c4) / 6000;
+    uVar3 = pTicksType;
+    *param_4 = pTicksType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (byte *)0x84:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2294);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x85:
+    param_4[1] = *(undefined4 *)(param_1 + 0x229c);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x86:
+    param_4[1] = *(undefined4 *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x340c);
+    uVar21 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x87:
+    param_4[1] = (uint)*gpAutoFire;
+    uVar21 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x88:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 != 0) {
+        uVar21 = FUN_10088b58(extraout_EDX_12);
+        pcVar8 = EQClasses::CEverQuest::GetLangDesc((CEverQuest *)*ppEverQuest,uVar21 - 1);
+        param_4[1] = pcVar8;
+        uVar3 = pStringType;
+        *param_4 = pStringType;
+        return CONCAT31((int3)((uint)uVar3 >> 8),1);
+      }
+      iVar9 = GetLanguageIDByName(extraout_EDX_12);
+      pbVar4 = (byte *)(iVar9 + -1);
+      if (pbVar4 < (byte *)0x19) {
+        param_4[1] = pbVar4;
+        uVar21 = pIntType;
+        *param_4 = pIntType;
+        return CONCAT31((int3)(uVar21 >> 8),1);
+      }
+    }
+    break;
+  case (byte *)0x89:
+    piVar2 = *(int **)ppAuraMgr;
+    pbVar4 = ppAuraMgr;
+    if ((piVar2 != (int *)0x0) && (*piVar2 != 0)) {
+      DataTypeTemp = '\0';
+      pbVar4 = (byte *)piVar2[4];
+      pbVar19 = *(byte **)pbVar4;
+      if (*param_3 == 0) {
+        pbVar15 = pbVar19;
+        do {
+          bVar13 = *pbVar15;
+          pbVar4 = (byte *)CONCAT31((int3)((uint)pbVar4 >> 8),bVar13);
+          pbVar15[(int)&DataTypeTemp - (int)pbVar19] = bVar13;
+          pbVar15 = pbVar15 + 1;
+        } while (bVar13 != 0);
+      }
+      else {
+        local_100c = (undefined1  [4])piVar2;
+        iVar9 = FUN_100e70b0((char *)param_3);
+        if (iVar9 == 0) {
+          local_1010 = (byte *)0x0;
+          pbVar4 = (byte *)0x0;
+          if (*piVar2 == 0) break;
+          iVar9 = (int)&DataTypeTemp - (int)pbVar19;
+          pbVar15 = extraout_EDX_13;
+          do {
+            iVar20 = FUN_10081b25(pbVar15,pbVar19);
+            pbVar4 = pbVar19;
+            if (iVar20 == 0) {
+              do {
+                bVar13 = *pbVar4;
+                pbVar4[iVar9] = bVar13;
+                pbVar4 = pbVar4 + 1;
+              } while (bVar13 != 0);
+            }
+            iVar9 = iVar9 + -0x4c;
+            pbVar4 = local_1010 + 1;
+            pbVar19 = pbVar19 + 0x4c;
+            pbVar15 = param_3;
+            local_1010 = pbVar4;
+          } while (pbVar4 < *(byte **)local_100c);
+        }
+        else {
+          pbVar4 = (byte *)FUN_10088b58(extraout_EDX_13);
+          if ((byte *)*piVar2 < pbVar4) break;
+          pbVar4 = (byte *)((int)pbVar4 * 0x4c);
+          pbVar15 = pbVar19 + -0x4c + (int)pbVar4;
+          pbVar19 = pbVar15;
+          do {
+            bVar13 = *pbVar19;
+            pbVar4 = (byte *)CONCAT31((int3)((uint)pbVar4 >> 8),bVar13);
+            pbVar19[(int)&DataTypeTemp - (int)pbVar15] = bVar13;
+            pbVar19 = pbVar19 + 1;
+          } while (bVar13 != 0);
+        }
+      }
+      if (DataTypeTemp != '\0') {
+        param_4[1] = &DataTypeTemp;
+        uVar3 = pStringType;
+        *param_4 = pStringType;
+        return CONCAT31((int3)((uint)uVar3 >> 8),1);
+      }
+    }
+    break;
+  case (byte *)0x8a:
+    param_4[1] = *(undefined4 *)(*ppCharData + 0x32f8);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x8b:
+    param_4[1] = *(undefined4 *)(*ppCharData + 0x32fc);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x8c:
+    param_4[1] = *(undefined4 *)(*ppCharData + 0x3304);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x8d:
+    param_4[1] = *(undefined4 *)(*ppCharData + 0x3308);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x8e:
+    param_4[1] = *(undefined4 *)(*ppCharData + 0x3310);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x8f:
+    param_4[1] = *(undefined4 *)(*ppCharData + 0x3318);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x90:
+    param_4[1] = *(undefined4 *)(*ppCharData + 0x331c);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x91:
+    param_4[1] = *(undefined4 *)(*ppCharData + 0x3320);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x92:
+    param_4[1] = *(undefined4 *)(*ppCharData + 0x3324);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x93:
+    param_4[1] = *(undefined4 *)(*ppCharData + 0x3328);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x94:
+    param_4[1] = *(undefined4 *)(*ppCharData + 0x332c);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x95:
+    param_4[1] = *(undefined4 *)(*ppCharData + 0x3330);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x96:
+    pbVar4 = pTributeActive;
+    if (*pTributeActive != 0) {
+      iVar9 = EQClasses::EQMisc::GetActiveFavorCost(pEQMisc);
+      param_4[1] = iVar9;
+      uVar21 = pIntType;
+      *param_4 = pIntType;
+      return CONCAT31((int3)(uVar21 >> 8),1);
+    }
+    break;
+  case (byte *)0x97:
+    switch(*(undefined4 *)(*ppPlayerWnd + 0x2d0)) {
+    case 0:
+      goto switchD_100e1c12_caseD_0;
+    case 1:
+      param_4[1] = "DEBUFFED";
+      uVar3 = pStringType;
+      *param_4 = pStringType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    case 2:
+      param_4[1] = "COOLDOWN";
+      uVar3 = pStringType;
+      *param_4 = pStringType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    case 3:
+      param_4[1] = "ACTIVE";
+      uVar3 = pStringType;
+      *param_4 = pStringType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    case 4:
+      param_4[1] = "RESTING";
+      uVar3 = pStringType;
+      *param_4 = pStringType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    default:
+      param_4[1] = "UNKNOWN";
+      uVar3 = pStringType;
+      *param_4 = pStringType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+  case (byte *)0x98:
+    param_4[1] = *(undefined4 *)(param_1 + 0x36b4);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x99:
+    param_4[1] = (uint)(*(int *)(param_1 + 0x36bc) + *(int *)(param_1 + 0x36b8) +
+                        *(int *)(param_1 + 14000) + *(int *)(param_1 + 0x36ac) +
+                       *(int *)(param_1 + 0x36a8)) / 5;
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x9a:
+    uVar21 = *(uint *)(param_1 + 0x36b8);
+    if (*(uint *)(param_1 + 0x36ac) <= *(uint *)(param_1 + 0x36b8)) {
+      uVar21 = *(uint *)(param_1 + 0x36ac);
+    }
+    uVar10 = *(uint *)(param_1 + 0x36bc);
+    if (uVar21 <= *(uint *)(param_1 + 0x36bc)) {
+      uVar10 = uVar21;
+    }
+    uVar21 = *(uint *)(param_1 + 0x36a8);
+    if (uVar10 <= *(uint *)(param_1 + 0x36a8)) {
+      uVar21 = uVar10;
+    }
+    uVar10 = *(uint *)(param_1 + 14000);
+    if (uVar21 <= *(uint *)(param_1 + 14000)) {
+      uVar10 = uVar21;
+    }
+    param_4[1] = uVar10;
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0x9b:
+    uVar11 = 10;
+    goto LAB_100e1d7e;
+  case (byte *)0x9c:
+    uVar11 = 0xb;
+    goto LAB_100e1d7e;
+  case (byte *)0x9d:
+    uVar11 = 0xc;
+    goto LAB_100e1d7e;
+  case (byte *)0x9e:
+    uVar11 = 0xd;
+    goto LAB_100e1d7e;
+  case (byte *)0x9f:
+    param_4[1] = *(int *)(param_1 + 0x2dd0) + 0x139c;
+    uVar3 = pFellowshipType;
+    *param_4 = pFellowshipType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (byte *)0xa0:
+    if (*(int *)(param_1 + 0x31c4) == 0) {
+      param_4[1] = 0;
+      uVar3 = pTicksType;
+      *param_4 = pTicksType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+    iVar9 = GetFastTime();
+    param_4[1] = (uint)((*(int *)(param_1 + 0x31c0) - iVar9) + *(int *)(param_1 + 0x31c4)) / 6 + 1;
+    uVar3 = pTicksType;
+    *param_4 = pTicksType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (byte *)0xa1:
+    uVar21 = *(uint *)(param_1 + 0x2e7c);
+    uVar10 = *(uint *)(param_1 + 0x2e64);
+LAB_100df621:
+    if (uVar21 <= uVar10) {
+      uVar10 = uVar21;
+    }
+LAB_100df626:
+    param_4[1] = uVar10;
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xa2:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2e90);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xa3:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2e94);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xa4:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2e98);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xa5:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2e9c);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xa6:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2ea0);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xa7:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2ea4);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xa8:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2ea8);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xa9:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2ec4);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xaa:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2ec8);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xab:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2ed4);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xac:
+    param_4[1] = *(undefined4 *)(param_1 + 0x2ee4);
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xae:
+    uVar11 = 0xe;
+    goto LAB_100e1d7e;
+  case (byte *)0xaf:
+    uVar11 = 0xf;
+LAB_100e1d7e:
+    uVar11 = EQClasses::PlayerPointManager::GetAltCurrency
+                       ((PlayerPointManager *)(*ppCharData + 0x2978),uVar11,1);
+LAB_100e1d90:
+    param_4[1] = uVar11;
+    uVar21 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(uVar21 >> 8),1);
+  case (byte *)0xb0:
+    if (*(int *)(*ppMercInfo + 0x10c) == 0) {
+      param_4[1] = &DAT_1013d17c;
+      uVar3 = pStringType;
+      *param_4 = pStringType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+    iVar9 = *(int *)(*ppMercInfo + 0x110);
+    if (iVar9 != 1) {
+      pcVar8 = "ACTIVE";
+      if (iVar9 != 5) {
+        pcVar8 = "UNKNOWN";
+      }
+      param_4[1] = pcVar8;
+      uVar3 = pStringType;
+      *param_4 = pStringType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+    param_4[1] = "SUSPENDED";
+    uVar3 = pStringType;
+    *param_4 = pStringType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (byte *)0xb1:
+    uVar21 = *(uint *)(param_1 + 0x31b8);
+    if ((uVar21 != 0) && (piVar2 = *(int **)(uVar21 + 8), piVar2 != (int *)0x0)) {
+      if (*param_3 == 0) {
+        iVar20 = 0;
+        for (iVar9 = *(int *)(uVar21 + 4); iVar9 != 0; iVar9 = iVar9 + -1) {
+          if ((*piVar2 != 0) && (piVar2[1] != 0)) {
+            iVar20 = iVar20 + 1;
+          }
+          piVar2 = piVar2 + 0x13;
+        }
+        param_4[1] = iVar20;
+        uVar21 = pIntType;
+        *param_4 = pIntType;
+        return CONCAT31((int3)(uVar21 >> 8),1);
+      }
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 == 0) {
+        uVar10 = 0;
+        pbVar4 = (byte *)0x0;
+        if (*(int *)(uVar21 + 4) != 0) {
+          pbVar4 = (byte *)(extraout_EDX_14 + 0xc);
+          while (((*(int *)(pbVar4 + -0xc) == 0 || (*(int *)(pbVar4 + -8) == 0)) ||
+                 (iVar9 = FUN_10081b25(param_3,pbVar4), iVar9 != 0))) {
+            uVar10 = uVar10 + 1;
+            pbVar4 = pbVar4 + 0x4c;
+            if (*(uint *)(uVar21 + 4) <= uVar10) {
+              return uVar21 & 0xffffff00;
+            }
+          }
+          param_4[1] = uVar10;
+          uVar3 = pXTargetType;
+          *param_4 = pXTargetType;
+          return CONCAT31((int3)((uint)uVar3 >> 8),1);
+        }
+      }
+      else {
+        pbVar4 = (byte *)FUN_10088b58(param_3);
+        if ((0 < (int)pbVar4) &&
+           (pbVar4 = (byte *)FUN_10088b58(param_3), (int)pbVar4 <= *(int *)(uVar21 + 4))) {
+          uVar21 = FUN_10088b58(param_3);
+          param_4[1] = uVar21 - 1;
+          uVar3 = pXTargetType;
+          *param_4 = pXTargetType;
+          return CONCAT31((int3)((uint)uVar3 >> 8),1);
+        }
+      }
+    }
+    break;
+  case (byte *)0xb2:
+    uVar11 = EQClasses::EQ_Character1::TotalEffect
+                       ((EQ_Character1 *)(*ppCharData + 0x2dc8),0xb,true,0,true,true);
+    goto LAB_100e1d90;
+  case (byte *)0xb3:
+    param_4[1] = &DAT_1013d17c;
+    uVar3 = pStringType;
+    iVar9 = *ppMercInfo;
+    if (*(int *)(iVar9 + 0x10c) != 0) {
+      uVar21 = 0;
+      if (*(uint *)(iVar9 + 0x238) != 0) {
+        local_100c = *(undefined1 (*) [4])(iVar9 + 0x23c);
+        puVar18 = (undefined4 *)local_100c;
+        do {
+          if (*(int *)*puVar18 == *(int *)(iVar9 + 0x144)) {
+            pcVar8 = EQClasses::CDBStr::GetString
+                               ((CDBStr *)*ppCDBStr,
+                                *(int *)(*(int *)((int)local_100c + uVar21 * 4) + 4),0x18,(int *)0x0
+                               );
+            param_4[1] = pcVar8;
+            uVar3 = pStringType;
+            *param_4 = pStringType;
+            return CONCAT31((int3)((uint)uVar3 >> 8),1);
+          }
+          uVar21 = uVar21 + 1;
+          puVar18 = puVar18 + 1;
+        } while (uVar21 < *(uint *)(iVar9 + 0x238));
+      }
+    }
+    *param_4 = pStringType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (byte *)0xb4:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 == 0) {
+        uVar21 = 0;
+        while (uVar10 = FUN_10081b25(param_3,(&szSkills)[uVar21]), uVar10 != 0) {
+          uVar21 = uVar21 + 1;
+          if (0x62 < uVar21) {
+            return uVar10 & 0xffffff00;
+          }
+        }
+      }
+      else {
+        pbVar4 = (byte *)FUN_10088b58(param_3);
+        if ((byte *)0x62 < pbVar4 + -1) break;
+      }
+      *param_4 = pIntType;
+      uVar3 = FUN_100c0e10();
+      param_4[1] = uVar3;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+    break;
+  case (byte *)0xb5:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 == 0) {
+        iVar9 = 0;
+        uVar21 = 0x3060;
+        pbVar4 = extraout_EDX_15;
+        do {
+          uVar10 = *(uint *)(*(int *)(*ppCharData + 0x31f0) + 4);
+          uVar7 = *(uint *)(uVar21 + uVar10);
+          if ((uVar7 != 0) && (uVar7 < 0xafc9)) {
+            iVar20 = *(int *)(*ppSpellMgr + 0x2c180 + uVar7 * 4);
+            uVar10 = 0;
+            if ((iVar20 != 0) &&
+               (uVar10 = FUN_10081b25(pbVar4,(byte *)(iVar20 + 0x27a)), pbVar4 = param_3,
+               uVar10 == 0)) {
+              uVar21 = GetSpellGemTimer(iVar9);
+              param_4[1] = (uVar21 / 1000 + 5) / 6;
+              uVar3 = pTicksType;
+              *param_4 = pTicksType;
+              return CONCAT31((int3)((uint)uVar3 >> 8),1);
+            }
+          }
+          uVar21 = uVar21 + 4;
+          iVar9 = iVar9 + 1;
+          if (0x308f < uVar21) {
+            return uVar10 & 0xffffff00;
+          }
+        } while( true );
+      }
+      uVar21 = FUN_10088b58(extraout_EDX_15);
+      pbVar4 = (byte *)(uVar21 - 1);
+      if ((pbVar4 < (byte *)0xc) &&
+         (*(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x3060 + (int)pbVar4 * 4) != -1))
+      {
+        uVar21 = GetSpellGemTimer((int)pbVar4);
+        param_4[1] = (uVar21 / 1000 + 5) / 6;
+        uVar3 = pTicksType;
+        *param_4 = pTicksType;
+        return CONCAT31((int3)((uint)uVar3 >> 8),1);
+      }
+    }
+    break;
+  case (byte *)0xb6:
+    if (*param_3 != 0) {
+      iVar9 = FUN_100e70b0((char *)param_3);
+      if (iVar9 == 0) {
+        uVar21 = 0;
+        while (uVar10 = FUN_10081b25(param_3,(&szExpansions)[uVar21]), uVar10 != 0) {
+          uVar21 = uVar21 + 1;
+          if (0x12 < uVar21) {
+            return uVar10 & 0xffffff00;
+          }
+        }
+        bVar13 = (byte)uVar21;
+      }
+      else {
+        pbVar4 = (byte *)FUN_10088b58(param_3);
+        if ((byte *)0x13 < pbVar4) break;
+        bVar13 = (char)pbVar4 - 1;
+      }
+      param_4[1] = 1 << (bVar13 & 0x1f) & *(uint *)(*ppCharData + 0x3648);
+      uVar21 = pBoolType;
+      *param_4 = pBoolType;
+      return CONCAT31((int3)(uVar21 >> 8),1);
+    }
+    break;
+  case (byte *)0xb7:
+    pbVar4 = (byte *)0x0;
+    if (*ppAggroInfo != 0) {
+      uVar11 = (ulong)*(byte *)(*ppAggroInfo + 4);
+      goto LAB_100e1d90;
+    }
+    break;
+  case (byte *)0xb8:
+    pbVar4 = (byte *)0x0;
+    if (*ppAggroInfo != 0) {
+      uVar11 = (ulong)*(byte *)(*ppAggroInfo + 0xc);
+      goto LAB_100e1d90;
+    }
+    break;
+  case (byte *)0xb9:
+    pbVar4 = (byte *)0x0;
+    if (*ppAggroInfo == 0) break;
+    iVar9 = *(int *)(*ppAggroInfo + 0xe0);
+    goto LAB_100e225d;
+  case (byte *)0xba:
+    pbVar4 = (byte *)0x0;
+    if (*ppAggroInfo == 0) break;
+    iVar9 = *(int *)(*ppAggroInfo + 0xd8);
+LAB_100e225d:
+    pbVar4 = (byte *)0x0;
+    if (iVar9 != 0) {
+      pEVar12 = EQClasses::EQPlayerManager::GetSpawnByID((EQPlayerManager *)*ppSpawnManager,iVar9);
+      param_4[1] = pEVar12;
+      piVar2 = pSpawnType;
+      *param_4 = pSpawnType;
+      return CONCAT31((int3)((uint)piVar2 >> 8),1);
+    }
+  }
+switchD_100df071_caseD_6:
+  return (uint)pbVar4 & 0xffffff00;
+switchD_100e1c12_caseD_0:
+  iVar9 = FUN_100c2100(*ppPlayerWnd,(byte *)"PW_CombatStateAnim");
+  pcVar8 = "COMBAT";
+  if (iVar9 == 0) {
+    pcVar8 = "NULL";
+  }
+  param_4[1] = pcVar8;
+  uVar3 = pStringType;
+  *param_4 = pStringType;
+  return CONCAT31((int3)((uint)uVar3 >> 8),1);
+}
+
+
+
+============================================================
+Vtable symbol: MQ2WindowType::vftable
+Address: 1013f7a8
+slot 0 (+0x00) | 1013f7a8 | 1001d270 | FUN_1001d270
+slot 1 (+0x04) | 1013f7ac | 1001d2a0 | FUN_1001d2a0
+slot 2 (+0x08) | 1013f7b0 | 1000f480 | FUN_1000f480
+slot 3 (+0x0c) | 1013f7b4 | 1000f490 | FUN_1000f490
+slot 4 (+0x10) | 1013f7b8 | 100db090 | FUN_100db090
+slot 5 (+0x14) | 1013f7bc | 1001d220 | FUN_1001d220
+slot 6 (+0x18) | 1013f7c0 | 1014fa4c | <no-function>
+slot 7 (+0x1c) | 1013f7c4 | 1001ea30 | FUN_1001ea30
+
+Likely GetMember handler from vtable+0x10:
+Function: FUN_100db090 @ 100db090
+Signature: undefined4 __thiscall FUN_100db090(void * this, CListWnd * param_1, uint * param_2, uint * param_3, undefined4 * param_4)
+Instructions:
+  100db090 | SUB ESP,0x804
+  100db096 | PUSH EBX
+  100db097 | PUSH EBP
+  100db098 | PUSH ESI
+  100db099 | PUSH EDI
+  100db09a | PUSH dword ptr [ESP + 0x81c]
+  100db0a1 | CALL 0x10019c10
+  100db0a6 | TEST EAX,EAX
+  100db0a8 | JZ 0x100dbba0
+  100db0ae | MOV EAX,dword ptr [EAX]
+  100db0b0 | LEA ECX,[EAX + -0x1]
+  100db0b3 | CMP ECX,0x20
+  100db0b6 | JA 0x100dbba0
+  100db0bc | MOV EAX,[0x10186ebc]
+  100db0c1 | JMP dword ptr [ECX*0x4 + 0x100dbbb0]
+  100db0c8 | MOV EAX,dword ptr [ESP + 0x818]
+  100db0cf | MOV ECX,dword ptr [ESP + 0x824]
+  100db0d6 | POP EDI
+  100db0d7 | POP ESI
+  100db0d8 | MOVZX EAX,byte ptr [EAX + 0x196]
+  100db0df | MOV dword ptr [ECX + 0x4],EAX
+  100db0e2 | MOV EAX,[0x1017c0bc]
+  100db0e7 | POP EBP
+  100db0e8 | MOV dword ptr [ECX],EAX
+  100db0ea | MOV AL,0x1
+  100db0ec | POP EBX
+  100db0ed | ADD ESP,0x804
+  100db0f3 | RET 0x10
+  100db0f6 | MOV EDX,dword ptr [ESP + 0x820]
+  100db0fd | MOV ECX,dword ptr [ESP + 0x818]
+  100db104 | CALL 0x100c2100
+  100db109 | MOV ECX,dword ptr [ESP + 0x824]
+  100db110 | MOV dword ptr [ECX + 0x4],EAX
+  100db113 | TEST EAX,EAX
+  100db115 | JNZ 0x100db167
+  100db117 | MOV dword ptr [ECX + 0x4],0x0
+  100db11e | MOV EAX,[0x1017c0b0]
+  100db123 | MOV dword ptr [ECX],EAX
+  100db125 | POP EDI
+  100db126 | POP ESI
+  100db127 | POP EBP
+  100db128 | MOV AL,0x1
+  100db12a | POP EBX
+  100db12b | ADD ESP,0x804
+  100db131 | RET 0x10
+  100db134 | MOV EAX,dword ptr [ESP + 0x818]
+  100db13b | MOV EAX,dword ptr [EAX + 0x174]
+  100db141 | JMP 0x100db109
+  100db143 | MOV EAX,dword ptr [ESP + 0x818]
+  100db14a | MOV EAX,dword ptr [EAX + 0x10]
+  100db14d | JMP 0x100db109
+  100db14f | MOV EAX,dword ptr [ESP + 0x818]
+  100db156 | MOV ECX,dword ptr [ESP + 0x824]
+  100db15d | MOV EAX,dword ptr [EAX + 0x8]
+  100db160 | MOV dword ptr [ECX + 0x4],EAX
+  100db163 | TEST EAX,EAX
+  100db165 | JZ 0x100db117
+  100db167 | MOV EAX,[0x1017c0c0]
+  100db16c | POP EDI
+  100db16d | POP ESI
+  100db16e | POP EBP
+  100db16f | MOV dword ptr [ECX],EAX
+  100db171 | MOV AL,0x1
+  100db173 | POP EBX
+  100db174 | ADD ESP,0x804
+  100db17a | RET 0x10
+  100db17d | MOV EAX,dword ptr [ESP + 0x818]
+  100db184 | MOV ECX,dword ptr [ESP + 0x824]
+  100db18b | MOV EAX,dword ptr [EAX + 0x190]
+  100db191 | MOV dword ptr [ECX + 0x4],EAX
+  100db194 | JMP 0x100db11e
+  100db196 | MOV EAX,dword ptr [ESP + 0x818]
+  100db19d | MOV ECX,dword ptr [ESP + 0x824]
+  100db1a4 | MOV EAX,dword ptr [EAX + 0x17c]
+  100db1aa | MOV dword ptr [ECX + 0x4],EAX
+  100db1ad | JMP 0x100db11e
+  100db1b2 | MOV ECX,dword ptr [ESP + 0x818]
+  100db1b9 | XOR EDX,EDX
+  100db1bb | IMUL EAX,dword ptr [ECX + 0x17c],0x64
+  100db1c2 | DIV dword ptr [ECX + 0x190]
+  100db1c8 | MOV ECX,dword ptr [ESP + 0x824]
+  100db1cf | MOV dword ptr [ECX + 0x4],EAX
+  100db1d2 | JMP 0x100db11e
+  100db1d7 | MOV EAX,dword ptr [ESP + 0x818]
+  100db1de | MOV ECX,dword ptr [ESP + 0x824]
+  100db1e5 | MOV EAX,dword ptr [EAX + 0x1a0]
+  100db1eb | MOV dword ptr [ECX + 0x4],EAX
+  100db1ee | JMP 0x100db11e
+  100db1f3 | MOV EAX,dword ptr [ESP + 0x818]
+  100db1fa | MOV ECX,dword ptr [ESP + 0x824]
+  100db201 | MOV EAX,dword ptr [EAX + 0x198]
+  100db207 | MOV dword ptr [ECX + 0x4],EAX
+  100db20a | JMP 0x100db11e
+  100db20f | MOV ECX,dword ptr [ESP + 0x818]
+  100db216 | XOR EDX,EDX
+  100db218 | IMUL EAX,dword ptr [ECX + 0x198],0x64
+  100db21f | DIV dword ptr [ECX + 0x1a0]
+  100db225 | MOV ECX,dword ptr [ESP + 0x824]
+  100db22c | MOV dword ptr [ECX + 0x4],EAX
+  100db22f | JMP 0x100db11e
+  100db234 | MOV EAX,dword ptr [ESP + 0x818]
+  100db23b | MOV ECX,dword ptr [ESP + 0x824]
+  100db242 | POP EDI
+  100db243 | POP ESI
+  100db244 | MOV EAX,dword ptr [EAX + 0x10]
+  100db247 | MOV dword ptr [ECX + 0x4],EAX
+  100db24a | MOV EAX,[0x1017c0bc]
+  100db24f | POP EBP
+  100db250 | MOV dword ptr [ECX],EAX
+  100db252 | MOV AL,0x1
+  100db254 | POP EBX
+  100db255 | ADD ESP,0x804
+  100db25b | RET 0x10
+  100db25e | MOV EAX,dword ptr [ESP + 0x818]
+  100db265 | MOV ECX,dword ptr [ESP + 0x824]
+  100db26c | POP EDI
+  100db26d | POP ESI
+  100db26e | MOV EAX,dword ptr [EAX + 0x8]
+  100db271 | MOV dword ptr [ECX + 0x4],EAX
+  100db274 | MOV EAX,[0x1017c0bc]
+  100db279 | POP EBP
+  100db27a | MOV dword ptr [ECX],EAX
+  100db27c | MOV AL,0x1
+  100db27e | POP EBX
+  100db27f | ADD ESP,0x804
+  100db285 | RET 0x10
+  100db288 | MOV EAX,dword ptr [ESP + 0x818]
+  100db28f | MOV ECX,dword ptr [ESP + 0x824]
+  100db296 | POP EDI
+  100db297 | POP ESI
+  100db298 | MOVZX EAX,byte ptr [EAX + 0x1ce]
+  100db29f | MOV dword ptr [ECX + 0x4],EAX
+  100db2a2 | MOV EAX,[0x1017c0bc]
+  100db2a7 | POP EBP
+  100db2a8 | MOV dword ptr [ECX],EAX
+  100db2aa | MOV AL,0x1
+  100db2ac | POP EBX
+  100db2ad | ADD ESP,0x804
+  100db2b3 | RET 0x10
+  100db2b6 | MOV EAX,dword ptr [ESP + 0x818]
+  100db2bd | MOV ECX,dword ptr [ESP + 0x824]
+  100db2c4 | POP EDI
+  100db2c5 | POP ESI
+  100db2c6 | MOVZX EAX,byte ptr [EAX + 0x20]
+  100db2ca | MOV dword ptr [ECX + 0x4],EAX
+  100db2cd | MOV EAX,[0x1017c0bc]
+  100db2d2 | POP EBP
+  100db2d3 | MOV dword ptr [ECX],EAX
+  100db2d5 | MOV AL,0x1
+  100db2d7 | POP EBX
+  100db2d8 | ADD ESP,0x804
+  100db2de | RET 0x10
+  100db2e1 | MOV EAX,dword ptr [ESP + 0x818]
+  100db2e8 | MOV ECX,dword ptr [ESP + 0x824]
+  100db2ef | MOV EAX,dword ptr [EAX + 0x60]
+  100db2f2 | MOV dword ptr [ECX + 0x4],EAX
+  100db2f5 | JMP 0x100db11e
+  100db2fa | MOV EAX,dword ptr [ESP + 0x818]
+  100db301 | MOV ECX,dword ptr [ESP + 0x824]
+  100db308 | MOV EAX,dword ptr [EAX + 0x64]
+  100db30b | MOV dword ptr [ECX + 0x4],EAX
+  100db30e | JMP 0x100db11e
+  100db313 | MOV EAX,dword ptr [ESP + 0x818]
+  100db31a | MOV EDX,dword ptr [ESP + 0x824]
+  100db321 | POP EDI
+  100db322 | POP ESI
+  100db323 | MOV ECX,dword ptr [EAX + 0x68]
+  100db326 | SUB ECX,dword ptr [EAX + 0x60]
+  100db329 | MOV dword ptr [EDX + 0x4],ECX
+  100db32c | MOV EAX,[0x1017c0b0]
+  100db331 | POP EBP
+  100db332 | MOV dword ptr [EDX],EAX
+  100db334 | MOV AL,0x1
+  100db336 | POP EBX
+  100db337 | ADD ESP,0x804
+  100db33d | RET 0x10
+  100db340 | MOV EAX,dword ptr [ESP + 0x818]
+  100db347 | MOV EDX,dword ptr [ESP + 0x824]
+  100db34e | POP EDI
+  100db34f | POP ESI
+  100db350 | MOV ECX,dword ptr [EAX + 0x6c]
+  100db353 | SUB ECX,dword ptr [EAX + 0x64]
+  100db356 | MOV dword ptr [EDX + 0x4],ECX
+  100db359 | MOV EAX,[0x1017c0b0]
+  100db35e | POP EBP
+  100db35f | MOV dword ptr [EDX],EAX
+  100db361 | MOV AL,0x1
+  100db363 | POP EBX
+  100db364 | ADD ESP,0x804
+  100db36a | RET 0x10
+  100db36d | MOV EAX,dword ptr [ESP + 0x818]
+  100db374 | MOV ECX,dword ptr [ESP + 0x824]
+  100db37b | POP EDI
+  100db37c | POP ESI
+  100db37d | MOV EAX,dword ptr [EAX + 0x128]
+  100db383 | MOV dword ptr [ECX + 0x4],EAX
+  100db386 | MOV EAX,[0x1017c148]
+  100db38b | POP EBP
+  100db38c | MOV dword ptr [ECX],EAX
+  100db38e | MOV AL,0x1
+  100db390 | POP EBX
+  100db391 | ADD ESP,0x804
+  100db397 | RET 0x10
+  100db39a | MOV ESI,dword ptr [ESP + 0x818]
+  100db3a1 | MOV ECX,ESI
+  100db3a3 | CALL 0x100c2350
+  100db3a8 | CMP EAX,0x25
+  100db3ab | JNZ 0x100db41f
+  100db3ad | MOV EAX,dword ptr [ESI + 0x1d8]
+  100db3b3 | MOV byte ptr [0x10181fd0],0x0
+  100db3ba | TEST EAX,EAX
+  100db3bc | JZ 0x100db4a1
+  100db3c2 | CMP dword ptr [EAX + 0xc],0x0
+  100db3c6 | LEA ECX,[EAX + 0x14]
+  100db3c9 | JNZ 0x100db3f2
+  100db3cb | CMP dword ptr [EAX + 0x8],0x7ff
+  100db3d2 | JNC 0x100db45f
+  100db3d8 | MOV EDX,0x10181fd0
+  100db3dd | SUB EDX,ECX
+  100db3df | NOP
+  100db3e0 | MOV AL,byte ptr [ECX]
+  100db3e2 | LEA ECX,[ECX + 0x1]
+  100db3e5 | MOV byte ptr [ECX + EDX*0x1 + -0x1],AL
+  100db3e9 | TEST AL,AL
+  100db3eb | JNZ 0x100db3e0
+  100db3ed | JMP 0x100db4a1
+  100db3f2 | XOR EDX,EDX
+  100db3f4 | CMP byte ptr [ECX],DL
+  100db3f6 | JZ 0x100db49a
+  100db3fc | NOP dword ptr [EAX]
+  100db400 | CMP EDX,0x7fe
+  100db406 | JNC 0x100db49a
+  100db40c | MOV AL,byte ptr [ECX]
+  100db40e | ADD ECX,0x2
+  100db411 | MOV byte ptr [EDX + 0x10181fd0],AL
+  100db417 | INC EDX
+  100db418 | CMP byte ptr [ECX],0x0
+  100db41b | JNZ 0x100db400
+  100db41d | JMP 0x100db49a
+  100db41f | MOV EAX,dword ptr [ESI + 0x1a8]
+  100db425 | MOV byte ptr [0x10181fd0],0x0
+  100db42c | TEST EAX,EAX
+  100db42e | JZ 0x100db4a1
+  100db430 | CMP dword ptr [EAX + 0xc],0x0
+  100db434 | LEA ECX,[EAX + 0x14]
+  100db437 | JNZ 0x100db47b
+  100db439 | CMP dword ptr [EAX + 0x8],0x7ff
+  100db440 | JNC 0x100db45f
+  100db442 | MOV EDX,0x10181fd0
+  100db447 | SUB EDX,ECX
+  100db449 | NOP dword ptr [EAX]
+  100db450 | MOV AL,byte ptr [ECX]
+  100db452 | LEA ECX,[ECX + 0x1]
+  100db455 | MOV byte ptr [ECX + EDX*0x1 + -0x1],AL
+  100db459 | TEST AL,AL
+  100db45b | JNZ 0x100db450
+  100db45d | JMP 0x100db4a1
+  100db45f | PUSH 0x7ff
+  100db464 | PUSH ECX
+  100db465 | PUSH 0x10181fd0
+Decompile:
+
+
+UIType __thiscall
+FUN_100db090(void *this,CListWnd *param_1,uint *param_2,uint *param_3,undefined4 *param_4)
+
+{
+  char cVar1;
+  bool bVar2;
+  undefined4 uVar3;
+  UIType *pUVar4;
+  uint *puVar5;
+  int iVar6;
+  undefined4 extraout_EAX;
+  int iVar7;
+  undefined4 extraout_EAX_00;
+  undefined1 (*pauVar8) [16];
+  uint extraout_EAX_01;
+  CXMLData *pCVar9;
+  UIType UVar10;
+  char *pcVar11;
+  char *pcVar12;
+  uint uVar13;
+  int iVar14;
+  int local_804;
+  byte local_800 [2048];
+  
+  pUVar4 = (UIType *)FUN_10019c10(this,param_2);
+  pCVar9 = (CXMLData *)0x0;
+  if (pUVar4 == (UIType *)0x0) goto switchD_100db0c1_default;
+  pCVar9 = (CXMLData *)*pUVar4;
+  switch(pCVar9) {
+  case (CXMLData *)0x1:
+    param_4[1] = (uint)(byte)param_1[0x196];
+    uVar3 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (CXMLData *)0x2:
+    iVar14 = FUN_100c2100((int)param_1,(byte *)param_3);
+    goto LAB_100db109;
+  case (CXMLData *)0x3:
+    param_4[1] = *(undefined4 *)(param_1 + 400);
+    break;
+  case (CXMLData *)0x4:
+    param_4[1] = *(undefined4 *)(param_1 + 0x17c);
+    break;
+  case (CXMLData *)0x5:
+    param_4[1] = (uint)(*(int *)(param_1 + 0x17c) * 100) / *(uint *)(param_1 + 400);
+    break;
+  case (CXMLData *)0x6:
+    param_4[1] = *(undefined4 *)(param_1 + 0x1a0);
+    break;
+  case (CXMLData *)0x7:
+    param_4[1] = *(undefined4 *)(param_1 + 0x198);
+    break;
+  case (CXMLData *)0x8:
+    param_4[1] = (uint)(*(int *)(param_1 + 0x198) * 100) / *(uint *)(param_1 + 0x1a0);
+    break;
+  case (CXMLData *)0x9:
+    param_4[1] = *(undefined4 *)(param_1 + 0x10);
+    uVar3 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (CXMLData *)0xa:
+    param_4[1] = *(undefined4 *)(param_1 + 8);
+    uVar3 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (CXMLData *)0xb:
+    iVar14 = *(int *)(param_1 + 0x174);
+    goto LAB_100db109;
+  case (CXMLData *)0xc:
+    iVar14 = *(int *)(param_1 + 0x10);
+LAB_100db109:
+    param_4[1] = iVar14;
+    uVar3 = pWindowType;
+joined_r0x100db165:
+    pWindowType = uVar3;
+    if (iVar14 != 0) {
+      *param_4 = uVar3;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+    param_4[1] = 0;
+    break;
+  case (CXMLData *)0xd:
+    iVar14 = *(int *)(param_1 + 8);
+    param_4[1] = iVar14;
+    uVar3 = pWindowType;
+    goto joined_r0x100db165;
+  case (CXMLData *)0xe:
+    param_4[1] = (uint)(byte)param_1[0x1ce];
+    uVar3 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (CXMLData *)0xf:
+    param_4[1] = *(undefined4 *)(param_1 + 0x60);
+    break;
+  case (CXMLData *)0x10:
+    param_4[1] = *(undefined4 *)(param_1 + 100);
+    break;
+  case (CXMLData *)0x11:
+    param_4[1] = *(int *)(param_1 + 0x6c) - *(int *)(param_1 + 100);
+    UVar10 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(UVar10 >> 8),1);
+  case (CXMLData *)0x12:
+    param_4[1] = *(int *)(param_1 + 0x68) - *(int *)(param_1 + 0x60);
+    UVar10 = pIntType;
+    *param_4 = pIntType;
+    return CONCAT31((int3)(UVar10 >> 8),1);
+  case (CXMLData *)0x13:
+    param_4[1] = (uint)(byte)param_1[0x20];
+    uVar3 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (CXMLData *)0x14:
+    param_4[1] = *(undefined4 *)(param_1 + 0x128);
+    uVar3 = pArgbType;
+    *param_4 = pArgbType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (CXMLData *)0x15:
+    UVar10 = EQClasses::CXWnd::GetType((CXWnd *)param_1);
+    if (UVar10 == 0x25) {
+      iVar14 = *(int *)(param_1 + 0x1d8);
+      DataTypeTemp = 0;
+      if (iVar14 == 0) goto LAB_100db4a1;
+      pcVar12 = (char *)(iVar14 + 0x14);
+      if (*(int *)(iVar14 + 0xc) != 0) {
+        cVar1 = *pcVar12;
+        for (uVar13 = 0; (cVar1 != '\0' && (uVar13 < 0x7fe)); uVar13 = uVar13 + 1) {
+          cVar1 = *pcVar12;
+          pcVar12 = pcVar12 + 2;
+          (&DataTypeTemp)[uVar13] = cVar1;
+          cVar1 = *pcVar12;
+        }
+LAB_100db49a:
+        (&DataTypeTemp)[uVar13] = 0;
+        goto LAB_100db4a1;
+      }
+      if (*(uint *)(iVar14 + 8) < 0x7ff) {
+        pcVar11 = pcVar12;
+        do {
+          cVar1 = *pcVar11;
+          pcVar11[(int)&DataTypeTemp - (int)pcVar12] = cVar1;
+          pcVar11 = pcVar11 + 1;
+        } while (cVar1 != '\0');
+        goto LAB_100db4a1;
+      }
+    }
+    else {
+      iVar14 = *(int *)(param_1 + 0x1a8);
+      DataTypeTemp = 0;
+      if (iVar14 == 0) goto LAB_100db4a1;
+      pcVar12 = (char *)(iVar14 + 0x14);
+      if (*(int *)(iVar14 + 0xc) != 0) {
+        cVar1 = *pcVar12;
+        for (uVar13 = 0; (cVar1 != '\0' && (uVar13 < 0x7fe)); uVar13 = uVar13 + 1) {
+          cVar1 = *pcVar12;
+          pcVar12 = pcVar12 + 2;
+          (&DataTypeTemp)[uVar13] = cVar1;
+          cVar1 = *pcVar12;
+        }
+        goto LAB_100db49a;
+      }
+      if (*(uint *)(iVar14 + 8) < 0x7ff) {
+        pcVar11 = pcVar12;
+        do {
+          cVar1 = *pcVar11;
+          pcVar11[(int)&DataTypeTemp - (int)pcVar12] = cVar1;
+          pcVar11 = pcVar11 + 1;
+        } while (cVar1 != '\0');
+        goto LAB_100db4a1;
+      }
+    }
+    DataTypeTemp = 0;
+    _strncpy(&DataTypeTemp,pcVar12,0x7ff);
+    DAT_101827ce = 0;
+LAB_100db4a1:
+    DAT_101827cf = 0;
+    param_4[1] = &DataTypeTemp;
+    uVar3 = pStringType;
+    *param_4 = pStringType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (CXMLData *)0x16:
+    iVar14 = *(int *)(param_1 + 0xe8);
+    DataTypeTemp = '\0';
+    if (iVar14 != 0) {
+      pcVar12 = (char *)(iVar14 + 0x14);
+      if (*(int *)(iVar14 + 0xc) != 0) {
+        cVar1 = *pcVar12;
+        for (uVar13 = 0; (cVar1 != '\0' && (uVar13 < 0x7ff)); uVar13 = uVar13 + 1) {
+          cVar1 = *pcVar12;
+          pcVar12 = pcVar12 + 2;
+          (&DataTypeTemp)[uVar13] = cVar1;
+          cVar1 = *pcVar12;
+        }
+        (&DataTypeTemp)[uVar13] = 0;
+        param_4[1] = &DataTypeTemp;
+        uVar3 = pStringType;
+        *param_4 = pStringType;
+        return CONCAT31((int3)((uint)uVar3 >> 8),1);
+      }
+      if (*(uint *)(iVar14 + 8) < 0x800) {
+        pcVar11 = pcVar12;
+        do {
+          cVar1 = *pcVar11;
+          pcVar11[(int)&DataTypeTemp - (int)pcVar12] = cVar1;
+          pcVar11 = pcVar11 + 1;
+        } while (cVar1 != '\0');
+        param_4[1] = &DataTypeTemp;
+        uVar3 = pStringType;
+        *param_4 = pStringType;
+        return CONCAT31((int3)((uint)uVar3 >> 8),1);
+      }
+LAB_100dba63:
+      DataTypeTemp = 0;
+      _strncpy(&DataTypeTemp,pcVar12,0x800);
+      DAT_101827cf = 0;
+      param_4[1] = &DataTypeTemp;
+      uVar3 = pStringType;
+      *param_4 = pStringType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+    goto LAB_100dbacf;
+  case (CXMLData *)0x17:
+    iVar14 = 0;
+    UVar10 = EQClasses::CXWnd::GetType((CXWnd *)param_1);
+    if (UVar10 == 0x27) {
+      param_1 = *(CListWnd **)(param_1 + 0x1d8);
+    }
+    else {
+      pCVar9 = (CXMLData *)EQClasses::CXWnd::GetType((CXWnd *)param_1);
+      if (pCVar9 != (CXMLData *)0x1c) goto switchD_100db0c1_default;
+    }
+    puVar5 = FUN_10058360(param_3,',');
+    if (puVar5 != (uint *)0x0) {
+      uVar13 = FUN_10088b58((byte *)((int)puVar5 + 1));
+      iVar14 = 0;
+      if (-1 < (int)(uVar13 - 1)) {
+        iVar14 = uVar13 - 1;
+      }
+      DebugSpew(0x1013f234);
+      *(undefined1 *)puVar5 = 0;
+    }
+    iVar6 = FUN_100e70b0((char *)param_3);
+    if (iVar6 == 0) {
+      bVar2 = false;
+      _memset(local_800,0,0x800);
+      if ((char)*param_3 == '=') {
+        bVar2 = true;
+        pcVar12 = (char *)((int)param_3 + 1);
+        do {
+          cVar1 = *pcVar12;
+          pcVar12[(int)(local_800 + -((int)param_3 + 1))] = cVar1;
+          pcVar12 = pcVar12 + 1;
+        } while (cVar1 != '\0');
+      }
+      else {
+        puVar5 = param_3;
+        do {
+          uVar13 = *puVar5;
+          *(byte *)((int)puVar5 + (int)(local_800 + -(int)param_3)) = (byte)uVar13;
+          puVar5 = (uint *)((int)puVar5 + 1);
+        } while ((byte)uVar13 != 0);
+      }
+      __strlwr((char *)local_800);
+      iVar6 = 0;
+      while( true ) {
+        EQClasses::CXStr::CXStr((CXStr *)&local_804);
+        EQClasses::CListWnd::GetItemText(param_1,(CXStr *)&local_804,iVar6,iVar14);
+        DataTypeTemp = '\0';
+        if (local_804 == 0) break;
+        if (*(int *)(local_804 + 0xc) == 0) {
+          pcVar12 = (char *)(local_804 + 0x14);
+          if (*(uint *)(local_804 + 8) < 0x800) {
+            pcVar11 = pcVar12;
+            do {
+              cVar1 = *pcVar11;
+              pcVar11[(int)&DataTypeTemp - (int)pcVar12] = cVar1;
+              pcVar11 = pcVar11 + 1;
+            } while (cVar1 != '\0');
+          }
+          else {
+            _strncpy(&DataTypeTemp,pcVar12,0x800);
+            DAT_101827cf = 0;
+          }
+        }
+        else {
+          pcVar12 = (char *)(local_804 + 0x14);
+          cVar1 = *pcVar12;
+          for (uVar13 = 0; (cVar1 != '\0' && (uVar13 < 0x7ff)); uVar13 = uVar13 + 1) {
+            cVar1 = *pcVar12;
+            pcVar12 = pcVar12 + 2;
+            (&DataTypeTemp)[uVar13] = cVar1;
+            cVar1 = *pcVar12;
+          }
+          (&DataTypeTemp)[uVar13] = 0;
+        }
+        if (DataTypeTemp == '\0') break;
+        if (bVar2) {
+          iVar7 = FUN_10081b25((byte *)&DataTypeTemp,local_800);
+          if (iVar7 == 0) {
+LAB_100db88a:
+            param_4[1] = iVar6 + 1;
+            *param_4 = pIntType;
+            EQClasses::CXStr::~CXStr((CXStr *)&local_804);
+            return CONCAT31((int3)((uint)extraout_EAX_00 >> 8),1);
+          }
+        }
+        else {
+          __strlwr(&DataTypeTemp);
+          pauVar8 = FUN_10057f60((undefined1 (*) [16])&DataTypeTemp,(undefined1 (*) [16])local_800);
+          if (pauVar8 != (undefined1 (*) [16])0x0) goto LAB_100db88a;
+        }
+        iVar6 = iVar6 + 1;
+        EQClasses::CXStr::~CXStr((CXStr *)&local_804);
+      }
+      EQClasses::CXStr::~CXStr((CXStr *)&local_804);
+      return extraout_EAX_01 & 0xffffff00;
+    }
+    uVar13 = FUN_10088b58((byte *)param_3);
+    pCVar9 = (CXMLData *)0x0;
+    if (uVar13 != 0) {
+      EQClasses::CXStr::CXStr((CXStr *)&local_804);
+      EQClasses::CListWnd::GetItemText(param_1,(CXStr *)&local_804,uVar13 - 1,iVar14);
+      DataTypeTemp = 0;
+      if (local_804 != 0) {
+        if (*(int *)(local_804 + 0xc) == 0) {
+          pcVar12 = (char *)(local_804 + 0x14);
+          if (*(uint *)(local_804 + 8) < 0x800) {
+            pcVar11 = pcVar12;
+            do {
+              cVar1 = *pcVar11;
+              pcVar11[(int)&DataTypeTemp - (int)pcVar12] = cVar1;
+              pcVar11 = pcVar11 + 1;
+            } while (cVar1 != '\0');
+          }
+          else {
+            _strncpy(&DataTypeTemp,pcVar12,0x800);
+            DAT_101827cf = 0;
+          }
+        }
+        else {
+          pcVar12 = (char *)(local_804 + 0x14);
+          cVar1 = *pcVar12;
+          for (uVar13 = 0; (cVar1 != '\0' && (uVar13 < 0x7ff)); uVar13 = uVar13 + 1) {
+            cVar1 = *pcVar12;
+            pcVar12 = pcVar12 + 2;
+            (&DataTypeTemp)[uVar13] = cVar1;
+            cVar1 = *pcVar12;
+          }
+          (&DataTypeTemp)[uVar13] = 0;
+        }
+      }
+      param_4[1] = &DataTypeTemp;
+      *param_4 = pStringType;
+      EQClasses::CXStr::~CXStr((CXStr *)&local_804);
+      return CONCAT31((int3)((uint)extraout_EAX >> 8),1);
+    }
+    goto switchD_100db0c1_default;
+  case (CXMLData *)0x18:
+    param_4[1] = (uint)(byte)param_1[0x1e4];
+    uVar3 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (CXMLData *)0x19:
+    param_4[1] = *(undefined4 *)(param_1 + 0x84);
+    break;
+  case (CXMLData *)0x1a:
+    param_4[1] = (uint)(param_1[0x1a] != (CListWnd)0x0);
+    uVar3 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (CXMLData *)0x1b:
+    param_4[1] = (uint)(byte)param_1[0x1e5];
+    uVar3 = pBoolType;
+    *param_4 = pBoolType;
+    return CONCAT31((int3)((uint)uVar3 >> 8),1);
+  case (CXMLData *)0x1c:
+    pCVar9 = EQClasses::CXWnd::GetXMLData((CXWnd *)param_1);
+    if (pCVar9 == (CXMLData *)0x0) goto switchD_100db0c1_default;
+    iVar14 = *(int *)(pCVar9 + 0x18);
+    DataTypeTemp = '\0';
+    if (iVar14 == 0) goto switchD_100db0c1_default;
+    pcVar12 = (char *)(iVar14 + 0x14);
+    if (*(int *)(iVar14 + 0xc) == 0) {
+      if (0x7ff < *(uint *)(iVar14 + 8)) goto LAB_100dba63;
+      pcVar11 = pcVar12;
+      do {
+        cVar1 = *pcVar11;
+        pCVar9 = (CXMLData *)CONCAT31((int3)((uint)pCVar9 >> 8),cVar1);
+        pcVar11[(int)&DataTypeTemp - (int)pcVar12] = cVar1;
+        pcVar11 = pcVar11 + 1;
+      } while (cVar1 != '\0');
+      uVar13 = *(uint *)(iVar14 + 8);
+    }
+    else {
+      cVar1 = *pcVar12;
+      for (uVar13 = 0; (cVar1 != '\0' && (uVar13 < 0x7ff)); uVar13 = uVar13 + 1) {
+        cVar1 = *pcVar12;
+        pCVar9 = (CXMLData *)CONCAT31((int3)((uint)pCVar9 >> 8),cVar1);
+        pcVar12 = pcVar12 + 2;
+        (&DataTypeTemp)[uVar13] = cVar1;
+        cVar1 = *pcVar12;
+      }
+LAB_100dbac0:
+      (&DataTypeTemp)[uVar13] = 0;
+    }
+    goto LAB_100dbac7;
+  case (CXMLData *)0x1d:
+    pCVar9 = EQClasses::CXWnd::GetXMLData((CXWnd *)param_1);
+    if (pCVar9 == (CXMLData *)0x0) goto switchD_100db0c1_default;
+    iVar14 = *(int *)(pCVar9 + 0x20);
+    DataTypeTemp = '\0';
+    if (iVar14 == 0) goto switchD_100db0c1_default;
+    pcVar12 = (char *)(iVar14 + 0x14);
+    if (*(int *)(iVar14 + 0xc) != 0) {
+      cVar1 = *pcVar12;
+      for (uVar13 = 0; (cVar1 != '\0' && (uVar13 < 0x7ff)); uVar13 = uVar13 + 1) {
+        cVar1 = *pcVar12;
+        pCVar9 = (CXMLData *)CONCAT31((int3)((uint)pCVar9 >> 8),cVar1);
+        pcVar12 = pcVar12 + 2;
+        (&DataTypeTemp)[uVar13] = cVar1;
+        cVar1 = *pcVar12;
+      }
+      goto LAB_100dbac0;
+    }
+    if (0x7ff < *(uint *)(iVar14 + 8)) goto LAB_100dba63;
+    pcVar11 = pcVar12;
+    do {
+      cVar1 = *pcVar11;
+      pCVar9 = (CXMLData *)CONCAT31((int3)((uint)pCVar9 >> 8),cVar1);
+      pcVar11[(int)&DataTypeTemp - (int)pcVar12] = cVar1;
+      pcVar11 = pcVar11 + 1;
+    } while (cVar1 != '\0');
+    uVar13 = *(uint *)(iVar14 + 8);
+    goto LAB_100dbac7;
+  case (CXMLData *)0x1e:
+    pCVar9 = EQClasses::CXWnd::GetXMLData((CXWnd *)param_1);
+    if (pCVar9 == (CXMLData *)0x0) goto switchD_100db0c1_default;
+    iVar14 = *(int *)(pCVar9 + 0x14);
+    DataTypeTemp = '\0';
+    if (iVar14 == 0) goto switchD_100db0c1_default;
+    pcVar12 = (char *)(iVar14 + 0x14);
+    if (*(int *)(iVar14 + 0xc) != 0) {
+      cVar1 = *pcVar12;
+      for (uVar13 = 0; (cVar1 != '\0' && (uVar13 < 0x7ff)); uVar13 = uVar13 + 1) {
+        cVar1 = *pcVar12;
+        pCVar9 = (CXMLData *)CONCAT31((int3)((uint)pCVar9 >> 8),cVar1);
+        pcVar12 = pcVar12 + 2;
+        (&DataTypeTemp)[uVar13] = cVar1;
+        cVar1 = *pcVar12;
+      }
+      goto LAB_100dbac0;
+    }
+    if (0x7ff < *(uint *)(iVar14 + 8)) goto LAB_100dba63;
+    pcVar11 = pcVar12;
+    do {
+      cVar1 = *pcVar11;
+      pCVar9 = (CXMLData *)CONCAT31((int3)((uint)pCVar9 >> 8),cVar1);
+      pcVar11[(int)&DataTypeTemp - (int)pcVar12] = cVar1;
+      pcVar11 = pcVar11 + 1;
+    } while (cVar1 != '\0');
+    uVar13 = *(uint *)(iVar14 + 8);
+LAB_100dbac7:
+    if (uVar13 != 0) {
+LAB_100dbacf:
+      param_4[1] = &DataTypeTemp;
+      uVar3 = pStringType;
+      *param_4 = pStringType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+switchD_100db0c1_default:
+    return (uint)pCVar9 & 0xffffff00;
+  case (CXMLData *)0x1f:
+    UVar10 = EQClasses::CXWnd::GetType((CXWnd *)param_1);
+    if (UVar10 == 0x1c) {
+      param_4[1] = *(undefined4 *)(param_1 + 0x1d8);
+    }
+    else {
+      UVar10 = EQClasses::CXWnd::GetType((CXWnd *)param_1);
+      if (UVar10 != 0x27) goto LAB_100db125;
+      param_4[1] = *(undefined4 *)(*(int *)(param_1 + 0x1d8) + 0x1d8);
+    }
+    break;
+  case (CXMLData *)0x20:
+    if (*ppTradeWnd != 0) {
+      param_4[1] = (uint)*(byte *)(*ppTradeWnd + 0x2f8);
+      uVar3 = pBoolType;
+      *param_4 = pBoolType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+  case (CXMLData *)0x21:
+    pCVar9 = (CXMLData *)0x0;
+    if (*ppTradeWnd != 0) {
+      param_4[1] = (uint)*(byte *)(*ppTradeWnd + 0x2f9);
+      uVar3 = pBoolType;
+      *param_4 = pBoolType;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+  default:
+    goto switchD_100db0c1_default;
+  }
+  UVar10 = pIntType;
+  *param_4 = pIntType;
+LAB_100db125:
+  return CONCAT31((int3)(UVar10 >> 8),1);
+}
+
+
+
+============================================================
+Vtable symbol: MQ2TargetType::vftable
+Address: 1013f40c
+slot 0 (+0x00) | 1013f40c | 1001f2a0 | FUN_1001f2a0
+slot 1 (+0x04) | 1013f410 | 1001f300 | FUN_1001f300
+slot 2 (+0x08) | 1013f414 | 1001f260 | FUN_1001f260
+slot 3 (+0x0c) | 1013f418 | 1001f290 | FUN_1001f290
+slot 4 (+0x10) | 1013f41c | 100d72b0 | FUN_100d72b0
+slot 5 (+0x14) | 1013f420 | 1001f220 | FUN_1001f220
+slot 6 (+0x18) | 1013f424 | 10150264 | <no-function>
+slot 7 (+0x1c) | 1013f428 | 1001f0d0 | FUN_1001f0d0
+
+Likely GetMember handler from vtable+0x10:
+Function: FUN_100d72b0 @ 100d72b0
+Signature: uint __thiscall FUN_100d72b0(void * this, int param_1, uint * param_2, byte * param_3, undefined4 * param_4)
+Instructions:
+  100d72b0 | PUSH EBX
+  100d72b1 | PUSH ESI
+  100d72b2 | MOV ESI,dword ptr [ESP + 0xc]
+  100d72b6 | PUSH EDI
+  100d72b7 | TEST ESI,ESI
+  100d72b9 | JZ 0x100d735b
+  100d72bf | MOV EDI,dword ptr [ESP + 0x14]
+  100d72c3 | PUSH EDI
+  100d72c4 | CALL 0x10019c10
+  100d72c9 | TEST EAX,EAX
+  100d72cb | JNZ 0x100d72ea
+  100d72cd | MOV ECX,dword ptr [0x1017c108]
+  100d72d3 | PUSH dword ptr [ESP + 0x1c]
+  100d72d7 | PUSH dword ptr [ESP + 0x1c]
+  100d72db | MOV EAX,dword ptr [ECX]
+  100d72dd | PUSH EDI
+  100d72de | PUSH ESI
+  100d72df | MOV EAX,dword ptr [EAX + 0x10]
+  100d72e2 | CALL EAX
+  100d72e4 | POP EDI
+  100d72e5 | POP ESI
+  100d72e6 | POP EBX
+  100d72e7 | RET 0x10
+  100d72ea | MOV EAX,dword ptr [EAX]
+  100d72ec | DEC EAX
+  100d72ed | CMP EAX,0x5
+  100d72f0 | JA 0x100d735b
+  100d72f2 | JMP dword ptr [EAX*0x4 + 0x100d7694]
+  100d72f9 | MOV EDX,dword ptr [0x10186ed4]
+  100d72ff | MOV ESI,dword ptr [EDX]
+  100d7301 | CMP dword ptr [ESI + 0x868],0x0
+  100d7308 | JBE 0x100d735b
+  100d730a | MOV EBX,dword ptr [ESP + 0x18]
+  100d730e | CMP byte ptr [EBX],0x0
+  100d7311 | JZ 0x100d73dc
+  100d7317 | MOV ECX,EBX
+  100d7319 | CALL 0x100e70b0
+  100d731e | TEST EAX,EAX
+  100d7320 | JZ 0x100d7363
+  100d7322 | PUSH EBX
+  100d7323 | CALL 0x10088b58
+  100d7328 | MOV EDI,EAX
+  100d732a | ADD ESP,0x4
+  100d732d | TEST EDI,EDI
+  100d732f | JZ 0x100d735b
+  100d7331 | CMP EDI,0x61
+  100d7334 | JNC 0x100d735b
+  100d7336 | MOV ECX,dword ptr [0x10186ed4]
+  100d733c | XOR ESI,ESI
+  100d733e | XOR EDX,EDX
+  100d7340 | MOV EAX,dword ptr [ECX]
+  100d7342 | ADD EAX,0x53c
+  100d7347 | MOV ECX,dword ptr [EAX]
+  100d7349 | TEST ECX,ECX
+  100d734b | JZ 0x100d7352
+  100d734d | INC ESI
+  100d734e | CMP EDI,ESI
+  100d7350 | JZ 0x100d73c1
+  100d7352 | INC EDX
+  100d7353 | ADD EAX,0x4
+  100d7356 | CMP EDX,0x61
+  100d7359 | JC 0x100d7347
+  100d735b | POP EDI
+  100d735c | POP ESI
+  100d735d | XOR AL,AL
+  100d735f | POP EBX
+  100d7360 | RET 0x10
+  100d7363 | MOV ESI,0x53c
+  100d7368 | MOV EAX,dword ptr [EDX]
+  100d736a | MOV EDI,dword ptr [ESI + EAX*0x1]
+  100d736d | TEST EDI,EDI
+  100d736f | JZ 0x100d73ac
+  100d7371 | MOV EAX,[0x10189650]
+  100d7376 | TEST EAX,EAX
+  100d7378 | JZ 0x100d7393
+  100d737a | MOV EAX,dword ptr [EAX]
+  100d737c | MOV EAX,dword ptr [EAX + EDI*0x4 + 0x2c180]
+  100d7383 | TEST EAX,EAX
+  100d7385 | JZ 0x100d7393
+  100d7387 | ADD EAX,0x27a
+  100d738c | JZ 0x100d7393
+  100d738e | CMP byte ptr [EAX],0x0
+  100d7391 | JNZ 0x100d7398
+  100d7393 | MOV EAX,0x10146300
+  100d7398 | PUSH EAX
+  100d7399 | PUSH EBX
+  100d739a | CALL 0x10081b25
+  100d739f | ADD ESP,0x8
+  100d73a2 | TEST EAX,EAX
+  100d73a4 | JZ 0x100d73bf
+  100d73a6 | MOV EDX,dword ptr [0x10186ed4]
+  100d73ac | ADD ESI,0x4
+  100d73af | CMP ESI,0x6c0
+  100d73b5 | JC 0x100d7368
+  100d73b7 | POP EDI
+  100d73b8 | POP ESI
+  100d73b9 | XOR AL,AL
+  100d73bb | POP EBX
+  100d73bc | RET 0x10
+  100d73bf | MOV ECX,EDI
+  100d73c1 | CALL 0x100e7530
+  100d73c6 | MOV ECX,dword ptr [ESP + 0x1c]
+  100d73ca | POP EDI
+  100d73cb | POP ESI
+  100d73cc | POP EBX
+  100d73cd | MOV dword ptr [ECX + 0x4],EAX
+  100d73d0 | MOV EAX,[0x1017c0f0]
+  100d73d5 | MOV dword ptr [ECX],EAX
+  100d73d7 | MOV AL,0x1
+  100d73d9 | RET 0x10
+  100d73dc | MOV EDI,dword ptr [0x10189650]
+  100d73e2 | XOR EDX,EDX
+  100d73e4 | ADD ESI,0x53c
+  100d73ea | NOP word ptr [EAX + EAX*0x1]
+  100d73f0 | MOV ECX,dword ptr [ESI]
+  100d73f2 | TEST ECX,ECX
+  100d73f4 | JZ 0x100d740b
+  100d73f6 | CMP ECX,0xafc9
+  100d73fc | JNC 0x100d740b
+  100d73fe | MOV EAX,dword ptr [EDI]
+  100d7400 | MOV ECX,dword ptr [EAX + ECX*0x4 + 0x2c180]
+  100d7407 | TEST ECX,ECX
+  100d7409 | JNZ 0x100d741c
+  100d740b | INC EDX
+  100d740c | ADD ESI,0x4
+  100d740f | CMP EDX,0x61
+  100d7412 | JC 0x100d73f0
+  100d7414 | POP EDI
+  100d7415 | POP ESI
+  100d7416 | XOR AL,AL
+  100d7418 | POP EBX
+  100d7419 | RET 0x10
+  100d741c | ADD ECX,0x27a
+  100d7422 | MOV EDX,0x10181fd0
+  100d7427 | SUB EDX,ECX
+  100d7429 | NOP dword ptr [EAX]
+  100d7430 | MOV AL,byte ptr [ECX]
+  100d7432 | LEA ECX,[ECX + 0x1]
+  100d7435 | MOV byte ptr [EDX + ECX*0x1 + -0x1],AL
+  100d7439 | TEST AL,AL
+  100d743b | JNZ 0x100d7430
+  100d743d | MOV ECX,dword ptr [ESP + 0x1c]
+  100d7441 | POP EDI
+  100d7442 | POP ESI
+  100d7443 | POP EBX
+  100d7444 | MOV dword ptr [ECX + 0x4],0x10181fd0
+  100d744b | MOV EAX,[0x1017c0ec]
+  100d7450 | MOV dword ptr [ECX],EAX
+  100d7452 | MOV AL,0x1
+  100d7454 | RET 0x10
+  100d7457 | MOV EAX,[0x10186ed4]
+  100d745c | MOV EAX,dword ptr [EAX]
+  100d745e | CMP dword ptr [EAX + 0x868],0x0
+  100d7465 | JBE 0x100d735b
+  100d746b | MOV EDX,dword ptr [ESP + 0x1c]
+  100d746f | MOV ECX,0x53c
+  100d7474 | MOV dword ptr [EDX + 0x4],0x0
+  100d747b | NOP dword ptr [EAX + EAX*0x1]
+  100d7480 | MOV EAX,[0x10186ed4]
+  100d7485 | MOV EAX,dword ptr [EAX]
+  100d7487 | CMP dword ptr [ECX + EAX*0x1],0x0
+  100d748b | JZ 0x100d7490
+  100d748d | INC dword ptr [EDX + 0x4]
+  100d7490 | ADD ECX,0x4
+  100d7493 | CMP ECX,0x6c0
+  100d7499 | JC 0x100d7480
+  100d749b | MOV EAX,[0x1017c0b0]
+  100d74a0 | POP EDI
+  100d74a1 | POP ESI
+  100d74a2 | MOV dword ptr [EDX],EAX
+  100d74a4 | MOV AL,0x1
+  100d74a6 | POP EBX
+  100d74a7 | RET 0x10
+  100d74aa | MOV EDX,dword ptr [0x10186ed4]
+  100d74b0 | MOV ESI,dword ptr [EDX]
+  100d74b2 | CMP dword ptr [ESI + 0x868],0x0
+  100d74b9 | JBE 0x100d735b
+  100d74bf | MOV EBX,dword ptr [ESP + 0x18]
+  100d74c3 | CMP byte ptr [EBX],0x0
+  100d74c6 | JZ 0x100d75d0
+  100d74cc | MOV ECX,EBX
+  100d74ce | CALL 0x100e70b0
+  100d74d3 | TEST EAX,EAX
+  100d74d5 | JZ 0x100d7552
+  100d74d7 | PUSH EBX
+  100d74d8 | CALL 0x10088b58
+  100d74dd | MOV EDI,EAX
+  100d74df | ADD ESP,0x4
+  100d74e2 | TEST EDI,EDI
+  100d74e4 | JZ 0x100d735b
+  100d74ea | CMP EDI,0x61
+  100d74ed | JNC 0x100d735b
+  100d74f3 | MOV ECX,dword ptr [0x10186ed4]
+  100d74f9 | XOR ESI,ESI
+  100d74fb | XOR EDX,EDX
+  100d74fd | MOV ECX,dword ptr [ECX]
+  100d74ff | LEA EAX,[ECX + 0x53c]
+  100d7505 | CMP dword ptr [EAX],0x0
+  100d7508 | JZ 0x100d750f
+  100d750a | INC ESI
+  100d750b | CMP EDI,ESI
+  100d750d | JZ 0x100d7520
+  100d750f | INC EDX
+  100d7510 | ADD EAX,0x4
+  100d7513 | CMP EDX,0x61
+  100d7516 | JC 0x100d7505
+  100d7518 | POP EDI
+  100d7519 | POP ESI
+  100d751a | XOR AL,AL
+  100d751c | POP EBX
+  100d751d | RET 0x10
+  100d7520 | MOV EAX,0x10624dd3
+  100d7525 | MUL dword ptr [ECX + EDX*0x4 + 0x6c0]
+  100d752c | MOV ECX,dword ptr [ESP + 0x1c]
+  100d7530 | MOV EAX,0xaaaaaaab
+  100d7535 | SHR EDX,0x6
+  100d7538 | ADD EDX,0x6
+  100d753b | MUL EDX
+  100d753d | POP EDI
+  100d753e | SHR EDX,0x2
+  100d7541 | MOV dword ptr [ECX + 0x4],EDX
+  100d7544 | MOV EAX,[0x1017c120]
+  100d7549 | POP ESI
+  100d754a | MOV dword ptr [ECX],EAX
+  100d754c | MOV AL,0x1
+  100d754e | POP EBX
+  100d754f | RET 0x10
+  100d7552 | XOR EDI,EDI
+  100d7554 | MOV ESI,0x53c
+  100d7559 | NOP dword ptr [EAX]
+  100d7560 | MOV EAX,dword ptr [EDX]
+  100d7562 | MOV ECX,dword ptr [ESI + EAX*0x1]
+  100d7565 | TEST ECX,ECX
+  100d7567 | JZ 0x100d75a4
+  100d7569 | MOV EAX,[0x10189650]
+  100d756e | TEST EAX,EAX
+  100d7570 | JZ 0x100d758b
+  100d7572 | MOV EAX,dword ptr [EAX]
+  100d7574 | MOV EAX,dword ptr [EAX + ECX*0x4 + 0x2c180]
+  100d757b | TEST EAX,EAX
+  100d757d | JZ 0x100d758b
+  100d757f | ADD EAX,0x27a
+  100d7584 | JZ 0x100d758b
+  100d7586 | CMP byte ptr [EAX],0x0
+  100d7589 | JNZ 0x100d7590
+  100d758b | MOV EAX,0x10146300
+  100d7590 | PUSH EAX
+  100d7591 | PUSH EBX
+  100d7592 | CALL 0x10081b25
+  100d7597 | ADD ESP,0x8
+  100d759a | TEST EAX,EAX
+  100d759c | JZ 0x100d75b8
+  100d759e | MOV EDX,dword ptr [0x10186ed4]
+  100d75a4 | ADD ESI,0x4
+  100d75a7 | INC EDI
+  100d75a8 | CMP ESI,0x6c0
+  100d75ae | JC 0x100d7560
+  100d75b0 | POP EDI
+  100d75b1 | POP ESI
+  100d75b2 | XOR AL,AL
+Decompile:
+
+
+uint __thiscall FUN_100d72b0(void *this,int param_1,uint *param_2,byte *param_3,undefined4 *param_4)
+
+{
+  char cVar1;
+  int iVar2;
+  uint *in_EAX;
+  int *piVar3;
+  uint uVar4;
+  uint uVar5;
+  undefined4 uVar6;
+  int iVar7;
+  char *pcVar8;
+  uint uVar9;
+  EQPlayer *pEVar10;
+  char *pcVar11;
+  uint *extraout_EDX;
+  uint *extraout_EDX_00;
+  uint *puVar12;
+  uint *puVar13;
+  
+  if (param_1 != 0) {
+    piVar3 = (int *)FUN_10019c10(this,param_2);
+    if (piVar3 == (int *)0x0) {
+      uVar4 = (**(code **)(*pSpawnType + 0x10))(param_1,param_2,param_3,param_4);
+      return uVar4;
+    }
+    in_EAX = (uint *)(*piVar3 + -1);
+    switch(in_EAX) {
+    case (uint *)0x0:
+      if (*(int *)(*ppTargetWnd + 0x868) != 0) {
+        if (*param_3 == 0) {
+          uVar4 = 0;
+          puVar13 = (uint *)(*ppTargetWnd + 0x53c);
+          do {
+            uVar9 = *puVar13;
+            if ((uVar9 != 0) && (uVar9 < 0xafc9)) {
+              in_EAX = (uint *)*ppSpellMgr;
+              if (in_EAX[uVar9 + 0xb060] != 0) {
+                pcVar11 = (char *)(in_EAX[uVar9 + 0xb060] + 0x27a);
+                pcVar8 = pcVar11;
+                do {
+                  cVar1 = *pcVar8;
+                  pcVar8 = pcVar8 + 1;
+                  pcVar8[0x10181fcf - (int)pcVar11] = cVar1;
+                } while (cVar1 != '\0');
+                param_4[1] = &DataTypeTemp;
+                uVar6 = pStringType;
+                *param_4 = pStringType;
+                return CONCAT31((int3)((uint)uVar6 >> 8),1);
+              }
+            }
+            uVar4 = uVar4 + 1;
+            puVar13 = puVar13 + 1;
+          } while (uVar4 < 0x61);
+          return (uint)in_EAX & 0xffffff00;
+        }
+        iVar7 = FUN_100e70b0((char *)param_3);
+        if (iVar7 == 0) {
+          uVar4 = 0x53c;
+          puVar13 = extraout_EDX;
+          do {
+            uVar5 = *puVar13;
+            uVar9 = *(uint *)(uVar4 + uVar5);
+            if (uVar9 != 0) {
+              if ((((ppSpellMgr == (int *)0x0) ||
+                   (iVar7 = *(int *)(*ppSpellMgr + 0x2c180 + uVar9 * 4), iVar7 == 0)) ||
+                  (pcVar8 = (char *)(iVar7 + 0x27a), (byte *)pcVar8 == (byte *)0x0)) ||
+                 (*pcVar8 == 0)) {
+                pcVar8 = "Unknown Spell";
+              }
+              uVar5 = FUN_10081b25(param_3,(byte *)pcVar8);
+              puVar13 = ppTargetWnd;
+              if (uVar5 == 0) goto LAB_100d73c1;
+            }
+            uVar4 = uVar4 + 4;
+            if (0x6bf < uVar4) {
+              return uVar5 & 0xffffff00;
+            }
+          } while( true );
+        }
+        puVar13 = (uint *)FUN_10088b58(param_3);
+        in_EAX = puVar13;
+        if ((puVar13 != (uint *)0x0) && (puVar13 < (uint *)0x61)) {
+          puVar12 = (uint *)0x0;
+          uVar4 = 0;
+          in_EAX = (uint *)(*ppTargetWnd + 0x53c);
+          do {
+            uVar9 = *in_EAX;
+            if ((uVar9 != 0) && (puVar12 = (uint *)((int)puVar12 + 1), puVar13 == puVar12)) {
+LAB_100d73c1:
+              uVar6 = FUN_100e7530(uVar9);
+              param_4[1] = uVar6;
+              uVar6 = pSpellType;
+              *param_4 = pSpellType;
+              return CONCAT31((int3)((uint)uVar6 >> 8),1);
+            }
+            uVar4 = uVar4 + 1;
+            in_EAX = in_EAX + 1;
+          } while (uVar4 < 0x61);
+        }
+      }
+      break;
+    case (uint *)0x1:
+      in_EAX = (uint *)*ppTargetWnd;
+      if (((uint *)*ppTargetWnd)[0x21a] != 0) {
+        uVar4 = 0x53c;
+        param_4[1] = 0;
+        do {
+          if (*(int *)(uVar4 + *ppTargetWnd) != 0) {
+            param_4[1] = param_4[1] + 1;
+          }
+          uVar6 = pIntType;
+          uVar4 = uVar4 + 4;
+        } while (uVar4 < 0x6c0);
+        *param_4 = pIntType;
+        return CONCAT31((int3)((uint)uVar6 >> 8),1);
+      }
+      break;
+    case (uint *)0x2:
+      uVar4 = *ppTargetWnd;
+      if (*(int *)(uVar4 + 0x868) != 0) {
+        if (*param_3 == 0) {
+          uVar9 = 0;
+          piVar3 = (int *)(uVar4 + 0x53c);
+          while (*piVar3 == 0) {
+            uVar9 = uVar9 + 1;
+            piVar3 = piVar3 + 1;
+            if (0x60 < uVar9) {
+              return (uint)piVar3 & 0xffffff00;
+            }
+          }
+          uVar4 = (uint)((ulonglong)*(uint *)(uVar4 + 0x6c0 + uVar9 * 4) * 0x10624dd3 >> 0x20);
+        }
+        else {
+          iVar7 = FUN_100e70b0((char *)param_3);
+          if (iVar7 == 0) {
+            iVar7 = 0;
+            uVar4 = 0x53c;
+            puVar13 = extraout_EDX_00;
+            do {
+              uVar9 = *puVar13;
+              if (*(int *)(uVar4 + uVar9) != 0) {
+                if ((((ppSpellMgr == (int *)0x0) ||
+                     (iVar2 = *(int *)(*ppSpellMgr + 0x2c180 + *(int *)(uVar4 + uVar9) * 4),
+                     iVar2 == 0)) ||
+                    (pcVar8 = (char *)(iVar2 + 0x27a), (byte *)pcVar8 == (byte *)0x0)) ||
+                   (*pcVar8 == 0)) {
+                  pcVar8 = "Unknown Spell";
+                }
+                uVar9 = FUN_10081b25(param_3,(byte *)pcVar8);
+                puVar13 = ppTargetWnd;
+                if (uVar9 == 0) {
+                  uVar4 = (uint)((ulonglong)*(uint *)(*ppTargetWnd + 0x6c0 + iVar7 * 4) * 0x10624dd3
+                                >> 0x20);
+                  goto LAB_100d752c;
+                }
+              }
+              uVar4 = uVar4 + 4;
+              iVar7 = iVar7 + 1;
+              if (0x6bf < uVar4) {
+                return uVar9 & 0xffffff00;
+              }
+            } while( true );
+          }
+          in_EAX = (uint *)FUN_10088b58(param_3);
+          if ((in_EAX == (uint *)0x0) || ((uint *)0x60 < in_EAX)) break;
+          puVar13 = (uint *)0x0;
+          uVar4 = 0;
+          piVar3 = (int *)(*ppTargetWnd + 0x53c);
+          while ((*piVar3 == 0 || (puVar13 = (uint *)((int)puVar13 + 1), in_EAX != puVar13))) {
+            uVar4 = uVar4 + 1;
+            piVar3 = piVar3 + 1;
+            if (0x60 < uVar4) {
+              return (uint)piVar3 & 0xffffff00;
+            }
+          }
+          uVar4 = (uint)((ulonglong)*(uint *)(*ppTargetWnd + 0x6c0 + uVar4 * 4) * 0x10624dd3 >> 0x20
+                        );
+        }
+LAB_100d752c:
+        param_4[1] = ((uVar4 >> 6) + 6) / 6;
+        uVar6 = pTicksType;
+        *param_4 = pTicksType;
+        return CONCAT31((int3)((uint)uVar6 >> 8),1);
+      }
+      break;
+    case (uint *)0x3:
+      in_EAX = (uint *)0x0;
+      if (*ppAggroInfo != 0) {
+        param_4[1] = (uint)*(byte *)(*ppAggroInfo + 4);
+        uVar6 = pIntType;
+        *param_4 = pIntType;
+        return CONCAT31((int3)((uint)uVar6 >> 8),1);
+      }
+      break;
+    case (uint *)0x4:
+      in_EAX = (uint *)0x0;
+      if (*ppAggroInfo != 0) {
+        param_4[1] = (uint)*(byte *)(*ppAggroInfo + 0xc);
+        uVar6 = pIntType;
+        *param_4 = pIntType;
+        return CONCAT31((int3)((uint)uVar6 >> 8),1);
+      }
+      break;
+    case (uint *)0x5:
+      in_EAX = (uint *)0x0;
+      if (*ppAggroInfo != 0) {
+        iVar7 = *(int *)(*ppAggroInfo + 0xe0);
+        in_EAX = (uint *)0x0;
+        if (iVar7 != 0) {
+          pEVar10 = EQClasses::EQPlayerManager::GetSpawnByID
+                              ((EQPlayerManager *)*ppSpawnManager,iVar7);
+          param_4[1] = pEVar10;
+          piVar3 = pSpawnType;
+          *param_4 = pSpawnType;
+          return CONCAT31((int3)((uint)piVar3 >> 8),1);
+        }
+      }
+    }
+  }
+  return (uint)in_EAX & 0xffffff00;
+}
+
+
+
+============================================================
+Vtable symbol: MQ2XTargetType::vftable
+Address: 1013f7e0
+slot 0 (+0x00) | 1013f7e0 | 1001f450 | FUN_1001f450
+slot 1 (+0x04) | 1013f7e4 | 1001f460 | FUN_1001f460
+slot 2 (+0x08) | 1013f7e8 | 1000f480 | FUN_1000f480
+slot 3 (+0x0c) | 1013f7ec | 1000f490 | FUN_1000f490
+slot 4 (+0x10) | 1013f7f0 | 100d7160 | FUN_100d7160
+slot 5 (+0x14) | 1013f7f4 | 1001f3b0 | FUN_1001f3b0
+slot 6 (+0x18) | 1013f7f8 | 1014f9bc | <no-function>
+slot 7 (+0x1c) | 1013f7fc | 1001d380 | FUN_1001d380
+
+Likely GetMember handler from vtable+0x10:
+Function: FUN_100d7160 @ 100d7160
+Signature: uint __thiscall FUN_100d7160(void * this, int param_1, uint * param_2, undefined4 * param_3, undefined4 * param_4)
+Instructions:
+  100d7160 | MOV EAX,[0x10185268]
+  100d7165 | SUB ESP,0x4c
+  100d7168 | MOV EAX,dword ptr [EAX]
+  100d716a | PUSH EDI
+  100d716b | TEST EAX,EAX
+  100d716d | JZ 0x100d728b
+  100d7173 | CMP dword ptr [EAX + 0x31b8],0x0
+  100d717a | JZ 0x100d728b
+  100d7180 | PUSH dword ptr [ESP + 0x58]
+  100d7184 | CALL 0x10019c10
+  100d7189 | MOV EDI,EAX
+  100d718b | TEST EDI,EDI
+  100d718d | JZ 0x100d728b
+  100d7193 | MOV ECX,dword ptr [0x10185268]
+  100d7199 | PUSH ESI
+  100d719a | MOV ECX,dword ptr [ECX]
+  100d719c | MOV ESI,dword ptr [ECX + 0x31b8]
+  100d71a2 | MOV ECX,dword ptr [ESP + 0x58]
+  100d71a6 | IMUL EDX,ECX,0x4c
+  100d71a9 | MOV EAX,dword ptr [ESI + 0x8]
+  100d71ac | ADD EAX,EDX
+  100d71ae | POP ESI
+  100d71af | MOVUPS XMM0,xmmword ptr [EAX]
+  100d71b2 | MOVUPS xmmword ptr [ESP + 0x4],XMM0
+  100d71b7 | MOVUPS XMM0,xmmword ptr [EAX + 0x10]
+  100d71bb | MOVUPS xmmword ptr [ESP + 0x14],XMM0
+  100d71c0 | MOVUPS XMM0,xmmword ptr [EAX + 0x20]
+  100d71c4 | MOVUPS xmmword ptr [ESP + 0x24],XMM0
+  100d71c9 | MOVUPS XMM0,xmmword ptr [EAX + 0x30]
+  100d71cd | MOVUPS xmmword ptr [ESP + 0x34],XMM0
+  100d71d2 | MOVQ XMM0,qword ptr [EAX + 0x40]
+  100d71d7 | MOVQ qword ptr [ESP + 0x44],XMM0
+  100d71dd | MOV EAX,dword ptr [EAX + 0x48]
+  100d71e0 | MOV dword ptr [ESP + 0x4c],EAX
+  100d71e4 | MOV EAX,dword ptr [EDI]
+  100d71e6 | DEC EAX
+  100d71e7 | CMP EAX,0x3
+  100d71ea | JA 0x100d728b
+  100d71f0 | JMP dword ptr [EAX*0x4 + 0x100d7294]
+  100d71f7 | PUSH dword ptr [ESP + 0x4]
+  100d71fb | CALL 0x100c1dc0
+  100d7200 | MOV ECX,dword ptr [ESP + 0x60]
+  100d7204 | TEST EAX,EAX
+  100d7206 | MOV EDX,0x1013ef8c
+  100d720b | CMOVNZ EDX,EAX
+  100d720e | POP EDI
+  100d720f | MOV dword ptr [ECX + 0x4],EDX
+  100d7212 | MOV EAX,[0x1017c0ec]
+  100d7217 | MOV dword ptr [ECX],EAX
+  100d7219 | MOV AL,0x1
+  100d721b | ADD ESP,0x4c
+  100d721e | RET 0x10
+  100d7221 | MOV ECX,dword ptr [ESP + 0x60]
+  100d7225 | MOV EAX,dword ptr [ESP + 0xc]
+  100d7229 | POP EDI
+  100d722a | MOV dword ptr [ECX + 0x4],EAX
+  100d722d | MOV EAX,[0x1017c0b0]
+  100d7232 | MOV dword ptr [ECX],EAX
+  100d7234 | MOV AL,0x1
+  100d7236 | ADD ESP,0x4c
+  100d7239 | RET 0x10
+  100d723c | CMP byte ptr [ESP + 0x10],0x0
+  100d7241 | LEA EAX,[ESP + 0x10]
+  100d7245 | MOV ECX,0x1013d17c
+  100d724a | CMOVZ EAX,ECX
+  100d724d | MOV ECX,dword ptr [ESP + 0x60]
+  100d7251 | POP EDI
+  100d7252 | MOV dword ptr [ECX + 0x4],EAX
+  100d7255 | MOV EAX,[0x1017c0ec]
+  100d725a | MOV dword ptr [ECX],EAX
+  100d725c | MOV AL,0x1
+  100d725e | ADD ESP,0x4c
+  100d7261 | RET 0x10
+  100d7264 | MOV EAX,[0x10186eac]
+  100d7269 | MOV EAX,dword ptr [EAX]
+  100d726b | TEST EAX,EAX
+  100d726d | JZ 0x100d728b
+  100d726f | MOVZX EAX,byte ptr [EAX + ECX*0x8 + 0x3c]
+  100d7274 | MOV ECX,dword ptr [ESP + 0x60]
+  100d7278 | POP EDI
+  100d7279 | MOV dword ptr [ECX + 0x4],EAX
+  100d727c | MOV EAX,[0x1017c0b0]
+  100d7281 | MOV dword ptr [ECX],EAX
+  100d7283 | MOV AL,0x1
+  100d7285 | ADD ESP,0x4c
+  100d7288 | RET 0x10
+  100d728b | XOR AL,AL
+  100d728d | POP EDI
+  100d728e | ADD ESP,0x4c
+  100d7291 | RET 0x10
+Decompile:
+
+
+uint __thiscall
+FUN_100d7160(void *this,int param_1,uint *param_2,undefined4 *param_3,undefined4 *param_4)
+
+{
+  undefined4 uVar1;
+  int *piVar2;
+  int iVar3;
+  uint uVar4;
+  char *pcVar5;
+  undefined4 *puVar6;
+  char *pcVar7;
+  undefined4 uStack_40;
+  undefined4 local_3c;
+  undefined4 uStack_38;
+  undefined4 uStack_34;
+  undefined4 uStack_30;
+  undefined4 local_2c;
+  undefined4 uStack_28;
+  undefined4 uStack_24;
+  undefined4 uStack_20;
+  undefined4 local_1c;
+  undefined4 uStack_18;
+  undefined4 uStack_14;
+  undefined4 uStack_10;
+  undefined8 local_c;
+  undefined4 local_4;
+  
+  uVar4 = *ppCharData;
+  if ((uVar4 != 0) && (*(int *)(uVar4 + 0x31b8) != 0)) {
+    piVar2 = (int *)FUN_10019c10(this,param_2);
+    uVar4 = 0;
+    if (piVar2 != (int *)0x0) {
+      iVar3 = *(int *)(*(int *)(*ppCharData + 0x31b8) + 8) + param_1 * 0x4c;
+      uStack_40 = *(undefined4 *)(iVar3 + 0xc);
+      local_3c = *(undefined4 *)(iVar3 + 0x10);
+      uStack_38 = *(undefined4 *)(iVar3 + 0x14);
+      uStack_34 = *(undefined4 *)(iVar3 + 0x18);
+      uStack_30 = *(undefined4 *)(iVar3 + 0x1c);
+      local_2c = *(undefined4 *)(iVar3 + 0x20);
+      uStack_28 = *(undefined4 *)(iVar3 + 0x24);
+      uStack_24 = *(undefined4 *)(iVar3 + 0x28);
+      uStack_20 = *(undefined4 *)(iVar3 + 0x2c);
+      local_1c = *(undefined4 *)(iVar3 + 0x30);
+      uStack_18 = *(undefined4 *)(iVar3 + 0x34);
+      uStack_14 = *(undefined4 *)(iVar3 + 0x38);
+      uStack_10 = *(undefined4 *)(iVar3 + 0x3c);
+      local_c = *(undefined8 *)(iVar3 + 0x40);
+      local_4 = *(undefined4 *)(iVar3 + 0x48);
+      uVar4 = *piVar2 - 1;
+      switch(uVar4) {
+      case 0:
+        pcVar5 = (char *)_GetXtargetType_4();
+        pcVar7 = "UNKNOWN";
+        if (pcVar5 != (char *)0x0) {
+          pcVar7 = pcVar5;
+        }
+        param_3[1] = pcVar7;
+        uVar1 = pStringType;
+        *param_3 = pStringType;
+        return CONCAT31((int3)((uint)uVar1 >> 8),1);
+      case 1:
+        param_4[1] = *(undefined4 *)(iVar3 + 8);
+        uVar1 = pIntType;
+        *param_4 = pIntType;
+        return CONCAT31((int3)((uint)uVar1 >> 8),1);
+      case 2:
+        puVar6 = &uStack_40;
+        if ((char)uStack_40 == '\0') {
+          puVar6 = &DAT_1013d17c;
+        }
+        param_4[1] = puVar6;
+        uVar1 = pStringType;
+        *param_4 = pStringType;
+        return CONCAT31((int3)((uint)uVar1 >> 8),1);
+      case 3:
+        uVar4 = 0;
+        if (*ppAggroInfo != 0) {
+          param_4[1] = (uint)*(byte *)(*ppAggroInfo + 0x3c + param_1 * 8);
+          uVar1 = pIntType;
+          *param_4 = pIntType;
+          return CONCAT31((int3)((uint)uVar1 >> 8),1);
+        }
+      }
+    }
+  }
+  return uVar4 & 0xffffff00;
+}
+
+
+

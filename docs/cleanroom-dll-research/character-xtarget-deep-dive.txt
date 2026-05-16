@@ -1,0 +1,476 @@
+Program: dinput8.dll
+
+== Selected strings ==
+1013d270 | Me
+1013d208 | Type
+1013d650 | ID
+1013d654 | Name
+1013d65c | X
+1013d660 | Y
+1013d664 | Z
+
+============================================================
+Function: dataCharacter @ 100d5a80
+Signature: undefined4 __cdecl dataCharacter(undefined4 param_1, undefined4 * param_2)
+Callers:
+  10158808 | <none>
+  Entry Point | <none>
+  100d6724 | InitializeMQ2Data
+Callees:
+Instructions:
+  100d5a80 | MOV EAX,[0x10185268]
+  100d5a85 | MOV EAX,dword ptr [EAX]
+  100d5a87 | TEST EAX,EAX
+  100d5a89 | JZ 0x100d5a9f
+  100d5a8b | MOV ECX,dword ptr [ESP + 0x8]
+  100d5a8f | MOV dword ptr [ECX + 0x4],EAX
+  100d5a92 | MOV EAX,[0x1017c104]
+  100d5a97 | MOV dword ptr [ECX],EAX
+  100d5a99 | MOV EAX,0x1
+  100d5a9e | RET
+  100d5a9f | XOR EAX,EAX
+  100d5aa1 | RET
+Decompile:
+
+
+undefined4 __cdecl dataCharacter(undefined4 param_1,undefined4 *param_2)
+
+{
+                    /* 0xd5a80  1021  dataCharacter */
+  if (*ppCharData != 0) {
+    param_2[1] = *ppCharData;
+    *param_2 = pCharacterType;
+    return 1;
+  }
+  return 0;
+}
+
+
+
+============================================================
+Function: FUN_1001b360 @ 1001b360
+Signature: undefined4 * __fastcall FUN_1001b360(undefined4 * param_1)
+Callers:
+  100e5cca | InitializeMQ2DataTypes
+Callees:
+  1000f350 | FUN_1000f350
+  1000f4d0 | FUN_1000f4d0
+Instructions:
+  1001b360 | PUSH EBP
+  1001b361 | MOV EBP,ESP
+  1001b363 | AND ESP,0xfffffff8
+  1001b366 | PUSH ECX
+  1001b367 | PUSH ESI
+  1001b368 | PUSH 0x1013d930
+  1001b36d | MOV ESI,ECX
+  1001b36f | CALL 0x1000f350
+  1001b374 | PUSH 0x1013d650
+  1001b379 | PUSH 0x1
+  1001b37b | MOV ECX,ESI
+  1001b37d | MOV dword ptr [ESI],0x1013f770
+  1001b383 | CALL 0x1000f4d0
+  1001b388 | PUSH 0x1013d654
+  1001b38d | PUSH 0x2
+  1001b38f | MOV ECX,ESI
+  1001b391 | CALL 0x1000f4d0
+  1001b396 | PUSH 0x1013abec
+  1001b39b | PUSH 0x3
+  1001b39d | MOV ECX,ESI
+  1001b39f | CALL 0x1000f4d0
+  1001b3a4 | PUSH 0x1013d93c
+  1001b3a9 | PUSH 0x4
+  1001b3ab | MOV ECX,ESI
+  1001b3ad | CALL 0x1000f4d0
+  1001b3b2 | PUSH 0x1013d22c
+  1001b3b7 | PUSH 0x5
+  1001b3b9 | MOV ECX,ESI
+  1001b3bb | CALL 0x1000f4d0
+  1001b3c0 | PUSH 0x1013d940
+  1001b3c5 | PUSH 0x6
+  1001b3c7 | MOV ECX,ESI
+  1001b3c9 | CALL 0x1000f4d0
+  1001b3ce | PUSH 0x1013d944
+  1001b3d3 | PUSH 0x7
+  1001b3d5 | MOV ECX,ESI
+  1001b3d7 | CALL 0x1000f4d0
+  1001b3dc | PUSH 0x1013d94c
+  1001b3e1 | PUSH 0x8
+  1001b3e3 | MOV ECX,ESI
+  1001b3e5 | CALL 0x1000f4d0
+  1001b3ea | PUSH 0x1013d6ec
+  1001b3ef | PUSH 0xa
+  1001b3f1 | MOV ECX,ESI
+  1001b3f3 | CALL 0x1000f4d0
+  1001b3f8 | PUSH 0x1013d6f8
+  1001b3fd | PUSH 0xb
+  1001b3ff | MOV ECX,ESI
+  1001b401 | CALL 0x1000f4d0
+  1001b406 | PUSH 0x1013d958
+  1001b40b | PUSH 0xc
+  1001b40d | MOV ECX,ESI
+  1001b40f | CALL 0x1000f4d0
+  1001b414 | PUSH 0x1013d700
+  1001b419 | PUSH 0xd
+  1001b41b | MOV ECX,ESI
+  1001b41d | CALL 0x1000f4d0
+  1001b422 | PUSH 0x1013d8d8
+  1001b427 | PUSH 0xe
+  1001b429 | MOV ECX,ESI
+  1001b42b | CALL 0x1000f4d0
+  1001b430 | PUSH 0x1013d8e4
+  1001b435 | PUSH 0xf
+  1001b437 | MOV ECX,ESI
+  1001b439 | CALL 0x1000f4d0
+  1001b43e | PUSH 0x1013d960
+  1001b443 | PUSH 0x10
+  1001b445 | MOV ECX,ESI
+  1001b447 | CALL 0x1000f4d0
+  1001b44c | PUSH 0x1013d96c
+  1001b451 | PUSH 0x11
+  1001b453 | MOV ECX,ESI
+  1001b455 | CALL 0x1000f4d0
+  1001b45a | PUSH 0x1013d974
+  1001b45f | PUSH 0x12
+  1001b461 | MOV ECX,ESI
+  1001b463 | CALL 0x1000f4d0
+  1001b468 | PUSH 0x1013d97c
+  1001b46d | PUSH 0x13
+  1001b46f | MOV ECX,ESI
+  1001b471 | CALL 0x1000f4d0
+  1001b476 | PUSH 0x1013d984
+  1001b47b | PUSH 0x14
+  1001b47d | MOV ECX,ESI
+  1001b47f | CALL 0x1000f4d0
+  1001b484 | PUSH 0x1013d234
+  1001b489 | PUSH 0x15
+  1001b48b | MOV ECX,ESI
+  1001b48d | CALL 0x1000f4d0
+  1001b492 | PUSH 0x1013d98c
+  1001b497 | PUSH 0x16
+  1001b499 | MOV ECX,ESI
+  1001b49b | CALL 0x1000f4d0
+  1001b4a0 | PUSH 0x1013d71c
+  1001b4a5 | PUSH 0x17
+  1001b4a7 | MOV ECX,ESI
+  1001b4a9 | CALL 0x1000f4d0
+  1001b4ae | PUSH 0x1013d994
+  1001b4b3 | PUSH 0x18
+  1001b4b5 | MOV ECX,ESI
+  1001b4b7 | CALL 0x1000f4d0
+  1001b4bc | PUSH 0x1013d99c
+  1001b4c1 | PUSH 0x19
+  1001b4c3 | MOV ECX,ESI
+  1001b4c5 | CALL 0x1000f4d0
+  1001b4ca | PUSH 0x1013d9a8
+  1001b4cf | PUSH 0x1a
+  1001b4d1 | MOV ECX,ESI
+  1001b4d3 | CALL 0x1000f4d0
+  1001b4d8 | PUSH 0x1013d9b8
+  1001b4dd | PUSH 0x1b
+  1001b4df | MOV ECX,ESI
+  1001b4e1 | CALL 0x1000f4d0
+  1001b4e6 | PUSH 0x1013d9c0
+  1001b4eb | PUSH 0x1c
+  1001b4ed | MOV ECX,ESI
+  1001b4ef | CALL 0x1000f4d0
+  1001b4f4 | PUSH 0x1013d9c8
+  1001b4f9 | PUSH 0x1d
+  1001b4fb | MOV ECX,ESI
+  1001b4fd | CALL 0x1000f4d0
+  1001b502 | PUSH 0x1013d9d4
+  1001b507 | PUSH 0x1e
+  1001b509 | MOV ECX,ESI
+  1001b50b | CALL 0x1000f4d0
+  1001b510 | PUSH 0x1013d9e0
+  1001b515 | PUSH 0x1f
+  1001b517 | MOV ECX,ESI
+  1001b519 | CALL 0x1000f4d0
+  1001b51e | PUSH 0x1013d9ec
+  1001b523 | PUSH 0x20
+  1001b525 | MOV ECX,ESI
+  1001b527 | CALL 0x1000f4d0
+  1001b52c | PUSH 0x1013d9f8
+  1001b531 | PUSH 0x21
+  1001b533 | MOV ECX,ESI
+  1001b535 | CALL 0x1000f4d0
+  1001b53a | PUSH 0x1013da04
+  1001b53f | PUSH 0x22
+  1001b541 | MOV ECX,ESI
+  1001b543 | CALL 0x1000f4d0
+  1001b548 | PUSH 0x1013da10
+  1001b54d | PUSH 0x23
+  1001b54f | MOV ECX,ESI
+  1001b551 | CALL 0x1000f4d0
+  1001b556 | PUSH 0x1013da1c
+  1001b55b | PUSH 0x24
+  1001b55d | MOV ECX,ESI
+  1001b55f | CALL 0x1000f4d0
+  1001b564 | PUSH 0x1013da2c
+  1001b569 | PUSH 0x25
+  1001b56b | MOV ECX,ESI
+  1001b56d | CALL 0x1000f4d0
+  1001b572 | PUSH 0x1013da38
+  1001b577 | PUSH 0x26
+  1001b579 | MOV ECX,ESI
+  1001b57b | CALL 0x1000f4d0
+  1001b580 | PUSH 0x1013da44
+  1001b585 | PUSH 0x27
+  1001b587 | MOV ECX,ESI
+  1001b589 | CALL 0x1000f4d0
+  1001b58e | PUSH 0x1013da50
+  1001b593 | PUSH 0x28
+  1001b595 | MOV ECX,ESI
+  1001b597 | CALL 0x1000f4d0
+  1001b59c | PUSH 0x1013da58
+  1001b5a1 | PUSH 0x2a
+  1001b5a3 | MOV ECX,ESI
+  1001b5a5 | CALL 0x1000f4d0
+  1001b5aa | PUSH 0x1013da60
+  1001b5af | PUSH 0x2b
+  1001b5b1 | MOV ECX,ESI
+  1001b5b3 | CALL 0x1000f4d0
+  1001b5b8 | PUSH 0x1013da70
+  1001b5bd | PUSH 0x2c
+  1001b5bf | MOV ECX,ESI
+  1001b5c1 | CALL 0x1000f4d0
+  1001b5c6 | PUSH 0x1013da74
+  1001b5cb | PUSH 0x2d
+  1001b5cd | MOV ECX,ESI
+  1001b5cf | CALL 0x1000f4d0
+  1001b5d4 | PUSH 0x1013da80
+  1001b5d9 | PUSH 0x2e
+  1001b5db | MOV ECX,ESI
+  1001b5dd | CALL 0x1000f4d0
+  1001b5e2 | PUSH 0x1013da90
+  1001b5e7 | PUSH 0x2f
+  1001b5e9 | MOV ECX,ESI
+  1001b5eb | CALL 0x1000f4d0
+  1001b5f0 | PUSH 0x1013daa0
+  1001b5f5 | PUSH 0x30
+  1001b5f7 | MOV ECX,ESI
+  1001b5f9 | CALL 0x1000f4d0
+  1001b5fe | PUSH 0x1013dab4
+  1001b603 | PUSH 0x31
+  1001b605 | MOV ECX,ESI
+  1001b607 | CALL 0x1000f4d0
+  1001b60c | PUSH 0x1013dac8
+  1001b611 | PUSH 0x32
+  1001b613 | MOV ECX,ESI
+  1001b615 | CALL 0x1000f4d0
+  1001b61a | PUSH 0x1013dad0
+  1001b61f | PUSH 0x33
+  1001b621 | MOV ECX,ESI
+  1001b623 | CALL 0x1000f4d0
+  1001b628 | PUSH 0x1013dad4
+  1001b62d | PUSH 0x34
+  1001b62f | MOV ECX,ESI
+  1001b631 | CALL 0x1000f4d0
+  1001b636 | PUSH 0x1013dad8
+  1001b63b | PUSH 0x35
+  1001b63d | MOV ECX,ESI
+  1001b63f | CALL 0x1000f4d0
+  1001b644 | PUSH 0x1013dadc
+  1001b649 | PUSH 0x36
+  1001b64b | MOV ECX,ESI
+  1001b64d | CALL 0x1000f4d0
+  1001b652 | PUSH 0x1013dae0
+  1001b657 | PUSH 0x37
+  1001b659 | MOV ECX,ESI
+Decompile:
+
+
+undefined4 * __fastcall FUN_1001b360(undefined4 *param_1)
+
+{
+  FUN_1000f350(param_1,"character");
+  *param_1 = MQ2CharacterType::vftable;
+  FUN_1000f4d0(param_1,1,(uint *)&DAT_1013d650);
+  FUN_1000f4d0(param_1,2,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(param_1,3,(uint *)"Level");
+  FUN_1000f4d0(param_1,4,(uint *)&DAT_1013d93c);
+  FUN_1000f4d0(param_1,5,(uint *)"Spawn");
+  FUN_1000f4d0(param_1,6,(uint *)&DAT_1013d940);
+  FUN_1000f4d0(param_1,7,(uint *)"AAExp");
+  FUN_1000f4d0(param_1,8,(uint *)"AAPoints");
+  FUN_1000f4d0(param_1,10,(uint *)"CurrentHPs");
+  FUN_1000f4d0(param_1,0xb,(uint *)"MaxHPs");
+  FUN_1000f4d0(param_1,0xc,(uint *)"HPRegen");
+  FUN_1000f4d0(param_1,0xd,(uint *)"PctHPs");
+  FUN_1000f4d0(param_1,0xe,(uint *)"CurrentMana");
+  FUN_1000f4d0(param_1,0xf,(uint *)"MaxMana");
+  FUN_1000f4d0(param_1,0x10,(uint *)"ManaRegen");
+  FUN_1000f4d0(param_1,0x11,(uint *)"PctMana");
+  FUN_1000f4d0(param_1,0x12,(uint *)&DAT_1013d974);
+  FUN_1000f4d0(param_1,0x13,(uint *)&DAT_1013d97c);
+  FUN_1000f4d0(param_1,0x14,(uint *)&DAT_1013d984);
+  FUN_1000f4d0(param_1,0x15,(uint *)"Skill");
+  FUN_1000f4d0(param_1,0x16,(uint *)"Ability");
+  FUN_1000f4d0(param_1,0x17,(uint *)"Surname");
+  FUN_1000f4d0(param_1,0x18,(uint *)&DAT_1013d994);
+  FUN_1000f4d0(param_1,0x19,(uint *)"CashBank");
+  FUN_1000f4d0(param_1,0x1a,(uint *)"PlatinumShared");
+  FUN_1000f4d0(param_1,0x1b,(uint *)"Grouped");
+  FUN_1000f4d0(param_1,0x1c,(uint *)"HPBonus");
+  FUN_1000f4d0(param_1,0x1d,(uint *)"ManaBonus");
+  FUN_1000f4d0(param_1,0x1e,(uint *)"GukEarned");
+  FUN_1000f4d0(param_1,0x1f,(uint *)"MMEarned");
+  FUN_1000f4d0(param_1,0x20,(uint *)"RujEarned");
+  FUN_1000f4d0(param_1,0x21,(uint *)"TakEarned");
+  FUN_1000f4d0(param_1,0x22,(uint *)"MirEarned");
+  FUN_1000f4d0(param_1,0x23,(uint *)"LDoNPoints");
+  FUN_1000f4d0(param_1,0x24,(uint *)"CurrentFavor");
+  FUN_1000f4d0(param_1,0x25,(uint *)"CareerFavor");
+  FUN_1000f4d0(param_1,0x26,(uint *)"Endurance");
+  FUN_1000f4d0(param_1,0x27,(uint *)"Inventory");
+  FUN_1000f4d0(param_1,0x28,(uint *)&DAT_1013da50);
+  FUN_1000f4d0(param_1,0x2a,(uint *)"Combat");
+  FUN_1000f4d0(param_1,0x2b,(uint *)"FreeInventory");
+  FUN_1000f4d0(param_1,0x2c,(uint *)&DAT_1013da70);
+  FUN_1000f4d0(param_1,0x2d,(uint *)"SpellReady");
+  FUN_1000f4d0(param_1,0x2e,(uint *)"GroupLeaderExp");
+  FUN_1000f4d0(param_1,0x2f,(uint *)"RaidLeaderExp");
+  FUN_1000f4d0(param_1,0x30,(uint *)"GroupLeaderPoints");
+  FUN_1000f4d0(param_1,0x31,(uint *)"RaidLeaderPoints");
+  FUN_1000f4d0(param_1,0x32,(uint *)"Drunk");
+  FUN_1000f4d0(param_1,0x33,&DAT_1013dad0);
+  FUN_1000f4d0(param_1,0x34,&DAT_1013dad4);
+  FUN_1000f4d0(param_1,0x35,&DAT_1013dad8);
+  FUN_1000f4d0(param_1,0x36,&DAT_1013dadc);
+  FUN_1000f4d0(param_1,0x37,&DAT_1013dae0);
+  FUN_1000f4d0(param_1,0x38,&DAT_1013dae4);
+  FUN_1000f4d0(param_1,0x39,&DAT_1013dae8);
+  FUN_1000f4d0(param_1,0x3a,(uint *)"svMagic");
+  FUN_1000f4d0(param_1,0x3b,(uint *)"svFire");
+  FUN_1000f4d0(param_1,0x3c,(uint *)"svCold");
+  FUN_1000f4d0(param_1,0x3d,(uint *)"svPoison");
+  FUN_1000f4d0(param_1,0x3e,(uint *)"svDisease");
+  FUN_1000f4d0(param_1,0x3f,(uint *)"Hunger");
+  FUN_1000f4d0(param_1,0x40,(uint *)"Thirst");
+  FUN_1000f4d0(param_1,0x41,(uint *)"BaseSTR");
+  FUN_1000f4d0(param_1,0x42,(uint *)"BaseSTA");
+  FUN_1000f4d0(param_1,0x43,(uint *)"BaseCHA");
+  FUN_1000f4d0(param_1,0x44,(uint *)"BaseDEX");
+  FUN_1000f4d0(param_1,0x45,(uint *)"BaseINT");
+  FUN_1000f4d0(param_1,0x46,(uint *)"BaseAGI");
+  FUN_1000f4d0(param_1,0x47,(uint *)"BaseWIS");
+  FUN_1000f4d0(param_1,0x48,(uint *)"PracticePoints");
+  FUN_1000f4d0(param_1,0x49,(uint *)"PctExp");
+  FUN_1000f4d0(param_1,0x4a,(uint *)"PctAAExp");
+  FUN_1000f4d0(param_1,0x4b,(uint *)"Moving");
+  FUN_1000f4d0(param_1,0x4c,(uint *)"AbilityReady");
+  FUN_1000f4d0(param_1,0x4d,(uint *)"PetBuff");
+  FUN_1000f4d0(param_1,0x4e,(uint *)"Platinum");
+  FUN_1000f4d0(param_1,0x4f,(uint *)&DAT_1013dbac);
+  FUN_1000f4d0(param_1,0x50,(uint *)"Silver");
+  FUN_1000f4d0(param_1,0x51,(uint *)"Copper");
+  FUN_1000f4d0(param_1,0x52,(uint *)"PlatinumBank");
+  FUN_1000f4d0(param_1,0x53,(uint *)"GoldBank");
+  FUN_1000f4d0(param_1,0x54,(uint *)"SilverBank");
+  FUN_1000f4d0(param_1,0x55,(uint *)"CopperBank");
+  FUN_1000f4d0(param_1,0x56,(uint *)"PctGroupLeaderExp");
+  FUN_1000f4d0(param_1,0x57,(uint *)"PctRaidLeaderExp");
+  FUN_1000f4d0(param_1,0x58,(uint *)"Stunned");
+  FUN_1000f4d0(param_1,0x59,(uint *)"RangedReady");
+  FUN_1000f4d0(param_1,0x5a,(uint *)"AltTimerReady");
+  FUN_1000f4d0(param_1,0x5b,(uint *)"MaxEndurance");
+  FUN_1000f4d0(param_1,0x5c,(uint *)"PctEndurance");
+  FUN_1000f4d0(param_1,0x5d,(uint *)"AltAbility");
+  FUN_1000f4d0(param_1,0x5e,(uint *)"AltAbilityReady");
+  FUN_1000f4d0(param_1,0x5f,(uint *)"AltAbilityTimer");
+  FUN_1000f4d0(param_1,0x60,(uint *)"CombatAbility");
+  FUN_1000f4d0(param_1,0x61,(uint *)"CombatAbilityTimer");
+  FUN_1000f4d0(param_1,0x62,(uint *)"LargestFreeInventory");
+  FUN_1000f4d0(param_1,99,(uint *)"TargetOfTarget");
+  FUN_1000f4d0(param_1,100,(uint *)"RaidAssistTarget");
+  FUN_1000f4d0(param_1,0x65,(uint *)"GroupAssistTarget");
+  FUN_1000f4d0(param_1,0x66,(uint *)"RaidMarkNPC");
+  FUN_1000f4d0(param_1,0x67,(uint *)"GroupMarkNPC");
+  FUN_1000f4d0(param_1,0x68,(uint *)"CountBuffs");
+  FUN_1000f4d0(param_1,0x69,(uint *)"LanguageSkill");
+  FUN_1000f4d0(param_1,0x6a,(uint *)"EnduranceBonus");
+  FUN_1000f4d0(param_1,0x6b,(uint *)"CombatEffectsBonus");
+  FUN_1000f4d0(param_1,0x6c,(uint *)"ShieldingBonus");
+  FUN_1000f4d0(param_1,0x6d,(uint *)"SpellShieldBonus");
+  FUN_1000f4d0(param_1,0x6e,(uint *)"AvoidanceBonus");
+  FUN_1000f4d0(param_1,0x6f,(uint *)"AccuracyBonus");
+  FUN_1000f4d0(param_1,0x70,(uint *)"StunResistBonus");
+  FUN_1000f4d0(param_1,0x71,(uint *)"StrikeThroughBonus");
+  FUN_1000f4d0(param_1,0x72,(uint *)"AttackBonus");
+  FUN_1000f4d0(param_1,0x73,(uint *)"HPRegenBonus");
+  FUN_1000f4d0(param_1,0x74,(uint *)"ManaRegenBonus");
+  FUN_1000f4d0(param_1,0x75,(uint *)"DamageShieldBonus");
+  FUN_1000f4d0(param_1,0x76,(uint *)"DoTShieldBonus");
+  FUN_1000f4d0(param_1,0x77,(uint *)"AttackSpeed");
+  FUN_1000f4d0(param_1,0x78,(uint *)"GroupList");
+  FUN_1000f4d0(param_1,0x79,(uint *)"AmIGroupLeader");
+  FUN_1000f4d0(param_1,0x7a,(uint *)"CurrentEndurance");
+  FUN_1000f4d0(param_1,0x7b,(uint *)"EnduranceRegen");
+  FUN_1000f4d0(param_1,0x7c,(uint *)"FreeBuffSlots");
+  FUN_1000f4d0(param_1,0x7d,(uint *)"CurrentWeight");
+  FUN_1000f4d0(param_1,0x7e,(uint *)"AAPointsSpent");
+  FUN_1000f4d0(param_1,0x7f,(uint *)"AAPointsTotal");
+  FUN_1000f4d0(param_1,0x80,(uint *)"TributeActive");
+  FUN_1000f4d0(param_1,0x81,(uint *)"CombatAbilityReady");
+  FUN_1000f4d0(param_1,0x82,(uint *)"Running");
+  FUN_1000f4d0(param_1,0x83,(uint *)"GroupSize");
+  FUN_1000f4d0(param_1,0x84,(uint *)"TributeTimer");
+  FUN_1000f4d0(param_1,0x85,(uint *)"RadiantCrystals");
+  FUN_1000f4d0(param_1,0x86,(uint *)"EbonCrystals");
+  FUN_1000f4d0(param_1,0x87,(uint *)"Shrouded");
+  FUN_1000f4d0(param_1,0x88,(uint *)"AutoFire");
+  FUN_1000f4d0(param_1,0x89,(uint *)"Language");
+  FUN_1000f4d0(param_1,0x8a,(uint *)&DAT_1013ab78);
+  FUN_1000f4d0(param_1,0x8b,(uint *)"LAMarkNPC");
+  FUN_1000f4d0(param_1,0x8c,(uint *)"LANPCHealth");
+  FUN_1000f4d0(param_1,0x8d,(uint *)"LADelegateMA");
+  FUN_1000f4d0(param_1,0x8e,(uint *)"LADelegateMarkNPC");
+  FUN_1000f4d0(param_1,0x8f,(uint *)"LAInspectBuffs");
+  FUN_1000f4d0(param_1,0x90,(uint *)"LASpellAwareness");
+  FUN_1000f4d0(param_1,0x91,(uint *)"LAOffenseEnhancement");
+  FUN_1000f4d0(param_1,0x92,(uint *)"LAManaEnhancement");
+  FUN_1000f4d0(param_1,0x93,(uint *)"LAHealthEnhancement");
+  FUN_1000f4d0(param_1,0x94,(uint *)"LAHealthRegen");
+  FUN_1000f4d0(param_1,0x95,(uint *)"LAFindPathPC");
+  FUN_1000f4d0(param_1,0x96,(uint *)"LAHoTT");
+  FUN_1000f4d0(param_1,0x97,(uint *)"ActiveFavorCost");
+  FUN_1000f4d0(param_1,0x98,(uint *)"CombatState");
+  FUN_1000f4d0(param_1,0x99,(uint *)"svCorruption");
+  FUN_1000f4d0(param_1,0x9a,(uint *)"svPrismatic");
+  FUN_1000f4d0(param_1,0x9b,(uint *)"svChromatic");
+  FUN_1000f4d0(param_1,0x9c,(uint *)"Doubloons");
+  FUN_1000f4d0(param_1,0x9d,(uint *)&DAT_1013e010);
+  FUN_1000f4d0(param_1,0x9e,(uint *)"Phosphenes");
+  FUN_1000f4d0(param_1,0x9f,(uint *)"Phosphites");
+  FUN_1000f4d0(param_1,0xa0,(uint *)"Fellowship");
+  FUN_1000f4d0(param_1,0xa1,(uint *)"Downtime");
+  FUN_1000f4d0(param_1,0xa2,(uint *)"DamageShieldMitigationBonus");
+  FUN_1000f4d0(param_1,0xa3,(uint *)"HeroicSTRBonus");
+  FUN_1000f4d0(param_1,0xa4,(uint *)"HeroicINTBonus");
+  FUN_1000f4d0(param_1,0xa5,(uint *)"HeroicWISBonus");
+  FUN_1000f4d0(param_1,0xa6,(uint *)"HeroicAGIBonus");
+  FUN_1000f4d0(param_1,0xa7,(uint *)"HeroicDEXBonus");
+  FUN_1000f4d0(param_1,0xa8,(uint *)"HeroicSTABonus");
+  FUN_1000f4d0(param_1,0xa9,(uint *)"HeroicCHABonus");
+  FUN_1000f4d0(param_1,0xaa,(uint *)"HealAmountBonus");
+  FUN_1000f4d0(param_1,0xab,(uint *)"SpellDamageBonus");
+  FUN_1000f4d0(param_1,0xac,(uint *)"ClairvoyanceBonus");
+  FUN_1000f4d0(param_1,0xad,(uint *)"EnduranceRegenBonus");
+  FUN_1000f4d0(param_1,0xae,(uint *)"Counters");
+  FUN_1000f4d0(param_1,0xaf,(uint *)"Faycites");
+  FUN_1000f4d0(param_1,0xb0,(uint *)"Chronobines");
+  FUN_1000f4d0(param_1,0xb1,(uint *)"Mercenary");
+  FUN_1000f4d0(param_1,0xb2,(uint *)"XTarget");
+  FUN_1000f4d0(param_1,0xb3,(uint *)"Haste");
+  FUN_1000f4d0(param_1,0xb4,(uint *)"MercenaryStance");
+  FUN_1000f4d0(param_1,0xb5,(uint *)"SkillCap");
+  FUN_1000f4d0(param_1,0xb6,(uint *)"GemTimer");
+  FUN_1000f4d0(param_1,0xb7,(uint *)"HaveExpansion");
+  FUN_1000f4d0(param_1,0xb8,(uint *)"PctAggro");
+  FUN_1000f4d0(param_1,0xb9,(uint *)"SecondaryPctAggro");
+  FUN_1000f4d0(param_1,0xba,(uint *)"SecondaryAggroPlayer");
+  FUN_1000f4d0(param_1,0xbb,(uint *)"AggroLock");
+  return param_1;
+}
+
+
+
