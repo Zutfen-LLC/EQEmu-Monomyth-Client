@@ -12,6 +12,8 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Added
 
+- Fail-closed ROF2 fingerprint byte-scan fallback for `eqgame.exe` that runs once at startup when version resources are unavailable or inconclusive and matches only when both known markers `May 10 2013` and `23:30:08` are present.
+- Capability manifest fingerprint method reporting (`version_resource`, `byte_scan`, or `unavailable`) to make startup guard results grep-friendly.
 - Fail-closed receive dispatcher discovery scaffold for the validated ROF2 candidate at VA `0x004c3250` / RVA `0x000c3250`, with layered static structural checks and one startup log line.
 - Runtime capability manifest fields for receive dispatcher discovery state, validated candidate RVA/address, and PacketObserver state reporting while keeping `packet_hooks_allowed=false`.
 - Dev-only receive dispatcher hook gated by `MONOMYTH_ENABLE_PACKET_HOOKS=1`, ROF2 fingerprint validation, and receive dispatcher discovery validation.
@@ -22,6 +24,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Documentation
 
+- README documentation for the ROF2 fingerprint byte-scan fallback, required dual-marker match, and `fingerprint_method` capability logging.
 - README documentation for receive dispatcher discovery, fail-closed behavior, and the no-hooks/no-packet-data safety boundary.
 - README documentation for the unsafe local packet-hook opt-in, metadata-only receive observation, no payload access, no send interception, and rate-limited logging.
 - README note describing the Windows CI workflow and artifact output.
