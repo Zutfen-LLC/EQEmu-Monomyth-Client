@@ -10,6 +10,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 - Win32 MSVC builds now statically link the C/C++ runtime for `dinput8.dll` (`/MT` in `Release`, `/MTd` in `Debug`) so the client DLL no longer depends on `MSVCP140.dll` or `VCRUNTIME140.dll` at loader startup.
 - Receive dispatcher discovery now resolves the validated ROF2 dispatcher candidate as runtime `module_base + 0x000c3250`, logs the runtime module base and resolved candidate address, and still fails closed if the resolved address falls outside the loaded image or structural validation does not match.
+- Receive dispatcher discovery now validates the large ROF2 dispatcher with layered named checks: mandatory range, entry/compare-tree, unknown-message path, and feeder-call evidence remain fail-closed, while `ret 0x10` epilogue evidence is logged as bounded advisory diagnostics near the known epilogue RVA instead of being required in a small entry-adjacent scan window.
 
 ### Added
 
@@ -27,7 +28,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 ### Documentation
 
 - README documentation for the ROF2 fingerprint byte-scan fallback, required dual-marker match, and `fingerprint_method` capability logging.
-- README documentation for receive dispatcher discovery, fail-closed behavior, and the no-hooks/no-packet-data safety boundary.
+- README documentation for receive dispatcher discovery, layered fail-closed validation, advisory epilogue handling for the large dispatcher, and the no-hooks/no-packet-data safety boundary.
 - README documentation for the unsafe local packet-hook opt-in, metadata-only receive observation, no payload access, no send interception, and rate-limited logging.
 - README note describing the Windows CI workflow, artifact output, and rolling prerelease downloads.
 - README build and troubleshooting documentation for static MSVC runtime linkage, `0xc0000142` startup failures, and `dumpbin` dependency verification.
