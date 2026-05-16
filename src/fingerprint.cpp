@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <cstddef>
 #include <cwctype>
 #include <string>
@@ -148,8 +149,8 @@ bool ScanFileForKnownRof2Markers(
                                                                : kExpectedTimeAscii.size()) -
         1;
     std::array<char, kByteScanChunkBytes> chunk = {};
-    std::string window;
-    window.reserve(kCarryBytes + kByteScanChunkBytes);
+    std::array<char, kCarryBytes + kByteScanChunkBytes> scan_window = {};
+    std::size_t carry_size = 0;
 
     for (;;) {
         DWORD read = 0;
@@ -162,20 +163,24 @@ bool ScanFileForKnownRof2Markers(
             break;
         }
 
-        const std::size_t carry_size = std::min(window.size(), kCarryBytes);
-        if (carry_size != 0) {
-            window.erase(0, window.size() - carry_size);
-        } else {
-            window.clear();
-        }
-        window.append(chunk.data(), read);
+        std::memcpy(scan_window.data() + carry_size, chunk.data(), read);
+        const std::size_t window_size = carry_size + static_cast<std::size_t>(read);
 
-        const MarkerPresence chunk_markers = FindKnownRof2Markers(window);
+        const MarkerPresence chunk_markers = FindKnownRof2Markers(
+            std::string_view(scan_window.data(), window_size));
         markers->date_found = markers->date_found || chunk_markers.date_found;
         markers->time_found = markers->time_found || chunk_markers.time_found;
         if (markers->date_found && markers->time_found) {
             CloseHandle(file);
             return true;
+        }
+
+        carry_size = std::min(window_size, kCarryBytes);
+        if (carry_size != 0) {
+            std::memmove(
+                scan_window.data(),
+                scan_window.data() + (window_size - carry_size),
+                carry_size);
         }
     }
 
