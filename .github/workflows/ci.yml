@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Windows ${{ matrix.config }}
+    runs-on:
+      group: Windows
+      labels: windows
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - Debug
+          - Release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -A Win32
+
+      - name: Build
+        run: cmake --build build --config ${{ matrix.config }} --parallel
+
+      - name: Upload DLL artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dinput8-${{ matrix.config }}
+          path: build/${{ matrix.config }}/dinput8.dll
+          if-no-files-found: error

@@ -2,6 +2,8 @@
 
 This repository contains a fresh minimal `dinput8.dll` bootstrap for the EverQuest ROF2 client used by Monomyth. This slice is intentionally narrow: it proxies the system `dinput8.dll`, records low-noise startup diagnostics, applies a fail-closed ROF2 fingerprint guard, and exposes a future hook lifecycle with no active hooks.
 
+Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
+
 ## Current behavior
 
 - Loads as `dinput8.dll` next to `eqgame.exe`.
@@ -44,6 +46,10 @@ cmake --build build --config Release
 Expected output:
 
 - `build/Release/dinput8.dll`
+
+## CI
+
+GitHub Actions builds this project on `windows-latest` for both `Debug` and `Release` using the same 32-bit CMake configuration documented above. Each successful run uploads the built `dinput8.dll` as a workflow artifact.
 
 ## Install
 
