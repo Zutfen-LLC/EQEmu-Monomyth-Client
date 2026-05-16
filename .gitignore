@@ -1,0 +1,56 @@
+# Build directories
+/build/
+/out/
+/bin/
+/lib/
+/x64/
+/Win32/
+/Debug/
+/Release/
+/RelWithDebInfo/
+/MinSizeRel/
+/cmake-build-*/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+Testing/
+cmake_install.cmake
+compile_commands.json
+install_manifest.txt
+
+# Visual Studio / MSBuild
+/.vs/
+*.vcxproj.user
+*.vcxproj.filters
+*.sln.docstates
+*.opensdf
+*.opendb
+*.sdf
+*.suo
+*.user
+*.userosscache
+*.VC.db
+*.VC.opendb
+
+# Compiler / linker outputs
+*.a
+*.dll
+*.dll.exp
+*.dll.lib
+*.exe
+*.exp
+*.idb
+*.ilk
+*.lib
+*.obj
+*.pdb
+
+# Logs and local runtime artifacts
+*.log
+monomyth-client.log
+
+# OS cruft
+.DS_Store
+Thumbs.db
