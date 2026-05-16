@@ -127,6 +127,10 @@ BOOL CALLBACK InitializeOnce(PINIT_ONCE, PVOID, PVOID*) {
 
     if (g_capabilities.hooks_allowed) {
         g_hooks_started = monomyth::hooks::Initialize(g_capabilities);
+        if (!g_hooks_started) {
+            monomyth::logger::Log(
+                L"hook_manager: initialization failed; continuing proxy-only behavior where possible");
+        }
     } else {
         monomyth::logger::Log(L"hook_manager: skipped because capability manifest denied hook capability");
     }
