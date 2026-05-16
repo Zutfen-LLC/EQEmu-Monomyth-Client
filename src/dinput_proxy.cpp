@@ -7,6 +7,7 @@
 #include "hook_manager.h"
 #include "logger.h"
 #include "packet_observer.h"
+#include "receive_dispatch_discovery.h"
 #include "runtime_capabilities.h"
 
 namespace monomyth::proxy {
@@ -31,6 +32,15 @@ DllGetClassObjectFn g_dll_get_class_object = nullptr;
 DllRegisterServerFn g_dll_register_server = nullptr;
 DllUnregisterServerFn g_dll_unregister_server = nullptr;
 GetdfDIJoystickFn g_getdf_dijoystick = nullptr;
+
+void PublishCapabilitiesWithDiscovery() noexcept {
+    monomyth::receive_dispatch_discovery::Initialize();
+    const monomyth::receive_dispatch_discovery::Result discovery =
+        monomyth::receive_dispatch_discovery::Run(g_capabilities.hooks_allowed);
+    monomyth::runtime::ApplyReceiveDispatchDiscovery(&g_capabilities, discovery);
+    monomyth::runtime::LogCapabilityManifest(g_capabilities);
+    monomyth::receive_dispatch_discovery::LogResult(discovery);
+}
 
 std::wstring BuildSystemDinputPath() noexcept {
     wchar_t system_dir[MAX_PATH] = {};
@@ -74,7 +84,7 @@ BOOL CALLBACK InitializeOnce(PINIT_ONCE, PVOID, PVOID*) {
             false,
             false,
             L"failed to build system dinput8 path");
-        monomyth::runtime::LogCapabilityManifest(g_capabilities);
+        PublishCapabilitiesWithDiscovery();
         g_init_result = HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND);
         return TRUE;
     }
@@ -86,7 +96,7 @@ BOOL CALLBACK InitializeOnce(PINIT_ONCE, PVOID, PVOID*) {
             false,
             false,
             L"failed to load real system dinput8.dll");
-        monomyth::runtime::LogCapabilityManifest(g_capabilities);
+        PublishCapabilitiesWithDiscovery();
         g_init_result = HRESULT_FROM_WIN32(GetLastError());
         return TRUE;
     }
@@ -98,7 +108,7 @@ BOOL CALLBACK InitializeOnce(PINIT_ONCE, PVOID, PVOID*) {
             g_proxy_loaded,
             false,
             L"failed to resolve required dinput8 exports");
-        monomyth::runtime::LogCapabilityManifest(g_capabilities);
+        PublishCapabilitiesWithDiscovery();
         g_init_result = HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
         return TRUE;
     }
@@ -111,7 +121,7 @@ BOOL CALLBACK InitializeOnce(PINIT_ONCE, PVOID, PVOID*) {
         g_proxy_ready,
         g_fingerprint_checked,
         g_fingerprint);
-    monomyth::runtime::LogCapabilityManifest(g_capabilities);
+    PublishCapabilitiesWithDiscovery();
 
     monomyth::packet_observer::Initialize(g_capabilities);
 
@@ -139,6 +149,7 @@ void Shutdown() noexcept {
     }
 
     monomyth::packet_observer::Shutdown();
+    monomyth::receive_dispatch_discovery::Shutdown();
 
     if (g_real_module != nullptr) {
         FreeLibrary(g_real_module);
