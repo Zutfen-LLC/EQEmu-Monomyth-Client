@@ -49,7 +49,7 @@ Expected output:
 
 ## CI
 
-GitHub Actions builds this project on the repository's Windows runner group for both `Debug` and `Release` using the same 32-bit CMake configuration documented above. The workflow bootstraps CMake explicitly and initializes the MSVC x86 developer environment before configuring the build. Each successful run uploads the built `dinput8.dll` as a workflow artifact.
+GitHub Actions builds this project on the repository's Windows runner group for both `Debug` and `Release` using the same 32-bit CMake configuration documented above. The workflow initializes the MSVC x86 developer environment and expects `cmake` to already be installed on the runner and available on `PATH`. Each successful run uploads the built `dinput8.dll` as a workflow artifact.
 
 ## Install
 

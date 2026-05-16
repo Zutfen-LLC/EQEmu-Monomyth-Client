@@ -31,11 +31,13 @@ jobs:
         with:
           arch: x86
 
-      - name: Set up CMake
-        uses: lukka/get-cmake@latest
-
-      - name: Show tool versions
+      - name: Verify local build tools
+        shell: powershell
         run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) {
+            throw "cmake is not available on this Windows runner. Install CMake and add it to PATH."
+          }
           cmake --version
           cl
 
