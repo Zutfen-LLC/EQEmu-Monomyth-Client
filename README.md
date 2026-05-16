@@ -63,6 +63,22 @@ cmake --build build --config Release
 Expected output:
 
 - `build/Release/dinput8.dll`
+- MSVC `Release` builds statically link the C/C++ runtime (`/MT`) so the client DLL does not require `MSVCP140.dll` or `VCRUNTIME140.dll` beside `eqgame.exe`.
+- MSVC `Debug` builds use the static debug runtime (`/MTd`).
+
+Post-build validation:
+
+```powershell
+dumpbin /headers build\Release\dinput8.dll | findstr machine
+dumpbin /dependents build\Release\dinput8.dll
+dumpbin /exports build\Release\dinput8.dll
+```
+
+Expected checks:
+
+- `dumpbin /headers` reports `14C machine (x86)`.
+- `dumpbin /dependents` does not list `MSVCP140.dll` or `VCRUNTIME140.dll`.
+- `dumpbin /exports` matches the exports declared in `dinput8.def`.
 
 ## CI
 
@@ -105,6 +121,30 @@ The capability manifest is currently internal and log-only. This slice does not 
    - `DirectInput8Create` proxying succeeds.
    - `monomyth-client.log` shows startup state.
    - Fingerprint failure, if any, reports `hooks_allowed=false` without breaking input.
+
+## Troubleshooting
+
+If the ROF2 client fails at startup with `0xc0000142` after placing the custom `dinput8.dll` beside `eqgame.exe`, check the loader-facing basics before changing any hook logic:
+
+- Confirm the DLL is still Win32/x86:
+
+  ```powershell
+  dumpbin /headers build\Release\dinput8.dll | findstr machine
+  ```
+
+- Confirm the `Release` DLL no longer depends on the VC++ redistributable DLLs:
+
+  ```powershell
+  dumpbin /dependents build\Release\dinput8.dll
+  ```
+
+- Confirm the proxy exports are unchanged:
+
+  ```powershell
+  dumpbin /exports build\Release\dinput8.dll
+  ```
+
+For this repository's expected `Release` output, `dumpbin /dependents build\Release\dinput8.dll` should not list `MSVCP140.dll` or `VCRUNTIME140.dll`. If either appears, the build is not using the intended static MSVC runtime and the loader environment may still be missing required x86 VC++ runtime files.
 
 ## Packet observer scaffold
 

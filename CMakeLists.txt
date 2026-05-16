@@ -26,6 +26,12 @@ target_compile_definitions(dinput8 PRIVATE
     NOMINMAX
 )
 
+if(MSVC)
+    set_property(TARGET dinput8 PROPERTY
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    )
+endif()
+
 set_target_properties(dinput8 PROPERTIES
     OUTPUT_NAME dinput8
     PREFIX ""
