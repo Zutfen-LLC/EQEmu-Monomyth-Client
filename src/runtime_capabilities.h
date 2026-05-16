@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "fingerprint.h"
 
 namespace monomyth::runtime {
@@ -14,7 +16,7 @@ struct Manifest {
     bool packet_hooks_allowed = false;
     bool ui_hooks_allowed = false;
     bool heartbeat_allowed = false;
-    const wchar_t* reason = L"manifest unavailable";
+    std::wstring reason = L"manifest unavailable";
 };
 
 Manifest BuildCapabilityManifest(

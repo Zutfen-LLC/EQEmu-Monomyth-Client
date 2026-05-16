@@ -7,7 +7,7 @@
 namespace monomyth::runtime {
 namespace {
 
-const wchar_t* NormalizeReason(const wchar_t* reason) noexcept {
+std::wstring NormalizeReason(const wchar_t* reason) {
     if (reason == nullptr || reason[0] == L'\0') {
         return L"unknown";
     }
@@ -75,7 +75,7 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" ";
     AppendBoolField(&message, L"heartbeat_allowed=", manifest.heartbeat_allowed);
     message += L" reason=\"";
-    message += NormalizeReason(manifest.reason);
+    message += NormalizeReason(manifest.reason.c_str());
     message += L"\"";
     monomyth::logger::Log(message);
 }
