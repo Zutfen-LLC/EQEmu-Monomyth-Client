@@ -24,12 +24,22 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Set up MSVC developer command prompt
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x86
+      - name: Set up MSVC developer environment
+        shell: cmd
+        run: |
+          @echo off
+          setlocal
+          for /f "usebackq delims=" %%I in (`vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSINSTALLDIR=%%I"
+          if not defined VSINSTALLDIR (
+            echo Visual Studio with C++ build tools was not found on this Windows runner.
+            exit /b 1
+          )
+          call "%VSINSTALLDIR%\Common7\Tools\VsDevCmd.bat" -arch=x86 -host_arch=x64
+          if errorlevel 1 exit /b %errorlevel%
+          set > "%RUNNER_TEMP%\msvc-env.txt"
+          type "%RUNNER_TEMP%\msvc-env.txt" >> "%GITHUB_ENV%"
 
       - name: Verify local build tools
         shell: powershell
@@ -49,7 +59,7 @@ jobs:
 
       - name: Upload DLL artifact
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dinput8-${{ matrix.config }}
           path: build/${{ matrix.config }}/dinput8.dll
