@@ -12,6 +12,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 - Receive dispatcher discovery now resolves the validated ROF2 dispatcher candidate as runtime `module_base + 0x000c3250`, logs the runtime module base and resolved candidate address, and still fails closed if the resolved address falls outside the loaded image or structural validation does not match.
 - Receive dispatcher discovery now validates the large ROF2 dispatcher with layered named checks: mandatory range, entry/compare-tree, unknown-message path, and feeder-call evidence remain fail-closed, while `ret 0x10` epilogue evidence is logged as bounded advisory diagnostics near the known epilogue RVA instead of being required in a small entry-adjacent scan window.
 - The default receive-introspection allowlist is now narrowed to opcode `0x7dfc`; opcode `0x2958` is no longer introspected by default and remains available only through the existing local override environment variable for targeted experiments.
+- Receive introspection allowlist overrides now accept exact ROF2 opcode names from the local reference table as well as numeric opcode ids, while keeping the default allowlist at `0x7dfc` / `OP_ClientUpdate`.
 
 ### Added
 
@@ -35,6 +36,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 - README documentation for the unsafe local packet-hook opt-in, metadata-only receive observation, no payload access, no send interception, and rate-limited logging.
 - README documentation for the separate receive-introspection opt-in, bounded 16-byte prefix logging, default opcode allowlist, and fail-closed payload safety checks.
 - README documentation now reflects the hardened default receive-introspection allowlist and notes that `0x2958` can be re-added only through the existing local override for targeted experiments.
+- README documentation now reflects exact-name receive-introspection allowlist overrides, mixed name/numeric examples, and invalid-token fail-closed behavior.
 - README documentation for ROF2 `opcode_name` enrichment and unknown-opcode fallback behavior.
 - README note describing the Windows CI workflow, artifact output, and rolling prerelease downloads.
 - README build and troubleshooting documentation for static MSVC runtime linkage, `0xc0000142` startup failures, and `dumpbin` dependency verification.

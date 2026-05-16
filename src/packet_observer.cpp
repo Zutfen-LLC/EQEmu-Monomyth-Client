@@ -43,6 +43,12 @@ std::atomic<std::uint64_t> g_introspection_match_count = 0;
 std::atomic<std::uint64_t> g_introspection_skip_count = 0;
 std::vector<std::uint32_t> g_introspection_allowlist;
 
+struct IntrospectionAllowlistConfig {
+    std::vector<std::uint32_t> opcodes;
+    std::vector<std::wstring> invalid_tokens;
+    bool uses_default = true;
+};
+
 std::wstring Hex32(std::uint32_t value) {
     std::wstringstream stream;
     stream << L"0x" << std::hex << value;
@@ -89,16 +95,17 @@ bool ParseOpcodeToken(std::wstring_view token, std::uint32_t* opcode) noexcept {
 
     wchar_t* end = nullptr;
     const unsigned long parsed = wcstoul(trimmed.c_str(), &end, 0);
-    if (end == nullptr || *end != L'\0' ||
-        parsed > std::numeric_limits<std::uint32_t>::max()) {
-        return false;
+    if (end != nullptr && *end == L'\0' &&
+        parsed <= std::numeric_limits<std::uint32_t>::max()) {
+        *opcode = static_cast<std::uint32_t>(parsed);
+        return true;
     }
 
-    *opcode = static_cast<std::uint32_t>(parsed);
-    return true;
+    return monomyth::opcode_reference::TryLookupRof2OpcodeValue(trimmed, opcode);
 }
 
-std::vector<std::uint32_t> LoadIntrospectionAllowlist() {
+IntrospectionAllowlistConfig LoadIntrospectionAllowlist() {
+    IntrospectionAllowlistConfig config;
     wchar_t value[256] = {};
     constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
     const DWORD length = GetEnvironmentVariableW(
@@ -106,17 +113,23 @@ std::vector<std::uint32_t> LoadIntrospectionAllowlist() {
         value,
         kValueCapacity);
     if (length == 0 || length >= kValueCapacity) {
-        return std::vector<std::uint32_t>(kDefaultAllowlist.begin(), kDefaultAllowlist.end());
+        config.opcodes.assign(kDefaultAllowlist.begin(), kDefaultAllowlist.end());
+        return config;
     }
 
-    std::vector<std::uint32_t> opcodes;
+    config.uses_default = false;
     std::wstring_view remaining(value, length);
     while (!remaining.empty()) {
         const std::size_t separator = remaining.find(L',');
         const std::wstring_view token = remaining.substr(0, separator);
         std::uint32_t opcode = 0;
         if (ParseOpcodeToken(token, &opcode)) {
-            opcodes.push_back(opcode);
+            config.opcodes.push_back(opcode);
+        } else {
+            const std::wstring trimmed = TrimWhitespace(token);
+            if (!trimmed.empty()) {
+                config.invalid_tokens.push_back(trimmed);
+            }
         }
 
         if (separator == std::wstring_view::npos) {
@@ -125,13 +138,11 @@ std::vector<std::uint32_t> LoadIntrospectionAllowlist() {
         remaining.remove_prefix(separator + 1);
     }
 
-    if (opcodes.empty()) {
-        return std::vector<std::uint32_t>(kDefaultAllowlist.begin(), kDefaultAllowlist.end());
-    }
-
-    std::sort(opcodes.begin(), opcodes.end());
-    opcodes.erase(std::unique(opcodes.begin(), opcodes.end()), opcodes.end());
-    return opcodes;
+    std::sort(config.opcodes.begin(), config.opcodes.end());
+    config.opcodes.erase(
+        std::unique(config.opcodes.begin(), config.opcodes.end()),
+        config.opcodes.end());
+    return config;
 }
 
 bool IsIntrospectionAllowlisted(std::uint32_t opcode) noexcept {
@@ -149,7 +160,23 @@ std::wstring BuildAllowlistSummary() {
         if (i != 0) {
             stream << L",";
         }
-        stream << Hex32(g_introspection_allowlist[i]);
+        const std::uint32_t opcode = g_introspection_allowlist[i];
+        stream << Hex32(opcode);
+        const std::wstring_view opcode_name = monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
+        if (opcode_name != L"unknown") {
+            stream << L"(" << opcode_name << L")";
+        }
+    }
+    return stream.str();
+}
+
+std::wstring JoinTokens(const std::vector<std::wstring>& tokens) {
+    std::wstringstream stream;
+    for (std::size_t i = 0; i < tokens.size(); ++i) {
+        if (i != 0) {
+            stream << L",";
+        }
+        stream << tokens[i];
     }
     return stream.str();
 }
@@ -245,8 +272,20 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     g_introspection_match_count.store(0);
     g_introspection_skip_count.store(0);
     g_introspection_enabled.store(manifest.receive_introspection_allowed);
-    g_introspection_allowlist = LoadIntrospectionAllowlist();
+    const IntrospectionAllowlistConfig allowlist_config = LoadIntrospectionAllowlist();
+    g_introspection_allowlist = allowlist_config.opcodes;
     g_state.store(State::kInitialized);
+
+    if (!allowlist_config.invalid_tokens.empty()) {
+        std::wstring invalid_message = L"PacketObserver recv_introspection_invalid_tokens=\"";
+        invalid_message += JoinTokens(allowlist_config.invalid_tokens);
+        invalid_message += L"\"";
+        monomyth::logger::Log(invalid_message);
+    }
+    if (!allowlist_config.uses_default && g_introspection_allowlist.empty()) {
+        monomyth::logger::Log(
+            L"PacketObserver recv_introspection_config_status=no_valid_opcodes");
+    }
 
     std::wstring message =
         L"PacketObserver state=initialized mode=metadata_only log_policy=first_50_then_every_500";
@@ -256,8 +295,14 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         message += std::to_wstring(kPayloadSafetyCeiling);
         message += L" recv_introspection_log_policy=first_10_then_every_1000";
         message += L" recv_introspection_scope=allowlisted_only";
+        message += L" recv_introspection_allowlist_source=";
+        message += allowlist_config.uses_default ? L"default" : L"configured";
         message += L" recv_introspection_allowlist=";
-        message += BuildAllowlistSummary();
+        if (g_introspection_allowlist.empty()) {
+            message += L"empty";
+        } else {
+            message += BuildAllowlistSummary();
+        }
     } else {
         message += L" recv_introspection=false";
     }
