@@ -4,6 +4,7 @@
 #include <winver.h>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cwctype>
 #include <string>
@@ -18,6 +19,7 @@ constexpr wchar_t kExpectedTime[] = L"23:30:08";
 constexpr std::string_view kExpectedDateAscii = "May 10 2013";
 constexpr std::string_view kExpectedTimeAscii = "23:30:08";
 constexpr LONGLONG kMaxExecutableScanBytes = 512LL * 1024LL * 1024LL;
+constexpr DWORD kByteScanChunkBytes = 64 * 1024;
 
 std::wstring ToLower(std::wstring value) {
     std::transform(value.begin(), value.end(), value.begin(), [](wchar_t ch) {
@@ -114,10 +116,14 @@ bool ContainsValue(const std::vector<std::wstring>& strings, const std::wstring&
     return false;
 }
 
-bool ReadFileBytes(const std::wstring& path, std::vector<std::byte>* bytes) noexcept {
-    if (bytes == nullptr || path.empty()) {
+bool ScanFileForKnownRof2Markers(
+    const std::wstring& path,
+    MarkerPresence* markers) noexcept {
+    if (markers == nullptr || path.empty()) {
         return false;
     }
+
+    *markers = {};
 
     HANDLE file = CreateFileW(
         path.c_str(),
@@ -137,29 +143,44 @@ bool ReadFileBytes(const std::wstring& path, std::vector<std::byte>* bytes) noex
         return false;
     }
 
-    bytes->resize(static_cast<std::size_t>(size.QuadPart));
-    DWORD total_read = 0;
-    while (total_read < bytes->size()) {
-        const DWORD chunk = static_cast<DWORD>(std::min<std::size_t>(
-            bytes->size() - total_read,
-            static_cast<std::size_t>(0x7ffff000)));
+    constexpr std::size_t kCarryBytes =
+        (kExpectedDateAscii.size() > kExpectedTimeAscii.size() ? kExpectedDateAscii.size()
+                                                               : kExpectedTimeAscii.size()) -
+        1;
+    std::array<char, kByteScanChunkBytes> chunk = {};
+    std::string window;
+    window.reserve(kCarryBytes + kByteScanChunkBytes);
+
+    for (;;) {
         DWORD read = 0;
-        if (!ReadFile(
-                file,
-                bytes->data() + total_read,
-                chunk,
-                &read,
-                nullptr) ||
-            read == 0) {
+        if (!ReadFile(file, chunk.data(), kByteScanChunkBytes, &read, nullptr)) {
             CloseHandle(file);
-            bytes->clear();
             return false;
         }
-        total_read += read;
+
+        if (read == 0) {
+            break;
+        }
+
+        const std::size_t carry_size = std::min(window.size(), kCarryBytes);
+        if (carry_size != 0) {
+            window.erase(0, window.size() - carry_size);
+        } else {
+            window.clear();
+        }
+        window.append(chunk.data(), read);
+
+        const MarkerPresence chunk_markers = FindKnownRof2Markers(window);
+        markers->date_found = markers->date_found || chunk_markers.date_found;
+        markers->time_found = markers->time_found || chunk_markers.time_found;
+        if (markers->date_found && markers->time_found) {
+            CloseHandle(file);
+            return true;
+        }
     }
 
     CloseHandle(file);
-    return total_read == bytes->size();
+    return true;
 }
 
 std::wstring ByteScanFailureReason(
@@ -231,8 +252,8 @@ Result Evaluate() noexcept {
         }
     }
 
-    std::vector<std::byte> file_bytes;
-    result.byte_scan_checked = ReadFileBytes(process_path, &file_bytes);
+    MarkerPresence markers = {};
+    result.byte_scan_checked = ScanFileForKnownRof2Markers(process_path, &markers);
     if (!result.byte_scan_checked) {
         result.reason = result.version_strings_checked
             ? L"version resources inconclusive; byte scan unreadable"
@@ -240,10 +261,6 @@ Result Evaluate() noexcept {
         return result;
     }
 
-    const std::string_view bytes_view(
-        reinterpret_cast<const char*>(file_bytes.data()),
-        file_bytes.size());
-    const MarkerPresence markers = FindKnownRof2Markers(bytes_view);
     result.byte_scan_match = markers.date_found && markers.time_found;
     if (!result.byte_scan_match) {
         result.reason = ByteScanFailureReason(result.version_strings_checked, markers);
