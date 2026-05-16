@@ -1,0 +1,30 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(MonomythClientDll LANGUAGES CXX)
+
+add_library(dinput8 SHARED
+    src/dllmain.cpp
+    src/dinput_proxy.cpp
+    src/logger.cpp
+    src/fingerprint.cpp
+    src/hook_manager.cpp
+    dinput8.def
+)
+
+target_include_directories(dinput8 PRIVATE src)
+
+target_compile_features(dinput8 PRIVATE cxx_std_20)
+
+target_compile_definitions(dinput8 PRIVATE
+    UNICODE
+    _UNICODE
+    WIN32_LEAN_AND_MEAN
+    NOMINMAX
+)
+
+set_target_properties(dinput8 PROPERTIES
+    OUTPUT_NAME dinput8
+    PREFIX ""
+)
+
+target_link_libraries(dinput8 PRIVATE version)
