@@ -101,7 +101,8 @@ Startup logs include:
 - Export resolution result
 - One structured `CapabilityManifest ...` summary line with proxy, host, fingerprint, hook, packet, and UI capability state plus the reason string
 - The `CapabilityManifest` line includes `fingerprint_method=version_resource`, `fingerprint_method=byte_scan`, or `fingerprint_method=unavailable` for grep-friendly startup diagnosis
-- One `ReceiveDispatchDiscovery ...` line with the static discovery state, validated candidate RVA/address when available, and a concise reason
+- The `CapabilityManifest` line includes `runtime_module_base`, `receive_dispatch_rva`, and `receive_dispatch_address` whenever discovery resolves the validated dispatcher candidate at runtime
+- One `ReceiveDispatchDiscovery ...` line with the discovery state, runtime module base, validated candidate RVA/resolved address when available, and a concise reason
 - Post-guard heartbeat when hooks are allowed
 - One `PacketObserver state=...` line indicating current observer state
 - When the dev hook is enabled, rate-limited metadata lines beginning with `PacketObserverRecv`
@@ -166,9 +167,9 @@ Future receive-only observation must continue to route through this module, rema
 
 ## Receive dispatcher discovery
 
-The `ReceiveDispatchDiscovery` module (`src/receive_dispatch_discovery.h` / `src/receive_dispatch_discovery.cpp`) is a fail-closed static discovery scaffold for the validated ROF2 receive dispatcher candidate at VA `0x004c3250` / RVA `0x000c3250`.
+The `ReceiveDispatchDiscovery` module (`src/receive_dispatch_discovery.h` / `src/receive_dispatch_discovery.cpp`) is a fail-closed static discovery scaffold for the validated ROF2 receive dispatcher candidate at preferred VA `0x004c3250` / RVA `0x000c3250`.
 
-Discovery runs only after the existing fingerprint/capability manifest path says enhancement discovery is allowed. It validates layered executable-image evidence such as the candidate RVA, a `ret 0x10` epilogue shape, the unknown-message string reference, nearby dispatch-like compare/branch structure, and the two known direct feeder callsites. If any required structural check fails or cannot be evaluated confidently, the result is `failed` or `skipped_by_capability` and no candidate address/RVA is exposed as validated.
+Discovery runs only after the existing fingerprint/capability manifest path says enhancement discovery is allowed. It resolves the validated candidate relative to the loaded `eqgame.exe` module base at runtime, verifies that the resolved address still falls inside the loaded image, and only then applies layered executable-image checks such as the candidate RVA, a `ret 0x10` epilogue shape, the unknown-message string reference, nearby dispatch-like compare/branch structure, and the two known direct feeder callsites. If runtime module discovery fails, if the resolved RVA falls outside the loaded image, or if any required structural check fails or cannot be evaluated confidently, the result is `failed` or `skipped_by_capability` and packet hooks remain disabled.
 
 This module does **not** install hooks, detours, callbacks, or memory patches. It does **not** observe, read, copy, decode, log, mutate, or retain any live packet data. A validated discovery result is only one prerequisite for the explicit dev-gated receive-only hook; by itself it does not activate `PacketObserver`, and `packet_hooks_allowed` remains `false`.
 
@@ -184,7 +185,7 @@ $env:MONOMYTH_ENABLE_PACKET_HOOKS = "1"
 
 The opt-in is not sufficient by itself. The hook installs only when DirectInput proxy bootstrap is ready, the ROF2 fingerprint guard passes, receive dispatcher discovery validates the known candidate, and `MONOMYTH_ENABLE_PACKET_HOOKS=1` is present. If any gate fails, if the detour cannot be installed cleanly, or if the dispatcher prologue is ambiguous, packet observation is disabled and the DLL continues proxy-only behavior where possible.
 
-The hook boundary is the validated receive dispatcher candidate at VA `0x004c3250` / RVA `0x000c3250`. It preserves the validated `this`/ECX plus four stack argument shape: source/context pointer, opcode/message id, payload pointer, and payload length. The hook never reads from the payload pointer and never retains it. There is no send hook path in this repository.
+The hook boundary is the validated receive dispatcher candidate at runtime `module_base + 0x000c3250` (preferred VA `0x004c3250`). It preserves the validated `this`/ECX plus four stack argument shape: source/context pointer, opcode/message id, payload pointer, and payload length. The hook never reads from the payload pointer and never retains it. There is no send hook path in this repository.
 
 ## Future slices
 

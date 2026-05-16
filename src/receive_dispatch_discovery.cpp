@@ -14,7 +14,6 @@
 namespace monomyth::receive_dispatch_discovery {
 namespace {
 
-constexpr std::uint32_t kExpectedImageBase = 0x00400000;
 constexpr std::uint32_t kCandidateRva = 0x000c3250;
 constexpr std::uint32_t kFeederCallRvaA = 0x0006240d;
 constexpr std::uint32_t kFeederCallRvaB = 0x001427a7;
@@ -30,6 +29,7 @@ struct ImageView {
     const IMAGE_NT_HEADERS* nt = nullptr;
     const IMAGE_SECTION_HEADER* sections = nullptr;
     WORD section_count = 0;
+    std::uint32_t image_size = 0;
 };
 
 std::wstring Hex32(std::uint32_t value) {
@@ -71,7 +71,20 @@ bool BuildImageView(ImageView* view) noexcept {
     view->nt = nt;
     view->sections = IMAGE_FIRST_SECTION(nt);
     view->section_count = nt->FileHeader.NumberOfSections;
+    view->image_size = nt->OptionalHeader.SizeOfImage;
     return true;
+}
+
+bool IsRangeWithinImage(
+    const ImageView& image,
+    std::uint32_t rva,
+    std::size_t length) noexcept {
+    if (image.image_size == 0 || rva >= image.image_size) {
+        return false;
+    }
+
+    const std::uint64_t end = static_cast<std::uint64_t>(rva) + length;
+    return end <= image.image_size;
 }
 
 std::uint32_t SectionSpan(const IMAGE_SECTION_HEADER& section) noexcept {
@@ -238,9 +251,10 @@ bool HasDispatchLikeLocalShape(
     return compare_like >= 4 && branch_like >= 4;
 }
 
-Result MakeFailure(const wchar_t* reason) {
-    Result result = {};
+Result MakeFailure(const Result& partial, const wchar_t* reason) {
+    Result result = partial;
     result.state = State::kFailed;
+    result.validated = false;
     result.reason = reason;
     return result;
 }
@@ -248,52 +262,59 @@ Result MakeFailure(const wchar_t* reason) {
 Result ValidateCandidate() noexcept {
     ImageView image = {};
     if (!BuildImageView(&image)) {
-        return MakeFailure(L"host PE image unavailable");
+        return MakeFailure({}, L"host PE image unavailable");
     }
 
-    if (image.nt->OptionalHeader.ImageBase != kExpectedImageBase) {
-        return MakeFailure(L"unexpected ROF2 image base");
+    Result result = {};
+    result.module_base = reinterpret_cast<std::uintptr_t>(image.base);
+    result.candidate_rva = kCandidateRva;
+    result.candidate_address = result.module_base + kCandidateRva;
+
+    if (!IsRangeWithinImage(image, kCandidateRva, 1)) {
+        return MakeFailure(result, L"candidate RVA resolves outside loaded module image");
     }
 
     const auto* code_section = FindSection(image, kCandidateRva, 1, IMAGE_SCN_MEM_EXECUTE);
     if (code_section == nullptr) {
-        return MakeFailure(L"candidate RVA is not in executable image section");
+        return MakeFailure(result, L"candidate RVA is not in executable image section");
     }
 
-    Result result = {};
     result.state = State::kCandidateFound;
 
-    const std::uintptr_t candidate_address =
-        reinterpret_cast<std::uintptr_t>(image.base + kCandidateRva);
-
     if (!HasRet10Epilogue(image, *code_section)) {
-        return MakeFailure(L"candidate missing ret 0x10 epilogue evidence");
+        return MakeFailure(result, L"structural validation failed: candidate missing ret 0x10 epilogue evidence");
     }
 
     const std::uint8_t* unknown_message = FindUnknownMessageString(image);
     if (unknown_message == nullptr) {
-        return MakeFailure(L"unknown-message string not found in readable image section");
+        return MakeFailure(
+            result,
+            L"structural validation failed: unknown-message string not found in readable image section");
     }
 
     if (!HasLocalXrefTo(image, *code_section, unknown_message)) {
-        return MakeFailure(L"candidate missing local xref to unknown-message string");
+        return MakeFailure(
+            result,
+            L"structural validation failed: candidate missing local xref to unknown-message string");
     }
 
     if (!HasDispatchLikeLocalShape(image, *code_section)) {
-        return MakeFailure(L"candidate missing local dispatch-like compare/branch evidence");
+        return MakeFailure(
+            result,
+            L"structural validation failed: candidate missing local dispatch-like compare/branch evidence");
     }
 
-    if (!ValidateDirectCall(image, kFeederCallRvaA, candidate_address) ||
-        !ValidateDirectCall(image, kFeederCallRvaB, candidate_address)) {
-        return MakeFailure(L"known direct feeder callsites do not target candidate");
+    if (!ValidateDirectCall(image, kFeederCallRvaA, result.candidate_address) ||
+        !ValidateDirectCall(image, kFeederCallRvaB, result.candidate_address)) {
+        return MakeFailure(
+            result,
+            L"structural validation failed: known direct feeder callsites do not target candidate");
     }
 
     result.state = State::kValidated;
     result.validated = true;
-    result.candidate_rva = kCandidateRva;
-    result.candidate_address = candidate_address;
     result.reason =
-        L"validated static ROF2 dispatcher structure: rva, ret10, unknown-string-xref, dispatch shape, feeder calls";
+        L"structural validation succeeded: rva resolution, ret10, unknown-string-xref, dispatch shape, feeder calls";
     return result;
 }
 
@@ -324,6 +345,7 @@ void Shutdown() noexcept {
 
     g_result.state = State::kShutdown;
     g_result.validated = false;
+    g_result.module_base = 0;
     g_result.candidate_rva = 0;
     g_result.candidate_address = 0;
     g_result.reason = L"shutdown";
@@ -355,9 +377,15 @@ const wchar_t* StateName(State state) noexcept {
 void LogResult(const Result& result) noexcept {
     std::wstring message = L"ReceiveDispatchDiscovery state=";
     message += StateName(result.state);
-    if (result.validated) {
+    if (result.module_base != 0) {
+        message += L" module_base=";
+        message += HexPtr(result.module_base);
+    }
+    if (result.candidate_rva != 0) {
         message += L" candidate_rva=";
         message += Hex32(result.candidate_rva);
+    }
+    if (result.candidate_address != 0) {
         message += L" candidate_address=";
         message += HexPtr(result.candidate_address);
     }

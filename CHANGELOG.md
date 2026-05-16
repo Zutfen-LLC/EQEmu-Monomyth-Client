@@ -9,6 +9,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 ### Changed
 
 - Win32 MSVC builds now statically link the C/C++ runtime for `dinput8.dll` (`/MT` in `Release`, `/MTd` in `Debug`) so the client DLL no longer depends on `MSVCP140.dll` or `VCRUNTIME140.dll` at loader startup.
+- Receive dispatcher discovery now resolves the validated ROF2 dispatcher candidate as runtime `module_base + 0x000c3250`, logs the runtime module base and resolved candidate address, and still fails closed if the resolved address falls outside the loaded image or structural validation does not match.
 
 ### Added
 

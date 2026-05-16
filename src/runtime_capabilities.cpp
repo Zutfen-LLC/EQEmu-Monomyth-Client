@@ -127,9 +127,15 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
         manifest.receive_dispatch_discovery_state);
     message += L" ";
     AppendBoolField(&message, L"receive_dispatch_validated=", manifest.receive_dispatch_validated);
-    if (manifest.receive_dispatch_validated) {
+    if (manifest.runtime_module_base != 0) {
+        message += L" runtime_module_base=";
+        message += HexPtr(manifest.runtime_module_base);
+    }
+    if (manifest.receive_dispatch_rva != 0) {
         message += L" receive_dispatch_rva=";
         message += Hex32(manifest.receive_dispatch_rva);
+    }
+    if (manifest.receive_dispatch_address != 0) {
         message += L" receive_dispatch_address=";
         message += HexPtr(manifest.receive_dispatch_address);
     }
@@ -151,13 +157,9 @@ void ApplyReceiveDispatchDiscovery(
 
     manifest->receive_dispatch_discovery_state = discovery.state;
     manifest->receive_dispatch_validated = discovery.validated;
-    if (discovery.validated) {
-        manifest->receive_dispatch_rva = discovery.candidate_rva;
-        manifest->receive_dispatch_address = discovery.candidate_address;
-    } else {
-        manifest->receive_dispatch_rva = 0;
-        manifest->receive_dispatch_address = 0;
-    }
+    manifest->runtime_module_base = discovery.module_base;
+    manifest->receive_dispatch_rva = discovery.candidate_rva;
+    manifest->receive_dispatch_address = discovery.candidate_address;
 
     manifest->packet_hooks_allowed =
         manifest->proxy_ready &&
