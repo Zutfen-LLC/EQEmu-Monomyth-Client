@@ -1,0 +1,3906 @@
+Program: dinput8.dll
+Image base: 10000000
+
+== String refs ==
+-- /notify
+  100f9770 | FUN_100f9770
+  101119d0 | ShutdownMQ2Windows
+  10111fb0 | InitializeMQ2Windows
+-- /itemnotify
+  1010f870 | FUN_1010f870
+  101119d0 | ShutdownMQ2Windows
+  10111fb0 | InitializeMQ2Windows
+-- /windows
+  101119d0 | ShutdownMQ2Windows
+  10111fb0 | InitializeMQ2Windows
+-- /itemslots
+  101119d0 | ShutdownMQ2Windows
+  10111fb0 | InitializeMQ2Windows
+-- leftmouseup
+  100059f0 | FUN_100059f0
+  1003cd50 | FUN_1003cd50
+  10111010 | SendWndClick2
+  10111b20 | SendWndClick
+-- leftmouse
+  100059f0 | FUN_100059f0
+  1003cd50 | FUN_1003cd50
+  101100a0 | FUN_101100a0
+  10111010 | SendWndClick2
+  10111b20 | SendWndClick
+-- rightmouse
+  <none>
+-- listselect
+  101100a0 | FUN_101100a0
+-- Window '%s' not open
+  100c95c0 | CombineCmd
+-- Window '%s' is now open.
+  100ca2b0 | WindowState
+-- Window '%s' is currently %s
+  100ca2b0 | WindowState
+-- AltCurr_DisplayMissingButton
+  100059f0 | FUN_100059f0
+  1003cd50 | FUN_1003cd50
+-- AltCurr_CreateItemButton
+  100059f0 | FUN_100059f0
+  1003cd50 | FUN_1003cd50
+-- InventoryWindow
+  100059f0 | FUN_100059f0
+  1003cd50 | FUN_1003cd50
+-- First Click - Main Hook
+  1003cd50 | FUN_1003cd50
+-- Second Click - Main Hook
+  1003cd50 | FUN_1003cd50
+
+== Target functions ==
+10110da0 | SendWndNotification
+10111da0 | FindMQ2Window
+10111fb0 | InitializeMQ2Windows
+101119d0 | ShutdownMQ2Windows
+100d60f0 | ParseMQ2DataPortion
+100d5d20 | dataSpawn
+100d6700 | InitializeMQ2Data
+100e5a00 | InitializeMQ2DataTypes
+100d6b70 | AddMQ2Data
+100d6f70 | AddMQ2Type
+1003cd50 | FUN_1003cd50
+100c69c0 | FUN_100c69c0
+100f9770 | FUN_100f9770
+1010f870 | FUN_1010f870
+100059f0 | FUN_100059f0
+10111010 | SendWndClick2
+10111b20 | SendWndClick
+101100a0 | FUN_101100a0
+100c95c0 | CombineCmd
+100ca2b0 | WindowState
+
+============================================================
+Function: SendWndNotification @ 10110da0
+Signature: undefined4 __cdecl SendWndNotification(uint * param_1, byte * param_2, uint param_3, void * param_4)
+Callers:
+  101100a0 | FUN_101100a0
+Callees:
+  10005510 | FUN_10005510
+  100589d0 | _memset
+  100c1dd0 | GetFastTime
+  100c1ef0 | EQClasses::CXWnd::WndNotification
+  100c2100 | FUN_100c2100
+  100c6db0 | FUN_100c6db0
+  10111da0 | FindMQ2Window
+Decompile:
+
+uint __cdecl SendWndNotification(uint *param_1,byte *param_2,uint param_3,void *param_4)
+
+{
+  CXWnd *this;
+  uint uVar1;
+  CXWnd *pCVar2;
+  undefined4 uVar3;
+  void *this_00;
+  void *this_01;
+  undefined1 local_804 [2052];
+  
+                    /* 0x110da0  878  SendWndNotification */
+  _memset(local_804,0,0x800);
+  this = (CXWnd *)FindMQ2Window(param_1);
+  if (this == (CXWnd *)0x0) {
+    FUN_10005510(this_00,local_804,0x10146fdc);
+LAB_10110de6:
+    uVar1 = FUN_100c6db0();
+    return uVar1 & 0xffffff00;
+  }
+  pCVar2 = (CXWnd *)0x0;
+  if ((param_2 != (byte *)0x0) && (*param_2 != 0)) {
+    pCVar2 = (CXWnd *)FUN_100c2100((int)this,param_2);
+    if (pCVar2 == (CXWnd *)0x0) {
+      FUN_10005510(this_01,local_804,0x10146ff8);
+      goto LAB_10110de6;
+    }
+  }
+  EQClasses::CXWnd::WndNotification(this,pCVar2,param_3,param_4);
+  uVar3 = GetFastTime();
+  *gpMouseEventTime = uVar3;
+  return CONCAT31((int3)((uint)uVar3 >> 8),1);
+}
+
+
+
+============================================================
+Function: FindMQ2Window @ 10111da0
+Signature: int __cdecl FindMQ2Window(uint * param_1)
+Callers:
+  100059f0 | FUN_100059f0
+  1001d2a0 | FUN_1001d2a0
+  100c95c0 | CombineCmd
+  100ca2b0 | WindowState
+  100d5920 | dataWindow
+  101100a0 | FUN_101100a0
+  10110da0 | SendWndNotification
+  10110f10 | SendListSelect
+  10111b20 | SendWndClick
+Callees:
+  10007090 | FUN_10007090
+  1002f140 | FUN_1002f140
+  1003d4c0 | FUN_1003d4c0
+  10065e13 | _tolower
+  10081b25 | FUN_10081b25
+  1008431e | FUN_1008431e
+  10088b58 | FUN_10088b58
+  1009c5e0 | __strnicmp
+  100ff9d0 | FindContainerForContents
+Decompile:
+
+int __cdecl FindMQ2Window(uint *param_1)
+
+{
+  LPVOID pvVar1;
+  char ****ppppcVar2;
+  int iVar3;
+  int *piVar4;
+  uint uVar5;
+  uint *puVar6;
+  char ****ppppcVar7;
+  char ****ppppcVar8;
+  int iVar9;
+  char ***local_20 [4];
+  int local_10;
+  uint local_c;
+  
+                    /* 0x111da0  715  FindMQ2Window */
+  local_20[0] = (char ***)0x0;
+  local_10 = 0;
+  local_c = 0xf;
+  puVar6 = param_1;
+  do {
+    uVar5 = *puVar6;
+    puVar6 = (uint *)((int)puVar6 + 1);
+  } while ((char)uVar5 != '\0');
+  FUN_10007090(local_20,param_1,(int)puVar6 - ((int)param_1 + 1));
+  ppppcVar2 = local_20;
+  if (0xf < local_c) {
+    ppppcVar2 = (char ****)local_20[0];
+  }
+  ppppcVar8 = (char ****)((int)ppppcVar2 + local_10);
+  ppppcVar7 = local_20;
+  if (0xf < local_c) {
+    ppppcVar7 = (char ****)local_20[0];
+  }
+  if (ppppcVar7 != ppppcVar8) {
+    iVar9 = (int)ppppcVar2 - (int)ppppcVar7;
+    do {
+      iVar3 = _tolower((int)*(char *)ppppcVar7);
+      *(char *)((int)ppppcVar7 + iVar9) = (char)iVar3;
+      ppppcVar7 = (char ****)((int)ppppcVar7 + 1);
+    } while (ppppcVar7 != ppppcVar8);
+  }
+  piVar4 = FUN_1002f140((uint *)local_20);
+  if (*piVar4 == 0) {
+    iVar9 = __strnicmp((char *)param_1,"bank",4);
+    if (iVar9 == 0) {
+      uVar5 = FUN_10088b58((byte *)(param_1 + 1));
+      if ((uVar5 != 0) && (uVar5 < 0x19)) {
+        iVar9 = *(int *)(*(int *)(*ppCharData + 0x1ea8) + -4 + uVar5 * 4);
+        goto LAB_10111ef5;
+      }
+    }
+    else {
+      iVar9 = __strnicmp((char *)param_1,"pack",4);
+      if (iVar9 == 0) {
+        uVar5 = FUN_10088b58((byte *)(param_1 + 1));
+        if ((uVar5 != 0) && (uVar5 < 0xb)) {
+          iVar9 = *(int *)(*(int *)(*(int *)(*(int *)(*ppCharData + 0x31f0) + 4) + 0x20) + 0x58 +
+                          uVar5 * 4);
+LAB_10111ef5:
+          if (iVar9 != 0) {
+            iVar3 = FindContainerForContents(iVar9);
+            goto LAB_10111f6d;
+          }
+        }
+      }
+      else {
+        iVar9 = FUN_10081b25((byte *)param_1,(byte *)"enviro");
+        if (iVar9 == 0) {
+          iVar9 = *(int *)(*ppContainerMgr + 0x8c);
+          goto LAB_10111ef5;
+        }
+      }
+    }
+  }
+  else {
+    iVar9 = *piVar4 * 4 + -4;
+    pvVar1 = *(LPVOID *)(iVar9 + DAT_10193bc4);
+    if (pvVar1 != (LPVOID)0x0) {
+      iVar3 = *(int *)((int)pvVar1 + 0x80);
+      if (iVar3 != 0) goto LAB_10111f6d;
+      if (*(int **)((int)pvVar1 + 0x84) != (int *)0x0) {
+        iVar3 = **(int **)((int)pvVar1 + 0x84);
+        goto LAB_10111f6d;
+      }
+      piVar4 = FUN_1002f140((uint *)local_20);
+      *piVar4 = 0;
+      FUN_1003d4c0(pvVar1);
+      *(undefined4 *)(iVar9 + DAT_10193bc4) = 0;
+    }
+    piVar4 = FUN_1002f140((uint *)local_20);
+    *piVar4 = 0;
+  }
+  iVar3 = 0;
+LAB_10111f6d:
+  if (0xf < local_c) {
+    ppppcVar2 = (char ****)local_20[0];
+    if ((0xfff < local_c + 1) &&
+       (ppppcVar2 = (char ****)local_20[0][-1],
+       (char *)0x1f < (char *)((int)local_20[0] + (-4 - (int)ppppcVar2)))) {
+                    /* WARNING: Subroutine does not return */
+      FUN_1008431e();
+    }
+    FUN_1003d4c0(ppppcVar2);
+  }
+  return iVar3;
+}
+
+
+
+============================================================
+Function: InitializeMQ2Windows @ 10111fb0
+Signature: undefined __stdcall InitializeMQ2Windows(void)
+Callers:
+  100c26b0 | FUN_100c26b0
+  100c2d00 | FUN_100c2d00
+Callees:
+  10005510 | FUN_10005510
+  10005850 | FUN_10005850
+  100067d0 | FUN_100067d0
+  100067f0 | FUN_100067f0
+  10006810 | FUN_10006810
+  10006860 | FUN_10006860
+  100068a0 | FUN_100068a0
+  10007090 | FUN_10007090
+  10007a60 | FUN_10007a60
+  1000b790 | FUN_1000b790
+  10012210 | FUN_10012210
+  10016ef0 | FUN_10016ef0
+  10017cb0 | FUN_10017cb0
+  1002f030 | FUN_1002f030
+  1002f140 | FUN_1002f140
+  1003d106 | FUN_1003d106
+  1003d4c0 | FUN_1003d4c0
+  100589d0 | _memset
+  1008431e | FUN_1008431e
+  100c0920 | __alloca_probe
+  100c22f0 | EQClasses::CXWnd::GetXMLData
+  100c77b0 | AddCommand
+  100ed4e0 | AddDetourf
+  1010f420 | DebugSpew
+  1010f740 | GetCXStr
+Decompile:
+
+/* WARNING: Function: __alloca_probe replaced with injection: alloca_probe */
+
+void InitializeMQ2Windows(void)
+
+{
+  char cVar1;
+  CXWnd *this;
+  uint uVar2;
+  uint uVar3;
+  int *piVar4;
+  CXMLData *pCVar5;
+  undefined4 *puVar6;
+  undefined4 *puVar7;
+  undefined4 *puVar8;
+  uint *puVar9;
+  byte *pbVar10;
+  byte *extraout_ECX;
+  char *pcVar11;
+  byte *extraout_ECX_00;
+  byte *extraout_ECX_01;
+  byte *extraout_ECX_02;
+  byte *extraout_ECX_03;
+  byte *extraout_ECX_04;
+  byte *extraout_ECX_05;
+  byte *extraout_ECX_06;
+  byte *extraout_ECX_07;
+  byte *extraout_ECX_08;
+  byte *extraout_ECX_09;
+  byte *extraout_ECX_10;
+  byte *extraout_ECX_11;
+  byte *extraout_ECX_12;
+  byte *extraout_ECX_13;
+  byte *extraout_ECX_14;
+  byte ******ppppppbVar12;
+  byte *extraout_ECX_15;
+  byte *extraout_ECX_16;
+  byte *extraout_ECX_17;
+  byte *extraout_ECX_18;
+  uint *puVar13;
+  int iVar14;
+  int iVar15;
+  bool bVar16;
+  byte *****local_1060;
+  int iStack_105c;
+  int iStack_1058;
+  int iStack_1054;
+  uint local_1050;
+  uint uStack_104c;
+  undefined4 *local_1034;
+  int *local_1030;
+  int local_102c;
+  int *local_1028;
+  int local_1024;
+  undefined4 local_1020;
+  int local_101c;
+  undefined4 local_1018;
+  undefined1 local_1014 [4];
+  undefined4 local_1010;
+  uint local_810 [511];
+  undefined4 uStack_14;
+  
+                    /* 0x111fb0  787  InitializeMQ2Windows */
+  uStack_14 = 0x10111fc0;
+  DebugSpew(0x10146cb4);
+  iVar14 = 0;
+  do {
+    puVar13 = (uint *)(&szItemSlot)[iVar14];
+    local_1060 = (byte *****)0x0;
+    local_1050 = 0;
+    uStack_104c = 0xf;
+    puVar9 = puVar13;
+    do {
+      uVar3 = *puVar9;
+      puVar9 = (uint *)((int)puVar9 + 1);
+    } while ((char)uVar3 != '\0');
+    FUN_10007090(&local_1060,puVar13,(int)puVar9 - ((int)puVar13 + 1));
+    FUN_10017cb0(&ItemSlotMap,(int *)&local_1030,(byte *)&local_1060);
+    iVar15 = ItemSlotMap;
+    if (*(char *)((int)local_1028 + 0xd) == '\0') {
+      pbVar10 = (byte *)(local_1028 + 4);
+      if (0xf < (uint)local_1028[9]) {
+        pbVar10 = (byte *)local_1028[4];
+      }
+      local_1034 = (undefined4 *)local_1028[8];
+      ppppppbVar12 = &local_1060;
+      if (0xf < uStack_104c) {
+        ppppppbVar12 = (byte ******)local_1060;
+      }
+      uVar3 = local_1050;
+      if (local_1034 < local_1050) {
+        uVar3 = (uint)local_1034;
+      }
+      while (uVar2 = uVar3 - 4, 3 < uVar3) {
+        if (*ppppppbVar12 != *(byte ******)pbVar10) goto LAB_10112076;
+        ppppppbVar12 = ppppppbVar12 + 1;
+        pbVar10 = pbVar10 + 4;
+        uVar3 = uVar2;
+      }
+      if (uVar2 == 0xfffffffc) {
+LAB_101120aa:
+        uVar3 = 0;
+      }
+      else {
+LAB_10112076:
+        bVar16 = *(byte *)ppppppbVar12 < *pbVar10;
+        if ((*(byte *)ppppppbVar12 == *pbVar10) &&
+           ((uVar2 == 0xfffffffd ||
+            ((bVar16 = *(byte *)((int)ppppppbVar12 + 1) < pbVar10[1],
+             *(byte *)((int)ppppppbVar12 + 1) == pbVar10[1] &&
+             ((uVar2 == 0xfffffffe ||
+              ((bVar16 = *(byte *)((int)ppppppbVar12 + 2) < pbVar10[2],
+               *(byte *)((int)ppppppbVar12 + 2) == pbVar10[2] &&
+               ((uVar2 == 0xffffffff ||
+                (bVar16 = *(byte *)((int)ppppppbVar12 + 3) < pbVar10[3],
+                *(byte *)((int)ppppppbVar12 + 3) == pbVar10[3])))))))))))) goto LAB_101120aa;
+        uVar3 = -(uint)bVar16 | 1;
+      }
+      piVar4 = local_1028;
+      if (uVar3 == 0) {
+        if (local_1050 < local_1034) goto LAB_101120c5;
+      }
+      else if ((int)uVar3 < 0) goto LAB_101120c5;
+    }
+    else {
+LAB_101120c5:
+      if (DAT_101935b0 == 0x5d1745d) goto LAB_10112e65;
+      piVar4 = (int *)FUN_1003d106(0x2c);
+      piVar4[4] = 0;
+      piVar4[8] = 0;
+      piVar4[9] = 0;
+      piVar4[4] = (int)local_1060;
+      piVar4[5] = iStack_105c;
+      piVar4[6] = iStack_1058;
+      piVar4[7] = iStack_1054;
+      piVar4[8] = local_1050;
+      piVar4[9] = uStack_104c;
+      local_1050 = 0;
+      uStack_104c = 0xf;
+      local_1060 = (byte *****)((uint)local_1060 & 0xffffff00);
+      piVar4[10] = 0;
+      *piVar4 = iVar15;
+      piVar4[1] = iVar15;
+      piVar4[2] = iVar15;
+      *(undefined2 *)(piVar4 + 3) = 0;
+      piVar4 = FUN_10016ef0(&ItemSlotMap,local_1030,local_102c,piVar4);
+    }
+    piVar4[10] = iVar14;
+    if (0xf < uStack_104c) {
+      ppppppbVar12 = (byte ******)local_1060;
+      if ((0xfff < uStack_104c + 1) &&
+         (ppppppbVar12 = (byte ******)local_1060[-1],
+         (byte *)0x1f < (byte *)((int)local_1060 + (-4 - (int)ppppppbVar12)))) goto LAB_10112e6a;
+      FUN_1003d4c0(ppppppbVar12);
+    }
+    iVar14 = iVar14 + 1;
+  } while (iVar14 < 0x21);
+  _memset(&local_1010,0,0x800);
+  pbVar10 = extraout_ECX;
+  iVar14 = 2000;
+  do {
+    FUN_10005510(pbVar10,&local_1010,0x1013f28c);
+    pcVar11 = (char *)&local_1010;
+    local_1060 = (byte *****)0x0;
+    local_1050 = 0;
+    uStack_104c = 0xf;
+    do {
+      cVar1 = *pcVar11;
+      pcVar11 = pcVar11 + 1;
+    } while (cVar1 != '\0');
+    FUN_10007090(&local_1060,&local_1010,(int)pcVar11 - ((int)&local_1010 + 1));
+    FUN_10017cb0(&ItemSlotMap,(int *)&local_1030,(byte *)&local_1060);
+    iVar15 = ItemSlotMap;
+    if (*(char *)((int)local_1028 + 0xd) == '\0') {
+      pbVar10 = (byte *)(local_1028 + 4);
+      if (0xf < (uint)local_1028[9]) {
+        pbVar10 = (byte *)local_1028[4];
+      }
+      local_1034 = (undefined4 *)local_1028[8];
+      ppppppbVar12 = &local_1060;
+      if (0xf < uStack_104c) {
+        ppppppbVar12 = (byte ******)local_1060;
+      }
+      uVar3 = local_1050;
+      if (local_1034 < local_1050) {
+        uVar3 = (uint)local_1034;
+      }
+      while (uVar2 = uVar3 - 4, 3 < uVar3) {
+        if (*ppppppbVar12 != *(byte ******)pbVar10) goto LAB_10112267;
+        ppppppbVar12 = ppppppbVar12 + 1;
+        pbVar10 = pbVar10 + 4;
+        uVar3 = uVar2;
+      }
+      if (uVar2 == 0xfffffffc) {
+LAB_1011229b:
+        uVar3 = 0;
+      }
+      else {
+LAB_10112267:
+        bVar16 = *(byte *)ppppppbVar12 < *pbVar10;
+        if ((*(byte *)ppppppbVar12 == *pbVar10) &&
+           ((uVar2 == 0xfffffffd ||
+            ((bVar16 = *(byte *)((int)ppppppbVar12 + 1) < pbVar10[1],
+             *(byte *)((int)ppppppbVar12 + 1) == pbVar10[1] &&
+             ((uVar2 == 0xfffffffe ||
+              ((bVar16 = *(byte *)((int)ppppppbVar12 + 2) < pbVar10[2],
+               *(byte *)((int)ppppppbVar12 + 2) == pbVar10[2] &&
+               ((uVar2 == 0xffffffff ||
+                (bVar16 = *(byte *)((int)ppppppbVar12 + 3) < pbVar10[3],
+                *(byte *)((int)ppppppbVar12 + 3) == pbVar10[3])))))))))))) goto LAB_1011229b;
+        uVar3 = -(uint)bVar16 | 1;
+      }
+      piVar4 = local_1028;
+      if (uVar3 == 0) {
+        if (local_1050 < local_1034) goto LAB_101122b6;
+      }
+      else if ((int)uVar3 < 0) goto LAB_101122b6;
+    }
+    else {
+LAB_101122b6:
+      if (DAT_101935b0 == 0x5d1745d) goto LAB_10112e65;
+      piVar4 = (int *)FUN_1003d106(0x2c);
+      piVar4[4] = 0;
+      piVar4[8] = 0;
+      piVar4[9] = 0;
+      piVar4[4] = (int)local_1060;
+      piVar4[5] = iStack_105c;
+      piVar4[6] = iStack_1058;
+      piVar4[7] = iStack_1054;
+      piVar4[8] = local_1050;
+      piVar4[9] = uStack_104c;
+      local_1050 = 0;
+      uStack_104c = 0xf;
+      local_1060 = (byte *****)((uint)local_1060 & 0xffffff00);
+      piVar4[10] = 0;
+      *piVar4 = iVar15;
+      piVar4[1] = iVar15;
+      piVar4[2] = iVar15;
+      *(undefined2 *)(piVar4 + 3) = 0;
+      piVar4 = FUN_10016ef0(&ItemSlotMap,local_1030,local_102c,piVar4);
+      pbVar10 = extraout_ECX_00;
+    }
+    piVar4[10] = iVar14;
+    if (0xf < uStack_104c) {
+      ppppppbVar12 = (byte ******)local_1060;
+      if ((0xfff < uStack_104c + 1) &&
+         (ppppppbVar12 = (byte ******)local_1060[-1],
+         (byte *)0x1f < (byte *)((int)local_1060 + (-4 - (int)ppppppbVar12)))) goto LAB_10112e6a;
+      FUN_1003d4c0(ppppppbVar12);
+      pbVar10 = extraout_ECX_01;
+    }
+    iVar15 = iVar14 + -1999;
+    iVar14 = iVar14 + 1;
+  } while (iVar15 < 0x18);
+  iVar14 = 0x9c4;
+  do {
+    FUN_10005510(pbVar10,&local_1010,0x1013f294);
+    pcVar11 = (char *)&local_1010;
+    local_1060 = (byte *****)0x0;
+    local_1050 = 0;
+    uStack_104c = 0xf;
+    do {
+      cVar1 = *pcVar11;
+      pcVar11 = pcVar11 + 1;
+    } while (cVar1 != '\0');
+    FUN_10007090(&local_1060,&local_1010,(int)pcVar11 - ((int)&local_1010 + 1));
+    FUN_10017cb0(&ItemSlotMap,(int *)&local_1030,(byte *)&local_1060);
+    iVar15 = ItemSlotMap;
+    if (*(char *)((int)local_1028 + 0xd) == '\0') {
+      pbVar10 = (byte *)(local_1028 + 4);
+      if (0xf < (uint)local_1028[9]) {
+        pbVar10 = (byte *)local_1028[4];
+      }
+      local_1034 = (undefined4 *)local_1028[8];
+      ppppppbVar12 = &local_1060;
+      if (0xf < uStack_104c) {
+        ppppppbVar12 = (byte ******)local_1060;
+      }
+      uVar3 = local_1050;
+      if (local_1034 < local_1050) {
+        uVar3 = (uint)local_1034;
+      }
+      while (uVar2 = uVar3 - 4, 3 < uVar3) {
+        if (*ppppppbVar12 != *(byte ******)pbVar10) goto LAB_10112447;
+        ppppppbVar12 = ppppppbVar12 + 1;
+        pbVar10 = pbVar10 + 4;
+        uVar3 = uVar2;
+      }
+      if (uVar2 == 0xfffffffc) {
+LAB_1011247b:
+        uVar3 = 0;
+      }
+      else {
+LAB_10112447:
+        bVar16 = *(byte *)ppppppbVar12 < *pbVar10;
+        if ((*(byte *)ppppppbVar12 == *pbVar10) &&
+           ((uVar2 == 0xfffffffd ||
+            ((bVar16 = *(byte *)((int)ppppppbVar12 + 1) < pbVar10[1],
+             *(byte *)((int)ppppppbVar12 + 1) == pbVar10[1] &&
+             ((uVar2 == 0xfffffffe ||
+              ((bVar16 = *(byte *)((int)ppppppbVar12 + 2) < pbVar10[2],
+               *(byte *)((int)ppppppbVar12 + 2) == pbVar10[2] &&
+               ((uVar2 == 0xffffffff ||
+                (bVar16 = *(byte *)((int)ppppppbVar12 + 3) < pbVar10[3],
+                *(byte *)((int)ppppppbVar12 + 3) == pbVar10[3])))))))))))) goto LAB_1011247b;
+        uVar3 = -(uint)bVar16 | 1;
+      }
+      piVar4 = local_1028;
+      if (uVar3 == 0) {
+        if (local_1050 < local_1034) goto LAB_10112496;
+      }
+      else if ((int)uVar3 < 0) goto LAB_10112496;
+    }
+    else {
+LAB_10112496:
+      if (DAT_101935b0 == 0x5d1745d) goto LAB_10112e65;
+      piVar4 = (int *)FUN_1003d106(0x2c);
+      piVar4[4] = 0;
+      piVar4[8] = 0;
+      piVar4[9] = 0;
+      piVar4[4] = (int)local_1060;
+      piVar4[5] = iStack_105c;
+      piVar4[6] = iStack_1058;
+      piVar4[7] = iStack_1054;
+      piVar4[8] = local_1050;
+      piVar4[9] = uStack_104c;
+      local_1050 = 0;
+      uStack_104c = 0xf;
+      local_1060 = (byte *****)((uint)local_1060 & 0xffffff00);
+      piVar4[10] = 0;
+      *piVar4 = iVar15;
+      piVar4[1] = iVar15;
+      piVar4[2] = iVar15;
+      *(undefined2 *)(piVar4 + 3) = 0;
+      piVar4 = FUN_10016ef0(&ItemSlotMap,local_1030,local_102c,piVar4);
+      pbVar10 = extraout_ECX_02;
+    }
+    piVar4[10] = iVar14;
+    if (0xf < uStack_104c) {
+      ppppppbVar12 = (byte ******)local_1060;
+      if ((0xfff < uStack_104c + 1) &&
+         (ppppppbVar12 = (byte ******)local_1060[-1],
+         (byte *)0x1f < (byte *)((int)local_1060 + (-4 - (int)ppppppbVar12)))) goto LAB_10112e6a;
+      FUN_1003d4c0(ppppppbVar12);
+      pbVar10 = extraout_ECX_03;
+    }
+    iVar15 = iVar14 + -0x9c3;
+    iVar14 = iVar14 + 1;
+  } while (iVar15 < 2);
+  iVar14 = 3000;
+  do {
+    FUN_10005510(pbVar10,&local_1010,0x1013f2ac);
+    pcVar11 = (char *)&local_1010;
+    local_1060 = (byte *****)0x0;
+    local_1050 = 0;
+    uStack_104c = 0xf;
+    do {
+      cVar1 = *pcVar11;
+      pcVar11 = pcVar11 + 1;
+    } while (cVar1 != '\0');
+    FUN_10007090(&local_1060,&local_1010,(int)pcVar11 - ((int)&local_1010 + 1));
+    FUN_10017cb0(&ItemSlotMap,(int *)&local_1030,(byte *)&local_1060);
+    piVar4 = local_1028;
+    if ((*(char *)((int)local_1028 + 0xd) != '\0') ||
+       (uVar3 = FUN_1000b790((byte *)&local_1060,(byte *)(local_1028 + 4)),
+       pbVar10 = extraout_ECX_04, (char)uVar3 != '\0')) {
+      iVar15 = ItemSlotMap;
+      if (DAT_101935b0 == 0x5d1745d) goto LAB_10112e65;
+      piVar4 = (int *)FUN_1003d106(0x2c);
+      piVar4[4] = 0;
+      piVar4[8] = 0;
+      piVar4[9] = 0;
+      piVar4[4] = (int)local_1060;
+      piVar4[5] = iStack_105c;
+      piVar4[6] = iStack_1058;
+      piVar4[7] = iStack_1054;
+      piVar4[8] = local_1050;
+      piVar4[9] = uStack_104c;
+      local_1050 = 0;
+      uStack_104c = 0xf;
+      local_1060 = (byte *****)((uint)local_1060 & 0xffffff00);
+      piVar4[10] = 0;
+      *piVar4 = iVar15;
+      piVar4[1] = iVar15;
+      piVar4[2] = iVar15;
+      *(undefined2 *)(piVar4 + 3) = 0;
+      piVar4 = FUN_10016ef0(&ItemSlotMap,local_1030,local_102c,piVar4);
+      pbVar10 = extraout_ECX_05;
+    }
+    piVar4[10] = iVar14;
+    if (0xf < uStack_104c) {
+      ppppppbVar12 = (byte ******)local_1060;
+      if ((0xfff < uStack_104c + 1) &&
+         (ppppppbVar12 = (byte ******)local_1060[-1],
+         (byte *)0x1f < (byte *)((int)local_1060 + (-4 - (int)ppppppbVar12)))) goto LAB_10112e6a;
+      FUN_1003d4c0(ppppppbVar12);
+      pbVar10 = extraout_ECX_06;
+    }
+    iVar15 = iVar14 + -2999;
+    iVar14 = iVar14 + 1;
+  } while (iVar15 < 0x10);
+  iVar14 = 4000;
+  do {
+    FUN_10005510(pbVar10,&local_1010,0x10146cd0);
+    pcVar11 = (char *)&local_1010;
+    local_1060 = (byte *****)0x0;
+    local_1050 = 0;
+    uStack_104c = 0xf;
+    do {
+      cVar1 = *pcVar11;
+      pcVar11 = pcVar11 + 1;
+    } while (cVar1 != '\0');
+    FUN_10007090(&local_1060,&local_1010,(int)pcVar11 - ((int)&local_1010 + 1));
+    FUN_10017cb0(&ItemSlotMap,(int *)&local_1030,(byte *)&local_1060);
+    piVar4 = local_1028;
+    if ((*(char *)((int)local_1028 + 0xd) != '\0') ||
+       (uVar3 = FUN_1000b790((byte *)&local_1060,(byte *)(local_1028 + 4)),
+       pbVar10 = extraout_ECX_07, (char)uVar3 != '\0')) {
+      iVar15 = ItemSlotMap;
+      if (DAT_101935b0 == 0x5d1745d) goto LAB_10112e65;
+      piVar4 = (int *)FUN_1003d106(0x2c);
+      piVar4[4] = 0;
+      piVar4[8] = 0;
+      piVar4[9] = 0;
+      piVar4[4] = (int)local_1060;
+      piVar4[5] = iStack_105c;
+      piVar4[6] = iStack_1058;
+      piVar4[7] = iStack_1054;
+      piVar4[8] = local_1050;
+      piVar4[9] = uStack_104c;
+      local_1050 = 0;
+      uStack_104c = 0xf;
+      local_1060 = (byte *****)((uint)local_1060 & 0xffffff00);
+      piVar4[10] = 0;
+      *piVar4 = iVar15;
+      piVar4[1] = iVar15;
+      piVar4[2] = iVar15;
+      *(undefined2 *)(piVar4 + 3) = 0;
+      piVar4 = FUN_10016ef0(&ItemSlotMap,local_1030,local_102c,piVar4);
+      pbVar10 = extraout_ECX_08;
+    }
+    piVar4[10] = iVar14;
+    if (0xf < uStack_104c) {
+      ppppppbVar12 = (byte ******)local_1060;
+      if ((0xfff < uStack_104c + 1) &&
+         (ppppppbVar12 = (byte ******)local_1060[-1],
+         (byte *)0x1f < (byte *)((int)local_1060 + (-4 - (int)ppppppbVar12)))) goto LAB_10112e6a;
+      FUN_1003d4c0(ppppppbVar12);
+      pbVar10 = extraout_ECX_09;
+    }
+    iVar15 = iVar14 + -3999;
+    iVar14 = iVar14 + 1;
+  } while (iVar15 < 10);
+  local_1034 = (undefined4 *)0xfa0;
+  do {
+    puVar6 = local_1034;
+    FUN_10005510(pbVar10,&local_1010,0x1013f2b4);
+    pcVar11 = (char *)&local_1010;
+    local_1060 = (byte *****)0x0;
+    local_1050 = 0;
+    uStack_104c = 0xf;
+    do {
+      cVar1 = *pcVar11;
+      pcVar11 = pcVar11 + 1;
+    } while (cVar1 != '\0');
+    FUN_10007090(&local_1060,&local_1010,(int)pcVar11 - ((int)&local_1010 + 1));
+    FUN_10017cb0(&ItemSlotMap,(int *)&local_1030,(byte *)&local_1060);
+    piVar4 = local_1028;
+    if ((*(char *)((int)local_1028 + 0xd) != '\0') ||
+       (uVar3 = FUN_1000b790((byte *)&local_1060,(byte *)(local_1028 + 4)),
+       pbVar10 = extraout_ECX_10, (char)uVar3 != '\0')) {
+      iVar14 = ItemSlotMap;
+      if (DAT_101935b0 == 0x5d1745d) goto LAB_10112e65;
+      piVar4 = (int *)FUN_1003d106(0x2c);
+      FUN_10006860(piVar4 + 4,&local_1060);
+      piVar4[10] = 0;
+      *piVar4 = iVar14;
+      piVar4[1] = iVar14;
+      piVar4[2] = iVar14;
+      *(undefined2 *)(piVar4 + 3) = 0;
+      piVar4 = FUN_10016ef0(&ItemSlotMap,local_1030,local_102c,piVar4);
+      pbVar10 = extraout_ECX_11;
+      puVar6 = local_1034;
+    }
+    piVar4[10] = (int)puVar6;
+    if (0xf < uStack_104c) {
+      ppppppbVar12 = (byte ******)local_1060;
+      if ((0xfff < uStack_104c + 1) &&
+         (ppppppbVar12 = (byte ******)local_1060[-1],
+         (byte *)0x1f < (byte *)((int)local_1060 + (-4 - (int)ppppppbVar12)))) goto LAB_10112e6a;
+      FUN_1003d4c0(ppppppbVar12);
+      pbVar10 = extraout_ECX_12;
+    }
+    local_1034 = (undefined4 *)((int)puVar6 + 1);
+  } while ((int)((int)puVar6 - 3999U) < 10);
+  local_1034 = (undefined4 *)0x1388;
+  do {
+    puVar6 = local_1034;
+    FUN_10005510(pbVar10,&local_1010,0x1013f2a4);
+    pcVar11 = (char *)&local_1010;
+    local_1060 = (byte *****)0x0;
+    local_1050 = 0;
+    uStack_104c = 0xf;
+    do {
+      cVar1 = *pcVar11;
+      pcVar11 = pcVar11 + 1;
+    } while (cVar1 != '\0');
+    FUN_10007090(&local_1060,&local_1010,(int)pcVar11 - ((int)&local_1010 + 1));
+    FUN_10017cb0(&ItemSlotMap,(int *)&local_1030,(byte *)&local_1060);
+    piVar4 = local_1028;
+    if ((*(char *)((int)local_1028 + 0xd) != '\0') ||
+       (uVar3 = FUN_1000b790((byte *)&local_1060,(byte *)(local_1028 + 4)),
+       pbVar10 = extraout_ECX_13, (char)uVar3 != '\0')) {
+      iVar14 = ItemSlotMap;
+      if (DAT_101935b0 == 0x5d1745d) goto LAB_10112e65;
+      piVar4 = (int *)FUN_1003d106(0x2c);
+      FUN_10006860(piVar4 + 4,&local_1060);
+      piVar4[10] = 0;
+      *piVar4 = iVar14;
+      piVar4[1] = iVar14;
+      piVar4[2] = iVar14;
+      *(undefined2 *)(piVar4 + 3) = 0;
+      piVar4 = FUN_10016ef0(&ItemSlotMap,local_1030,local_102c,piVar4);
+      pbVar10 = extraout_ECX_14;
+      puVar6 = local_1034;
+    }
+    piVar4[10] = (int)puVar6;
+    if (0xf < uStack_104c) {
+      ppppppbVar12 = (byte ******)local_1060;
+      if ((0xfff < uStack_104c + 1) &&
+         (ppppppbVar12 = (byte ******)local_1060[-1],
+         (byte *)0x1f < (byte *)((int)local_1060 + (-4 - (int)ppppppbVar12)))) {
+LAB_10112e6a:
+                    /* WARNING: Subroutine does not return */
+        FUN_1008431e();
+      }
+      FUN_1003d4c0(ppppppbVar12);
+      pbVar10 = extraout_ECX_15;
+    }
+    local_1034 = (undefined4 *)((int)puVar6 + 1);
+  } while ((int)((int)puVar6 - 4999U) < 0x1f);
+  local_1034 = (undefined4 *)0x1770;
+  do {
+    puVar6 = local_1034;
+    FUN_10005510(pbVar10,&local_1010,0x1013f2c0);
+    pcVar11 = (char *)&local_1010;
+    local_1060 = (byte *****)0x0;
+    local_1050 = 0;
+    uStack_104c = 0xf;
+    do {
+      cVar1 = *pcVar11;
+      pcVar11 = pcVar11 + 1;
+    } while (cVar1 != '\0');
+    FUN_10007090(&local_1060,&local_1010,(int)pcVar11 - ((int)&local_1010 + 1));
+    FUN_10017cb0(&ItemSlotMap,(int *)&local_1030,(byte *)&local_1060);
+    piVar4 = local_1028;
+    if ((*(char *)((int)local_1028 + 0xd) != '\0') ||
+       (uVar3 = FUN_1000b790((byte *)&local_1060,(byte *)(local_1028 + 4)), (char)uVar3 != '\0')) {
+      iVar14 = ItemSlotMap;
+      if (DAT_101935b0 == 0x5d1745d) {
+LAB_10112e65:
+                    /* WARNING: Subroutine does not return */
+        FUN_10005850();
+      }
+      piVar4 = (int *)FUN_1003d106(0x2c);
+      FUN_10006860(piVar4 + 4,&local_1060);
+      piVar4[10] = 0;
+      *piVar4 = iVar14;
+      piVar4[1] = iVar14;
+      piVar4[2] = iVar14;
+      *(undefined2 *)(piVar4 + 3) = 0;
+      piVar4 = FUN_10016ef0(&ItemSlotMap,local_1030,local_102c,piVar4);
+      puVar6 = local_1034;
+    }
+    piVar4[10] = (int)puVar6;
+    FUN_10006810((int *)&local_1060);
+    local_1034 = (undefined4 *)((int)puVar6 + 1);
+    pbVar10 = extraout_ECX_16;
+    if (0x4f < (int)((int)puVar6 - 5999U)) {
+      iVar14 = 7000;
+      iVar15 = 0x50;
+      do {
+        FUN_10005510(pbVar10,&local_1010,0x1013f2cc);
+        FUN_100068a0(&local_1060,&local_1010);
+        piVar4 = FUN_10012210(&ItemSlotMap,(byte *)&local_1060);
+        *piVar4 = iVar14;
+        FUN_10006810((int *)&local_1060);
+        iVar14 = iVar14 + 1;
+        iVar15 = iVar15 + -1;
+        pbVar10 = extraout_ECX_17;
+      } while (iVar15 != 0);
+      iVar14 = 8000;
+      iVar15 = 0x1f;
+      do {
+        FUN_10005510(pbVar10,&local_1010,0x1013f2d8);
+        FUN_100068a0(&local_1060,&local_1010);
+        piVar4 = FUN_10012210(&ItemSlotMap,(byte *)&local_1060);
+        *piVar4 = iVar14;
+        FUN_10006810((int *)&local_1060);
+        iVar14 = iVar14 + 1;
+        iVar15 = iVar15 + -1;
+        pbVar10 = extraout_ECX_18;
+      } while (iVar15 != 0);
+      AddDetourf(CXMLSOMDocumentBase__XMLRead);
+      AddDetourf(CSidlScreenWnd__Init1);
+      AddDetourf(CXWndManager__RemoveWnd);
+      AddCommand("/windows",FUN_10110690,0,1,0);
+      AddCommand("/notify",FUN_101100a0,0,1,0);
+      AddCommand("/itemnotify",FUN_1010f870,0,1,0);
+      AddCommand("/itemslots",&LAB_1010f7c0,0,1,0);
+      iVar14 = *ppWndMgr;
+      if (iVar14 != 0) {
+        _memset(local_810,0,0x800);
+        local_1034 = *(undefined4 **)(iVar14 + 8);
+        this = (CXWnd *)*local_1034;
+        iVar14 = *(int *)(iVar14 + 4);
+        while ((this != (CXWnd *)0x0 && (local_1024 = iVar14 + -1, iVar14 != 0))) {
+          pCVar5 = EQClasses::CXWnd::GetXMLData(this);
+          if ((pCVar5 != (CXMLData *)0x0) && (*(int *)(pCVar5 + 8) == 0x31)) {
+            GetCXStr(*(int *)(pCVar5 + 0x18),(char *)local_810,0x800);
+            FUN_100068a0(&local_1060,local_810);
+            puVar6 = (undefined4 *)FUN_100067f0(&local_1060,&local_1020);
+            puVar7 = (undefined4 *)FUN_100067d0(&local_1060,&local_101c);
+            puVar8 = (undefined4 *)FUN_100067f0(&local_1060,&local_1018);
+            FUN_10007a60(local_1014,(char *)*puVar8,(char *)*puVar7,(undefined1 *)*puVar6);
+            piVar4 = FUN_1002f140((uint *)&local_1060);
+            if (*piVar4 == 0) {
+              iVar14 = FUN_1003d106(0x88);
+              puVar13 = local_810;
+              do {
+                uVar3 = *puVar13;
+                *(char *)((int)puVar13 + (iVar14 - (int)local_810)) = (char)uVar3;
+                puVar13 = (uint *)((int)puVar13 + 1);
+              } while ((char)uVar3 != '\0');
+              *(CXWnd **)(iVar14 + 0x80) = this;
+              *(undefined4 *)(iVar14 + 0x84) = 0;
+              uVar3 = FUN_1002f030();
+              *(int *)(DAT_10193bc4 + uVar3 * 4) = iVar14;
+              piVar4 = FUN_1002f140((uint *)&local_1060);
+              *piVar4 = uVar3 + 1;
+            }
+            else {
+              iVar14 = *(int *)(DAT_10193bc4 + -4 + *piVar4 * 4);
+              *(CXWnd **)(iVar14 + 0x80) = this;
+              *(undefined4 *)(iVar14 + 0x84) = 0;
+            }
+            FUN_10006810((int *)&local_1060);
+          }
+          local_1034 = local_1034 + 1;
+          this = (CXWnd *)*local_1034;
+          iVar14 = local_1024;
+        }
+      }
+      return;
+    }
+  } while( true );
+}
+
+
+
+============================================================
+Function: ShutdownMQ2Windows @ 101119d0
+Signature: undefined __stdcall ShutdownMQ2Windows(void)
+Callers:
+  <none>
+Callees:
+  1003d4c0 | FUN_1003d4c0
+  100c7730 | RemoveCommand
+  100ed400 | RemoveDetour
+  1010f420 | DebugSpew
+Decompile:
+
+void ShutdownMQ2Windows(void)
+
+{
+  LPVOID pvVar1;
+  uint uVar2;
+  uint uVar3;
+  
+                    /* 0x1119d0  893  ShutdownMQ2Windows */
+  DebugSpew(0x10146d04);
+  RemoveCommand("/windows");
+  RemoveCommand("/notify");
+  RemoveCommand("/itemnotify");
+  RemoveCommand("/itemslots");
+  RemoveDetour(CXMLSOMDocumentBase__XMLRead);
+  RemoveDetour(CSidlScreenWnd__Init1);
+  RemoveDetour(CXWndManager__RemoveWnd);
+  uVar3 = 0;
+  uVar2 = DAT_10193bc0;
+  if (DAT_10193bc0 != 0) {
+    do {
+      pvVar1 = *(LPVOID *)(DAT_10193bc4 + uVar3 * 4);
+      if (pvVar1 != (LPVOID)0x0) {
+        FUN_1003d4c0(pvVar1);
+        *(undefined4 *)(DAT_10193bc4 + uVar3 * 4) = 0;
+        uVar2 = DAT_10193bc0;
+      }
+      uVar3 = uVar3 + 1;
+    } while (uVar3 < uVar2);
+  }
+  return;
+}
+
+
+
+============================================================
+Function: ParseMQ2DataPortion @ 100d60f0
+Signature: undefined4 __cdecl ParseMQ2DataPortion(uint * param_1, int * param_2)
+Callers:
+  100d5f00 | ParseMacroData
+  100e78d0 | NewVardata
+Callees:
+  10007090 | FUN_10007090
+  10012210 | FUN_10012210
+  10019c10 | FUN_10019c10
+  10019cd0 | FUN_10019cd0
+  10019d00 | FUN_10019d00
+  10019e80 | FindMQ2Data
+  1001fd60 | FindMQ2DataVariable
+  1001fea0 | FUN_1001fea0
+  1003d4c0 | FUN_1003d4c0
+  100589d0 | _memset
+  1008431e | FUN_1008431e
+  100d6d50 | FindMQ2DataType
+  1010a330 | MQ2DataError
+Decompile:
+
+undefined4 __cdecl ParseMQ2DataPortion(uint *param_1,int *param_2)
+
+{
+  char *pcVar1;
+  byte bVar2;
+  char cVar3;
+  bool bVar4;
+  char cVar5;
+  int *piVar6;
+  int iVar7;
+  uint uVar8;
+  byte *pbVar9;
+  uint *puVar10;
+  byte *pbVar11;
+  uint *puVar12;
+  bool bVar13;
+  uint *local_82c;
+  int *local_824 [4];
+  int *local_814;
+  uint local_810;
+  uint local_808 [513];
+  
+                    /* 0xd60f0  849  ParseMQ2DataPortion */
+  *param_2 = 0;
+  param_2[1] = 0;
+  _memset(local_808,0,0x800);
+  cVar5 = (char)*param_1;
+  puVar12 = param_1;
+  local_82c = param_1;
+  while (cVar5 != '\0') {
+    if (cVar5 == '(') {
+      *(char *)param_1 = '\0';
+      piVar6 = (int *)*param_2;
+      if (puVar12 == param_1) goto LAB_100d65f7;
+      if (piVar6 == (int *)0x0) {
+        local_810 = 0xf;
+        puVar10 = puVar12;
+        do {
+          uVar8 = *puVar10;
+          puVar10 = (uint *)((int)puVar10 + 1);
+        } while ((char)uVar8 != '\0');
+        local_824[0] = piVar6;
+        local_814 = piVar6;
+        FUN_10007090(local_824,puVar12,(int)puVar10 - ((int)puVar12 + 1));
+        piVar6 = FUN_10012210(&DAT_10193298,(byte *)local_824);
+        iVar7 = *piVar6;
+        if (0xf < local_810) {
+          piVar6 = local_824[0];
+          if ((0xfff < local_810 + 1) &&
+             (piVar6 = (int *)local_824[0][-1],
+             0x1f < (uint)((int)local_824[0] + (-4 - (int)piVar6)))) goto LAB_100d66b3;
+          FUN_1003d4c0(piVar6);
+        }
+        local_814 = (int *)0x0;
+        local_810 = 0xf;
+        local_824[0] = (int *)((uint)local_824[0] & 0xffffff00);
+        if ((iVar7 == 0) || (iVar7 = *(int *)(DAT_101932a4 + -4 + iVar7 * 4), iVar7 == 0)) {
+          local_824[0] = (int *)0x0;
+          local_814 = (int *)0x0;
+          local_810 = 0xf;
+          puVar10 = puVar12;
+          do {
+            uVar8 = *puVar10;
+            puVar10 = (uint *)((int)puVar10 + 1);
+          } while ((char)uVar8 != '\0');
+          FUN_10007090(local_824,puVar12,(int)puVar10 - ((int)puVar12 + 1));
+          piVar6 = FUN_1001fea0((byte *)local_824);
+          pbVar9 = (byte *)*piVar6;
+          if (0xf < local_810) {
+            piVar6 = local_824[0];
+            if ((0xfff < local_810 + 1) &&
+               (piVar6 = (int *)local_824[0][-1],
+               0x1f < (uint)((int)local_824[0] + (-4 - (int)piVar6)))) {
+LAB_100d66b3:
+                    /* WARNING: Subroutine does not return */
+              FUN_1008431e();
+            }
+            FUN_1003d4c0(piVar6);
+          }
+          local_814 = (int *)0x0;
+          local_810 = 0xf;
+          local_824[0] = (int *)((uint)local_824[0] & 0xffffff00);
+          if (pbVar9 == (byte *)0x0) {
+            if (gMacroStack == 0) {
+              return 0;
+            }
+            for (pbVar9 = *(byte **)(gMacroStack + 0x808); pbVar11 = pbVar9, puVar12 = local_82c,
+                pbVar9 != (byte *)0x0; pbVar9 = *(byte **)(pbVar9 + 0x808)) {
+              do {
+                bVar2 = *pbVar11;
+                bVar13 = bVar2 < (byte)*puVar12;
+                if (bVar2 != (byte)*puVar12) {
+LAB_100d62e6:
+                  uVar8 = -(uint)bVar13 | 1;
+                  goto LAB_100d62eb;
+                }
+                if (bVar2 == 0) break;
+                bVar2 = pbVar11[1];
+                bVar13 = bVar2 < *(byte *)((int)puVar12 + 1);
+                if (bVar2 != *(byte *)((int)puVar12 + 1)) goto LAB_100d62e6;
+                pbVar11 = pbVar11 + 2;
+                puVar12 = (uint *)((int)puVar12 + 2);
+              } while (bVar2 != 0);
+              uVar8 = 0;
+LAB_100d62eb:
+              if (uVar8 == 0) goto LAB_100d634c;
+            }
+            pbVar11 = *(byte **)(gMacroStack + 0x80c);
+            pbVar9 = pbVar11;
+            if (pbVar11 == (byte *)0x0) {
+              return 0;
+            }
+LAB_100d6310:
+            do {
+              bVar2 = *pbVar11;
+              bVar13 = bVar2 < (byte)*puVar12;
+              if (bVar2 != (byte)*puVar12) {
+LAB_100d6330:
+                uVar8 = -(uint)bVar13 | 1;
+                goto LAB_100d6335;
+              }
+              if (bVar2 == 0) break;
+              bVar2 = pbVar11[1];
+              bVar13 = bVar2 < *(byte *)((int)puVar12 + 1);
+              if (bVar2 != *(byte *)((int)puVar12 + 1)) goto LAB_100d6330;
+              pbVar11 = pbVar11 + 2;
+              puVar12 = (uint *)((int)puVar12 + 2);
+            } while (bVar2 != 0);
+            uVar8 = 0;
+LAB_100d6335:
+            if (uVar8 != 0) {
+              pbVar11 = *(byte **)(pbVar9 + 0x808);
+              puVar12 = local_82c;
+              pbVar9 = pbVar11;
+              if (pbVar11 == (byte *)0x0) {
+                return 0;
+              }
+              goto LAB_100d6310;
+            }
+LAB_100d634c:
+            if (pbVar9 == (byte *)0x0) {
+              return 0;
+            }
+          }
+          if ((char)local_808[0] == '\0') {
+            iVar7 = *(int *)(pbVar9 + 0x804);
+            *param_2 = *(int *)(pbVar9 + 0x800);
+            param_2[1] = iVar7;
+          }
+          else if (*(int *)(pbVar9 + 0x800) == pArrayType) {
+            iVar7 = FUN_10019d00(*(void **)(pbVar9 + 0x804),local_808,param_2);
+            goto joined_r0x100d6382;
+          }
+        }
+        else {
+          iVar7 = (**(code **)(iVar7 + 0x40))(local_808,param_2);
+joined_r0x100d6382:
+          if (iVar7 == 0) {
+            return 0;
+          }
+        }
+      }
+      else {
+        cVar5 = (**(code **)(*piVar6 + 0x10))(param_2[1],puVar12,local_808,param_2);
+        if (cVar5 == '\0') goto LAB_100d667e;
+      }
+      if (*param_2 == 0) {
+        return 0;
+      }
+      *(char *)param_1 = '\0';
+      puVar10 = (uint *)((int)param_1 + 1);
+      cVar5 = *(char *)puVar10;
+      puVar12 = puVar10;
+      while (cVar5 != ')') {
+        if (cVar5 == '\0') {
+          return 0;
+        }
+        pcVar1 = (char *)((int)puVar12 + 1);
+        puVar12 = (uint *)((int)puVar12 + 1);
+        cVar5 = *pcVar1;
+      }
+      *(undefined1 *)puVar12 = 0;
+      iVar7 = FindMQ2DataType(puVar10);
+      if (iVar7 == 0) {
+        MQ2DataError();
+        return 0;
+      }
+      if (iVar7 == pTypeType) {
+        param_2[1] = *param_2;
+        iVar7 = pTypeType;
+      }
+      param_1 = (uint *)((int)puVar12 + 1);
+      *param_2 = iVar7;
+      if (*(char *)param_1 != '.') {
+        if (*(char *)param_1 == '\0') {
+          return 1;
+        }
+        MQ2DataError();
+        return 0;
+      }
+LAB_100d658b:
+      local_82c = (uint *)((int)param_1 + 1);
+      puVar12 = local_82c;
+    }
+    else {
+      if (cVar5 == '[') {
+        *(char *)param_1 = '\0';
+        puVar12 = local_808;
+        param_1 = (uint *)((int)param_1 + 1);
+        bVar4 = false;
+        bVar13 = true;
+LAB_100d644f:
+        cVar5 = (char)*param_1;
+        do {
+          if (cVar5 == '\0') {
+            return 0;
+          }
+          if ((bVar13) && (bVar13 = false, cVar5 == '\"')) {
+            bVar4 = true;
+            param_1 = (uint *)((int)param_1 + 1);
+            goto LAB_100d644f;
+          }
+          bVar13 = false;
+          if (!bVar4) {
+            if (cVar5 == ']') {
+              cVar3 = *(char *)((int)param_1 + 1);
+              if (((cVar3 == '.') || (cVar3 == '(')) || (cVar3 == '\0')) {
+                *(char *)puVar12 = '\0';
+                *(char *)param_1 = '\0';
+                puVar12 = local_82c;
+                goto LAB_100d6597;
+              }
+            }
+            else if (cVar5 == ',') {
+              bVar13 = true;
+            }
+LAB_100d64cb:
+            *(char *)puVar12 = cVar5;
+            puVar12 = (uint *)((int)puVar12 + 1);
+            param_1 = (uint *)((int)param_1 + 1);
+            goto LAB_100d644f;
+          }
+          if (cVar5 != '\"') goto LAB_100d64cb;
+          cVar5 = *(char *)((int)param_1 + 1);
+          if ((cVar5 != ']') && (cVar5 != ',')) goto LAB_100d6490;
+          bVar4 = false;
+          param_1 = (uint *)((int)param_1 + 1);
+        } while( true );
+      }
+      if (cVar5 == '.') {
+        *(char *)param_1 = '\0';
+        piVar6 = (int *)*param_2;
+        if (puVar12 != param_1) {
+          if (piVar6 == (int *)0x0) {
+            iVar7 = FindMQ2Data(puVar12);
+            if (iVar7 == 0) {
+              pbVar9 = FindMQ2DataVariable(puVar12);
+              if (pbVar9 == (byte *)0x0) {
+                return 0;
+              }
+              if ((char)local_808[0] == '\0') {
+                iVar7 = *(int *)(pbVar9 + 0x804);
+                *param_2 = *(int *)(pbVar9 + 0x800);
+                param_2[1] = iVar7;
+              }
+              else if (*(int *)(pbVar9 + 0x800) == pArrayType) {
+                iVar7 = FUN_10019d00(*(void **)(pbVar9 + 0x804),local_808,param_2);
+                goto joined_r0x100d6552;
+              }
+            }
+            else {
+              iVar7 = (**(code **)(iVar7 + 0x40))(local_808,param_2);
+joined_r0x100d6552:
+              if (iVar7 == 0) {
+                return 0;
+              }
+            }
+          }
+          else {
+            cVar5 = (**(code **)(*piVar6 + 0x10))(param_2[1],puVar12,local_808,param_2);
+            if (cVar5 == '\0') goto LAB_100d667e;
+          }
+          local_808[0]._0_1_ = '\0';
+          goto LAB_100d658b;
+        }
+        goto LAB_100d65f7;
+      }
+    }
+LAB_100d6597:
+    pcVar1 = (char *)((int)param_1 + 1);
+    param_1 = (uint *)((int)param_1 + 1);
+    cVar5 = *pcVar1;
+  }
+  piVar6 = (int *)*param_2;
+  if (puVar12 == param_1) {
+LAB_100d65f7:
+    if (piVar6 == (int *)0x0) {
+      return 0;
+    }
+  }
+  else if (piVar6 == (int *)0x0) {
+    iVar7 = FindMQ2Data(puVar12);
+    if (iVar7 == 0) {
+      pbVar9 = FindMQ2DataVariable(puVar12);
+      if (pbVar9 == (byte *)0x0) {
+        return 0;
+      }
+      if ((char)local_808[0] == '\0') {
+        iVar7 = *(int *)(pbVar9 + 0x804);
+        *param_2 = *(int *)(pbVar9 + 0x800);
+        param_2[1] = iVar7;
+        return 1;
+      }
+      if ((*(int *)(pbVar9 + 0x800) == pArrayType) &&
+         (iVar7 = FUN_10019d00(*(void **)(pbVar9 + 0x804),local_808,param_2), iVar7 == 0)) {
+        return 0;
+      }
+    }
+    else {
+      iVar7 = (**(code **)(iVar7 + 0x40))(local_808,param_2);
+      if (iVar7 == 0) {
+        return 0;
+      }
+    }
+  }
+  else {
+    cVar5 = (**(code **)(*piVar6 + 0x10))(param_2[1],puVar12,local_808,param_2);
+    if (cVar5 == '\0') {
+LAB_100d667e:
+      iVar7 = FUN_10019c10((void *)*param_2,puVar12);
+      if (iVar7 != 0) {
+        return 0;
+      }
+      iVar7 = FUN_10019cd0((void *)*param_2,puVar12);
+      if (iVar7 != 0) {
+        return 0;
+      }
+      MQ2DataError();
+      return 0;
+    }
+  }
+  return 1;
+LAB_100d6490:
+  *(char *)puVar12 = '\"';
+  puVar12 = (uint *)((int)puVar12 + 1);
+  param_1 = (uint *)((int)param_1 + 1);
+  goto LAB_100d644f;
+}
+
+
+
+============================================================
+Function: dataSpawn @ 100d5d20
+Signature: undefined4 __cdecl dataSpawn(byte * param_1, undefined4 * param_2)
+Callers:
+  100d6700 | InitializeMQ2Data
+Callees:
+  100589d0 | _memset
+  10088b58 | FUN_10088b58
+  100c0920 | __alloca_probe
+  100c1910 | EQClasses::EQPlayerManager::GetSpawnByID
+  1010ac50 | ParseSearchSpawn
+  1010aea0 | SearchThroughSpawns
+Decompile:
+
+/* WARNING: Function: __alloca_probe replaced with injection: alloca_probe */
+
+undefined4 __cdecl dataSpawn(byte *param_1,undefined4 *param_2)
+
+{
+  byte bVar1;
+  uint uVar2;
+  EQPlayer *pEVar3;
+  byte *pbVar4;
+  uint local_28c8 [2566];
+  undefined4 local_b0;
+  undefined4 local_38;
+  undefined4 uStack_34;
+  undefined4 uStack_30;
+  undefined4 uStack_2c;
+  undefined4 uStack_4;
+  
+                    /* 0xd5d20  1055  dataSpawn */
+  uStack_4 = 0x100d5d2a;
+  bVar1 = *param_1;
+  if (bVar1 != 0) {
+    pbVar4 = param_1;
+    if (bVar1 != 0x2d) goto LAB_100d5d50;
+    bVar1 = param_1[1];
+    while (pbVar4 = pbVar4 + 1, bVar1 != 0) {
+LAB_100d5d50:
+      if ((((char)bVar1 < '0') || ('9' < (char)bVar1)) && (bVar1 != 0x2e)) {
+        _memset(local_28c8,0,0x28c4);
+        local_28c8[1] = 0x6e;
+        local_28c8[2] = 0;
+        local_b0 = 0xffff;
+        local_38 = 0;
+        uStack_34 = 0x40c38800;
+        uStack_30 = 0;
+        uStack_2c = 0x40c38800;
+        ParseSearchSpawn((char *)param_1,local_28c8);
+        pEVar3 = (EQPlayer *)SearchThroughSpawns((int)local_28c8,*ppCharSpawn);
+        goto LAB_100d5dda;
+      }
+      bVar1 = pbVar4[1];
+    }
+    uVar2 = FUN_10088b58(param_1);
+    pEVar3 = EQClasses::EQPlayerManager::GetSpawnByID((EQPlayerManager *)*ppSpawnManager,uVar2);
+LAB_100d5dda:
+    param_2[1] = pEVar3;
+    if (pEVar3 != (EQPlayer *)0x0) {
+      *param_2 = pSpawnType;
+      return 1;
+    }
+  }
+  return 0;
+}
+
+
+
+============================================================
+Function: InitializeMQ2Data @ 100d6700
+Signature: undefined __stdcall InitializeMQ2Data(void)
+Callers:
+  100c26b0 | FUN_100c26b0
+  100f9c70 | InitializeParser
+Callees:
+  100d6b70 | AddMQ2Data
+Decompile:
+
+void InitializeMQ2Data(void)
+
+{
+                    /* 0xd6700  780  InitializeMQ2Data */
+  AddMQ2Data((uint *)"Spawn",dataSpawn);
+  AddMQ2Data((uint *)"Target",dataTarget);
+  AddMQ2Data((uint *)&DAT_1013d270,dataCharacter);
+  AddMQ2Data((uint *)"Spell",dataSpell);
+  AddMQ2Data((uint *)"Switch",dataSwitch);
+  AddMQ2Data((uint *)"Ground",dataGroundItem);
+  AddMQ2Data((uint *)"Merchant",dataMerchant);
+  AddMQ2Data((uint *)"Window",dataWindow);
+  AddMQ2Data((uint *)"Macro",dataMacro);
+  AddMQ2Data((uint *)"MacroQuest",dataMacroQuest);
+  AddMQ2Data((uint *)&DAT_1013d2a0,dataMath);
+  AddMQ2Data((uint *)&DAT_1013d268,dataZone);
+  AddMQ2Data((uint *)"Group",dataGroup);
+  AddMQ2Data((uint *)"String",dataString);
+  AddMQ2Data((uint *)&DAT_1013d1fc,dataInt);
+  AddMQ2Data((uint *)&DAT_1013d2b0,dataBool);
+  AddMQ2Data((uint *)"Float",dataFloat);
+  AddMQ2Data((uint *)"Corpse",dataCorpse);
+  AddMQ2Data((uint *)&DAT_1013d2b8,dataIf);
+  AddMQ2Data((uint *)"Cursor",dataCursor);
+  AddMQ2Data((uint *)"NearestSpawn",dataNearestSpawn);
+  AddMQ2Data((uint *)&DAT_1013d208,&LAB_100d69d0);
+  AddMQ2Data((uint *)&DAT_1013abb4,dataTime);
+  AddMQ2Data((uint *)"GameTime",dataGameTime);
+  AddMQ2Data((uint *)&DAT_1013d2d0,dataIni);
+  AddMQ2Data((uint *)"Heading",dataHeading);
+  AddMQ2Data((uint *)"Defined",dataDefined);
+  AddMQ2Data((uint *)"LastSpawn",dataLastSpawn);
+  AddMQ2Data((uint *)"FindItem",dataFindItem);
+  AddMQ2Data((uint *)"FindItemBank",dataFindItemBank);
+  AddMQ2Data((uint *)"InvSlot",dataInvSlot);
+  AddMQ2Data((uint *)"SelectedItem",dataSelectedItem);
+  AddMQ2Data((uint *)"FindItemCount",dataFindItemCount);
+  AddMQ2Data((uint *)"FindItemBankCount",dataFindItemBankCount);
+  AddMQ2Data((uint *)"Skill",dataSkill);
+  AddMQ2Data((uint *)"AltAbility",dataAltAbility);
+  AddMQ2Data((uint *)&DAT_1013d338,dataRaid);
+  AddMQ2Data((uint *)"NamingSpawn",dataNamingSpawn);
+  AddMQ2Data((uint *)"SpawnCount",dataSpawnCount);
+  AddMQ2Data((uint *)"LineOfSight",dataLineOfSight);
+  AddMQ2Data((uint *)"Plugin",dataPlugin);
+  AddMQ2Data((uint *)"Select",dataSelect);
+  AddMQ2Data((uint *)"DoorTarget",dataDoorTarget);
+  AddMQ2Data((uint *)"ItemTarget",dataItemTarget);
+  AddMQ2Data((uint *)"DynamicZone",dataDynamicZone);
+  AddMQ2Data((uint *)"Friends",dataFriends);
+  return;
+}
+
+
+
+============================================================
+Function: InitializeMQ2DataTypes @ 100e5a00
+Signature: undefined __stdcall InitializeMQ2DataTypes(void)
+Callers:
+  100c26b0 | FUN_100c26b0
+  100f9c70 | InitializeParser
+Callees:
+  1000f350 | FUN_1000f350
+  1000f4d0 | FUN_1000f4d0
+  1000f710 | FUN_1000f710
+  1001acc0 | FUN_1001acc0
+  1001b360 | FUN_1001b360
+  1001bf30 | FUN_1001bf30
+  1001c330 | FUN_1001c330
+  1001d020 | FUN_1001d020
+  1003d106 | FUN_1003d106
+Decompile:
+
+void InitializeMQ2DataTypes(void)
+
+{
+  undefined4 *puVar1;
+  
+                    /* 0xe5a00  781  InitializeMQ2DataTypes */
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"float");
+  *puVar1 = MQ2FloatType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d61c);
+  FUN_1000f4d0(puVar1,2,(uint *)"Centi");
+  FUN_1000f4d0(puVar1,3,(uint *)"Milli");
+  FUN_1000f4d0(puVar1,4,(uint *)&DAT_1013d1fc);
+  FUN_1000f4d0(puVar1,5,(uint *)"Precision");
+  pFloatType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"int");
+  *puVar1 = MQ2IntType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)"Float");
+  FUN_1000f4d0(puVar1,2,(uint *)&DAT_1013d550);
+  FUN_1000f4d0(puVar1,3,(uint *)"Reverse");
+  pIntType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"byte");
+  *puVar1 = MQ2ByteType::vftable;
+  pByteType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"string");
+  *puVar1 = MQ2StringType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d588);
+  FUN_1000f4d0(puVar1,2,(uint *)&DAT_1013d58c);
+  FUN_1000f4d0(puVar1,3,(uint *)&DAT_1013d590);
+  FUN_1000f4d0(puVar1,4,(uint *)"Right");
+  FUN_1000f4d0(puVar1,5,(uint *)&DAT_1013d5a0);
+  FUN_1000f4d0(puVar1,6,(uint *)"Length");
+  FUN_1000f4d0(puVar1,7,(uint *)"Upper");
+  FUN_1000f4d0(puVar1,8,(uint *)"Lower");
+  FUN_1000f4d0(puVar1,9,(uint *)"Compare");
+  FUN_1000f4d0(puVar1,10,(uint *)"CompareCS");
+  FUN_1000f4d0(puVar1,0xb,(uint *)"Equal");
+  FUN_1000f4d0(puVar1,0xc,(uint *)"NotEqual");
+  FUN_1000f4d0(puVar1,0xd,(uint *)"EqualCS");
+  FUN_1000f4d0(puVar1,0xe,(uint *)"NotEqualCS");
+  FUN_1000f4d0(puVar1,0xf,(uint *)"Count");
+  FUN_1000f4d0(puVar1,0x10,(uint *)"Token");
+  FUN_1000f4d0(puVar1,0x11,(uint *)"Replace");
+  pStringType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  pSpawnType = FUN_1001acc0(puVar1);
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  pSpellType = FUN_1001bf30(puVar1);
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"buff");
+  *puVar1 = MQ2BuffType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d650);
+  FUN_1000f4d0(puVar1,2,(uint *)"Level");
+  FUN_1000f4d0(puVar1,3,(uint *)"Spell");
+  FUN_1000f4d0(puVar1,4,(uint *)&DAT_1013e2f4);
+  FUN_1000f4d0(puVar1,5,(uint *)"Duration");
+  FUN_1000f4d0(puVar1,6,(uint *)&DAT_1013d940);
+  FUN_1000f4d0(puVar1,7,(uint *)"Counters");
+  pBuffType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  pTicksType = FUN_1000f710(puVar1);
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  pCharacterType = FUN_1001b360(puVar1);
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"class");
+  *puVar1 = MQ2ClassType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)"ShortName");
+  FUN_1000f4d0(puVar1,3,(uint *)&DAT_1013d650);
+  FUN_1000f4d0(puVar1,4,(uint *)"PureCaster");
+  FUN_1000f4d0(puVar1,5,(uint *)"CanCast");
+  FUN_1000f4d0(puVar1,6,(uint *)"DruidType");
+  FUN_1000f4d0(puVar1,7,(uint *)"NecromancerType");
+  FUN_1000f4d0(puVar1,8,(uint *)"ShamanType");
+  FUN_1000f4d0(puVar1,9,(uint *)"ClericType");
+  FUN_1000f4d0(puVar1,10,(uint *)"PetClass");
+  FUN_1000f4d0(puVar1,0xb,(uint *)"HealerType");
+  pClassType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"race");
+  *puVar1 = MQ2RaceType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)&DAT_1013d650);
+  pRaceType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"ground");
+  *puVar1 = MQ2GroundType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d650);
+  FUN_1000f4d0(puVar1,2,(uint *)"Distance");
+  FUN_1000f4d0(puVar1,3,(uint *)&DAT_1013d65c);
+  FUN_1000f4d0(puVar1,4,(uint *)&DAT_1013d660);
+  FUN_1000f4d0(puVar1,5,(uint *)&DAT_1013d664);
+  FUN_1000f4d0(puVar1,6,(uint *)"Heading");
+  FUN_1000f4d0(puVar1,7,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,8,(uint *)"HeadingTo");
+  FUN_1000f4d0(puVar1,0xc,(uint *)"LineOfSight");
+  pGroundType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"switch");
+  *puVar1 = MQ2SwitchType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d650);
+  FUN_1000f4d0(puVar1,2,(uint *)"Distance");
+  FUN_1000f4d0(puVar1,3,(uint *)&DAT_1013d65c);
+  FUN_1000f4d0(puVar1,4,(uint *)&DAT_1013d660);
+  FUN_1000f4d0(puVar1,5,(uint *)&DAT_1013d664);
+  FUN_1000f4d0(puVar1,6,(uint *)"Heading");
+  FUN_1000f4d0(puVar1,7,(uint *)"DefaultX");
+  FUN_1000f4d0(puVar1,8,(uint *)"DefaultY");
+  FUN_1000f4d0(puVar1,9,(uint *)"DefaultZ");
+  FUN_1000f4d0(puVar1,10,(uint *)"DefaultHeading");
+  FUN_1000f4d0(puVar1,0xb,(uint *)&DAT_1013e7b0);
+  FUN_1000f4d0(puVar1,0xc,(uint *)"HeadingTo");
+  FUN_1000f4d0(puVar1,0xd,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,0x14,(uint *)"LineOfSight");
+  pSwitchType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"macro");
+  *puVar1 = MQ2MacroType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)"RunTime");
+  FUN_1000f4d0(puVar1,3,(uint *)"Paused");
+  FUN_1000f4d0(puVar1,4,(uint *)"Return");
+  FUN_1000f4d0(puVar1,5,(uint *)"Params");
+  FUN_1000f4d0(puVar1,6,(uint *)"Param");
+  pMacroType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"macroquest");
+  *puVar1 = MQ2MacroQuestType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)"GameState");
+  FUN_1000f4d0(puVar1,2,(uint *)"LoginName");
+  FUN_1000f4d0(puVar1,3,(uint *)"Server");
+  FUN_1000f4d0(puVar1,4,(uint *)"LastCommand");
+  FUN_1000f4d0(puVar1,5,(uint *)"LastTell");
+  FUN_1000f4d0(puVar1,6,(uint *)"Error");
+  FUN_1000f4d0(puVar1,7,(uint *)"SyntaxError");
+  FUN_1000f4d0(puVar1,8,(uint *)"MQ2DataError");
+  FUN_1000f4d0(puVar1,9,(uint *)"Running");
+  FUN_1000f4d0(puVar1,10,(uint *)"MouseX");
+  FUN_1000f4d0(puVar1,0xb,(uint *)"MouseY");
+  FUN_1000f4d0(puVar1,0xc,(uint *)"BuildDate");
+  FUN_1000f4d0(puVar1,0xd,(uint *)&DAT_1013ea0c);
+  FUN_1000f4d0(puVar1,0xe,(uint *)"ChatChannels");
+  FUN_1000f4d0(puVar1,0xf,(uint *)"ChatChannel");
+  FUN_1000f4d0(puVar1,0x10,(uint *)"ViewportX");
+  FUN_1000f4d0(puVar1,0x11,(uint *)"ViewportY");
+  FUN_1000f4d0(puVar1,0x12,(uint *)"ViewportXMax");
+  FUN_1000f4d0(puVar1,0x13,(uint *)"ViewportYMax");
+  FUN_1000f4d0(puVar1,0x14,(uint *)"ViewportXCenter");
+  FUN_1000f4d0(puVar1,0x15,(uint *)"ViewportYCenter");
+  FUN_1000f4d0(puVar1,0x16,(uint *)"LClickedObject");
+  pMacroQuestType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"math");
+  *puVar1 = MQ2MathType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013eaa0);
+  FUN_1000f4d0(puVar1,2,(uint *)&DAT_1013eaa4);
+  FUN_1000f4d0(puVar1,3,(uint *)&DAT_1013eaac);
+  FUN_1000f4d0(puVar1,4,(uint *)&DAT_1013eab4);
+  FUN_1000f4d0(puVar1,5,(uint *)&DAT_1013eab8);
+  FUN_1000f4d0(puVar1,6,(uint *)&DAT_1013eabc);
+  FUN_1000f4d0(puVar1,7,(uint *)&DAT_1013eac0);
+  FUN_1000f4d0(puVar1,8,(uint *)&DAT_1013eac8);
+  FUN_1000f4d0(puVar1,9,(uint *)&DAT_1013ead0);
+  FUN_1000f4d0(puVar1,10,(uint *)&DAT_1013d550);
+  FUN_1000f4d0(puVar1,0xb,(uint *)&DAT_1013ead8);
+  FUN_1000f4d0(puVar1,0xc,(uint *)&DAT_1013eadc);
+  FUN_1000f4d0(puVar1,0xd,(uint *)"Distance");
+  FUN_1000f4d0(puVar1,0xe,(uint *)&DAT_1013eae0);
+  pMathType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  pWindowType = FUN_1001d020(puVar1);
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"merchant");
+  *puVar1 = MQ2MerchantType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)"Markup");
+  FUN_1000f4d0(puVar1,2,(uint *)&DAT_1013e544);
+  FUN_1000f4d0(puVar1,3,(uint *)"Items");
+  FUN_1000f4d0(puVar1,4,(uint *)&DAT_1013e7b0);
+  FUN_1000f4d0(puVar1,5,(uint *)&DAT_1013e7dc);
+  pMerchantType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"zone");
+  *puVar1 = MQ2ZoneType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)"ShortName");
+  FUN_1000f4d0(puVar1,3,(uint *)&DAT_1013d650);
+  pZoneType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  pItemType = FUN_1001c330(puVar1);
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"bool");
+  *puVar1 = MQ2BoolType::vftable;
+  pBoolType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"body");
+  *puVar1 = MQ2BodyType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)&DAT_1013d650);
+  pBodyType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"Deity");
+  *puVar1 = MQ2DeityType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)&DAT_1013eb50);
+  FUN_1000f4d0(puVar1,3,(uint *)&DAT_1013d650);
+  pDeityType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"argb");
+  *puVar1 = MQ2ArgbType::vftable;
+  FUN_1000f4d0(puVar1,0,(uint *)&DAT_1013d564);
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d568);
+  FUN_1000f4d0(puVar1,2,(uint *)&DAT_1013d56c);
+  FUN_1000f4d0(puVar1,3,(uint *)&DAT_1013d570);
+  FUN_1000f4d0(puVar1,4,(uint *)&DAT_1013d1fc);
+  pArgbType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"corpse");
+  *puVar1 = MQ2CorpseType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013e7b0);
+  FUN_1000f4d0(puVar1,2,(uint *)&DAT_1013e544);
+  FUN_1000f4d0(puVar1,3,(uint *)"Items");
+  pCorpseType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"currentzone");
+  *puVar1 = MQ2CurrentZoneType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)"ShortName");
+  FUN_1000f4d0(puVar1,3,(uint *)&DAT_1013d208);
+  FUN_1000f4d0(puVar1,4,(uint *)"Gravity");
+  FUN_1000f4d0(puVar1,5,(uint *)"SkyType");
+  FUN_1000f4d0(puVar1,6,(uint *)"SafeY");
+  FUN_1000f4d0(puVar1,7,(uint *)"SafeX");
+  FUN_1000f4d0(puVar1,8,(uint *)"SafeZ");
+  FUN_1000f4d0(puVar1,9,(uint *)"MinClip");
+  FUN_1000f4d0(puVar1,10,(uint *)"MaxClip");
+  FUN_1000f4d0(puVar1,0xb,(uint *)&DAT_1013d650);
+  FUN_1000f4d0(puVar1,0xc,(uint *)"SafeN");
+  FUN_1000f4d0(puVar1,0xd,(uint *)"SafeW");
+  FUN_1000f4d0(puVar1,0xe,(uint *)"SafeU");
+  pCurrentZoneType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"type");
+  *puVar1 = MQ2TypeType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)"Member");
+  pTypeType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"time");
+  *puVar1 = MQ2TimeType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013eb60);
+  FUN_1000f4d0(puVar1,2,(uint *)"Minute");
+  FUN_1000f4d0(puVar1,3,(uint *)"Second");
+  FUN_1000f4d0(puVar1,4,(uint *)"DayOfWeek");
+  FUN_1000f4d0(puVar1,5,(uint *)&DAT_1013eb84);
+  FUN_1000f4d0(puVar1,6,(uint *)"Month");
+  FUN_1000f4d0(puVar1,7,(uint *)&DAT_1013eb90);
+  FUN_1000f4d0(puVar1,8,(uint *)"Time12");
+  FUN_1000f4d0(puVar1,9,(uint *)"Time24");
+  FUN_1000f4d0(puVar1,10,(uint *)&DAT_1013eba8);
+  FUN_1000f4d0(puVar1,0xb,(uint *)"Night");
+  FUN_1000f4d0(puVar1,0xc,(uint *)"SecondsSinceMidnight");
+  pTimeType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"heading");
+  *puVar1 = MQ2HeadingType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)"ShortName");
+  FUN_1000f4d0(puVar1,3,(uint *)"Degrees");
+  FUN_1000f4d0(puVar1,4,(uint *)"Clock");
+  FUN_1000f4d0(puVar1,5,(uint *)"DegreesCCW");
+  pHeadingType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"invslot");
+  *puVar1 = MQ2InvSlotType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013ec14);
+  FUN_1000f4d0(puVar1,2,(uint *)&DAT_1013ec1c);
+  FUN_1000f4d0(puVar1,3,(uint *)&DAT_1013d650);
+  FUN_1000f4d0(puVar1,4,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,5,(uint *)&DAT_1013e544);
+  pInvSlotType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"array");
+  *puVar1 = MQ2ArrayType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)"Dimensions");
+  FUN_1000f4d0(puVar1,2,(uint *)&DAT_1013e320);
+  pArrayType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"timer");
+  *puVar1 = MQ2TimerType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)"Value");
+  FUN_1000f4d0(puVar1,2,(uint *)"OriginalValue");
+  pTimerType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"plugin");
+  *puVar1 = MQ2PluginType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)"Version");
+  pPluginType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"skill");
+  *puVar1 = MQ2SkillType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)&DAT_1013d650);
+  FUN_1000f4d0(puVar1,3,(uint *)"ReuseTime");
+  FUN_1000f4d0(puVar1,4,(uint *)"MinLevel");
+  FUN_1000f4d0(puVar1,5,(uint *)"SkillCap");
+  FUN_1000f4d0(puVar1,6,(uint *)"AltTimer");
+  FUN_1000f4d0(puVar1,7,(uint *)"Activated");
+  pSkillType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"altability");
+  *puVar1 = MQ2AltAbilityType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)"ShortName");
+  FUN_1000f4d0(puVar1,3,(uint *)"Description");
+  FUN_1000f4d0(puVar1,4,(uint *)"MinLevel");
+  FUN_1000f4d0(puVar1,5,(uint *)&DAT_1013ec84);
+  FUN_1000f4d0(puVar1,6,(uint *)"RequiresAbility");
+  FUN_1000f4d0(puVar1,7,(uint *)"RequiresAbilityPoints");
+  FUN_1000f4d0(puVar1,8,(uint *)"MaxRank");
+  FUN_1000f4d0(puVar1,9,(uint *)"AARankRequired");
+  FUN_1000f4d0(puVar1,10,(uint *)"Spell");
+  FUN_1000f4d0(puVar1,0xb,(uint *)&DAT_1013d208);
+  FUN_1000f4d0(puVar1,0xc,(uint *)"ReuseTime");
+  FUN_1000f4d0(puVar1,0xd,(uint *)&DAT_1013d650);
+  FUN_1000f4d0(puVar1,0xe,(uint *)"MyReuseTime");
+  pAltAbilityType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"raid");
+  *puVar1 = MQ2RaidType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)"Member");
+  FUN_1000f4d0(puVar1,2,(uint *)"Members");
+  FUN_1000f4d0(puVar1,3,(uint *)"Target");
+  FUN_1000f4d0(puVar1,4,(uint *)"Leader");
+  FUN_1000f4d0(puVar1,5,(uint *)"TotalLevels");
+  FUN_1000f4d0(puVar1,6,(uint *)"AverageLevel");
+  FUN_1000f4d0(puVar1,7,(uint *)"LootType");
+  FUN_1000f4d0(puVar1,8,(uint *)"Looter");
+  FUN_1000f4d0(puVar1,9,(uint *)"Looters");
+  FUN_1000f4d0(puVar1,10,(uint *)"Locked");
+  FUN_1000f4d0(puVar1,0xb,(uint *)"Invited");
+  FUN_1000f4d0(puVar1,0xc,(uint *)"MainAssist");
+  pRaidType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"raidmember");
+  *puVar1 = MQ2RaidMemberType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,3,(uint *)"Group");
+  FUN_1000f4d0(puVar1,4,(uint *)"GroupLeader");
+  FUN_1000f4d0(puVar1,5,(uint *)"RaidLeader");
+  FUN_1000f4d0(puVar1,6,(uint *)"Spawn");
+  FUN_1000f4d0(puVar1,7,(uint *)"Looter");
+  FUN_1000f4d0(puVar1,8,(uint *)"Class");
+  FUN_1000f4d0(puVar1,9,(uint *)"Level");
+  pRaidMemberType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"group");
+  *puVar1 = MQ2GroupType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)"Member");
+  FUN_1000f4d0(puVar1,2,(uint *)"Members");
+  FUN_1000f4d0(puVar1,3,(uint *)"Leader");
+  FUN_1000f4d0(puVar1,4,(uint *)"GroupSize");
+  FUN_1000f4d0(puVar1,5,(uint *)"MainTank");
+  FUN_1000f4d0(puVar1,6,(uint *)"MainAssist");
+  FUN_1000f4d0(puVar1,7,(uint *)"Puller");
+  pGroupType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"groupmember");
+  *puVar1 = MQ2GroupMemberType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)"Leader");
+  FUN_1000f4d0(puVar1,3,(uint *)"Spawn");
+  FUN_1000f4d0(puVar1,4,(uint *)"Level");
+  FUN_1000f4d0(puVar1,5,(uint *)"MainTank");
+  FUN_1000f4d0(puVar1,6,(uint *)"MainAssist");
+  FUN_1000f4d0(puVar1,7,(uint *)"Puller");
+  FUN_1000f4d0(puVar1,8,(uint *)"Mercenary");
+  FUN_1000f4d0(puVar1,9,(uint *)"PctAggro");
+  pGroupMemberType = puVar1;
+  puVar1[0x14] = pSpawnType;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"Evolving");
+  *puVar1 = MQ2EvolvingItemType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)"ExpPct");
+  FUN_1000f4d0(puVar1,2,(uint *)"ExpOn");
+  FUN_1000f4d0(puVar1,3,(uint *)"Level");
+  FUN_1000f4d0(puVar1,4,(uint *)"MaxLevel");
+  pEvolvingItemType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"dynamiczone");
+  *puVar1 = MQ2DynamicZoneType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)"Members");
+  FUN_1000f4d0(puVar1,3,(uint *)"MaxMembers");
+  FUN_1000f4d0(puVar1,4,(uint *)"Member");
+  FUN_1000f4d0(puVar1,5,(uint *)"Leader");
+  pDynamicZoneType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"dzmember");
+  *puVar1 = MQ2DZMemberType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,2,(uint *)"Status");
+  pDZMemberType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"fellowship");
+  *puVar1 = MQ2FellowshipType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d650);
+  FUN_1000f4d0(puVar1,2,(uint *)"Leader");
+  FUN_1000f4d0(puVar1,3,(uint *)&DAT_1013edfc);
+  FUN_1000f4d0(puVar1,4,(uint *)"Members");
+  FUN_1000f4d0(puVar1,5,(uint *)"Member");
+  FUN_1000f4d0(puVar1,6,(uint *)"CampfireDuration");
+  FUN_1000f4d0(puVar1,7,(uint *)"CampfireY");
+  FUN_1000f4d0(puVar1,8,(uint *)"CampfireX");
+  FUN_1000f4d0(puVar1,9,(uint *)"CampfireZ");
+  FUN_1000f4d0(puVar1,10,(uint *)"CampfireZone");
+  FUN_1000f4d0(puVar1,0xb,(uint *)"Campfire");
+  pFellowshipType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"fellowshipmember");
+  *puVar1 = MQ2FellowshipMemberType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d268);
+  FUN_1000f4d0(puVar1,2,(uint *)"Level");
+  FUN_1000f4d0(puVar1,3,(uint *)"Class");
+  FUN_1000f4d0(puVar1,4,(uint *)"LastOn");
+  FUN_1000f4d0(puVar1,5,(uint *)&DAT_1013d654);
+  pFellowshipMemberType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"friend");
+  *puVar1 = MQ2FriendsType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)"Friend");
+  pFriendsType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"target");
+  *puVar1 = MQ2TargetType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d974);
+  FUN_1000f4d0(puVar1,2,(uint *)"BuffCount");
+  FUN_1000f4d0(puVar1,3,(uint *)"BuffDuration");
+  FUN_1000f4d0(puVar1,4,(uint *)"PctAggro");
+  FUN_1000f4d0(puVar1,5,(uint *)"SecondaryPctAggro");
+  FUN_1000f4d0(puVar1,6,(uint *)"SecondaryAggroPlayer");
+  pTargetType = puVar1;
+  puVar1 = (undefined4 *)FUN_1003d106(0x54);
+  FUN_1000f350(puVar1,"xtarget");
+  *puVar1 = MQ2XTargetType::vftable;
+  FUN_1000f4d0(puVar1,1,(uint *)&DAT_1013d208);
+  FUN_1000f4d0(puVar1,2,(uint *)&DAT_1013d650);
+  FUN_1000f4d0(puVar1,3,(uint *)&DAT_1013d654);
+  FUN_1000f4d0(puVar1,4,(uint *)"PctAggro");
+  pXTargetType = puVar1;
+  pCharacterType[0x14] = pSpawnType;
+  pBuffType[0x14] = pSpellType;
+  pRaidMemberType[0x14] = pSpawnType;
+  pTargetType[0x14] = pSpawnType;
+  return;
+}
+
+
+
+============================================================
+Function: AddMQ2Data @ 100d6b70
+Signature: undefined4 __cdecl AddMQ2Data(uint * param_1, undefined4 param_2)
+Callers:
+  100d6700 | InitializeMQ2Data
+Callees:
+  EXTERNAL:0000000f | KERNEL32.DLL::EnterCriticalSection
+  EXTERNAL:00000010 | KERNEL32.DLL::LeaveCriticalSection
+  10007090 | FUN_10007090
+  10012210 | FUN_10012210
+  10019e80 | FindMQ2Data
+  1003d106 | FUN_1003d106
+  1003d4c0 | FUN_1003d4c0
+  100589d0 | _memset
+  10059200 | FUN_10059200
+  1008431e | FUN_1008431e
+  10085830 | thunk_FUN_100a44d0
+  10085840 | FUN_10085840
+Decompile:
+
+undefined4 __cdecl AddMQ2Data(uint *param_1,undefined4 param_2)
+
+{
+  uint uVar1;
+  int iVar2;
+  uint *puVar3;
+  uint uVar4;
+  int *piVar5;
+  LPVOID pvVar6;
+  uint uVar7;
+  uint local_28;
+  LPVOID apvStack_20 [4];
+  undefined4 uStack_10;
+  uint uStack_c;
+  
+                    /* 0xd6b70  306  AddMQ2Data */
+  iVar2 = FindMQ2Data(param_1);
+  if (iVar2 != 0) {
+    return 0;
+  }
+  EnterCriticalSection((LPCRITICAL_SECTION)&DAT_101932a8);
+  uVar7 = 0;
+  local_28 = 0;
+  if (DAT_101932a0 != 0) {
+    do {
+      if (DAT_101932a4[uVar7] == 0) {
+        LeaveCriticalSection((LPCRITICAL_SECTION)&DAT_101932a8);
+        goto LAB_100d6c8e;
+      }
+      uVar7 = uVar7 + 1;
+      local_28 = uVar7;
+    } while (uVar7 < DAT_101932a0);
+  }
+  uVar7 = DAT_101932a0 + 10;
+  EnterCriticalSection((LPCRITICAL_SECTION)&DAT_101932a8);
+  if (DAT_101932a4 == (uint *)0x0) {
+    DAT_101932a4 = (uint *)FUN_10085840(uVar7 * 4);
+    _memset(DAT_101932a4,0,uVar7 * 4);
+    DAT_101932a0 = uVar7;
+  }
+  else if (DAT_101932a0 < uVar7) {
+    puVar3 = (uint *)FUN_10085840(uVar7 * 4);
+    _memset(puVar3,0,uVar7 * 4);
+    FUN_10059200(puVar3,DAT_101932a4,DAT_101932a0 << 2);
+    thunk_FUN_100a44d0(DAT_101932a4);
+    DAT_101932a0 = uVar7;
+    DAT_101932a4 = puVar3;
+  }
+  LeaveCriticalSection((LPCRITICAL_SECTION)&DAT_101932a8);
+  LeaveCriticalSection((LPCRITICAL_SECTION)&DAT_101932a8);
+  uVar7 = local_28;
+LAB_100d6c8e:
+  uVar4 = FUN_1003d106(0x44);
+  puVar3 = param_1;
+  do {
+    uVar1 = *puVar3;
+    puVar3 = (uint *)((int)puVar3 + 1);
+    *(char *)((uVar4 - (int)param_1) + -1 + (int)puVar3) = (char)uVar1;
+  } while ((char)uVar1 != '\0');
+  apvStack_20[0] = (LPVOID)0x0;
+  *(undefined4 *)(uVar4 + 0x40) = param_2;
+  uStack_10 = 0;
+  uStack_c = 0xf;
+  DAT_101932a4[uVar7] = uVar4;
+  puVar3 = param_1;
+  do {
+    uVar4 = *puVar3;
+    puVar3 = (uint *)((int)puVar3 + 1);
+  } while ((char)uVar4 != '\0');
+  FUN_10007090(apvStack_20,param_1,(int)puVar3 - ((int)param_1 + 1));
+  piVar5 = FUN_10012210(&DAT_10193298,(byte *)apvStack_20);
+  *piVar5 = uVar7 + 1;
+  if (0xf < uStack_c) {
+    pvVar6 = apvStack_20[0];
+    if ((0xfff < uStack_c + 1) &&
+       (pvVar6 = *(LPVOID *)((int)apvStack_20[0] + -4),
+       0x1f < (uint)((int)apvStack_20[0] + (-4 - (int)pvVar6)))) {
+                    /* WARNING: Subroutine does not return */
+      FUN_1008431e();
+    }
+    FUN_1003d4c0(pvVar6);
+  }
+  return 1;
+}
+
+
+
+============================================================
+Function: AddMQ2Type @ 100d6f70
+Signature: undefined4 __cdecl AddMQ2Type(uint param_1)
+Callers:
+  1000f350 | FUN_1000f350
+Callees:
+  EXTERNAL:0000000f | KERNEL32.DLL::EnterCriticalSection
+  EXTERNAL:00000010 | KERNEL32.DLL::LeaveCriticalSection
+  10007090 | FUN_10007090
+  10012210 | FUN_10012210
+  1003d4c0 | FUN_1003d4c0
+  100589d0 | _memset
+  10059200 | FUN_10059200
+  1008431e | FUN_1008431e
+  10085830 | thunk_FUN_100a44d0
+  10085840 | FUN_10085840
+  100d6d50 | FindMQ2DataType
+Decompile:
+
+undefined4 __cdecl AddMQ2Type(uint param_1)
+
+{
+  uint uVar1;
+  int iVar2;
+  uint *puVar3;
+  int *piVar4;
+  LPVOID pvVar5;
+  uint *puVar6;
+  uint uVar7;
+  uint local_2c;
+  LPVOID local_20 [4];
+  undefined4 local_10;
+  uint local_c;
+  
+                    /* 0xd6f70  309  AddMQ2Type */
+  puVar6 = (uint *)(param_1 + 4);
+  iVar2 = FindMQ2DataType(puVar6);
+  if (iVar2 != 0) {
+    return 0;
+  }
+  EnterCriticalSection((LPCRITICAL_SECTION)&DAT_101932c8);
+  uVar7 = 0;
+  local_2c = 0;
+  if (DAT_101932c0 != 0) {
+    do {
+      if (DAT_101932c4[uVar7] == 0) {
+        LeaveCriticalSection((LPCRITICAL_SECTION)&DAT_101932c8);
+        goto LAB_100d708e;
+      }
+      uVar7 = uVar7 + 1;
+      local_2c = uVar7;
+    } while (uVar7 < DAT_101932c0);
+  }
+  uVar7 = DAT_101932c0 + 10;
+  EnterCriticalSection((LPCRITICAL_SECTION)&DAT_101932c8);
+  if (DAT_101932c4 == (uint *)0x0) {
+    DAT_101932c4 = (uint *)FUN_10085840(uVar7 * 4);
+    _memset(DAT_101932c4,0,uVar7 * 4);
+    DAT_101932c0 = uVar7;
+  }
+  else if (DAT_101932c0 < uVar7) {
+    puVar3 = (uint *)FUN_10085840(uVar7 * 4);
+    _memset(puVar3,0,uVar7 * 4);
+    FUN_10059200(puVar3,DAT_101932c4,DAT_101932c0 << 2);
+    thunk_FUN_100a44d0(DAT_101932c4);
+    DAT_101932c0 = uVar7;
+    DAT_101932c4 = puVar3;
+  }
+  LeaveCriticalSection((LPCRITICAL_SECTION)&DAT_101932c8);
+  LeaveCriticalSection((LPCRITICAL_SECTION)&DAT_101932c8);
+  uVar7 = local_2c;
+LAB_100d708e:
+  local_20[0] = (LPVOID)0x0;
+  local_10 = 0;
+  DAT_101932c4[uVar7] = param_1;
+  local_c = 0xf;
+  puVar3 = puVar6;
+  do {
+    uVar1 = *puVar3;
+    puVar3 = (uint *)((int)puVar3 + 1);
+  } while ((char)uVar1 != '\0');
+  FUN_10007090(local_20,puVar6,(int)puVar3 - (param_1 + 5));
+  piVar4 = FUN_10012210(&DAT_10193290,(byte *)local_20);
+  *piVar4 = uVar7 + 1;
+  if (0xf < local_c) {
+    pvVar5 = local_20[0];
+    if ((0xfff < local_c + 1) &&
+       (pvVar5 = *(LPVOID *)((int)local_20[0] + -4),
+       0x1f < (uint)((int)local_20[0] + (-4 - (int)pvVar5)))) {
+                    /* WARNING: Subroutine does not return */
+      FUN_1008431e();
+    }
+    FUN_1003d4c0(pvVar5);
+  }
+  return 1;
+}
+
+
+
+============================================================
+Function: FUN_1003cd50 @ 1003cd50
+Signature: undefined __stdcall FUN_1003cd50(void)
+Callers:
+  101164c0 | InitializeTHJWindows
+Callees:
+  100c15a0 | EQClasses::CXWnd::IsReallyVisible
+  100c2100 | FUN_100c2100
+  1010f420 | DebugSpew
+  10111b20 | SendWndClick
+  10116310 | FUN_10116310
+Decompile:
+
+void FUN_1003cd50(void)
+
+{
+  bool bVar1;
+  
+  if (DAT_10193198 == (CXWnd *)0x0) {
+    DAT_10193198 = (CXWnd *)FUN_100c2100(*ppInventoryWnd,(byte *)"IW_AltCurrPage");
+    DebugSpew(0x10147774);
+  }
+  if (DAT_1019318c == 0) {
+    DAT_1019318c = FUN_100c2100(*ppInventoryWnd,(byte *)"AltCurr_CreateItemButton");
+    DebugSpew(0x10147780);
+  }
+  if ((DAT_10193198 == (CXWnd *)0x0) ||
+     (bVar1 = EQClasses::CXWnd::IsReallyVisible(DAT_10193198), !bVar1)) {
+    bVar1 = false;
+  }
+  else {
+    bVar1 = true;
+  }
+  if (DAT_1018e613 != '\0') {
+    if (bVar1) {
+      DebugSpew(0x10147798);
+      SendWndClick((uint *)"InventoryWindow",(byte *)"AltCurr_DisplayMissingButton",
+                   (byte *)"leftmouseup");
+    }
+    DAT_1018e613 = DAT_1018e613 == '\0';
+  }
+  if (DAT_10193bf0 == 0) {
+    if (bVar1) {
+      DAT_10193bf0 = 1;
+    }
+  }
+  else {
+    if (DAT_10193bf0 == 1) {
+      SendWndClick((uint *)"InventoryWindow",(byte *)"AltCurr_DisplayMissingButton",
+                   (byte *)"leftmouseup");
+      DebugSpew(0x101477b4);
+      DAT_1018e613 = DAT_1018e613 == '\0';
+      DAT_10193bf0 = 2;
+      *(undefined1 *)(DAT_1019318c + 0x138) = 1;
+      FUN_10116310();
+      return;
+    }
+    if ((DAT_10193bf0 + -2 == 0) && (!bVar1)) {
+      DAT_10193bf0 = DAT_10193bf0 + -2;
+      FUN_10116310();
+      return;
+    }
+  }
+  FUN_10116310();
+  return;
+}
+
+
+
+============================================================
+Function: FUN_100c69c0 @ 100c69c0
+Signature: undefined __fastcall FUN_100c69c0(int * param_1, uint * param_2)
+Callers:
+  100c2410 | DllGetClassObject
+  100c2470 | DirectInput8Create
+  100c5990 | FUN_100c5990
+  100c5a10 | FUN_100c5a10
+  100c5bd0 | FUN_100c5bd0
+  100c5ed0 | FUN_100c5ed0
+  100c61e0 | FUN_100c61e0
+  100c6740 | FUN_100c6740
+  100c68b0 | FUN_100c68b0
+Callees:
+  1000c250 | FUN_1000c250
+  1000c5d0 | FUN_1000c5d0
+  1000d2c0 | FUN_1000d2c0
+  1000d860 | FUN_1000d860
+  1000dba0 | FUN_1000dba0
+  1003d106 | FUN_1003d106
+Decompile:
+
+void __fastcall FUN_100c69c0(int *param_1,uint *param_2)
+
+{
+  int iVar1;
+  byte bVar2;
+  int *piVar3;
+  byte *pbVar4;
+  int *piVar5;
+  undefined4 *puVar6;
+  uint uVar7;
+  bool bVar8;
+  undefined4 *local_20 [2];
+  uint local_18 [2];
+  undefined4 *local_10 [3];
+  
+  if ((param_2 != (uint *)0x0) && (puVar6 = (undefined4 *)*param_2, puVar6 != (undefined4 *)0x0)) {
+    pbVar4 = (byte *)&DAT_101392b8;
+    uVar7 = 0xc;
+    piVar3 = param_1;
+    do {
+      if (*piVar3 != *(int *)pbVar4) {
+        bVar2 = (byte)*piVar3;
+        bVar8 = bVar2 < *pbVar4;
+        if ((((bVar2 == *pbVar4) &&
+             (bVar8 = *(byte *)((int)piVar3 + 1) < pbVar4[1],
+             *(byte *)((int)piVar3 + 1) == pbVar4[1])) &&
+            (bVar8 = *(byte *)((int)piVar3 + 2) < pbVar4[2], *(byte *)((int)piVar3 + 2) == pbVar4[2]
+            )) && (bVar8 = *(byte *)((int)piVar3 + 3) < pbVar4[3],
+                  *(byte *)((int)piVar3 + 3) == pbVar4[3])) {
+          uVar7 = 0;
+        }
+        else {
+          uVar7 = -(uint)bVar8 | 1;
+        }
+        goto LAB_100c6a2a;
+      }
+      piVar3 = piVar3 + 1;
+      pbVar4 = pbVar4 + 4;
+      bVar8 = 3 < uVar7;
+      uVar7 = uVar7 - 4;
+    } while (bVar8);
+    uVar7 = 0;
+LAB_100c6a2a:
+    if (uVar7 == 0) {
+      local_20[0] = puVar6;
+      piVar3 = FUN_1000d2c0(&DAT_101931d5,(int *)local_10,(int *)local_20,
+                            ((((uint)puVar6 >> 8 & 0xff ^
+                              ((uint)puVar6 & 0xff ^ 0x811c9dc5) * 0x1000193) * 0x1000193 ^
+                             (uint)puVar6 >> 0x10 & 0xff) * 0x1000193 ^ (uint)puVar6 >> 0x18) *
+                            0x1000193);
+      iVar1 = piVar3[1];
+      if ((iVar1 == 0) || (iVar1 == DAT_101931d9)) {
+        puVar6 = (undefined4 *)FUN_1003d106(0xc);
+        puVar6[1] = m_IDirectInput8A::vftable;
+        puVar6[2] = local_20[0];
+        *puVar6 = m_IDirectInput8A::vftable;
+        piVar3 = (int *)FUN_1000c5d0(&DAT_101931d5,(int *)local_18,(byte *)local_20);
+        *(undefined4 **)(*piVar3 + 0xc) = puVar6 + 1;
+      }
+      else {
+        puVar6 = (undefined4 *)(-(uint)(*(int *)(iVar1 + 0xc) != 0) & *(int *)(iVar1 + 0xc) - 4U);
+      }
+      *param_2 = (uint)puVar6;
+    }
+    pbVar4 = (byte *)&DAT_101399d0;
+    uVar7 = 0xc;
+    piVar3 = param_1;
+    do {
+      if (*piVar3 != *(int *)pbVar4) {
+        bVar2 = (byte)*piVar3;
+        bVar8 = bVar2 < *pbVar4;
+        if (((bVar2 == *pbVar4) &&
+            (bVar8 = *(byte *)((int)piVar3 + 1) < pbVar4[1], *(byte *)((int)piVar3 + 1) == pbVar4[1]
+            )) && ((bVar8 = *(byte *)((int)piVar3 + 2) < pbVar4[2],
+                   *(byte *)((int)piVar3 + 2) == pbVar4[2] &&
+                   (bVar8 = *(byte *)((int)piVar3 + 3) < pbVar4[3],
+                   *(byte *)((int)piVar3 + 3) == pbVar4[3])))) {
+          uVar7 = 0;
+        }
+        else {
+          uVar7 = -(uint)bVar8 | 1;
+        }
+        goto LAB_100c6b2a;
+      }
+      piVar3 = piVar3 + 1;
+      pbVar4 = pbVar4 + 4;
+      bVar8 = 3 < uVar7;
+      uVar7 = uVar7 - 4;
+    } while (bVar8);
+    uVar7 = 0;
+LAB_100c6b2a:
+    if (uVar7 == 0) {
+      local_10[0] = (undefined4 *)((uint)puVar6 >> 0x10);
+      local_18[0] = (uint)puVar6 >> 8;
+      local_20[0] = puVar6;
+      if (puVar6 != (undefined4 *)0x0) {
+        piVar3 = FUN_1000d2c0(&DAT_101931f5,(int *)local_18,(int *)local_20,
+                              (((((uint)puVar6 & 0xff ^ 0x811c9dc5) * 0x1000193 ^ local_18[0] & 0xff
+                                ) * 0x1000193 ^ (uint)local_10[0] & 0xff) * 0x1000193 ^
+                              (uint)puVar6 >> 0x18) * 0x1000193);
+        iVar1 = piVar3[1];
+        if ((iVar1 == 0) || (iVar1 == DAT_101931f9)) {
+          puVar6 = (undefined4 *)FUN_1003d106(0xc);
+          local_10[0] = local_20[0];
+          puVar6[1] = m_IDirectInput8W::vftable;
+          puVar6[2] = local_20[0];
+          *puVar6 = m_IDirectInput8W::vftable;
+          piVar3 = (int *)FUN_1000c5d0(&DAT_101931f5,(int *)local_20,(byte *)local_10);
+          *(undefined4 **)(*piVar3 + 0xc) = puVar6 + 1;
+        }
+        else {
+          puVar6 = (undefined4 *)(-(uint)(*(int *)(iVar1 + 0xc) != 0) & *(int *)(iVar1 + 0xc) - 4U);
+        }
+      }
+      *param_2 = (uint)puVar6;
+    }
+    piVar5 = &DAT_10139238;
+    uVar7 = 0xc;
+    piVar3 = param_1;
+    do {
+      if (*piVar3 != *piVar5) goto LAB_100c6c2a;
+      piVar3 = piVar3 + 1;
+      piVar5 = piVar5 + 1;
+      bVar8 = 3 < uVar7;
+      uVar7 = uVar7 - 4;
+    } while (bVar8);
+    puVar6 = FUN_1000c250((uint)puVar6);
+    *param_2 = (uint)puVar6;
+LAB_100c6c2a:
+    piVar5 = &DAT_101394c8;
+    uVar7 = 0xc;
+    piVar3 = param_1;
+    do {
+      if (*piVar3 != *piVar5) goto LAB_100c6c52;
+      piVar3 = piVar3 + 1;
+      piVar5 = piVar5 + 1;
+      bVar8 = 3 < uVar7;
+      uVar7 = uVar7 - 4;
+    } while (bVar8);
+    puVar6 = FUN_1000d860(*param_2);
+    *param_2 = (uint)puVar6;
+LAB_100c6c52:
+    piVar5 = &DAT_101393e8;
+    uVar7 = 0xc;
+    piVar3 = param_1;
+    do {
+      if (*piVar3 != *piVar5) goto LAB_100c6c7c;
+      piVar3 = piVar3 + 1;
+      piVar5 = piVar5 + 1;
+      bVar8 = 3 < uVar7;
+      uVar7 = uVar7 - 4;
+    } while (bVar8);
+    puVar6 = FUN_1000dba0(*param_2);
+    *param_2 = (uint)puVar6;
+LAB_100c6c7c:
+    piVar3 = &DAT_1011ec30;
+    uVar7 = 0xc;
+    do {
+      if (*param_1 != *piVar3) {
+        return;
+      }
+      param_1 = param_1 + 1;
+      piVar3 = piVar3 + 1;
+      bVar8 = 3 < uVar7;
+      uVar7 = uVar7 - 4;
+    } while (bVar8);
+    puVar6 = (undefined4 *)FUN_1003d106(0xc);
+    uVar7 = *param_2;
+    *puVar6 = m_IClassFactory::vftable;
+    puVar6[1] = uVar7;
+    puVar6[2] = &DAT_1011ec30;
+    *param_2 = (uint)puVar6;
+  }
+  return;
+}
+
+
+
+============================================================
+Function: FUN_100f9770 @ 100f9770
+Signature: undefined __fastcall FUN_100f9770(byte * param_1, char * param_2)
+Callers:
+  100f9430 | Click
+Callees:
+  100589d0 | _memset
+  10088b58 | FUN_10088b58
+  1009c5e0 | __strnicmp
+  100c0920 | __alloca_probe
+  100c1880 | EQClasses::CEverQuest::LMouseUp
+  100c1b80 | EQClasses::CDisplay::GetClickedActor
+  1010f290 | MacroError
+  1010f420 | DebugSpew
+Decompile:
+
+/* WARNING: Function: __alloca_probe replaced with injection: alloca_probe */
+
+void __fastcall FUN_100f9770(byte *param_1,char *param_2)
+
+{
+  bool bVar1;
+  bool bVar2;
+  uint uVar3;
+  uint uVar4;
+  char *pcVar5;
+  int iVar6;
+  T3D_tagACTORINSTANCE *pTVar7;
+  byte *pbVar8;
+  byte *pbVar9;
+  byte bVar10;
+  undefined1 local_100c [12];
+  byte local_1000 [2048];
+  byte local_800 [2044];
+  undefined4 uStack_4;
+  
+  uStack_4 = 0x100f977a;
+  _memset(local_800,0,0x800);
+  bVar10 = *param_1;
+  if (((bVar10 != 0x2b) && (bVar10 != 0x2d)) && (((char)bVar10 < '0' || ('9' < (char)bVar10)))) {
+    MacroError();
+    return;
+  }
+  bVar1 = false;
+  _memset(local_1000,0,0x800);
+  pbVar8 = param_1;
+  while ((bVar10 == 0x20 || (bVar10 == 9))) {
+    pbVar9 = pbVar8 + 1;
+    pbVar8 = pbVar8 + 1;
+    bVar10 = *pbVar9;
+  }
+  pbVar9 = local_1000;
+LAB_100f97f4:
+  if (((bVar10 == 0x20) || (bVar10 == 9)) || (bVar10 == 0)) {
+    if (!bVar1) goto LAB_100f984e;
+    if (bVar10 == 0) goto LAB_100f9827;
+  }
+  if (bVar10 == 0x22) {
+    bVar10 = pbVar8[1];
+    bVar1 = !bVar1;
+    pbVar8 = pbVar8 + 1;
+  }
+  else {
+    *pbVar9 = bVar10;
+    pbVar9 = pbVar9 + 1;
+    bVar10 = pbVar8[1];
+    pbVar8 = pbVar8 + 1;
+  }
+  goto LAB_100f97f4;
+LAB_100f9827:
+  DebugSpew(0x1014611c);
+  DebugSpew(0x10146150);
+  DebugSpew(0x1014615c);
+LAB_100f984e:
+  bVar2 = false;
+  bVar1 = false;
+  iVar6 = 1;
+  for (; (bVar10 = *param_1, bVar10 == 0x20 || (bVar10 == 9)); param_1 = param_1 + 1) {
+  }
+  do {
+    while (((bVar10 != 0x20 && (bVar10 != 9)) && (bVar10 != 0))) {
+LAB_100f98b7:
+      if (bVar10 == 0x22) {
+        bVar1 = !bVar1;
+      }
+      pbVar8 = param_1 + 1;
+      param_1 = param_1 + 1;
+      bVar10 = *pbVar8;
+    }
+    if (bVar1) {
+      if (bVar10 != 0) goto LAB_100f98b7;
+      DebugSpew(0x101460e4);
+      break;
+    }
+    while ((bVar10 == 0x20 || (bVar10 == 9))) {
+      pbVar8 = param_1 + 1;
+      param_1 = param_1 + 1;
+      bVar10 = *pbVar8;
+    }
+    iVar6 = iVar6 + -1;
+  } while (iVar6 != 0);
+  pbVar8 = local_800;
+  do {
+    bVar10 = *param_1;
+    if (((bVar10 == 0x20) || (bVar10 == 9)) || (bVar10 == 0)) {
+      if (!bVar2) goto LAB_100f9915;
+      if (bVar10 == 0) {
+        DebugSpew(0x1014611c);
+        DebugSpew(0x10146150);
+        DebugSpew(0x1014615c);
+LAB_100f9915:
+        uVar3 = FUN_10088b58(local_1000);
+        uVar4 = FUN_10088b58(local_800);
+        if (((local_1000[0] == 0x2b) || (local_1000[0] == 0x2d)) ||
+           ((local_800[0] == 0x2b || (local_800[0] == 0x2d)))) {
+          uVar3 = uVar3 + *EQADDR_MOUSE;
+          uVar4 = uVar4 + EQADDR_MOUSE[1];
+          pcVar5 = "Clicking mouse by relative offset";
+        }
+        else {
+          pcVar5 = "Clicking mouse at absolute position";
+        }
+        DebugSpew((int)pcVar5);
+        gLClickedObject = 0;
+        iVar6 = __strnicmp(param_2,"left",4);
+        if (iVar6 == 0) {
+          *__LMouseHeldTime = *(int *)(*ppDisplay + 0x154) + -0x45;
+          EQClasses::CEverQuest::LMouseUp((CEverQuest *)*ppEverQuest,uVar3,uVar4);
+          pTVar7 = EQClasses::CDisplay::GetClickedActor
+                             ((CDisplay *)*ppDisplay,uVar3,uVar4,0,local_100c,local_100c);
+          if (pTVar7 != (T3D_tagACTORINSTANCE *)0x0) {
+            gLClickedObject = 1;
+            DAT_101877f4 = 0;
+          }
+        }
+        return;
+      }
+    }
+    if (bVar10 == 0x22) {
+      bVar2 = !bVar2;
+      param_1 = param_1 + 1;
+    }
+    else {
+      *pbVar8 = bVar10;
+      pbVar8 = pbVar8 + 1;
+      param_1 = param_1 + 1;
+    }
+  } while( true );
+}
+
+
+
+============================================================
+Function: FUN_1010f870 @ 1010f870
+Signature: undefined __cdecl FUN_1010f870(undefined4 param_1, byte * param_2)
+Callers:
+  10111fb0 | InitializeMQ2Windows
+Callees:
+  10007090 | FUN_10007090
+  10012210 | FUN_10012210
+  1003d4c0 | FUN_1003d4c0
+  100589d0 | _memset
+  10081b25 | FUN_10081b25
+  1008431e | FUN_1008431e
+  10087149 | __strlwr
+  10088b58 | FUN_10088b58
+  1009c5e0 | __strnicmp
+  100c0920 | __alloca_probe
+  100c1ca0 | EQClasses::CInvSlotMgr::FindInvSlot
+  100c6db0 | FUN_100c6db0
+  1010add0 | WriteChatf
+  1010f420 | DebugSpew
+  10111010 | SendWndClick2
+Decompile:
+
+/* WARNING: Function: __alloca_probe replaced with injection: alloca_probe */
+
+void __cdecl FUN_1010f870(undefined4 param_1,byte *param_2)
+
+{
+  int *piVar1;
+  int *piVar2;
+  bool bVar3;
+  bool bVar4;
+  byte bVar5;
+  int iVar6;
+  uint uVar7;
+  uint *puVar8;
+  undefined4 uVar9;
+  byte *pbVar10;
+  uint *puVar11;
+  LPVOID pvVar12;
+  byte *pbVar13;
+  uint uVar14;
+  int iVar15;
+  CInvSlot *pCVar16;
+  CInvSlot *pCVar17;
+  uint uVar18;
+  uint local_2030;
+  uint local_2028;
+  byte *local_2024;
+  LPVOID local_2020 [4];
+  undefined4 local_2010;
+  uint local_200c;
+  byte local_2008 [4];
+  byte local_2004;
+  byte local_2003;
+  byte local_2002 [4];
+  byte local_1ffe [2038];
+  byte local_1808 [4];
+  byte local_1804 [6];
+  byte local_17fe [2038];
+  byte local_1008 [2048];
+  byte local_808 [2044];
+  undefined4 uStack_c;
+  
+  uStack_c = 0x1010f880;
+  _memset(local_1808,0,0x800);
+  _memset(local_1008,0,0x800);
+  _memset(local_808,0,0x800);
+  bVar3 = false;
+  _memset(local_2008,0,0x800);
+  for (pbVar10 = param_2; (bVar5 = *pbVar10, bVar5 == 0x20 || (bVar5 == 9)); pbVar10 = pbVar10 + 1)
+  {
+  }
+  pbVar13 = local_2008;
+LAB_1010f8f3:
+  if (((bVar5 == 0x20) || (bVar5 == 9)) || (bVar5 == 0)) {
+    if (!bVar3) goto LAB_1010f94c;
+    if (bVar5 == 0) goto LAB_1010f922;
+  }
+  if (bVar5 == 0x22) {
+    bVar3 = !bVar3;
+    pbVar10 = pbVar10 + 1;
+    bVar5 = *pbVar10;
+  }
+  else {
+    *pbVar13 = bVar5;
+    pbVar13 = pbVar13 + 1;
+    bVar5 = pbVar10[1];
+    pbVar10 = pbVar10 + 1;
+  }
+  goto LAB_1010f8f3;
+LAB_1010f922:
+  DebugSpew(0x1014611c);
+  DebugSpew(0x10146150);
+  DebugSpew(0x1014615c);
+LAB_1010f94c:
+  bVar4 = false;
+  bVar3 = false;
+  iVar6 = 1;
+  for (pbVar10 = param_2; (bVar5 = *pbVar10, bVar5 == 0x20 || (bVar5 == 9)); pbVar10 = pbVar10 + 1)
+  {
+  }
+  do {
+    while (((bVar5 != 0x20 && (bVar5 != 9)) && (bVar5 != 0))) {
+LAB_1010f9b6:
+      if (bVar5 == 0x22) {
+        bVar3 = !bVar3;
+      }
+      pbVar13 = pbVar10 + 1;
+      pbVar10 = pbVar10 + 1;
+      bVar5 = *pbVar13;
+    }
+    if (bVar3) {
+      if (bVar5 != 0) goto LAB_1010f9b6;
+      DebugSpew(0x101460e4);
+      break;
+    }
+    while ((bVar5 == 0x20 || (bVar5 == 9))) {
+      pbVar13 = pbVar10 + 1;
+      pbVar10 = pbVar10 + 1;
+      bVar5 = *pbVar13;
+    }
+    iVar6 = iVar6 + -1;
+  } while (iVar6 != 0);
+  pbVar13 = local_1808;
+LAB_1010f990:
+  bVar5 = *pbVar10;
+  if (((bVar5 == 0x20) || (bVar5 == 9)) || (bVar5 == 0)) {
+    if (!bVar4) goto LAB_1010fa1c;
+    if (bVar5 == 0) goto LAB_1010f9ef;
+  }
+  if (bVar5 == 0x22) {
+    bVar4 = !bVar4;
+    pbVar10 = pbVar10 + 1;
+  }
+  else {
+    *pbVar13 = bVar5;
+    pbVar13 = pbVar13 + 1;
+    pbVar10 = pbVar10 + 1;
+  }
+  goto LAB_1010f990;
+LAB_1010f9ef:
+  DebugSpew(0x1014611c);
+  DebugSpew(0x10146150);
+  DebugSpew(0x1014615c);
+LAB_1010fa1c:
+  bVar4 = false;
+  bVar3 = false;
+  iVar6 = 2;
+  for (pbVar10 = param_2; (bVar5 = *pbVar10, bVar5 == 0x20 || (bVar5 == 9)); pbVar10 = pbVar10 + 1)
+  {
+  }
+  do {
+    while (((bVar5 != 0x20 && (bVar5 != 9)) && (bVar5 != 0))) {
+LAB_1010fa86:
+      if (bVar5 == 0x22) {
+        bVar3 = !bVar3;
+      }
+      pbVar13 = pbVar10 + 1;
+      pbVar10 = pbVar10 + 1;
+      bVar5 = *pbVar13;
+    }
+    if (bVar3) {
+      if (bVar5 != 0) goto LAB_1010fa86;
+      DebugSpew(0x101460e4);
+      break;
+    }
+    while ((bVar5 == 0x20 || (bVar5 == 9))) {
+      pbVar13 = pbVar10 + 1;
+      pbVar10 = pbVar10 + 1;
+      bVar5 = *pbVar13;
+    }
+    iVar6 = iVar6 + -1;
+  } while (iVar6 != 0);
+  pbVar13 = local_1008;
+LAB_1010fa60:
+  bVar5 = *pbVar10;
+  if (((bVar5 == 0x20) || (bVar5 == 9)) || (bVar5 == 0)) {
+    if (!bVar4) goto LAB_1010faec;
+    if (bVar5 == 0) goto LAB_1010fabf;
+  }
+  if (bVar5 == 0x22) {
+    bVar4 = !bVar4;
+    pbVar10 = pbVar10 + 1;
+  }
+  else {
+    *pbVar13 = bVar5;
+    pbVar13 = pbVar13 + 1;
+    pbVar10 = pbVar10 + 1;
+  }
+  goto LAB_1010fa60;
+LAB_1010fabf:
+  DebugSpew(0x1014611c);
+  DebugSpew(0x10146150);
+  DebugSpew(0x1014615c);
+LAB_1010faec:
+  bVar4 = false;
+  bVar3 = false;
+  iVar6 = 3;
+  for (; (bVar5 = *param_2, bVar5 == 0x20 || (bVar5 == 9)); param_2 = param_2 + 1) {
+  }
+  do {
+    while (((bVar5 != 0x20 && (bVar5 != 9)) && (bVar5 != 0))) {
+LAB_1010fb56:
+      if (bVar5 == 0x22) {
+        bVar3 = !bVar3;
+      }
+      pbVar10 = param_2 + 1;
+      param_2 = param_2 + 1;
+      bVar5 = *pbVar10;
+    }
+    if (bVar3) {
+      if (bVar5 != 0) goto LAB_1010fb56;
+      DebugSpew(0x101460e4);
+      break;
+    }
+    while ((bVar5 == 0x20 || (bVar5 == 9))) {
+      pbVar10 = param_2 + 1;
+      param_2 = param_2 + 1;
+      bVar5 = *pbVar10;
+    }
+    iVar6 = iVar6 + -1;
+  } while (iVar6 != 0);
+  pbVar10 = local_808;
+LAB_1010fb30:
+  bVar5 = *param_2;
+  if (((bVar5 == 0x20) || (bVar5 == 9)) || (bVar5 == 0)) {
+    if (!bVar4) goto LAB_1010fbbc;
+    if (bVar5 == 0) goto LAB_1010fb8f;
+  }
+  if (bVar5 == 0x22) {
+    bVar4 = !bVar4;
+    param_2 = param_2 + 1;
+  }
+  else {
+    *pbVar10 = bVar5;
+    pbVar10 = pbVar10 + 1;
+    param_2 = param_2 + 1;
+  }
+  goto LAB_1010fb30;
+LAB_1010fb8f:
+  DebugSpew(0x1014611c);
+  DebugSpew(0x10146150);
+  DebugSpew(0x1014615c);
+LAB_1010fbbc:
+  if (local_1808[0] == 0) {
+LAB_1010fbc6:
+    FUN_100c6db0();
+    FUN_100c6db0();
+    return;
+  }
+  local_2024 = local_1808;
+  local_2028 = 0xffffffff;
+  uVar18 = 0xffffffff;
+  iVar15 = -1;
+  pCVar16 = (CInvSlot *)0x0;
+  local_2030 = -1;
+  piVar1 = (int *)*ppInvSlotMgr;
+  iVar6 = FUN_10081b25(local_2008,&DAT_101472bc);
+  if (iVar6 == 0) {
+    if (local_808[0] == 0) goto LAB_1010fbc6;
+    iVar6 = __strnicmp((char *)local_1808,"bank",4);
+    if (iVar6 == 0) {
+      uVar18 = FUN_10088b58(local_1804);
+      uVar18 = uVar18 - 1;
+      local_2028 = FUN_10088b58(local_1008);
+      local_2028 = local_2028 - 1;
+      uVar7 = 1;
+      local_2030 = 1;
+    }
+    else {
+      iVar6 = __strnicmp((char *)local_1808,"sharedbank",10);
+      if (iVar6 == 0) {
+        uVar18 = FUN_10088b58(local_17fe);
+        uVar18 = uVar18 - 1;
+        local_2028 = FUN_10088b58(local_1008);
+        local_2028 = local_2028 - 1;
+        uVar7 = 2;
+        local_2030 = 2;
+      }
+      else {
+        iVar6 = __strnicmp((char *)local_1808,"pack",4);
+        if (iVar6 == 0) {
+          uVar18 = FUN_10088b58(local_1804);
+          uVar18 = uVar18 + 0x16;
+          local_2028 = FUN_10088b58(local_1008);
+          local_2028 = local_2028 - 1;
+          uVar7 = 0;
+          local_2030 = 0;
+        }
+        else {
+          uVar7 = -1;
+        }
+      }
+    }
+    uVar14 = 0;
+    pCVar17 = pCVar16;
+    piVar2 = piVar1;
+    if (piVar1[0x801] != 0) {
+      do {
+        pCVar17 = (CInvSlot *)piVar2[1];
+        if ((((pCVar17[0x10] != (CInvSlot)0x0) &&
+             (iVar6 = *(int *)(pCVar17 + 4), *(int *)(iVar6 + 0x264) == uVar7)) &&
+            (*(ushort *)(iVar6 + 0x268) == uVar18)) && (*(ushort *)(iVar6 + 0x26a) == local_2028))
+        break;
+        uVar14 = uVar14 + 1;
+        uVar7 = local_2030;
+        piVar2 = piVar2 + 1;
+      } while (uVar14 < (uint)piVar1[0x801]);
+    }
+    local_2024 = local_808;
+    pCVar16 = (CInvSlot *)0x0;
+    if (uVar14 != piVar1[0x801]) {
+      pCVar16 = pCVar17;
+    }
+  }
+  else {
+    local_2030 = FUN_10088b58(local_2008);
+    if (local_2030 == 0) {
+      puVar8 = (uint *)__strlwr((char *)local_2008);
+      local_2020[0] = (LPVOID)0x0;
+      local_2010 = 0;
+      local_200c = 0xf;
+      puVar11 = puVar8;
+      do {
+        uVar7 = *puVar11;
+        puVar11 = (uint *)((int)puVar11 + 1);
+      } while ((char)uVar7 != '\0');
+      FUN_10007090(local_2020,puVar8,(int)puVar11 - ((int)puVar8 + 1));
+      puVar11 = (uint *)FUN_10012210(&ItemSlotMap,(byte *)local_2020);
+      local_2030 = *puVar11;
+      if (0xf < local_200c) {
+        pvVar12 = local_2020[0];
+        if ((0xfff < local_200c + 1) &&
+           (pvVar12 = *(LPVOID *)((int)local_2020[0] + -4),
+           0x1f < (uint)((int)local_2020[0] + (-4 - (int)pvVar12)))) {
+                    /* WARNING: Subroutine does not return */
+          FUN_1008431e();
+        }
+        FUN_1003d4c0(pvVar12);
+      }
+      if (local_2030 < 0x21) {
+        pCVar16 = EQClasses::CInvSlotMgr::FindInvSlot((CInvSlotMgr *)*ppInvSlotMgr,local_2030,-1);
+LAB_1010ffd6:
+        if (local_2030 != 0) {
+          if (pCVar16 != (CInvSlot *)0x0) goto LAB_10110045;
+          goto LAB_1010ffe2;
+        }
+      }
+      else {
+        iVar6 = __strnicmp((char *)local_2008,"loot",4);
+        if (iVar6 == 0) {
+          uVar18 = FUN_10088b58(&local_2004);
+          iVar15 = 0xb;
+LAB_1010ff71:
+          uVar18 = uVar18 - 1;
+        }
+        else {
+          iVar6 = __strnicmp((char *)local_2008,"enviro",6);
+          if (iVar6 == 0) {
+            uVar18 = FUN_10088b58(local_2002);
+            iVar15 = 4;
+            goto LAB_1010ff71;
+          }
+          iVar6 = __strnicmp((char *)local_2008,"pack",4);
+          if (iVar6 != 0) {
+            iVar6 = __strnicmp((char *)local_2008,"bank",4);
+            if (iVar6 == 0) {
+              uVar18 = FUN_10088b58(&local_2004);
+              iVar15 = 1;
+            }
+            else {
+              iVar6 = __strnicmp((char *)local_2008,"sharedbank",10);
+              if (iVar6 == 0) {
+                uVar18 = FUN_10088b58(local_1ffe);
+                iVar15 = 2;
+              }
+              else {
+                iVar6 = __strnicmp((char *)local_2008,"trade",5);
+                if (iVar6 != 0) goto LAB_1010ff77;
+                uVar18 = FUN_10088b58(&local_2003);
+                iVar15 = 3;
+              }
+            }
+            goto LAB_1010ff71;
+          }
+          uVar18 = FUN_10088b58(&local_2004);
+          iVar15 = 0;
+          uVar18 = uVar18 + 0x16;
+        }
+LAB_1010ff77:
+        uVar7 = 0;
+        piVar2 = piVar1;
+        if (piVar1[0x801] != 0) {
+          do {
+            pCVar16 = (CInvSlot *)piVar2[1];
+            if (((pCVar16[0x10] != (CInvSlot)0x0) &&
+                (*(int *)(*(int *)(pCVar16 + 4) + 0x264) == iVar15)) &&
+               (*(ushort *)(*(int *)(pCVar16 + 4) + 0x268) == uVar18)) {
+              local_2030 = 1;
+              break;
+            }
+            uVar7 = uVar7 + 1;
+            piVar2 = piVar2 + 1;
+          } while (uVar7 < (uint)piVar1[0x801]);
+        }
+        if (uVar7 != piVar1[0x801]) goto LAB_1010ffd6;
+      }
+      if ((local_2008[0] != 0x30) && (iVar6 = FUN_10081b25(local_2008,(byte *)"charm"), iVar6 != 0))
+      {
+        WriteChatf(0x101472dc);
+        return;
+      }
+    }
+    else {
+LAB_1010ffe2:
+      pCVar16 = (CInvSlot *)piVar1[local_2030 + 1];
+    }
+  }
+  if (pCVar16 == (CInvSlot *)0x0) {
+    WriteChatf(0x101472f4);
+    return;
+  }
+LAB_10110045:
+  DebugSpew(0x10147328);
+  if ((*(CXWnd **)(pCVar16 + 4) == (CXWnd *)0x0) ||
+     (uVar9 = SendWndClick2(*(CXWnd **)(pCVar16 + 4),local_2024), (char)uVar9 == '\0')) {
+    WriteChatf(0x10147208);
+  }
+  return;
+}
+
+
+
+============================================================
+Function: FUN_100059f0 @ 100059f0
+Signature: uint __thiscall FUN_100059f0(undefined4 param_1, uint param_2, uint * param_3, uint param_4)
+Callers:
+  100c2d00 | FUN_100c2d00
+Callees:
+  10034a50 | FUN_10034a50
+  1003d106 | FUN_1003d106
+  10081f25 | FUN_10081f25
+  100c15a0 | EQClasses::CXWnd::IsReallyVisible
+  100c2100 | FUN_100c2100
+  100c4090 | FUN_100c4090
+  100c46b0 | FUN_100c46b0
+  1010f420 | DebugSpew
+  1010f510 | UseAbility
+  10111b20 | SendWndClick
+  10111da0 | FindMQ2Window
+  10114650 | FUN_10114650
+  10115fd0 | FUN_10115fd0
+Decompile:
+
+uint __thiscall FUN_100059f0(void *this,undefined4 param_1,uint param_2,uint *param_3,uint param_4)
+
+{
+  undefined1 uVar1;
+  bool bVar2;
+  int *piVar3;
+  undefined4 uVar4;
+  undefined3 extraout_var;
+  int iVar5;
+  uint uVar6;
+  undefined8 uVar7;
+  uint local_10;
+  undefined4 local_c;
+  
+  if (param_2 < 0x3789) {
+    if (param_2 == 0x3788) {
+LAB_10005c30:
+      uVar4 = FUN_100c46b0();
+      uVar1 = (undefined1)uVar4;
+      if (DAT_10193198 != (CXWnd *)0x0) {
+        bVar2 = EQClasses::CXWnd::IsReallyVisible(DAT_10193198);
+        uVar4 = CONCAT31(extraout_var,bVar2);
+        if (bVar2) {
+          iVar5 = FindMQ2Window((uint *)"InventoryWindow");
+          if ((iVar5 != 0) &&
+             (iVar5 = FUN_100c2100(iVar5,(byte *)"AltCurr_CreateItemButton"), iVar5 != 0)) {
+            *(undefined1 *)(iVar5 + 0x1a) = 1;
+          }
+          uVar4 = SendWndClick((uint *)"InventoryWindow",(byte *)"AltCurr_DisplayMissingButton",
+                               (byte *)"leftmouseup");
+          DAT_1018e613 = DAT_1018e613 == '\0';
+        }
+      }
+      return CONCAT31((int3)((uint)uVar4 >> 8),uVar1);
+    }
+    if (param_2 < 0x1403) {
+      if (param_2 == 0x1402) {
+        DebugSpew(0x101388e4);
+        DAT_10193194 = param_3;
+        if (DAT_10193188 == (int *)0x0) {
+          piVar3 = (int *)FUN_1003d106(0x29c);
+          DAT_10193188 = FUN_10115fd0(piVar3);
+          if (DAT_10193188 == (int *)0x0) goto LAB_10005d4f;
+        }
+        if (*(int *)((int)DAT_10193194 + 5) != 0) {
+          FUN_10114650();
+          *(undefined1 *)((int)DAT_10193188 + 0x196) = 1;
+        }
+      }
+      else {
+        if (param_2 == 0x339) goto LAB_10005c30;
+        if (param_2 == 0x1338) {
+          FUN_100c4090(this,param_3,param_4);
+        }
+        else if (((param_2 == 0x1339) && (0x13 < param_4)) && (param_3 != (uint *)0x0)) {
+          uVar7 = FUN_10081f25((longlong *)0x0);
+          local_c = (undefined4)((ulonglong)uVar7 >> 0x20);
+          iVar5 = (int)uVar7;
+          uVar6 = *param_3;
+          local_10 = 8;
+          piVar3 = (int *)FUN_10034a50(&local_10);
+          *piVar3 = iVar5 + uVar6;
+          local_10 = 10;
+          uVar6 = param_3[1];
+          piVar3 = (int *)FUN_10034a50(&local_10);
+          *piVar3 = iVar5 + uVar6;
+          local_10 = 0x1e;
+          uVar6 = param_3[2];
+          piVar3 = (int *)FUN_10034a50(&local_10);
+          *piVar3 = iVar5 + uVar6;
+          local_10 = 0x26;
+          uVar6 = param_3[2];
+          piVar3 = (int *)FUN_10034a50(&local_10);
+          *piVar3 = iVar5 + uVar6;
+          local_10 = 0x1a;
+          uVar6 = param_3[2];
+          piVar3 = (int *)FUN_10034a50(&local_10);
+          *piVar3 = iVar5 + uVar6;
+          local_10 = 0x15;
+          uVar6 = param_3[3];
+          piVar3 = (int *)FUN_10034a50(&local_10);
+          *piVar3 = iVar5 + uVar6;
+          local_10 = 0x17;
+          uVar6 = param_3[3];
+          piVar3 = (int *)FUN_10034a50(&local_10);
+          *piVar3 = iVar5 + uVar6;
+          local_10 = 0x34;
+          uVar6 = param_3[3];
+          piVar3 = (int *)FUN_10034a50(&local_10);
+          *piVar3 = iVar5 + uVar6;
+          local_10 = 0x4a;
+          uVar6 = param_3[4];
+          piVar3 = (int *)FUN_10034a50(&local_10);
+          *piVar3 = iVar5 + uVar6;
+        }
+      }
+    }
+    else if (param_2 == 0x2703) {
+      UseAbility();
+    }
+    else if (param_2 == 0x27a2) goto LAB_10005c30;
+  }
+  else if (param_2 < 0x698a) {
+    if (param_2 == 0x6989) {
+      if ((0xb < param_4) && (param_3 != (uint *)0x0)) {
+        uVar7 = FUN_10081f25((longlong *)0x0);
+        local_c = (undefined4)((ulonglong)uVar7 >> 0x20);
+        local_10 = *param_3;
+        uVar6 = param_3[1];
+        piVar3 = (int *)FUN_10034a50(&local_10);
+        *piVar3 = (int)uVar7 + uVar6;
+      }
+    }
+    else if (((param_2 == 0x40b6) || (param_2 == 0x532a)) || (param_2 == 0x5409)) goto LAB_10005c30;
+  }
+  else {
+    if (param_2 == 0x6b6d) goto LAB_10005c30;
+    if (param_2 == 0x7777) {
+      DAT_1017bfc8 = 1;
+    }
+  }
+LAB_10005d4f:
+  uVar6 = FUN_100c46b0();
+  return uVar6;
+}
+
+
+
+============================================================
+Function: SendWndClick2 @ 10111010
+Signature: undefined4 __cdecl SendWndClick2(CXWnd * param_1, byte * param_2)
+Callers:
+  1010f870 | FUN_1010f870
+Callees:
+  10081b25 | FUN_10081b25
+  100c14c0 | EQClasses::CXWnd::GetScreenRect
+  100c1dd0 | GetFastTime
+  100c1e30 | EQClasses::CXWnd::HandleRButtonUpAfterHeld
+  100c1e40 | EQClasses::CXWnd::HandleRButtonHeld
+  100c1e50 | EQClasses::CXWnd::HandleRButtonUp
+  100c1e60 | EQClasses::CXWnd::HandleRButtonDown
+  100c1e70 | EQClasses::CXWnd::HandleLButtonUpAfterHeld
+  100c1e80 | EQClasses::CXWnd::HandleLButtonHeld
+  100c1e90 | EQClasses::CXWnd::HandleLButtonUp
+  100c1ea0 | EQClasses::CXWnd::HandleLButtonDown
+Decompile:
+
+uint __cdecl SendWndClick2(CXWnd *param_1,byte *param_2)
+
+{
+  uint in_EAX;
+  undefined4 uVar1;
+  uint uVar2;
+  int local_24;
+  int local_20;
+  int local_1c;
+  uint local_18;
+  int local_14;
+  int local_10;
+  
+                    /* 0x111010  877  SendWndClick2 */
+  if (param_1 != (CXWnd *)0x0) {
+    uVar2 = 0;
+    do {
+      in_EAX = FUN_10081b25((&PTR_s_leftmouse_10135a00)[uVar2],param_2);
+      if (in_EAX == 0) {
+        EQClasses::CXWnd::GetScreenRect(param_1);
+        local_24 = ((uint)(local_14 - local_1c) >> 1) + local_1c;
+        local_20 = (local_10 - local_18 >> 1) + local_18;
+        in_EAX = local_18;
+        switch(uVar2) {
+        case 0:
+          EQClasses::CXWnd::HandleLButtonDown(param_1,(CXPoint *)&local_24,0);
+          uVar1 = GetFastTime();
+          *gpMouseEventTime = uVar1;
+          return CONCAT31((int3)((uint)uVar1 >> 8),1);
+        case 1:
+          EQClasses::CXWnd::HandleLButtonDown(param_1,(CXPoint *)&local_24,0);
+          EQClasses::CXWnd::HandleLButtonUp(param_1,(CXPoint *)&local_24,0);
+          uVar1 = GetFastTime();
+          *gpMouseEventTime = uVar1;
+          return CONCAT31((int3)((uint)uVar1 >> 8),1);
+        case 2:
+          EQClasses::CXWnd::HandleLButtonDown(param_1,(CXPoint *)&local_24,0);
+          EQClasses::CXWnd::HandleLButtonHeld(param_1,(CXPoint *)&local_24,0);
+          uVar1 = GetFastTime();
+          *gpMouseEventTime = uVar1;
+          return CONCAT31((int3)((uint)uVar1 >> 8),1);
+        case 3:
+          EQClasses::CXWnd::HandleLButtonDown(param_1,(CXPoint *)&local_24,0);
+          EQClasses::CXWnd::HandleLButtonHeld(param_1,(CXPoint *)&local_24,0);
+          EQClasses::CXWnd::HandleLButtonUpAfterHeld(param_1,(CXPoint *)&local_24,0);
+          uVar1 = GetFastTime();
+          *gpMouseEventTime = uVar1;
+          return CONCAT31((int3)((uint)uVar1 >> 8),1);
+        case 4:
+          EQClasses::CXWnd::HandleRButtonDown(param_1,(CXPoint *)&local_24,0);
+          uVar1 = GetFastTime();
+          *gpMouseEventTime = uVar1;
+          return CONCAT31((int3)((uint)uVar1 >> 8),1);
+        case 5:
+          EQClasses::CXWnd::HandleRButtonDown(param_1,(CXPoint *)&local_24,0);
+          EQClasses::CXWnd::HandleRButtonUp(param_1,(CXPoint *)&local_24,0);
+          uVar1 = GetFastTime();
+          *gpMouseEventTime = uVar1;
+          return CONCAT31((int3)((uint)uVar1 >> 8),1);
+        case 6:
+          EQClasses::CXWnd::HandleRButtonDown(param_1,(CXPoint *)&local_24,0);
+          EQClasses::CXWnd::HandleRButtonHeld(param_1,(CXPoint *)&local_24,0);
+          uVar1 = GetFastTime();
+          *gpMouseEventTime = uVar1;
+          return CONCAT31((int3)((uint)uVar1 >> 8),1);
+        case 7:
+          EQClasses::CXWnd::HandleRButtonDown(param_1,(CXPoint *)&local_24,0);
+          EQClasses::CXWnd::HandleRButtonHeld(param_1,(CXPoint *)&local_24,0);
+          EQClasses::CXWnd::HandleRButtonUpAfterHeld(param_1,(CXPoint *)&local_24,0);
+          uVar1 = GetFastTime();
+          *gpMouseEventTime = uVar1;
+          return CONCAT31((int3)((uint)uVar1 >> 8),1);
+        }
+        break;
+      }
+      uVar2 = uVar2 + 1;
+    } while (uVar2 < 8);
+  }
+  return in_EAX & 0xffffff00;
+}
+
+
+
+============================================================
+Function: SendWndClick @ 10111b20
+Signature: undefined4 __cdecl SendWndClick(uint * param_1, byte * param_2, byte * param_3)
+Callers:
+  100059f0 | FUN_100059f0
+  1003cd50 | FUN_1003cd50
+  101100a0 | FUN_101100a0
+Callees:
+  1002ea10 | FUN_1002ea10
+  10081b25 | FUN_10081b25
+  100c14c0 | EQClasses::CXWnd::GetScreenRect
+  100c1dd0 | GetFastTime
+  100c1e30 | EQClasses::CXWnd::HandleRButtonUpAfterHeld
+  100c1e40 | EQClasses::CXWnd::HandleRButtonHeld
+  100c1e50 | EQClasses::CXWnd::HandleRButtonUp
+  100c1e60 | EQClasses::CXWnd::HandleRButtonDown
+  100c1e70 | EQClasses::CXWnd::HandleLButtonUpAfterHeld
+  100c1e80 | EQClasses::CXWnd::HandleLButtonHeld
+  100c1e90 | EQClasses::CXWnd::HandleLButtonUp
+  100c1ea0 | EQClasses::CXWnd::HandleLButtonDown
+  100c2100 | FUN_100c2100
+  10111da0 | FindMQ2Window
+Decompile:
+
+uint __cdecl SendWndClick(uint *param_1,byte *param_2,byte *param_3)
+
+{
+  CXWnd *this;
+  uint uVar1;
+  uint uVar2;
+  undefined4 uVar3;
+  int local_24;
+  int local_20;
+  int local_1c;
+  uint local_18;
+  int local_14;
+  int local_10;
+  
+                    /* 0x111b20  876  SendWndClick */
+  this = (CXWnd *)FindMQ2Window(param_1);
+  if (this == (CXWnd *)0x0) {
+    local_18 = FUN_1002ea10(0x10146fdc);
+  }
+  else {
+    if ((((param_2 != (byte *)0x0) && (*param_2 != 0)) && (*param_2 != 0x30)) &&
+       (this = (CXWnd *)FUN_100c2100((int)this,param_2), this == (CXWnd *)0x0)) {
+      uVar1 = FUN_1002ea10(0x10146ff8);
+      return uVar1 & 0xffffff00;
+    }
+    uVar1 = 0;
+    while (uVar2 = FUN_10081b25((&PTR_s_leftmouse_10135a00)[uVar1],param_3), uVar2 != 0) {
+      uVar1 = uVar1 + 1;
+      if (7 < uVar1) {
+        return uVar2 & 0xffffff00;
+      }
+    }
+    EQClasses::CXWnd::GetScreenRect(this);
+    local_24 = ((uint)(local_14 - local_1c) >> 1) + local_1c;
+    local_20 = (local_10 - local_18 >> 1) + local_18;
+    switch(uVar1) {
+    case 0:
+      EQClasses::CXWnd::HandleLButtonDown(this,(CXPoint *)&local_24,0);
+      uVar3 = GetFastTime();
+      *gpMouseEventTime = uVar3;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    case 1:
+      EQClasses::CXWnd::HandleLButtonDown(this,(CXPoint *)&local_24,0);
+      EQClasses::CXWnd::HandleLButtonUp(this,(CXPoint *)&local_24,0);
+      uVar3 = GetFastTime();
+      *gpMouseEventTime = uVar3;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    case 2:
+      EQClasses::CXWnd::HandleLButtonHeld(this,(CXPoint *)&local_24,0);
+      uVar3 = GetFastTime();
+      *gpMouseEventTime = uVar3;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    case 3:
+      EQClasses::CXWnd::HandleLButtonDown(this,(CXPoint *)&local_24,0);
+      EQClasses::CXWnd::HandleLButtonHeld(this,(CXPoint *)&local_24,0);
+      EQClasses::CXWnd::HandleLButtonUpAfterHeld(this,(CXPoint *)&local_24,0);
+      uVar3 = GetFastTime();
+      *gpMouseEventTime = uVar3;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    case 4:
+      EQClasses::CXWnd::HandleRButtonDown(this,(CXPoint *)&local_24,0);
+      uVar3 = GetFastTime();
+      *gpMouseEventTime = uVar3;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    case 5:
+      EQClasses::CXWnd::HandleRButtonDown(this,(CXPoint *)&local_24,0);
+      EQClasses::CXWnd::HandleRButtonUp(this,(CXPoint *)&local_24,0);
+      uVar3 = GetFastTime();
+      *gpMouseEventTime = uVar3;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    case 6:
+      EQClasses::CXWnd::HandleRButtonDown(this,(CXPoint *)&local_24,0);
+      EQClasses::CXWnd::HandleRButtonHeld(this,(CXPoint *)&local_24,0);
+      uVar3 = GetFastTime();
+      *gpMouseEventTime = uVar3;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    case 7:
+      EQClasses::CXWnd::HandleRButtonDown(this,(CXPoint *)&local_24,0);
+      EQClasses::CXWnd::HandleRButtonHeld(this,(CXPoint *)&local_24,0);
+      EQClasses::CXWnd::HandleRButtonUpAfterHeld(this,(CXPoint *)&local_24,0);
+      uVar3 = GetFastTime();
+      *gpMouseEventTime = uVar3;
+      return CONCAT31((int3)((uint)uVar3 >> 8),1);
+    }
+  }
+  return local_18 & 0xffffff00;
+}
+
+
+
+============================================================
+Function: FUN_101100a0 @ 101100a0
+Signature: undefined __cdecl FUN_101100a0(undefined4 param_1, byte * param_2)
+Callers:
+  10111fb0 | InitializeMQ2Windows
+Callees:
+  1002ea10 | FUN_1002ea10
+  100589d0 | _memset
+  10081b25 | FUN_10081b25
+  10088b58 | FUN_10088b58
+  100c0920 | __alloca_probe
+  100c10e0 | EQClasses::CTabWnd::SetPage
+  100c1dd0 | GetFastTime
+  100c2100 | FUN_100c2100
+  100c2350 | EQClasses::CXWnd::GetType
+  1010f350 | DebugSpewAlways
+  1010f420 | DebugSpew
+  10110da0 | SendWndNotification
+  10110f10 | SendListSelect
+  10111b20 | SendWndClick
+  10111da0 | FindMQ2Window
+Decompile:
+
+/* WARNING: Function: __alloca_probe replaced with injection: alloca_probe */
+
+void __cdecl FUN_101100a0(undefined4 param_1,byte *param_2)
+
+{
+  bool bVar1;
+  bool bVar2;
+  byte bVar3;
+  int iVar4;
+  CXWnd *this;
+  UIType UVar5;
+  undefined4 uVar6;
+  byte *pbVar7;
+  byte *pbVar8;
+  uint *puVar9;
+  byte *pbVar10;
+  uint uVar11;
+  byte local_2004 [2048];
+  uint local_1804 [512];
+  byte local_1004 [2048];
+  byte local_804 [2048];
+  undefined4 uStack_4;
+  
+  uStack_4 = 0x101100aa;
+  pbVar10 = (byte *)0x0;
+  _memset(local_2004,0,0x800);
+  _memset(local_1004,0,0x800);
+  _memset(local_804,0,0x800);
+  bVar1 = false;
+  _memset(local_1804,0,0x800);
+  for (pbVar7 = param_2; (bVar3 = *pbVar7, bVar3 == 0x20 || (bVar3 == 9)); pbVar7 = pbVar7 + 1) {
+  }
+  puVar9 = local_1804;
+LAB_10110124:
+  if (((bVar3 == 0x20) || (bVar3 == 9)) || (bVar3 == 0)) {
+    if (!bVar1) goto LAB_10110180;
+    if (bVar3 == 0) goto LAB_10110153;
+  }
+  if (bVar3 == 0x22) {
+    bVar1 = !bVar1;
+    pbVar7 = pbVar7 + 1;
+    bVar3 = *pbVar7;
+  }
+  else {
+    *(byte *)puVar9 = bVar3;
+    puVar9 = (uint *)((int)puVar9 + 1);
+    bVar3 = pbVar7[1];
+    pbVar7 = pbVar7 + 1;
+  }
+  goto LAB_10110124;
+LAB_10110153:
+  DebugSpew(0x1014611c);
+  DebugSpew(0x10146150);
+  DebugSpew(0x1014615c);
+LAB_10110180:
+  bVar2 = false;
+  bVar1 = false;
+  iVar4 = 1;
+  for (pbVar7 = param_2; (bVar3 = *pbVar7, bVar3 == 0x20 || (bVar3 == 9)); pbVar7 = pbVar7 + 1) {
+  }
+  do {
+    while (((bVar3 != 0x20 && (bVar3 != 9)) && (bVar3 != 0))) {
+LAB_101101f6:
+      if (bVar3 == 0x22) {
+        bVar1 = !bVar1;
+      }
+      pbVar8 = pbVar7 + 1;
+      pbVar7 = pbVar7 + 1;
+      bVar3 = *pbVar8;
+    }
+    if (bVar1) {
+      if (bVar3 != 0) goto LAB_101101f6;
+      DebugSpew(0x101460e4);
+      break;
+    }
+    while ((bVar3 == 0x20 || (bVar3 == 9))) {
+      pbVar8 = pbVar7 + 1;
+      pbVar7 = pbVar7 + 1;
+      bVar3 = *pbVar8;
+    }
+    iVar4 = iVar4 + -1;
+  } while (iVar4 != 0);
+  pbVar8 = local_2004;
+LAB_101101d0:
+  bVar3 = *pbVar7;
+  if (((bVar3 == 0x20) || (bVar3 == 9)) || (bVar3 == 0)) {
+    if (!bVar2) goto LAB_10110259;
+    if (bVar3 == 0) goto LAB_1011022f;
+  }
+  if (bVar3 == 0x22) {
+    bVar2 = !bVar2;
+    pbVar7 = pbVar7 + 1;
+  }
+  else {
+    *pbVar8 = bVar3;
+    pbVar8 = pbVar8 + 1;
+    pbVar7 = pbVar7 + 1;
+  }
+  goto LAB_101101d0;
+LAB_1011022f:
+  DebugSpew(0x1014611c);
+  DebugSpew(0x10146150);
+  DebugSpew(0x1014615c);
+LAB_10110259:
+  bVar2 = false;
+  bVar1 = false;
+  iVar4 = 2;
+  for (pbVar7 = param_2; (bVar3 = *pbVar7, bVar3 == 0x20 || (bVar3 == 9)); pbVar7 = pbVar7 + 1) {
+  }
+  do {
+    while (((bVar3 != 0x20 && (bVar3 != 9)) && (bVar3 != 0))) {
+LAB_101102c6:
+      if (bVar3 == 0x22) {
+        bVar1 = !bVar1;
+      }
+      pbVar8 = pbVar7 + 1;
+      pbVar7 = pbVar7 + 1;
+      bVar3 = *pbVar8;
+    }
+    if (bVar1) {
+      if (bVar3 != 0) goto LAB_101102c6;
+      DebugSpew(0x101460e4);
+      break;
+    }
+    while ((bVar3 == 0x20 || (bVar3 == 9))) {
+      pbVar8 = pbVar7 + 1;
+      pbVar7 = pbVar7 + 1;
+      bVar3 = *pbVar8;
+    }
+    iVar4 = iVar4 + -1;
+  } while (iVar4 != 0);
+  pbVar8 = local_1004;
+LAB_101102a0:
+  bVar3 = *pbVar7;
+  if (((bVar3 == 0x20) || (bVar3 == 9)) || (bVar3 == 0)) {
+    if (!bVar2) goto LAB_1011032c;
+    if (bVar3 == 0) goto LAB_101102ff;
+  }
+  if (bVar3 == 0x22) {
+    bVar2 = !bVar2;
+    pbVar7 = pbVar7 + 1;
+  }
+  else {
+    *pbVar8 = bVar3;
+    pbVar8 = pbVar8 + 1;
+    pbVar7 = pbVar7 + 1;
+  }
+  goto LAB_101102a0;
+LAB_101102ff:
+  DebugSpew(0x1014611c);
+  DebugSpew(0x10146150);
+  DebugSpew(0x1014615c);
+LAB_1011032c:
+  bVar2 = false;
+  bVar1 = false;
+  iVar4 = 3;
+  for (; (bVar3 = *param_2, bVar3 == 0x20 || (bVar3 == 9)); param_2 = param_2 + 1) {
+  }
+  do {
+    while (((bVar3 != 0x20 && (bVar3 != 9)) && (bVar3 != 0))) {
+LAB_10110396:
+      if (bVar3 == 0x22) {
+        bVar1 = !bVar1;
+      }
+      pbVar7 = param_2 + 1;
+      param_2 = param_2 + 1;
+      bVar3 = *pbVar7;
+    }
+    if (bVar1) {
+      if (bVar3 != 0) goto LAB_10110396;
+      DebugSpew(0x101460e4);
+      break;
+    }
+    while ((bVar3 == 0x20 || (bVar3 == 9))) {
+      pbVar7 = param_2 + 1;
+      param_2 = param_2 + 1;
+      bVar3 = *pbVar7;
+    }
+    iVar4 = iVar4 + -1;
+  } while (iVar4 != 0);
+  pbVar7 = local_804;
+  do {
+    bVar3 = *param_2;
+    if (((bVar3 == 0x20) || (bVar3 == 9)) || (bVar3 == 0)) {
+      if (!bVar2) goto LAB_101103fc;
+      if (bVar3 == 0) {
+        DebugSpew(0x1014611c);
+        DebugSpew(0x10146150);
+        DebugSpew(0x1014615c);
+LAB_101103fc:
+        if (local_1004[0] != 0) {
+          if (local_804[0] != 0) {
+            pbVar10 = (byte *)FUN_10088b58(local_804);
+          }
+          iVar4 = FUN_10081b25(local_1004,&DAT_10147160);
+          if (iVar4 == 0) {
+            DebugSpewAlways(0x101471d0);
+            pbVar10 = (byte *)0x1;
+          }
+          else if ((pbVar10 == (byte *)0x0) &&
+                  (uVar6 = SendWndClick(local_1804,local_2004,local_1004), (char)uVar6 != '\0')) {
+            return;
+          }
+          iVar4 = FUN_10081b25(local_1004,(byte *)"listselect");
+          if (iVar4 == 0) {
+            SendListSelect(local_1804,local_2004,pbVar10 + -1);
+            return;
+          }
+          iVar4 = FUN_10081b25(local_1004,(byte *)"tabselect");
+          if (iVar4 == 0) {
+            iVar4 = FindMQ2Window(local_1804);
+            if (iVar4 == 0) {
+              FUN_1002ea10(0x10146fdc);
+              return;
+            }
+            if ((local_2004[0] != 0) && (local_2004[0] != 0x30)) {
+              this = (CXWnd *)FUN_100c2100(iVar4,local_2004);
+              if (this == (CXWnd *)0x0) {
+                FUN_1002ea10(0x10146ff8);
+                return;
+              }
+              UVar5 = EQClasses::CXWnd::GetType(this);
+              if (UVar5 != 0x29) {
+                FUN_1002ea10(0x1014701c);
+                return;
+              }
+              EQClasses::CTabWnd::SetPage((CTabWnd *)this,(int)(pbVar10 + -1),true);
+              uVar6 = GetFastTime();
+              *gpMouseEventTime = uVar6;
+              return;
+            }
+          }
+          else {
+            uVar11 = 0;
+            do {
+              if (((byte *)(&DAT_10135530)[uVar11] != (byte *)0x0) &&
+                 (iVar4 = FUN_10081b25((byte *)(&DAT_10135530)[uVar11],local_1004), iVar4 == 0)) {
+                if (uVar11 == 0x1b) {
+                  pbVar10 = local_804;
+                }
+                else if (local_2004[0] == 0x30) {
+                  uVar6 = SendWndNotification(local_1804,(byte *)0x0,uVar11,pbVar10);
+                  if ((char)uVar6 != '\0') {
+                    return;
+                  }
+                  FUN_1002ea10(0x10147208);
+                  return;
+                }
+                uVar6 = SendWndNotification(local_1804,local_2004,uVar11,pbVar10);
+                if ((char)uVar6 != '\0') {
+                  return;
+                }
+                FUN_1002ea10(0x10147208);
+                return;
+              }
+              uVar11 = uVar11 + 1;
+            } while (uVar11 < 0x1e);
+            FUN_1002ea10(0x10147230);
+          }
+        }
+        return;
+      }
+    }
+    if (bVar3 == 0x22) {
+      bVar2 = !bVar2;
+      param_2 = param_2 + 1;
+    }
+    else {
+      *pbVar7 = bVar3;
+      pbVar7 = pbVar7 + 1;
+      param_2 = param_2 + 1;
+    }
+  } while( true );
+}
+
+
+
+============================================================
+Function: CombineCmd @ 100c95c0
+Signature: undefined __cdecl CombineCmd(undefined4 param_1, uint * param_2)
+Callers:
+  <none>
+Callees:
+  100c1d00 | EQClasses::CContainerWnd::HandleCombine
+  1010f290 | MacroError
+  10111da0 | FindMQ2Window
+Decompile:
+
+void __cdecl CombineCmd(undefined4 param_1,uint *param_2)
+
+{
+  CContainerWnd *this;
+  
+                    /* 0xc95c0  565  CombineCmd */
+  if ((char)*param_2 != '\0') {
+    this = (CContainerWnd *)FindMQ2Window(param_2);
+    if (this != (CContainerWnd *)0x0) {
+      if (*(int *)this != CContainerWnd__vftable) {
+        MacroError();
+        return;
+      }
+      EQClasses::CContainerWnd::HandleCombine(this);
+      return;
+    }
+    MacroError();
+  }
+  return;
+}
+
+
+
+============================================================
+Function: WindowState @ 100ca2b0
+Signature: undefined __cdecl WindowState(undefined4 param_1, byte * param_2)
+Callers:
+  <none>
+Callees:
+  10005510 | FUN_10005510
+  100589d0 | _memset
+  10081b25 | FUN_10081b25
+  100c0920 | __alloca_probe
+  100c1670 | EQClasses::CSidlScreenWnd::StoreIniVis
+  100c1ed0 | EQClasses::CXWnd::Show
+  100c6db0 | FUN_100c6db0
+  1010f420 | DebugSpew
+  10111da0 | FindMQ2Window
+Decompile:
+
+/* WARNING: Function: __alloca_probe replaced with injection: alloca_probe */
+
+void __cdecl WindowState(undefined4 param_1,byte *param_2)
+
+{
+  bool bVar1;
+  bool bVar2;
+  CXWnd CVar3;
+  CXWnd *this;
+  int iVar4;
+  byte *pbVar5;
+  void *this_00;
+  void *extraout_ECX;
+  uint *puVar6;
+  byte bVar7;
+  char *pcVar8;
+  uint local_1808 [512];
+  undefined1 local_1008 [2048];
+  byte local_808 [2048];
+  code *local_8;
+  
+                    /* 0xca2b0  916  WindowState */
+  local_8 = (code *)0x100ca2bd;
+  _memset(local_808,0,0x800);
+  bVar1 = false;
+  _memset(local_1808,0,0x800);
+  for (pbVar5 = param_2; (bVar7 = *pbVar5, bVar7 == 0x20 || (bVar7 == 9)); pbVar5 = pbVar5 + 1) {
+  }
+  puVar6 = local_1808;
+LAB_100ca303:
+  if (((bVar7 == 0x20) || (bVar7 == 9)) || (bVar7 == 0)) {
+    if (!bVar1) goto LAB_100ca35b;
+    if (bVar7 == 0) goto LAB_100ca332;
+  }
+  if (bVar7 == 0x22) {
+    bVar1 = !bVar1;
+    pbVar5 = pbVar5 + 1;
+    bVar7 = *pbVar5;
+  }
+  else {
+    *(byte *)puVar6 = bVar7;
+    puVar6 = (uint *)((int)puVar6 + 1);
+    bVar7 = pbVar5[1];
+    pbVar5 = pbVar5 + 1;
+  }
+  goto LAB_100ca303;
+LAB_100ca332:
+  DebugSpew(0x1014611c);
+  DebugSpew(0x10146150);
+  DebugSpew(0x1014615c);
+LAB_100ca35b:
+  bVar2 = false;
+  bVar1 = false;
+  iVar4 = 1;
+  for (; (bVar7 = *param_2, bVar7 == 0x20 || (bVar7 == 9)); param_2 = param_2 + 1) {
+  }
+  do {
+    while (((bVar7 != 0x20 && (bVar7 != 9)) && (bVar7 != 0))) {
+LAB_100ca3c6:
+      if (bVar7 == 0x22) {
+        bVar1 = !bVar1;
+      }
+      pbVar5 = param_2 + 1;
+      param_2 = param_2 + 1;
+      bVar7 = *pbVar5;
+    }
+    if (bVar1) {
+      if (bVar7 != 0) goto LAB_100ca3c6;
+      DebugSpew(0x101460e4);
+      break;
+    }
+    while ((bVar7 == 0x20 || (bVar7 == 9))) {
+      pbVar5 = param_2 + 1;
+      param_2 = param_2 + 1;
+      bVar7 = *pbVar5;
+    }
+    iVar4 = iVar4 + -1;
+  } while (iVar4 != 0);
+  pbVar5 = local_808;
+LAB_100ca3a0:
+  bVar7 = *param_2;
+  if (((bVar7 == 0x20) || (bVar7 == 9)) || (bVar7 == 0)) {
+    if (!bVar2) goto LAB_100ca428;
+    if (bVar7 == 0) goto LAB_100ca3ff;
+  }
+  if (bVar7 == 0x22) {
+    bVar2 = !bVar2;
+    param_2 = param_2 + 1;
+  }
+  else {
+    *pbVar5 = bVar7;
+    pbVar5 = pbVar5 + 1;
+    param_2 = param_2 + 1;
+  }
+  goto LAB_100ca3a0;
+LAB_100ca3ff:
+  DebugSpew(0x1014611c);
+  DebugSpew(0x10146150);
+  DebugSpew(0x1014615c);
+LAB_100ca428:
+  this = (CXWnd *)FindMQ2Window(local_1808);
+  if (this == (CXWnd *)0x0) {
+    return;
+  }
+  local_8 = *(code **)(*(int *)this + 0x90);
+  _memset(local_1008,0,0x800);
+  iVar4 = FUN_10081b25(local_808,&DAT_1013c650);
+  bVar7 = 99;
+  if (iVar4 == 0) {
+    bVar7 = 1;
+  }
+  iVar4 = FUN_10081b25(local_808,(byte *)"close");
+  CVar3 = (CXWnd)(-(iVar4 != 0) & bVar7);
+  this_00 = (void *)(uint)(byte)CVar3;
+  if (this[0x196] == CVar3) {
+    this_00 = (void *)0x63;
+  }
+  if (this_00 == (void *)0x0) {
+    EQClasses::CXWnd::Show(this,false,true,true);
+    pcVar8 = "Window \'%s\' is now closed.";
+    this_00 = extraout_ECX;
+  }
+  else {
+    if (this_00 != (void *)0x1) {
+      if (this_00 == (void *)0x63) {
+        FUN_10005510(&DAT_1013c650,local_1008,0x1013c6a0);
+      }
+      goto LAB_100ca53c;
+    }
+    (*local_8)();
+    pcVar8 = "Window \'%s\' is now open.";
+  }
+  FUN_10005510(this_00,local_1008,(int)pcVar8);
+  EQClasses::CSidlScreenWnd::StoreIniVis((CSidlScreenWnd *)this);
+LAB_100ca53c:
+  FUN_100c6db0();
+  return;
+}
+
+
+

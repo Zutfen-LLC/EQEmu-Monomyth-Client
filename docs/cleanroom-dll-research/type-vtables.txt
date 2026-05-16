@@ -1,0 +1,16 @@
+============================================================
+Vtable symbol: MQ2CharacterType::vftable
+<not found>
+
+============================================================
+Vtable symbol: MQ2WindowType::vftable
+<not found>
+
+============================================================
+Vtable symbol: MQ2TargetType::vftable
+<not found>
+
+============================================================
+Vtable symbol: MQ2XTargetType::vftable
+<not found>
+
