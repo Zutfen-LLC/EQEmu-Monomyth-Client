@@ -8,6 +8,7 @@ add_library(dinput8 SHARED
     src/logger.cpp
     src/fingerprint.cpp
     src/hook_manager.cpp
+    src/opcode_reference.cpp
     src/packet_observer.cpp
     src/receive_dispatch_discovery.cpp
     src/runtime_capabilities.cpp

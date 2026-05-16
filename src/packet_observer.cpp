@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "logger.h"
+#include "opcode_reference.h"
 
 // PacketObserver remains metadata-only unless both packet hook and receive
 // introspection dev opt-ins are enabled. Even then, payload access is bounded
@@ -163,11 +164,13 @@ void LogIntrospectionSkip(
     }
 
     std::wstringstream message;
+    const std::wstring_view opcode_name = monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
     message
         << L"PacketObserverRecvIntrospectionSkip"
         << L" seq=" << sequence
         << L" opcode=" << opcode
         << L" opcode_hex=" << Hex32(opcode)
+        << L" opcode_name=" << opcode_name
         << L" payload_length=" << payload_length
         << L" reason=\"" << ((reason == nullptr || reason[0] == L'\0') ? L"unknown" : reason)
         << L"\"";
@@ -286,11 +289,13 @@ void ObserveReceiveMetadata(
     const std::uint64_t sequence = g_observed_count.fetch_add(1) + 1;
     if (ShouldLogPacket(sequence)) {
         std::wstringstream message;
+        const std::wstring_view opcode_name = monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
         message
             << L"PacketObserverRecv"
             << L" seq=" << sequence
             << L" opcode=" << opcode
             << L" opcode_hex=" << Hex32(opcode)
+            << L" opcode_name=" << opcode_name
             << L" payload_length=" << payload_length
             << L" source_context=" << HexPtr(source_context);
         monomyth::logger::Log(message.str());
@@ -335,11 +340,13 @@ void ObserveReceiveMetadata(
     const std::wstring prefix_hex = FormatPrefixHex(prefix.data(), prefix_length);
 
     std::wstringstream introspection_message;
+    const std::wstring_view opcode_name = monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
     introspection_message
         << L"PacketObserverRecvIntrospection"
         << L" seq=" << introspection_sequence
         << L" opcode=" << opcode
         << L" opcode_hex=" << Hex32(opcode)
+        << L" opcode_name=" << opcode_name
         << L" payload_length=" << payload_length
         << L" prefix_len=" << prefix_length
         << L" prefix_hex=\"" << prefix_hex << L"\"";
