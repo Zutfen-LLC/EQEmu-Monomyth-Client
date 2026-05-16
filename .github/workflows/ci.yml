@@ -10,8 +10,144 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: Lint and Static Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Install lint dependencies
+        run: python -m pip install --disable-pip-version-check yamllint
+
+      - name: Check GitHub Actions workflows
+        uses: rhysd/actionlint@v1
+
+      - name: Check YAML files
+        run: |
+          git ls-files -z '*.yaml' '*.yml' |
+          xargs -0 --no-run-if-empty \
+            yamllint -d '{extends: default, rules: {document-start: disable, line-length: disable}}'
+
+      - name: Check JSON files
+        run: |
+          git ls-files -z '*.json' |
+          while IFS= read -r -d '' file; do
+            python -m json.tool "$file" >/dev/null
+          done
+
+      - name: Check Python scripts
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          git ls-files -z '*.py' |
+          xargs -0 --no-run-if-empty python -m py_compile
+
+      - name: Check whitespace
+        run: |
+          if git grep -nI -E '[[:blank:]]$' -- \
+            '*.c' '*.cc' '*.cpp' '*.h' '*.hpp' \
+            '*.cmake' 'CMakeLists.txt' \
+            '*.json' '*.md' '*.py' \
+            '*.yaml' '*.yml'; then
+            echo "Trailing whitespace found"
+            exit 1
+          fi
+
+      - name: Check final newlines
+        run: |
+          git ls-files -z \
+            '*.c' '*.cc' '*.cpp' '*.h' '*.hpp' \
+            '*.cmake' 'CMakeLists.txt' \
+            '*.json' '*.md' '*.py' \
+            '*.yaml' '*.yml' |
+          while IFS= read -r -d '' file; do
+            if [ -s "$file" ] && [ "$(tail -c 1 "$file" | wc -l)" -eq 0 ]; then
+              echo "$file: missing trailing newline"
+              exit 1
+            fi
+          done
+
+  ai-adversarial-review:
+    name: AI Adversarial Review
+    needs: lint
+    if: github.event_name == 'pull_request' && needs.lint.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Check review configuration
+        env:
+          OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+        run: |
+          if [ -n "${OPENAI_BASE_URL}" ] && [ -n "${OPENAI_API_KEY}" ] && [ -n "${OPENAI_MODEL}" ]; then
+            exit 0
+          fi
+          echo "AI adversarial review requires OPENAI_BASE_URL, OPENAI_API_KEY, and OPENAI_MODEL." >&2
+          exit 1
+
+      - name: Checkout trusted base tree
+        uses: actions/checkout@v6
+        with:
+          path: trusted
+          ref: ${{ github.base_ref }}
+          fetch-depth: 1
+
+      - name: Mark trusted tree as safe
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE/trusted"
+
+      - name: Fetch PR head
+        run: git -C trusted fetch origin "${{ github.event.pull_request.head.sha }}" --depth=1
+
+      - name: Build PR diff
+        run: git -C trusted diff --unified=3 HEAD "${{ github.event.pull_request.head.sha }}" > pr.diff
+
+      - name: Select review script
+        id: review_script
+        run: |
+          if [ -f trusted/.github/scripts/ai_adversarial_review.py ]; then
+            echo "path=trusted/.github/scripts/ai_adversarial_review.py" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=.github/scripts/ai_adversarial_review.py" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run adversarial review
+        env:
+          OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          HTTP_REFERER: ${{ github.server_url }}/${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 "${{ steps.review_script.outputs.path }}" pr.diff
+
   build:
     name: Windows ${{ matrix.config }}
+    needs:
+      - lint
+      - ai-adversarial-review
+    if: needs.lint.result == 'success' && (github.event_name != 'pull_request' || needs.ai-adversarial-review.result == 'success')
     runs-on:
       group: Windows
       labels: windows
@@ -27,19 +163,45 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set up MSVC developer environment
-        shell: cmd
+        shell: powershell
         run: |
-          @echo off
-          setlocal
-          for /f "usebackq delims=" %%I in (`vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSINSTALLDIR=%%I"
-          if not defined VSINSTALLDIR (
-            echo Visual Studio with C++ build tools was not found on this Windows runner.
-            exit /b 1
-          )
-          call "%VSINSTALLDIR%\Common7\Tools\VsDevCmd.bat" -arch=x86 -host_arch=x64
-          if errorlevel 1 exit /b %errorlevel%
-          set > "%RUNNER_TEMP%\msvc-env.txt"
-          type "%RUNNER_TEMP%\msvc-env.txt" >> "%GITHUB_ENV%"
+          $ErrorActionPreference = 'Stop'
+          $vsDevCmd = $null
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+
+          if (Test-Path $vswhere) {
+            $installPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+            if ($installPath) {
+              $candidate = Join-Path $installPath 'Common7\Tools\VsDevCmd.bat'
+              if (Test-Path $candidate) {
+                $vsDevCmd = $candidate
+              }
+            }
+          }
+
+          if (-not $vsDevCmd) {
+            $roots = @(
+              Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio',
+              Join-Path $env:ProgramFiles 'Microsoft Visual Studio'
+            ) | Where-Object { $_ -and (Test-Path $_) }
+
+            foreach ($root in $roots) {
+              $candidate = Get-ChildItem -Path $root -Filter VsDevCmd.bat -Recurse -File -ErrorAction SilentlyContinue |
+                Select-Object -First 1 -ExpandProperty FullName
+              if ($candidate) {
+                $vsDevCmd = $candidate
+                break
+              }
+            }
+          }
+
+          if (-not $vsDevCmd) {
+            throw 'Visual Studio with C++ build tools was not found on this Windows runner.'
+          }
+
+          $envDump = Join-Path $env:RUNNER_TEMP 'msvc-env.txt'
+          cmd /c "`"$vsDevCmd`" -arch=x86 -host_arch=x64 >nul && set" | Out-File -FilePath $envDump -Encoding ascii
+          Get-Content $envDump | Add-Content -Path $env:GITHUB_ENV -Encoding ascii
 
       - name: Verify local build tools
         shell: powershell
