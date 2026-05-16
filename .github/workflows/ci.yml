@@ -26,6 +26,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up MSVC developer command prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86
+
+      - name: Set up CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Show tool versions
+        run: |
+          cmake --version
+          cl
+
       - name: Configure
         run: cmake -S . -B build -A Win32
 
