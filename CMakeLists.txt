@@ -16,6 +16,7 @@ target_include_directories(dinput8 PRIVATE src)
 target_compile_features(dinput8 PRIVATE cxx_std_20)
 
 target_compile_definitions(dinput8 PRIVATE
+    DIRECTINPUT_VERSION=0x0800
     UNICODE
     _UNICODE
     WIN32_LEAN_AND_MEAN

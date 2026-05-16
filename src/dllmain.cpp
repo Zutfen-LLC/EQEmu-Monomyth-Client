@@ -22,7 +22,7 @@ BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID reserved) {
     return TRUE;
 }
 
-extern "C" __declspec(dllexport) HRESULT WINAPI DirectInput8Create(
+HRESULT WINAPI DirectInput8Create(
     HINSTANCE hinst,
     DWORD version,
     REFIID riidltf,
@@ -37,7 +37,7 @@ extern "C" __declspec(dllexport) HRESULT WINAPI DirectInput8Create(
     return real(hinst, version, riidltf, out, punkouter);
 }
 
-extern "C" __declspec(dllexport) HRESULT STDAPICALLTYPE DllCanUnloadNow() {
+STDAPI DllCanUnloadNow(void) {
     const HRESULT init_result = monomyth::proxy::EnsureInitialized();
     auto* real = monomyth::proxy::GetDllCanUnloadNow();
     if (FAILED(init_result) || real == nullptr) {
@@ -47,7 +47,7 @@ extern "C" __declspec(dllexport) HRESULT STDAPICALLTYPE DllCanUnloadNow() {
     return real();
 }
 
-extern "C" __declspec(dllexport) HRESULT STDAPICALLTYPE DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID* out) {
+STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID* out) {
     const HRESULT init_result = monomyth::proxy::EnsureInitialized();
     auto* real = monomyth::proxy::GetDllGetClassObject();
     if (FAILED(init_result) || real == nullptr) {
@@ -57,7 +57,7 @@ extern "C" __declspec(dllexport) HRESULT STDAPICALLTYPE DllGetClassObject(REFCLS
     return real(rclsid, riid, out);
 }
 
-extern "C" __declspec(dllexport) HRESULT STDAPICALLTYPE DllRegisterServer() {
+extern "C" HRESULT STDAPICALLTYPE DllRegisterServer(void) {
     const HRESULT init_result = monomyth::proxy::EnsureInitialized();
     auto* real = monomyth::proxy::GetDllRegisterServer();
     if (FAILED(init_result) || real == nullptr) {
@@ -67,7 +67,7 @@ extern "C" __declspec(dllexport) HRESULT STDAPICALLTYPE DllRegisterServer() {
     return real();
 }
 
-extern "C" __declspec(dllexport) HRESULT STDAPICALLTYPE DllUnregisterServer() {
+extern "C" HRESULT STDAPICALLTYPE DllUnregisterServer(void) {
     const HRESULT init_result = monomyth::proxy::EnsureInitialized();
     auto* real = monomyth::proxy::GetDllUnregisterServer();
     if (FAILED(init_result) || real == nullptr) {
@@ -77,7 +77,7 @@ extern "C" __declspec(dllexport) HRESULT STDAPICALLTYPE DllUnregisterServer() {
     return real();
 }
 
-extern "C" __declspec(dllexport) const DIDATAFORMAT* WINAPI GetdfDIJoystick() {
+LPCDIDATAFORMAT WINAPI GetdfDIJoystick(void) {
     const HRESULT init_result = monomyth::proxy::EnsureInitialized();
     auto* real = monomyth::proxy::GetdfDIJoystickExport();
     if (FAILED(init_result) || real == nullptr) {
