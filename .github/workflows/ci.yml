@@ -34,13 +34,13 @@ jobs:
 
       - name: Check YAML files
         run: |
-          git ls-files -z '*.yaml' '*.yml' |
+          git ls-files -z '*.yaml' '*.yml' ':(exclude)graphify-out/**' |
           xargs -0 --no-run-if-empty \
             yamllint -d '{extends: default, rules: {document-start: disable, line-length: disable}}'
 
       - name: Check JSON files
         run: |
-          git ls-files -z '*.json' |
+          git ls-files -z '*.json' ':(exclude)graphify-out/**' |
           while IFS= read -r -d '' file; do
             python -m json.tool "$file" >/dev/null
           done
@@ -49,7 +49,7 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: |
-          git ls-files -z '*.py' |
+          git ls-files -z '*.py' ':(exclude)graphify-out/**' |
           xargs -0 --no-run-if-empty python -m py_compile
 
       - name: Check whitespace
@@ -58,7 +58,8 @@ jobs:
             '*.c' '*.cc' '*.cpp' '*.h' '*.hpp' \
             '*.cmake' 'CMakeLists.txt' \
             '*.json' '*.md' '*.py' \
-            '*.yaml' '*.yml'; then
+            '*.yaml' '*.yml' \
+            ':(exclude)graphify-out/**'; then
             echo "Trailing whitespace found"
             exit 1
           fi
@@ -69,7 +70,8 @@ jobs:
             '*.c' '*.cc' '*.cpp' '*.h' '*.hpp' \
             '*.cmake' 'CMakeLists.txt' \
             '*.json' '*.md' '*.py' \
-            '*.yaml' '*.yml' |
+            '*.yaml' '*.yml' \
+            ':(exclude)graphify-out/**' |
           while IFS= read -r -d '' file; do
             if [ -s "$file" ] && [ "$(tail -c 1 "$file" | wc -l)" -eq 0 ]; then
               echo "$file: missing trailing newline"
@@ -121,7 +123,7 @@ jobs:
         run: git -C trusted fetch origin "${{ github.event.pull_request.head.sha }}" --depth=1
 
       - name: Build PR diff
-        run: git -C trusted diff --unified=3 HEAD "${{ github.event.pull_request.head.sha }}" > pr.diff
+        run: git -C trusted diff --unified=3 HEAD "${{ github.event.pull_request.head.sha }}" -- . ':(exclude)graphify-out/**' > pr.diff
 
       - name: Select review script
         id: review_script

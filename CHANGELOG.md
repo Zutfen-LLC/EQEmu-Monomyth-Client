@@ -18,3 +18,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 - README documentation for receive dispatcher discovery, fail-closed behavior, and the no-hooks/no-packet-data safety boundary.
 - README note describing the Windows CI workflow and artifact output.
+
+### Fixed
+
+- CI lint and AI review checks now exclude generated Graphify output artifacts.
