@@ -21,6 +21,7 @@ struct Result {
     std::uint32_t candidate_rva = 0;
     std::uintptr_t candidate_address = 0;
     std::wstring reason = L"not run";
+    std::wstring checks = L"not run";
 };
 
 void Initialize() noexcept;
