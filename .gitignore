@@ -51,6 +51,12 @@ install_manifest.txt
 *.log
 monomyth-client.log
 
+# Graphify output
+/graphify-out/*
+!/graphify-out/GRAPH_REPORT.md
+!/graphify-out/graph.json
+/src/graphify-out/*
+
 # OS cruft
 .DS_Store
 Thumbs.db
