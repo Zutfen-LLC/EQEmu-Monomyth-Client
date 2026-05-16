@@ -9,14 +9,16 @@ bool g_initialized = false;
 
 }  // namespace
 
-bool Initialize() noexcept {
+bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     if (g_initialized) {
         return true;
     }
 
     g_initialized = true;
     monomyth::logger::Log(L"hook_manager: initialized (no active hooks)");
-    monomyth::logger::Log(L"hook_manager: heartbeat (guard passed, hook install point remains inert)");
+    if (manifest.heartbeat_allowed) {
+        monomyth::logger::Log(L"hook_manager: heartbeat (guard passed, hook install point remains inert)");
+    }
     return true;
 }
 
