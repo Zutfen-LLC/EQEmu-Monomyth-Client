@@ -17,7 +17,8 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
   - `GetdfDIJoystick`
 - Writes a small log with DLL load/proxy/fingerprint status.
 - Builds a single internal runtime capability manifest that centralizes proxy, host, fingerprint, and future enhancement state.
-- Checks the host process name and, when version resources are present, looks for ROF2 markers `May 10 2013` and `23:30:08`.
+- Checks the host process name and first evaluates version-resource markers for `May 10 2013` and `23:30:08`.
+- Falls back once at startup to a fail-closed `eqgame.exe` byte scan when version resources are unavailable or inconclusive; both markers must be present or the fingerprint remains false.
 - Runs a fail-closed receive dispatcher discovery pass only after the fingerprint/capability path allows enhancement discovery.
 - Exposes a `HookManager` lifecycle that installs no active hook by default.
 - Keeps `packet_hooks_allowed=false` unless all of these gates pass:
@@ -32,6 +33,7 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 
 - DirectInput proxying is always the primary responsibility.
 - Fingerprint failure never blocks normal DirectInput behavior.
+- Fingerprint fallback still applies only to enhancement capability gating; DirectInput proxying continues whether the fallback matches or fails.
 - Hook capability is fail-closed and computed in the runtime capability manifest before any hook install point.
 - Packet hook capability is disabled by default and requires the scary local-only environment variable `MONOMYTH_ENABLE_PACKET_HOOKS=1`.
 - UI hook capability remains intentionally disabled.
@@ -98,6 +100,7 @@ Startup logs include:
 - Real `dinput8.dll` load result
 - Export resolution result
 - One structured `CapabilityManifest ...` summary line with proxy, host, fingerprint, hook, packet, and UI capability state plus the reason string
+- The `CapabilityManifest` line includes `fingerprint_method=version_resource`, `fingerprint_method=byte_scan`, or `fingerprint_method=unavailable` for grep-friendly startup diagnosis
 - One `ReceiveDispatchDiscovery ...` line with the static discovery state, validated candidate RVA/address when available, and a concise reason
 - Post-guard heartbeat when hooks are allowed
 - One `PacketObserver state=...` line indicating current observer state
@@ -121,6 +124,7 @@ The capability manifest is currently internal and log-only. This slice does not 
    - `DirectInput8Create` proxying succeeds.
    - `monomyth-client.log` shows startup state.
    - Fingerprint failure, if any, reports `hooks_allowed=false` without breaking input.
+   - When version resources are unavailable or inconclusive, fingerprint success requires both ROF2 byte markers `May 10 2013` and `23:30:08`.
 
 ## Troubleshooting
 
