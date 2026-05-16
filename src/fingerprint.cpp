@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <cwctype>
-#include <string_view>
 #include <string>
 #include <vector>
 
@@ -202,6 +201,11 @@ Result Evaluate() noexcept {
     result.reason = L"unknown";
 
     const std::wstring process_path = GetProcessPath();
+    if (process_path.empty()) {
+        result.reason = L"process path unavailable";
+        return result;
+    }
+
     const std::wstring process_name = ToLower(Basename(process_path));
     result.process_name_match = (process_name == kExpectedProcessName);
     if (!result.process_name_match) {

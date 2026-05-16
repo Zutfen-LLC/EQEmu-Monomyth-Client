@@ -24,6 +24,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Documentation
 
+- README documentation for the ROF2 fingerprint byte-scan fallback, required dual-marker match, and `fingerprint_method` capability logging.
 - README documentation for receive dispatcher discovery, fail-closed behavior, and the no-hooks/no-packet-data safety boundary.
 - README documentation for the unsafe local packet-hook opt-in, metadata-only receive observation, no payload access, no send interception, and rate-limited logging.
 - README note describing the Windows CI workflow and artifact output.
