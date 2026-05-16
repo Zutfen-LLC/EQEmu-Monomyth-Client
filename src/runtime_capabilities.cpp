@@ -1,5 +1,6 @@
 #include "runtime_capabilities.h"
 
+#include <sstream>
 #include <string>
 
 #include "logger.h"
@@ -18,6 +19,18 @@ std::wstring NormalizeReason(const wchar_t* reason) {
 void AppendBoolField(std::wstring* message, const wchar_t* field, bool value) {
     message->append(field);
     message->append(value ? L"true" : L"false");
+}
+
+std::wstring Hex32(std::uint32_t value) {
+    std::wstringstream stream;
+    stream << L"0x" << std::hex << value;
+    return stream.str();
+}
+
+std::wstring HexPtr(std::uintptr_t value) {
+    std::wstringstream stream;
+    stream << L"0x" << std::hex << value;
+    return stream.str();
 }
 
 }  // namespace
@@ -74,10 +87,41 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     AppendBoolField(&message, L"ui_hooks_allowed=", manifest.ui_hooks_allowed);
     message += L" ";
     AppendBoolField(&message, L"heartbeat_allowed=", manifest.heartbeat_allowed);
+    message += L" receive_dispatch_discovery=";
+    message += monomyth::receive_dispatch_discovery::StateName(
+        manifest.receive_dispatch_discovery_state);
+    message += L" ";
+    AppendBoolField(&message, L"receive_dispatch_validated=", manifest.receive_dispatch_validated);
+    if (manifest.receive_dispatch_validated) {
+        message += L" receive_dispatch_rva=";
+        message += Hex32(manifest.receive_dispatch_rva);
+        message += L" receive_dispatch_address=";
+        message += HexPtr(manifest.receive_dispatch_address);
+    }
     message += L" reason=\"";
     message += NormalizeReason(manifest.reason.c_str());
     message += L"\"";
     monomyth::logger::Log(message);
+}
+
+void ApplyReceiveDispatchDiscovery(
+    Manifest* manifest,
+    const monomyth::receive_dispatch_discovery::Result& discovery) noexcept {
+    if (manifest == nullptr) {
+        return;
+    }
+
+    manifest->receive_dispatch_discovery_state = discovery.state;
+    manifest->receive_dispatch_validated = discovery.validated;
+    if (discovery.validated) {
+        manifest->receive_dispatch_rva = discovery.candidate_rva;
+        manifest->receive_dispatch_address = discovery.candidate_address;
+    } else {
+        manifest->receive_dispatch_rva = 0;
+        manifest->receive_dispatch_address = 0;
+    }
+
+    manifest->packet_hooks_allowed = false;
 }
 
 }  // namespace monomyth::runtime

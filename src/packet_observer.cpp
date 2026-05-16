@@ -1,5 +1,7 @@
 #include "packet_observer.h"
 
+#include <string>
+
 #include "logger.h"
 
 // PacketObserver scaffold — inert, no hooks installed, no packet data accessed.
@@ -20,8 +22,11 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
 
     if (!manifest.packet_hooks_allowed) {
         g_state = State::kDisabledByCapability;
-        monomyth::logger::Log(
-            L"PacketObserver scaffold state=disabled_by_capability packet_hooks_allowed=false");
+        std::wstring message =
+            L"PacketObserver scaffold state=disabled_by_capability packet_hooks_allowed=false receive_dispatch_discovery=";
+        message += monomyth::receive_dispatch_discovery::StateName(
+            manifest.receive_dispatch_discovery_state);
+        monomyth::logger::Log(message);
         return g_state;
     }
 

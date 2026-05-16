@@ -102,7 +102,7 @@ Nodes (8): DLL Proxy Passthrough Pattern, Exported DirectInput8Create Proxy, Exp
 
 ### Community 8 - "DLL Entry Points"
 Cohesion: 0.25
-Nodes (0): 
+Nodes (0):
 
 ### Community 9 - "Client Fingerprinting"
 Cohesion: 0.57
@@ -118,23 +118,23 @@ Nodes (3): Debug and Release dinput8.dll Build Artifacts, GitHub Actions CI for 
 
 ### Community 12 - "Logger Header"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 13 - "Fingerprint Header"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 14 - "DInput Proxy Header"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 15 - "Hook Manager Header"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 16 - "Packet Observer Header"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 17 - "Log Thread Safety"
 Cohesion: 1.0
@@ -142,11 +142,11 @@ Nodes (2): Log File Handle, Log Mutex (Thread Safety)
 
 ### Community 18 - "Config Header"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 19 - "Runtime Capabilities Header"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ## Knowledge Gaps
 - **32 isolated node(s):** `Compile-Time Feature Flags`, `monomyth::logger::Flush`, `Log Mutex (Thread Safety)`, `Log File Handle`, `Exported DllCanUnloadNow Proxy` (+27 more)
