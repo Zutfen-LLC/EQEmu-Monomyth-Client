@@ -23,6 +23,7 @@ struct Manifest {
     monomyth::receive_dispatch_discovery::State receive_dispatch_discovery_state =
         monomyth::receive_dispatch_discovery::State::kUnavailable;
     bool receive_dispatch_validated = false;
+    std::uintptr_t runtime_module_base = 0;
     std::uint32_t receive_dispatch_rva = 0;
     std::uintptr_t receive_dispatch_address = 0;
     std::wstring reason = L"manifest unavailable";
