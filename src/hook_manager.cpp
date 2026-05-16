@@ -319,6 +319,7 @@ void MONOMYTH_FASTCALL ReceiveDispatchHook(
     monomyth::packet_observer::ObserveReceiveMetadata(
         opcode,
         payload_length,
+        payload,
         reinterpret_cast<std::uintptr_t>(source_context));
 
     g_original_receive_dispatch(this_context, source_context, opcode, payload, payload_length);
@@ -343,7 +344,9 @@ bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest& manifest) noe
 
     std::wstring message = L"hook_manager: receive dispatcher hook installed address=";
     message += HexPtr(manifest.receive_dispatch_address);
-    message += L" mode=metadata_only";
+    message += manifest.receive_introspection_allowed
+        ? L" mode=metadata_plus_bounded_introspection"
+        : L" mode=metadata_only";
     monomyth::logger::Log(message);
     return true;
 }

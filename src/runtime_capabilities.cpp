@@ -47,6 +47,20 @@ bool IsPacketHookDevOptInPresent() noexcept {
     return value[0] == L'1' && value[1] == L'\0';
 }
 
+bool IsReceiveIntrospectionDevOptInPresent() noexcept {
+    wchar_t value[16] = {};
+    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
+    const DWORD length = GetEnvironmentVariableW(
+        L"MONOMYTH_ENABLE_RECV_INTROSPECTION",
+        value,
+        kValueCapacity);
+    if (length == 0 || length >= kValueCapacity) {
+        return false;
+    }
+
+    return value[0] == L'1' && value[1] == L'\0';
+}
+
 std::wstring PacketHookDiscoveryReason(
     const monomyth::receive_dispatch_discovery::Result& discovery) {
     std::wstring reason = L"receive dispatcher discovery not validated";
@@ -77,12 +91,17 @@ Manifest BuildCapabilityManifest(
     manifest.hooks_allowed = proxy_ready && fingerprint.hooks_allowed;
     manifest.packet_hooks_dev_opt_in = IsPacketHookDevOptInPresent();
     manifest.packet_hooks_allowed = false;
+    manifest.receive_introspection_dev_opt_in = IsReceiveIntrospectionDevOptInPresent();
+    manifest.receive_introspection_allowed = false;
     manifest.ui_hooks_allowed = false;
     manifest.heartbeat_allowed = manifest.hooks_allowed;
     manifest.reason = NormalizeReason(fingerprint.reason.c_str());
     manifest.packet_hooks_reason = manifest.packet_hooks_dev_opt_in
         ? L"receive dispatcher discovery not run"
         : L"dev opt-in absent: set MONOMYTH_ENABLE_PACKET_HOOKS=1";
+    manifest.receive_introspection_reason = manifest.receive_introspection_dev_opt_in
+        ? L"receive introspection requested but packet hook gate has not passed"
+        : L"dev opt-in absent: set MONOMYTH_ENABLE_RECV_INTROSPECTION=1";
     return manifest;
 }
 
@@ -95,7 +114,9 @@ Manifest BuildDisabledCapabilityManifest(
     manifest.proxy_ready = proxy_ready;
     manifest.reason = NormalizeReason(reason);
     manifest.packet_hooks_dev_opt_in = IsPacketHookDevOptInPresent();
+    manifest.receive_introspection_dev_opt_in = IsReceiveIntrospectionDevOptInPresent();
     manifest.packet_hooks_reason = L"disabled before fingerprint/discovery gates";
+    manifest.receive_introspection_reason = L"disabled before fingerprint/discovery gates";
     return manifest;
 }
 
@@ -118,6 +139,16 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     AppendBoolField(&message, L"packet_hooks_dev_opt_in=", manifest.packet_hooks_dev_opt_in);
     message += L" ";
     AppendBoolField(&message, L"packet_hooks_allowed=", manifest.packet_hooks_allowed);
+    message += L" ";
+    AppendBoolField(
+        &message,
+        L"receive_introspection_dev_opt_in=",
+        manifest.receive_introspection_dev_opt_in);
+    message += L" ";
+    AppendBoolField(
+        &message,
+        L"receive_introspection_allowed=",
+        manifest.receive_introspection_allowed);
     message += L" ";
     AppendBoolField(&message, L"ui_hooks_allowed=", manifest.ui_hooks_allowed);
     message += L" ";
@@ -145,6 +176,9 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" packet_hooks_reason=\"";
     message += NormalizeReason(manifest.packet_hooks_reason.c_str());
     message += L"\"";
+    message += L" receive_introspection_reason=\"";
+    message += NormalizeReason(manifest.receive_introspection_reason.c_str());
+    message += L"\"";
     monomyth::logger::Log(message);
 }
 
@@ -167,6 +201,9 @@ void ApplyReceiveDispatchDiscovery(
         manifest->fingerprint_matched &&
         discovery.validated &&
         manifest->packet_hooks_dev_opt_in;
+    manifest->receive_introspection_allowed =
+        manifest->packet_hooks_allowed &&
+        manifest->receive_introspection_dev_opt_in;
 
     if (manifest->packet_hooks_allowed) {
         manifest->packet_hooks_reason =
@@ -182,6 +219,20 @@ void ApplyReceiveDispatchDiscovery(
         manifest->packet_hooks_reason = PacketHookDiscoveryReason(discovery);
     } else {
         manifest->packet_hooks_reason = L"packet hook gate denied for unknown reason";
+    }
+
+    if (manifest->receive_introspection_allowed) {
+        manifest->receive_introspection_reason =
+            L"enabled by explicit dev opt-in on top of packet hook gating";
+    } else if (!manifest->receive_introspection_dev_opt_in) {
+        manifest->receive_introspection_reason =
+            L"dev opt-in absent: set MONOMYTH_ENABLE_RECV_INTROSPECTION=1";
+    } else if (!manifest->packet_hooks_allowed) {
+        manifest->receive_introspection_reason =
+            L"receive introspection requires packet hook gating and remains fail-closed";
+    } else {
+        manifest->receive_introspection_reason =
+            L"receive introspection gate denied for unknown reason";
     }
 }
 
