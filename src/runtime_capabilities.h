@@ -18,6 +18,8 @@ struct Manifest {
     bool hooks_allowed = false;
     bool packet_hooks_dev_opt_in = false;
     bool packet_hooks_allowed = false;
+    bool receive_introspection_dev_opt_in = false;
+    bool receive_introspection_allowed = false;
     bool ui_hooks_allowed = false;
     bool heartbeat_allowed = false;
     monomyth::receive_dispatch_discovery::State receive_dispatch_discovery_state =
@@ -28,6 +30,7 @@ struct Manifest {
     std::uintptr_t receive_dispatch_address = 0;
     std::wstring reason = L"manifest unavailable";
     std::wstring packet_hooks_reason = L"packet hooks unavailable";
+    std::wstring receive_introspection_reason = L"receive introspection unavailable";
 };
 
 Manifest BuildCapabilityManifest(

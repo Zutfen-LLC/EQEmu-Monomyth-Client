@@ -19,6 +19,7 @@ void DisableBecauseHookUnavailable(const wchar_t* reason) noexcept;
 void ObserveReceiveMetadata(
     std::uint32_t opcode,
     std::uint32_t payload_length,
+    const void* payload,
     std::uintptr_t source_context) noexcept;
 void Shutdown() noexcept;
 State GetState() noexcept;
