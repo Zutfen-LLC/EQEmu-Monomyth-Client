@@ -16,6 +16,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Added
 
+- ROF2 opcode reference entry for THJ `OP_ServerAuthStats` (`0x1338`) from `C:\Code\THJ-Server-Original\utils\patches\patch_RoF2.conf`, enabling exact-name receive-introspection allowlist overrides without adding packet parsing or handler behavior.
 - Fail-closed ROF2 fingerprint byte-scan fallback for `eqgame.exe` that runs once at startup when version resources are unavailable or inconclusive and matches only when both known markers `May 10 2013` and `23:30:08` are present.
 - Capability manifest fingerprint method reporting (`version_resource`, `byte_scan`, or `unavailable`) to make startup guard results grep-friendly.
 - Fail-closed receive dispatcher discovery scaffold for the validated ROF2 candidate at VA `0x004c3250` / RVA `0x000c3250`, with layered static structural checks and one startup log line.
