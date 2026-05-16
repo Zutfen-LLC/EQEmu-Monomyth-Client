@@ -31,10 +31,8 @@ constexpr std::uint64_t kFirstIntrospectionLogLimit = 10;
 constexpr std::uint64_t kIntrospectionLogSampleInterval = 1000;
 constexpr std::uint32_t kPayloadSafetyCeiling = 4096;
 constexpr std::size_t kPrefixByteCap = 16;
-constexpr std::array<std::uint32_t, 3> kDefaultAllowlist = {
+constexpr std::array<std::uint32_t, 1> kDefaultAllowlist = {
     0x7dfc,
-    0x213f,
-    0x2958,
 };
 
 std::atomic<State> g_state = State::kUnavailable;
