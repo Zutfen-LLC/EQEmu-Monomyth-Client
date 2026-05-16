@@ -72,10 +72,8 @@ Manifest BuildCapabilityManifest(
     manifest.proxy_ready = proxy_ready;
     manifest.host_process_supported = fingerprint.process_name_match;
     manifest.fingerprint_checked = fingerprint_checked;
-    manifest.fingerprint_matched =
-        fingerprint.process_name_match &&
-        fingerprint.version_strings_checked &&
-        fingerprint.version_strings_match;
+    manifest.fingerprint_matched = fingerprint.process_name_match && fingerprint.matched;
+    manifest.fingerprint_method = fingerprint.method;
     manifest.hooks_allowed = proxy_ready && fingerprint.hooks_allowed;
     manifest.packet_hooks_dev_opt_in = IsPacketHookDevOptInPresent();
     manifest.packet_hooks_allowed = false;
@@ -112,6 +110,8 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     AppendBoolField(&message, L"fingerprint_checked=", manifest.fingerprint_checked);
     message += L" ";
     AppendBoolField(&message, L"fingerprint_matched=", manifest.fingerprint_matched);
+    message += L" fingerprint_method=";
+    message += monomyth::fingerprint::MethodName(manifest.fingerprint_method);
     message += L" ";
     AppendBoolField(&message, L"hooks_allowed=", manifest.hooks_allowed);
     message += L" ";

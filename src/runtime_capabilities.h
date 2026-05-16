@@ -14,6 +14,7 @@ struct Manifest {
     bool host_process_supported = false;
     bool fingerprint_checked = false;
     bool fingerprint_matched = false;
+    monomyth::fingerprint::Method fingerprint_method = monomyth::fingerprint::Method::kUnavailable;
     bool hooks_allowed = false;
     bool packet_hooks_dev_opt_in = false;
     bool packet_hooks_allowed = false;

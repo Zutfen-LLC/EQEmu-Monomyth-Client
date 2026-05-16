@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cwctype>
+#include <string_view>
 #include <string>
 #include <vector>
 
@@ -15,6 +16,9 @@ namespace {
 constexpr wchar_t kExpectedProcessName[] = L"eqgame.exe";
 constexpr wchar_t kExpectedDate[] = L"May 10 2013";
 constexpr wchar_t kExpectedTime[] = L"23:30:08";
+constexpr std::string_view kExpectedDateAscii = "May 10 2013";
+constexpr std::string_view kExpectedTimeAscii = "23:30:08";
+constexpr LONGLONG kMaxExecutableScanBytes = 512LL * 1024LL * 1024LL;
 
 std::wstring ToLower(std::wstring value) {
     std::transform(value.begin(), value.end(), value.begin(), [](wchar_t ch) {
@@ -111,7 +115,87 @@ bool ContainsValue(const std::vector<std::wstring>& strings, const std::wstring&
     return false;
 }
 
+bool ReadFileBytes(const std::wstring& path, std::vector<std::byte>* bytes) noexcept {
+    if (bytes == nullptr || path.empty()) {
+        return false;
+    }
+
+    HANDLE file = CreateFileW(
+        path.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr);
+    if (file == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+
+    LARGE_INTEGER size = {};
+    if (!GetFileSizeEx(file, &size) || size.QuadPart <= 0 || size.QuadPart > kMaxExecutableScanBytes) {
+        CloseHandle(file);
+        return false;
+    }
+
+    bytes->resize(static_cast<std::size_t>(size.QuadPart));
+    DWORD total_read = 0;
+    while (total_read < bytes->size()) {
+        const DWORD chunk = static_cast<DWORD>(std::min<std::size_t>(
+            bytes->size() - total_read,
+            static_cast<std::size_t>(0x7ffff000)));
+        DWORD read = 0;
+        if (!ReadFile(
+                file,
+                bytes->data() + total_read,
+                chunk,
+                &read,
+                nullptr) ||
+            read == 0) {
+            CloseHandle(file);
+            bytes->clear();
+            return false;
+        }
+        total_read += read;
+    }
+
+    CloseHandle(file);
+    return total_read == bytes->size();
+}
+
+std::wstring ByteScanFailureReason(
+    bool version_strings_checked,
+    const MarkerPresence& markers) {
+    std::wstring reason = version_strings_checked
+        ? L"version resources inconclusive; byte scan failed"
+        : L"version resources unavailable; byte scan failed";
+    reason += L" date_found=";
+    reason += markers.date_found ? L"true" : L"false";
+    reason += L" time_found=";
+    reason += markers.time_found ? L"true" : L"false";
+    return reason;
+}
+
 }  // namespace
+
+MarkerPresence FindKnownRof2Markers(std::string_view bytes) noexcept {
+    MarkerPresence presence = {};
+    presence.date_found = bytes.find(kExpectedDateAscii) != std::string_view::npos;
+    presence.time_found = bytes.find(kExpectedTimeAscii) != std::string_view::npos;
+    return presence;
+}
+
+const wchar_t* MethodName(Method method) noexcept {
+    switch (method) {
+    case Method::kVersionResource:
+        return L"version_resource";
+    case Method::kByteScan:
+        return L"byte_scan";
+    case Method::kUnavailable:
+    default:
+        return L"unavailable";
+    }
+}
 
 Result Evaluate() noexcept {
     Result result = {};
@@ -127,24 +211,50 @@ Result Evaluate() noexcept {
 
     std::vector<std::wstring> version_strings;
     result.version_strings_checked = ReadVersionStrings(process_path, &version_strings);
-    if (!result.version_strings_checked) {
-        result.reason = L"version resources unavailable";
+    if (result.version_strings_checked) {
+        const bool date_match = ContainsValue(version_strings, kExpectedDate);
+        const bool time_match = ContainsValue(version_strings, kExpectedTime);
+        result.version_strings_match = date_match && time_match;
+        if (result.version_strings_match) {
+            result.matched = true;
+            result.method = Method::kVersionResource;
+            result.file_hash_placeholder = false;
+            result.text_hash_placeholder = false;
+            result.prepatch_placeholder = false;
+            result.hooks_allowed = true;
+            result.reason = L"version resources matched both ROF2 markers";
+            return result;
+        }
+    }
+
+    std::vector<std::byte> file_bytes;
+    result.byte_scan_checked = ReadFileBytes(process_path, &file_bytes);
+    if (!result.byte_scan_checked) {
+        result.reason = result.version_strings_checked
+            ? L"version resources inconclusive; byte scan unreadable"
+            : L"version resources unavailable; byte scan unreadable";
         return result;
     }
 
-    const bool date_match = ContainsValue(version_strings, kExpectedDate);
-    const bool time_match = ContainsValue(version_strings, kExpectedTime);
-    result.version_strings_match = date_match && time_match;
-    if (!result.version_strings_match) {
-        result.reason = L"ROF2 version string mismatch";
+    const std::string_view bytes_view(
+        reinterpret_cast<const char*>(file_bytes.data()),
+        file_bytes.size());
+    const MarkerPresence markers = FindKnownRof2Markers(bytes_view);
+    result.byte_scan_match = markers.date_found && markers.time_found;
+    if (!result.byte_scan_match) {
+        result.reason = ByteScanFailureReason(result.version_strings_checked, markers);
         return result;
     }
 
+    result.matched = true;
+    result.method = Method::kByteScan;
     result.file_hash_placeholder = false;
     result.text_hash_placeholder = false;
     result.prepatch_placeholder = false;
     result.hooks_allowed = true;
-    result.reason = L"process and version strings matched; hash checks pending future implementation";
+    result.reason = result.version_strings_checked
+        ? L"version resources inconclusive; byte scan matched both ROF2 markers"
+        : L"version resources unavailable; byte scan matched both ROF2 markers";
     return result;
 }
 
