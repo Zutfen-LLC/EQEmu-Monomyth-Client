@@ -52,6 +52,10 @@ std::wstring HexPtr(std::uintptr_t value) {
     return stream.str();
 }
 
+const wchar_t* YesNo(bool value) noexcept {
+    return value ? L"yes" : L"no";
+}
+
 enum class CheckDisposition {
     kPass,
     kFail,
@@ -278,6 +282,65 @@ bool HasRet10Epilogue(const ImageView& image, const IMAGE_SECTION_HEADER& code_s
                sizeof(pattern)) != nullptr;
 }
 
+bool IsCompareLikeByte(std::uint8_t byte) noexcept {
+    return byte == 0x3d || byte == 0x39 || byte == 0x3b ||
+        byte == 0x81 || byte == 0x83 || byte == 0x85;
+}
+
+bool IsBranchLikeAt(
+    const std::uint8_t* code,
+    std::size_t index,
+    std::size_t scan_size) noexcept {
+    if (code == nullptr || index >= scan_size) {
+        return false;
+    }
+
+    const std::uint8_t byte = code[index];
+    return (byte >= 0x70 && byte <= 0x7f) ||
+        (byte == 0x0f && index + 1 < scan_size && code[index + 1] >= 0x80 && code[index + 1] <= 0x8f);
+}
+
+struct LocalCodeEvidence {
+    int compare_like = 0;
+    int branch_like = 0;
+    bool direct_call = false;
+    bool stack_setup = false;
+};
+
+LocalCodeEvidence AnalyzeLocalCodeEvidence(
+    const std::uint8_t* code,
+    std::size_t scan_size) noexcept {
+    LocalCodeEvidence evidence = {};
+    if (code == nullptr || scan_size == 0) {
+        return evidence;
+    }
+
+    for (std::size_t i = 0; i < scan_size; ++i) {
+        const std::uint8_t byte = code[i];
+        if (IsCompareLikeByte(byte)) {
+            ++evidence.compare_like;
+        }
+
+        if (IsBranchLikeAt(code, i, scan_size)) {
+            ++evidence.branch_like;
+        }
+
+        if (!evidence.direct_call && byte == 0xe8 && i + 5 <= scan_size) {
+            evidence.direct_call = true;
+        }
+
+        if (!evidence.stack_setup) {
+            const bool push_immediate = byte == 0x68 || byte == 0x6a;
+            const bool sub_esp_imm8 = byte == 0x83 && i + 2 < scan_size && code[i + 1] == 0xec;
+            const bool sub_esp_imm32 = byte == 0x81 && i + 5 < scan_size && code[i + 1] == 0xec;
+            const bool mov_stack_slot = byte == 0xc7 && i + 2 < scan_size && code[i + 1] == 0x44;
+            evidence.stack_setup = push_immediate || sub_esp_imm8 || sub_esp_imm32 || mov_stack_slot;
+        }
+    }
+
+    return evidence;
+}
+
 bool ValidateDirectCall(
     const ImageView& image,
     std::uint32_t call_rva,
@@ -312,31 +375,39 @@ bool HasDispatchLikeLocalShape(
     const std::size_t available = section_end - start_rva;
     const std::size_t scan_size = std::min(requested_scan_size, available);
     const std::uint8_t* code = image.base + start_rva;
-    int compare_like = 0;
-    int branch_like = 0;
-
-    for (std::size_t i = 0; i < scan_size; ++i) {
-        const std::uint8_t byte = code[i];
-        if (byte == 0x3d || byte == 0x39 || byte == 0x3b ||
-            byte == 0x81 || byte == 0x83 || byte == 0x85) {
-            ++compare_like;
-        }
-
-        if ((byte >= 0x70 && byte <= 0x7f) ||
-            (byte == 0x0f && i + 1 < scan_size && code[i + 1] >= 0x80 && code[i + 1] <= 0x8f)) {
-            ++branch_like;
-        }
-    }
-
-    return compare_like >= 4 && branch_like >= 4;
+    const LocalCodeEvidence evidence = AnalyzeLocalCodeEvidence(code, scan_size);
+    return evidence.compare_like >= 4 && evidence.branch_like >= 4;
 }
 
-bool HasUnknownMessagePathEvidence(
+struct UnknownMessagePathEvidence {
+    bool path_in_image = false;
+    bool compare = false;
+    bool branch = false;
+    bool call = false;
+    bool stack_setup = false;
+    bool string_reference = false;
+};
+
+std::wstring DescribeUnknownMessagePathEvidence(const UnknownMessagePathEvidence& evidence) {
+    std::wstring detail = L"path_in_image=";
+    detail += YesNo(evidence.path_in_image);
+    detail += L", compare=";
+    detail += YesNo(evidence.compare);
+    detail += L", branch=";
+    detail += YesNo(evidence.branch);
+    detail += L", call=";
+    detail += YesNo(evidence.call);
+    detail += L", stack_setup=";
+    detail += YesNo(evidence.stack_setup);
+    detail += L", string_reference=";
+    detail += YesNo(evidence.string_reference);
+    return detail;
+}
+
+UnknownMessagePathEvidence EvaluateUnknownMessagePathEvidence(
     const ImageView& image,
     const std::uint8_t* unknown_message) noexcept {
-    if (unknown_message == nullptr) {
-        return false;
-    }
+    UnknownMessagePathEvidence evidence = {};
 
     const std::uint8_t* path = RvaToPtr(
         image,
@@ -344,40 +415,37 @@ bool HasUnknownMessagePathEvidence(
         kUnknownMessageEvidenceScanBytes,
         IMAGE_SCN_MEM_EXECUTE);
     if (path == nullptr) {
-        return false;
+        return evidence;
     }
 
-    const std::uintptr_t string_address = reinterpret_cast<std::uintptr_t>(unknown_message);
-    const std::uint32_t string_address_32 = static_cast<std::uint32_t>(string_address);
-    const auto* string_address_bytes =
-        reinterpret_cast<const std::uint8_t*>(&string_address_32);
-    if (SearchBytes(
-            path,
-            kUnknownMessageEvidenceScanBytes,
-            string_address_bytes,
-            sizeof(string_address_32)) != nullptr) {
-        return true;
+    evidence.path_in_image = true;
+    const LocalCodeEvidence local = AnalyzeLocalCodeEvidence(path, kUnknownMessageEvidenceScanBytes);
+    evidence.compare = local.compare_like >= 1;
+    evidence.branch = local.branch_like >= 1;
+    evidence.call = local.direct_call;
+    evidence.stack_setup = local.stack_setup;
+
+    if (unknown_message != nullptr) {
+        const std::uintptr_t string_address = reinterpret_cast<std::uintptr_t>(unknown_message);
+        const std::uint32_t string_address_32 = static_cast<std::uint32_t>(string_address);
+        const auto* string_address_bytes =
+            reinterpret_cast<const std::uint8_t*>(&string_address_32);
+        evidence.string_reference = SearchBytes(
+                                        path,
+                                        kUnknownMessageEvidenceScanBytes,
+                                        string_address_bytes,
+                                        sizeof(string_address_32)) != nullptr;
     }
 
-    const std::uint32_t path_absolute = static_cast<std::uint32_t>(
-        reinterpret_cast<std::uintptr_t>(path));
-    const std::uint8_t* path_end = path + kUnknownMessageEvidenceScanBytes;
-    for (const std::uint8_t* cursor = path; cursor + 5 <= path_end; ++cursor) {
-        if (*cursor != 0xe8) {
-            continue;
-        }
+    return evidence;
+}
 
-        std::int32_t relative = 0;
-        std::memcpy(&relative, cursor + 1, sizeof(relative));
-        const std::uint32_t call_target =
-            static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(cursor + 5) + relative);
-        if (call_target >= path_absolute &&
-            call_target < path_absolute + kUnknownMessageEvidenceScanBytes) {
-            return true;
-        }
-    }
-
-    return false;
+bool IsUnknownMessagePathValidated(const UnknownMessagePathEvidence& evidence) noexcept {
+    return evidence.path_in_image &&
+        evidence.compare &&
+        evidence.branch &&
+        evidence.call &&
+        evidence.stack_setup;
 }
 
 Result MakeFailure(const Result& partial, const wchar_t* reason) {
@@ -489,30 +557,32 @@ Result ValidateCandidate() noexcept {
         CheckDisposition::kPass,
         L"known compare-tree RVA range shows compare/branch evidence");
 
+    // The literal string is diagnostic only. Known-good ROF2 builds can omit it
+    // from readable sections while still preserving the validated path-local
+    // dispatcher structure at the fixed RVA.
     const std::uint8_t* unknown_message = FindUnknownMessageString(image);
     if (unknown_message == nullptr) {
         SetCheck(
             &checks[4],
             L"unknown_message_string",
-            CheckDisposition::kFail,
+            CheckDisposition::kAdvisoryFail,
             L"unknown-message string not found in readable image section");
-        result.checks = SummarizeChecks(checks, std::size(checks));
-        return MakeFailure(
-            result,
-            L"structural validation failed: unknown-message string not found in readable image section");
+    } else {
+        SetCheck(
+            &checks[4],
+            L"unknown_message_string",
+            CheckDisposition::kAdvisoryPass,
+            L"unknown-message string found in readable image section");
     }
-    SetCheck(
-        &checks[4],
-        L"unknown_message_string",
-        CheckDisposition::kPass,
-        L"unknown-message string found in readable image section");
 
-    if (!HasUnknownMessagePathEvidence(image, unknown_message)) {
+    const UnknownMessagePathEvidence unknown_message_path =
+        EvaluateUnknownMessagePathEvidence(image, unknown_message);
+    if (!IsUnknownMessagePathValidated(unknown_message_path)) {
         SetCheck(
             &checks[5],
             L"unknown_message_path",
             CheckDisposition::kFail,
-            L"known unknown-message path RVA range missing bounded string/reference evidence");
+            DescribeUnknownMessagePathEvidence(unknown_message_path));
         result.checks = SummarizeChecks(checks, std::size(checks));
         return MakeFailure(
             result,
@@ -522,7 +592,7 @@ Result ValidateCandidate() noexcept {
         &checks[5],
         L"unknown_message_path",
         CheckDisposition::kPass,
-        L"known unknown-message path RVA range contains bounded string/reference evidence");
+        DescribeUnknownMessagePathEvidence(unknown_message_path));
 
     if (!ValidateDirectCall(image, DiscoveryRvas::kFeederCallA, result.candidate_address) ||
         !ValidateDirectCall(image, DiscoveryRvas::kFeederCallB, result.candidate_address)) {
@@ -542,24 +612,27 @@ Result ValidateCandidate() noexcept {
         CheckDisposition::kPass,
         L"known feeder callsites both target dispatcher candidate");
 
-    if (HasRet10Epilogue(image, *code_section)) {
+    if (!HasRet10Epilogue(image, *code_section)) {
         SetCheck(
             &checks[7],
             L"ret10_epilogue",
-            CheckDisposition::kAdvisoryPass,
-            L"bounded scan near known epilogue RVA found ret 0x10");
-    } else {
-        SetCheck(
-            &checks[7],
-            L"ret10_epilogue",
-            CheckDisposition::kAdvisoryFail,
-            L"bounded scan near known epilogue RVA did not find ret 0x10; dispatcher is large so entry-local epilogue evidence is not required");
+            CheckDisposition::kFail,
+            L"bounded scan near known epilogue RVA did not find ret 0x10");
+        result.checks = SummarizeChecks(checks, std::size(checks));
+        return MakeFailure(
+            result,
+            L"structural validation failed: bounded ret 0x10 epilogue evidence missing near known RVA");
     }
+    SetCheck(
+        &checks[7],
+        L"ret10_epilogue",
+        CheckDisposition::kPass,
+        L"bounded scan near known epilogue RVA found ret 0x10");
 
     result.state = State::kValidated;
     result.validated = true;
     result.reason =
-        L"structural validation succeeded: mandatory range, entry/compare-tree, unknown-message path, and feeder checks passed";
+        L"structural validation succeeded: mandatory range, entry/compare-tree, unknown-message path, feeder calls, and ret10 epilogue checks passed";
     result.checks = SummarizeChecks(checks, std::size(checks));
     return result;
 }
