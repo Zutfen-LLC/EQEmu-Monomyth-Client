@@ -1,5 +1,7 @@
 #include "runtime_capabilities.h"
 
+#include <windows.h>
+
 #include <sstream>
 #include <string>
 
@@ -33,6 +35,31 @@ std::wstring HexPtr(std::uintptr_t value) {
     return stream.str();
 }
 
+bool IsPacketHookDevOptInPresent() noexcept {
+    wchar_t value[16] = {};
+    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
+    const DWORD length =
+        GetEnvironmentVariableW(L"MONOMYTH_ENABLE_PACKET_HOOKS", value, kValueCapacity);
+    if (length == 0 || length >= kValueCapacity) {
+        return false;
+    }
+
+    return value[0] == L'1' && value[1] == L'\0';
+}
+
+std::wstring PacketHookDiscoveryReason(
+    const monomyth::receive_dispatch_discovery::Result& discovery) {
+    std::wstring reason = L"receive dispatcher discovery not validated";
+    reason += L" state=";
+    reason += monomyth::receive_dispatch_discovery::StateName(discovery.state);
+    if (!discovery.reason.empty()) {
+        reason += L" reason=\"";
+        reason += discovery.reason;
+        reason += L"\"";
+    }
+    return reason;
+}
+
 }  // namespace
 
 Manifest BuildCapabilityManifest(
@@ -50,10 +77,14 @@ Manifest BuildCapabilityManifest(
         fingerprint.version_strings_checked &&
         fingerprint.version_strings_match;
     manifest.hooks_allowed = proxy_ready && fingerprint.hooks_allowed;
+    manifest.packet_hooks_dev_opt_in = IsPacketHookDevOptInPresent();
     manifest.packet_hooks_allowed = false;
     manifest.ui_hooks_allowed = false;
     manifest.heartbeat_allowed = manifest.hooks_allowed;
     manifest.reason = NormalizeReason(fingerprint.reason.c_str());
+    manifest.packet_hooks_reason = manifest.packet_hooks_dev_opt_in
+        ? L"receive dispatcher discovery not run"
+        : L"dev opt-in absent: set MONOMYTH_ENABLE_PACKET_HOOKS=1";
     return manifest;
 }
 
@@ -65,6 +96,8 @@ Manifest BuildDisabledCapabilityManifest(
     manifest.proxy_loaded = proxy_loaded;
     manifest.proxy_ready = proxy_ready;
     manifest.reason = NormalizeReason(reason);
+    manifest.packet_hooks_dev_opt_in = IsPacketHookDevOptInPresent();
+    manifest.packet_hooks_reason = L"disabled before fingerprint/discovery gates";
     return manifest;
 }
 
@@ -81,6 +114,8 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     AppendBoolField(&message, L"fingerprint_matched=", manifest.fingerprint_matched);
     message += L" ";
     AppendBoolField(&message, L"hooks_allowed=", manifest.hooks_allowed);
+    message += L" ";
+    AppendBoolField(&message, L"packet_hooks_dev_opt_in=", manifest.packet_hooks_dev_opt_in);
     message += L" ";
     AppendBoolField(&message, L"packet_hooks_allowed=", manifest.packet_hooks_allowed);
     message += L" ";
@@ -100,6 +135,9 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     }
     message += L" reason=\"";
     message += NormalizeReason(manifest.reason.c_str());
+    message += L"\"";
+    message += L" packet_hooks_reason=\"";
+    message += NormalizeReason(manifest.packet_hooks_reason.c_str());
     message += L"\"";
     monomyth::logger::Log(message);
 }
@@ -121,7 +159,28 @@ void ApplyReceiveDispatchDiscovery(
         manifest->receive_dispatch_address = 0;
     }
 
-    manifest->packet_hooks_allowed = false;
+    manifest->packet_hooks_allowed =
+        manifest->proxy_ready &&
+        manifest->hooks_allowed &&
+        manifest->fingerprint_matched &&
+        discovery.validated &&
+        manifest->packet_hooks_dev_opt_in;
+
+    if (manifest->packet_hooks_allowed) {
+        manifest->packet_hooks_reason =
+            L"enabled by explicit dev opt-in, ROF2 fingerprint, and receive dispatcher validation";
+    } else if (!manifest->packet_hooks_dev_opt_in) {
+        manifest->packet_hooks_reason =
+            L"dev opt-in absent: set MONOMYTH_ENABLE_PACKET_HOOKS=1";
+    } else if (!manifest->proxy_ready) {
+        manifest->packet_hooks_reason = L"proxy is not ready";
+    } else if (!manifest->hooks_allowed || !manifest->fingerprint_matched) {
+        manifest->packet_hooks_reason = L"ROF2 fingerprint/host guard denied hook capability";
+    } else if (!discovery.validated) {
+        manifest->packet_hooks_reason = PacketHookDiscoveryReason(discovery);
+    } else {
+        manifest->packet_hooks_reason = L"packet hook gate denied for unknown reason";
+    }
 }
 
 }  // namespace monomyth::runtime

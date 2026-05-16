@@ -15,6 +15,7 @@ struct Manifest {
     bool fingerprint_checked = false;
     bool fingerprint_matched = false;
     bool hooks_allowed = false;
+    bool packet_hooks_dev_opt_in = false;
     bool packet_hooks_allowed = false;
     bool ui_hooks_allowed = false;
     bool heartbeat_allowed = false;
@@ -24,6 +25,7 @@ struct Manifest {
     std::uint32_t receive_dispatch_rva = 0;
     std::uintptr_t receive_dispatch_address = 0;
     std::wstring reason = L"manifest unavailable";
+    std::wstring packet_hooks_reason = L"packet hooks unavailable";
 };
 
 Manifest BuildCapabilityManifest(

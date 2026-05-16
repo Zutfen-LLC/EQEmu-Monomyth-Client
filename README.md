@@ -1,6 +1,6 @@
 # Monomyth Client Bootstrap
 
-This repository contains a fresh minimal `dinput8.dll` bootstrap for the EverQuest ROF2 client used by Monomyth. This slice is intentionally narrow: it proxies the system `dinput8.dll`, records low-noise startup diagnostics, applies a fail-closed ROF2 fingerprint guard, centralizes runtime capability state in one internal manifest, performs fail-closed receive dispatcher discovery for the known ROF2 candidate, and exposes a future hook lifecycle with no active hooks.
+This repository contains a fresh minimal `dinput8.dll` bootstrap for the EverQuest ROF2 client used by Monomyth. This slice is intentionally narrow: it proxies the system `dinput8.dll`, records low-noise startup diagnostics, applies a fail-closed ROF2 fingerprint guard, centralizes runtime capability state in one internal manifest, performs fail-closed receive dispatcher discovery for the known ROF2 candidate, and can install one dev-gated receive-only metadata hook when every safety gate passes.
 
 Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 
@@ -19,24 +19,35 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - Builds a single internal runtime capability manifest that centralizes proxy, host, fingerprint, and future enhancement state.
 - Checks the host process name and, when version resources are present, looks for ROF2 markers `May 10 2013` and `23:30:08`.
 - Runs a fail-closed receive dispatcher discovery pass only after the fingerprint/capability path allows enhancement discovery.
-- Exposes a no-op `HookManager` lifecycle and emits one inert post-guard heartbeat when hooks would be allowed.
-- Initializes an inert `PacketObserver` scaffold that is disabled by capability manifest (`packet_hooks_allowed=false`) and emits one startup state log line.
+- Exposes a `HookManager` lifecycle that installs no active hook by default.
+- Keeps `packet_hooks_allowed=false` unless all of these gates pass:
+  - DirectInput proxy bootstrap is ready.
+  - ROF2 fingerprint guard passes.
+  - Receive dispatcher discovery validates the known ROF2 dispatcher.
+  - The local developer explicitly sets `MONOMYTH_ENABLE_PACKET_HOOKS=1`.
+- When enabled, installs exactly one receive dispatcher hook at the validated candidate and routes metadata to `PacketObserver`.
+- Leaves `ui_hooks_allowed=false`.
 
 ## Safety model
 
 - DirectInput proxying is always the primary responsibility.
 - Fingerprint failure never blocks normal DirectInput behavior.
-- Hook capability is fail-closed and computed in the runtime capability manifest before any future hook install point.
-- Packet and UI hook capabilities remain intentionally disabled in this slice.
+- Hook capability is fail-closed and computed in the runtime capability manifest before any hook install point.
+- Packet hook capability is disabled by default and requires the scary local-only environment variable `MONOMYTH_ENABLE_PACKET_HOOKS=1`.
+- UI hook capability remains intentionally disabled.
 - Receive dispatcher discovery validates only static ROF2 executable-image structure and records success or failure in the internal runtime capability manifest.
-- The `PacketObserver` scaffold is inert: it does not install packet hooks, intercept, decode, mutate, or log any packet bytes. It exists only to provide a safe, capability-gated lifecycle boundary for future receive-only work.
-- This slice does not patch memory, install detours, or implement gameplay/UI behavior.
+- The receive hook is receive-only and metadata-only. It observes opcode/message id, payload length, and source/context pointer value.
+- The hook does **not** read, copy, decode, log, retain, or mutate packet payload bytes.
+- The hook always calls through to the original dispatcher.
+- Hook uninstall is idempotent and runs before `PacketObserver` shutdown.
+- This slice does not implement gameplay/UI behavior or any send interception.
 
 ## Non-goals in this slice
 
 - No MQ2 runtime.
 - No THJ patch bundle.
-- No packet hooks or `OP_ServerAuthStats`. The `PacketObserver` module is scaffolded but entirely inert: no detours, no opcode handling, and no packet data access.
+- No `OP_ServerAuthStats`, Monomyth projection protocol, opcode decoding, or projection state cache.
+- No send interception.
 - No labels, overlays, class displays, `/notify`, pet controls, or UI automation.
 - No copied THJ decompiled code and no wholesale fork of other DLL projects.
 
@@ -72,8 +83,10 @@ Startup logs include:
 - Export resolution result
 - One structured `CapabilityManifest ...` summary line with proxy, host, fingerprint, hook, packet, and UI capability state plus the reason string
 - One `ReceiveDispatchDiscovery ...` line with the static discovery state, validated candidate RVA/address when available, and a concise reason
-- Inert post-guard heartbeat when hooks are allowed
-- One `PacketObserver scaffold state=...` line indicating current observer state (currently always `disabled_by_capability`)
+- Post-guard heartbeat when hooks are allowed
+- One `PacketObserver state=...` line indicating current observer state
+- When the dev hook is enabled, rate-limited metadata lines beginning with `PacketObserverRecv`
+- One `PacketObserver state=shutdown observed_receive_count=...` line on shutdown
 
 The capability manifest is currently internal and log-only. This slice does not emit any external JSON or config artifact.
 
@@ -95,14 +108,17 @@ The capability manifest is currently internal and log-only. This slice does not 
 
 ## Packet observer scaffold
 
-The `PacketObserver` module (`src/packet_observer.h` / `src/packet_observer.cpp`) provides a lifecycle boundary for future receive-only packet work. In this slice it is completely inert:
+The `PacketObserver` module (`src/packet_observer.h` / `src/packet_observer.cpp`) provides the lifecycle boundary for receive-only packet observation.
 
-- It does **not** install packet hooks, detours, or callbacks into the ROF2 client.
+- It is disabled by default because `packet_hooks_allowed=false`.
+- It can initialize only when the manifest says packet hooks are allowed.
+- It receives immutable metadata only: opcode/message id, payload length, source/context pointer value, and an internal observed packet counter.
 - It does **not** intercept, read, decode, mutate, or log any packet bytes.
 - It does **not** define opcode-specific behavior.
-- `packet_hooks_allowed` remains `false` in the capability manifest; the observer reports `disabled_by_capability` on every startup.
+- It logs the first 50 observed receive packets, then every 500th packet, plus the final observed count on shutdown.
+- Log lines start with `PacketObserverRecv` and include opcode/message id and payload length.
 
-Future receive-only observation must be routed through this scaffold, gated on `packet_hooks_allowed` becoming `true` in the manifest, and must remain strictly non-mutating.
+Future receive-only observation must continue to route through this module, remain gated on `packet_hooks_allowed`, and stay strictly non-mutating.
 
 ## Receive dispatcher discovery
 
@@ -110,7 +126,21 @@ The `ReceiveDispatchDiscovery` module (`src/receive_dispatch_discovery.h` / `src
 
 Discovery runs only after the existing fingerprint/capability manifest path says enhancement discovery is allowed. It validates layered executable-image evidence such as the candidate RVA, a `ret 0x10` epilogue shape, the unknown-message string reference, nearby dispatch-like compare/branch structure, and the two known direct feeder callsites. If any required structural check fails or cannot be evaluated confidently, the result is `failed` or `skipped_by_capability` and no candidate address/RVA is exposed as validated.
 
-This module does **not** install hooks, detours, callbacks, or memory patches. It does **not** observe, read, copy, decode, log, mutate, or retain any live packet data. A validated discovery result is only a prerequisite for a later explicit dev-gated receive-only hook slice; by itself it does not activate `PacketObserver`, and `packet_hooks_allowed` remains `false`.
+This module does **not** install hooks, detours, callbacks, or memory patches. It does **not** observe, read, copy, decode, log, mutate, or retain any live packet data. A validated discovery result is only one prerequisite for the explicit dev-gated receive-only hook; by itself it does not activate `PacketObserver`, and `packet_hooks_allowed` remains `false`.
+
+## Dev receive hook
+
+The receive dispatcher hook is for local development only. Normal launches must not set the opt-in and will keep `packet_hooks_allowed=false`.
+
+To opt in for local testing, set this environment variable before launching the validated ROF2 client:
+
+```powershell
+$env:MONOMYTH_ENABLE_PACKET_HOOKS = "1"
+```
+
+The opt-in is not sufficient by itself. The hook installs only when DirectInput proxy bootstrap is ready, the ROF2 fingerprint guard passes, receive dispatcher discovery validates the known candidate, and `MONOMYTH_ENABLE_PACKET_HOOKS=1` is present. If any gate fails, if the detour cannot be installed cleanly, or if the dispatcher prologue is ambiguous, packet observation is disabled and the DLL continues proxy-only behavior where possible.
+
+The hook boundary is the validated receive dispatcher candidate at VA `0x004c3250` / RVA `0x000c3250`. It preserves the validated `this`/ECX plus four stack argument shape: source/context pointer, opcode/message id, payload pointer, and payload length. The hook never reads from the payload pointer and never retains it. There is no send hook path in this repository.
 
 ## Future slices
 
