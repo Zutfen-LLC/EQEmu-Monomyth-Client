@@ -17,6 +17,8 @@ namespace monomyth::spell_usability_discovery {
 namespace {
 
 constexpr char kGetSpellLevelNeededErrorString[] =
+    "GetSpellLevelNeeded: Unable to get Class Data";
+constexpr char kGetSpellLevelNeededErrorStringLegacy[] =
     "GetSpellLevelNeeded: Unable to get Class Data.";
 constexpr std::size_t kStringReferenceScanBytes = 0x400;
 constexpr std::size_t kFunctionStartBacktrackBytes = 0x80;
@@ -216,6 +218,31 @@ const std::uint8_t* FindAsciiString(
     }
 
     return nullptr;
+}
+
+struct LocatedString {
+    const std::uint8_t* address = nullptr;
+    const wchar_t* label = L"missing";
+};
+
+LocatedString FindGetSpellLevelNeededDiagnosticString(const ImageView& image) noexcept {
+    const std::uint8_t* cleanroom_string = FindAsciiString(
+        image,
+        kGetSpellLevelNeededErrorString,
+        sizeof(kGetSpellLevelNeededErrorString));
+    if (cleanroom_string != nullptr) {
+        return {cleanroom_string, L"cleanroom_no_period"};
+    }
+
+    const std::uint8_t* legacy_string = FindAsciiString(
+        image,
+        kGetSpellLevelNeededErrorStringLegacy,
+        sizeof(kGetSpellLevelNeededErrorStringLegacy));
+    if (legacy_string != nullptr) {
+        return {legacy_string, L"legacy_with_period"};
+    }
+
+    return {};
 }
 
 bool HasImmediateReference(
@@ -453,10 +480,9 @@ TargetResult DiscoverHandleRButtonUp(const ImageView& image) {
 
 TargetResult DiscoverGetSpellLevelNeeded(const ImageView& image) {
     TargetResult target = {L"GetSpellLevelNeeded"};
-    const std::uint8_t* error_string = FindAsciiString(
-        image,
-        kGetSpellLevelNeededErrorString,
-        sizeof(kGetSpellLevelNeededErrorString));
+    const LocatedString diagnostic_string =
+        FindGetSpellLevelNeededDiagnosticString(image);
+    const std::uint8_t* error_string = diagnostic_string.address;
     const bool string_found = error_string != nullptr;
     if (!string_found) {
         return BuildUnavailableTarget(
@@ -465,7 +491,7 @@ TargetResult DiscoverGetSpellLevelNeeded(const ImageView& image) {
             L"fingerprint_string_xref",
             L"diagnostic_string_missing",
             L"GetSpellLevelNeeded diagnostic string evidence was not present in the loaded image",
-            L"runtime_export_lookup=skipped diagnostic_string=no");
+            L"runtime_export_lookup=skipped diagnostic_string=no expected_variants=cleanroom_no_period|legacy_with_period");
     }
 
     std::array<std::uintptr_t, kMaxImmediateReferenceMatches> xref_matches = {};
@@ -474,7 +500,9 @@ TargetResult DiscoverGetSpellLevelNeeded(const ImageView& image) {
         reinterpret_cast<std::uintptr_t>(error_string),
         &xref_matches);
     if (xref_count != 1 || xref_matches[0] == 0) {
-        std::wstring evidence = L"runtime_export_lookup=skipped diagnostic_string=yes xref_count=";
+        std::wstring evidence = L"runtime_export_lookup=skipped diagnostic_string=yes diagnostic_variant=";
+        evidence += diagnostic_string.label;
+        evidence += L" xref_count=";
         evidence += std::to_wstring(xref_count);
         target = BuildUnavailableTarget(
             image,
@@ -535,6 +563,8 @@ TargetResult DiscoverGetSpellLevelNeeded(const ImageView& image) {
     });
 
     std::wstring evidence = L"runtime_export_lookup=skipped diagnostic_string=yes";
+    evidence += L" diagnostic_variant=";
+    evidence += diagnostic_string.label;
     evidence += L" xref_count=";
     evidence += std::to_wstring(xref_count);
     evidence += L" xref_address=";
