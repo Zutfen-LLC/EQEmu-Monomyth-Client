@@ -89,6 +89,20 @@ bool IsSpellUsabilityTraceDevOptInPresent() noexcept {
     return value[0] == L'1' && value[1] == L'\0';
 }
 
+bool IsScrollScribeTraceDevOptInPresent() noexcept {
+    wchar_t value[16] = {};
+    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
+    const DWORD length = GetEnvironmentVariableW(
+        L"MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE",
+        value,
+        kValueCapacity);
+    if (length == 0 || length >= kValueCapacity) {
+        return false;
+    }
+
+    return value[0] == L'1' && value[1] == L'\0';
+}
+
 bool IsMulticlassSpellUsabilityDevOptInPresent() noexcept {
     wchar_t value[16] = {};
     constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
@@ -116,6 +130,17 @@ std::wstring PacketHookDiscoveryReason(
     return reason;
 }
 
+bool AnySpellUsabilityDiscoveryRequestPresent(
+    bool discovery_dev_opt_in,
+    bool spell_trace_dev_opt_in,
+    bool scroll_scribe_trace_dev_opt_in,
+    bool multiclass_spell_usability_dev_opt_in) noexcept {
+    return discovery_dev_opt_in ||
+        spell_trace_dev_opt_in ||
+        scroll_scribe_trace_dev_opt_in ||
+        multiclass_spell_usability_dev_opt_in;
+}
+
 }  // namespace
 
 Manifest BuildCapabilityManifest(
@@ -136,14 +161,20 @@ Manifest BuildCapabilityManifest(
     manifest.receive_introspection_dev_opt_in = IsReceiveIntrospectionDevOptInPresent();
     manifest.receive_introspection_allowed = false;
     manifest.spell_usability_discovery_dev_opt_in = IsSpellUsabilityDiscoveryDevOptInPresent();
+    manifest.spell_usability_trace_dev_opt_in = IsSpellUsabilityTraceDevOptInPresent();
+    manifest.scroll_scribe_trace_dev_opt_in = IsScrollScribeTraceDevOptInPresent();
+    manifest.multiclass_spell_usability_dev_opt_in =
+        IsMulticlassSpellUsabilityDevOptInPresent();
     manifest.spell_usability_discovery_allowed =
         manifest.hooks_allowed &&
         manifest.fingerprint_matched &&
-        manifest.spell_usability_discovery_dev_opt_in;
-    manifest.spell_usability_trace_dev_opt_in = IsSpellUsabilityTraceDevOptInPresent();
+        AnySpellUsabilityDiscoveryRequestPresent(
+            manifest.spell_usability_discovery_dev_opt_in,
+            manifest.spell_usability_trace_dev_opt_in,
+            manifest.scroll_scribe_trace_dev_opt_in,
+            manifest.multiclass_spell_usability_dev_opt_in);
     manifest.spell_usability_trace_allowed = false;
-    manifest.multiclass_spell_usability_dev_opt_in =
-        IsMulticlassSpellUsabilityDevOptInPresent();
+    manifest.scroll_scribe_trace_allowed = false;
     manifest.multiclass_spell_usability_allowed = false;
     manifest.ui_hooks_allowed = false;
     manifest.heartbeat_allowed = manifest.hooks_allowed;
@@ -156,10 +187,19 @@ Manifest BuildCapabilityManifest(
         : L"dev opt-in absent: set MONOMYTH_ENABLE_RECV_INTROSPECTION=1";
     manifest.spell_usability_discovery_reason = manifest.spell_usability_discovery_dev_opt_in
         ? L"spell usability discovery requested but validation has not run"
+        : AnySpellUsabilityDiscoveryRequestPresent(
+              false,
+              manifest.spell_usability_trace_dev_opt_in,
+              manifest.scroll_scribe_trace_dev_opt_in,
+              manifest.multiclass_spell_usability_dev_opt_in)
+        ? L"spell usability discovery requested by a dependent trace/behavior opt-in but validation has not run"
         : L"dev opt-in absent: set MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY=1";
     manifest.spell_usability_trace_reason = manifest.spell_usability_trace_dev_opt_in
         ? L"spell usability trace requested but validated targets are not available"
         : L"dev opt-in absent: set MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1";
+    manifest.scroll_scribe_trace_reason = manifest.scroll_scribe_trace_dev_opt_in
+        ? L"scroll scribe trace requested but validated targets are not available"
+        : L"dev opt-in absent: set MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE=1";
     manifest.multiclass_spell_usability_reason =
         manifest.multiclass_spell_usability_dev_opt_in
         ? L"multiclass spell usability requested but validated GetSpellLevelNeeded target is not available"
@@ -179,12 +219,14 @@ Manifest BuildDisabledCapabilityManifest(
     manifest.receive_introspection_dev_opt_in = IsReceiveIntrospectionDevOptInPresent();
     manifest.spell_usability_discovery_dev_opt_in = IsSpellUsabilityDiscoveryDevOptInPresent();
     manifest.spell_usability_trace_dev_opt_in = IsSpellUsabilityTraceDevOptInPresent();
+    manifest.scroll_scribe_trace_dev_opt_in = IsScrollScribeTraceDevOptInPresent();
     manifest.multiclass_spell_usability_dev_opt_in =
         IsMulticlassSpellUsabilityDevOptInPresent();
     manifest.packet_hooks_reason = L"disabled before fingerprint/discovery gates";
     manifest.receive_introspection_reason = L"disabled before fingerprint/discovery gates";
     manifest.spell_usability_discovery_reason = L"disabled before fingerprint/discovery gates";
     manifest.spell_usability_trace_reason = L"disabled before fingerprint/discovery gates";
+    manifest.scroll_scribe_trace_reason = L"disabled before fingerprint/discovery gates";
     manifest.multiclass_spell_usability_reason =
         L"disabled before fingerprint/discovery gates";
     return manifest;
@@ -242,6 +284,16 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" ";
     AppendBoolField(
         &message,
+        L"scroll_scribe_trace_dev_opt_in=",
+        manifest.scroll_scribe_trace_dev_opt_in);
+    message += L" ";
+    AppendBoolField(
+        &message,
+        L"scroll_scribe_trace_allowed=",
+        manifest.scroll_scribe_trace_allowed);
+    message += L" ";
+    AppendBoolField(
+        &message,
         L"multiclass_spell_usability_dev_opt_in=",
         manifest.multiclass_spell_usability_dev_opt_in);
     message += L" ";
@@ -273,6 +325,17 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" get_spell_level_needed_state=";
     message += monomyth::spell_usability_discovery::TargetStateName(
         manifest.get_spell_level_needed_state);
+    message += L" handle_rbutton_up_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.handle_rbutton_up_state);
+    if (manifest.handle_rbutton_up_rva != 0) {
+        message += L" handle_rbutton_up_rva=";
+        message += Hex32(manifest.handle_rbutton_up_rva);
+    }
+    if (manifest.handle_rbutton_up_address != 0) {
+        message += L" handle_rbutton_up_address=";
+        message += HexPtr(manifest.handle_rbutton_up_address);
+    }
     if (manifest.get_spell_level_needed_rva != 0) {
         message += L" get_spell_level_needed_rva=";
         message += Hex32(manifest.get_spell_level_needed_rva);
@@ -280,6 +343,28 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     if (manifest.get_spell_level_needed_address != 0) {
         message += L" get_spell_level_needed_address=";
         message += HexPtr(manifest.get_spell_level_needed_address);
+    }
+    message += L" get_usable_classes_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.get_usable_classes_state);
+    if (manifest.get_usable_classes_rva != 0) {
+        message += L" get_usable_classes_rva=";
+        message += Hex32(manifest.get_usable_classes_rva);
+    }
+    if (manifest.get_usable_classes_address != 0) {
+        message += L" get_usable_classes_address=";
+        message += HexPtr(manifest.get_usable_classes_address);
+    }
+    message += L" can_equip_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.can_equip_state);
+    if (manifest.can_equip_rva != 0) {
+        message += L" can_equip_rva=";
+        message += Hex32(manifest.can_equip_rva);
+    }
+    if (manifest.can_equip_address != 0) {
+        message += L" can_equip_address=";
+        message += HexPtr(manifest.can_equip_address);
     }
     message += L" can_start_memming_state=";
     message += monomyth::spell_usability_discovery::TargetStateName(
@@ -306,6 +391,9 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L"\"";
     message += L" spell_usability_trace_reason=\"";
     message += NormalizeReason(manifest.spell_usability_trace_reason.c_str());
+    message += L"\"";
+    message += L" scroll_scribe_trace_reason=\"";
+    message += NormalizeReason(manifest.scroll_scribe_trace_reason.c_str());
     message += L"\"";
     message += L" multiclass_spell_usability_reason=\"";
     message += NormalizeReason(manifest.multiclass_spell_usability_reason.c_str());
@@ -376,12 +464,22 @@ void ApplySpellUsabilityDiscovery(
 
     manifest->spell_usability_discovery_allowed = discovery.allowed;
     manifest->spell_usability_trace_dev_opt_in = discovery.trace_dev_opt_in;
+    manifest->handle_rbutton_up_state = discovery.handle_rbutton_up.state;
+    manifest->handle_rbutton_up_rva = discovery.handle_rbutton_up.candidate_rva;
+    manifest->handle_rbutton_up_address = discovery.handle_rbutton_up.candidate_address;
     manifest->get_spell_level_needed_state = discovery.get_spell_level_needed.state;
     manifest->get_spell_level_needed_rva = discovery.get_spell_level_needed.candidate_rva;
     manifest->get_spell_level_needed_address = discovery.get_spell_level_needed.candidate_address;
+    manifest->get_usable_classes_state = discovery.get_usable_classes.state;
+    manifest->get_usable_classes_rva = discovery.get_usable_classes.candidate_rva;
+    manifest->get_usable_classes_address = discovery.get_usable_classes.candidate_address;
+    manifest->can_equip_state = discovery.can_equip.state;
+    manifest->can_equip_rva = discovery.can_equip.candidate_rva;
+    manifest->can_equip_address = discovery.can_equip.candidate_address;
     manifest->can_start_memming_state = discovery.can_start_memming.state;
     manifest->can_start_memming_rva = discovery.can_start_memming.candidate_rva;
     manifest->can_start_memming_address = discovery.can_start_memming.candidate_address;
+    manifest->scroll_scribe_trace_dev_opt_in = IsScrollScribeTraceDevOptInPresent();
     manifest->multiclass_spell_usability_dev_opt_in =
         IsMulticlassSpellUsabilityDevOptInPresent();
 
@@ -392,10 +490,24 @@ void ApplySpellUsabilityDiscovery(
         (discovery.can_start_memming.state ==
              monomyth::spell_usability_discovery::TargetState::kValidated &&
          discovery.can_start_memming.trace_safe);
+    const bool scroll_scribe_targets_validated =
+        discovery.handle_rbutton_up.state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated &&
+        discovery.handle_rbutton_up.trace_safe &&
+        discovery.get_usable_classes.state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated &&
+        discovery.get_usable_classes.trace_safe &&
+        discovery.can_equip.state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated &&
+        discovery.can_equip.trace_safe;
     manifest->spell_usability_trace_allowed =
         discovery.allowed &&
         discovery.trace_dev_opt_in &&
         any_trace_safe;
+    manifest->scroll_scribe_trace_allowed =
+        discovery.allowed &&
+        manifest->scroll_scribe_trace_dev_opt_in &&
+        scroll_scribe_targets_validated;
     manifest->multiclass_spell_usability_allowed =
         discovery.allowed &&
         manifest->multiclass_spell_usability_dev_opt_in &&
@@ -426,6 +538,23 @@ void ApplySpellUsabilityDiscovery(
     } else {
         manifest->spell_usability_trace_reason =
             L"spell usability trace gate denied for unknown reason";
+    }
+
+    if (manifest->scroll_scribe_trace_allowed) {
+        manifest->scroll_scribe_trace_reason =
+            L"enabled by explicit dev opt-in and validated scroll scribe trace targets";
+    } else if (!manifest->scroll_scribe_trace_dev_opt_in) {
+        manifest->scroll_scribe_trace_reason =
+            L"dev opt-in absent: set MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE=1";
+    } else if (!discovery.allowed) {
+        manifest->scroll_scribe_trace_reason =
+            L"scroll scribe trace requires the ROF2 discovery capability gate";
+    } else if (!scroll_scribe_targets_validated) {
+        manifest->scroll_scribe_trace_reason =
+            L"scroll scribe trace denied because one or more target validations were missing or ambiguous";
+    } else {
+        manifest->scroll_scribe_trace_reason =
+            L"scroll scribe trace gate denied for unknown reason";
     }
 
     if (manifest->multiclass_spell_usability_allowed) {

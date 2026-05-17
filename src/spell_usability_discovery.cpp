@@ -18,6 +18,13 @@ namespace {
 constexpr char kGetSpellLevelNeededMangled[] =
     "?GetSpellLevelNeeded@EQ_Spell@EQClasses@@QBEEI@Z";
 constexpr char kGetSpellLevelNeededWrapper[] = "EQ_Spell__GetSpellLevelNeeded";
+constexpr char kHandleRButtonUpMangled[] =
+    "?HandleRButtonUp@CInvSlot@EQClasses@@QAEXPAVCXPoint@2@@Z";
+constexpr char kHandleRButtonUpWrapper[] = "CInvSlot__HandleRButtonUp";
+constexpr char kCanEquipMangled[] =
+    "?CanEquip@EQ_Character@EQClasses@@QAEHPAKKK@Z";
+constexpr char kCanEquipWrapper[] = "EQ_Character__CanEquip";
+constexpr char kGetUsableClassesWrapper[] = "EQ_Character__GetUsableClasses";
 constexpr char kCanStartMemmingMangled[] =
     "?CanStartMemming@CSpellBookWnd@EQClasses@@QAE_NH@Z";
 constexpr char kCanStartMemmingWrapper[] = "CSpellBookWnd__CanStartMemming";
@@ -407,45 +414,96 @@ bool HasPlausibleX86Prologue(
 
 bool PopulateBaseTargetFields(
     const ImageView& image,
-    const ExportMatch& mangled,
+    const ExportMatch& export_match,
+    const wchar_t* discovery_method,
+    const wchar_t* missing_reason,
     TargetResult* target) {
     if (target == nullptr) {
         return false;
     }
 
-    if (!mangled.found) {
+    if (!export_match.found) {
         target->state = TargetState::kFailed;
-        target->discovery_method = L"export_lookup";
-        target->reason = L"exact mangled export not found in eqgame.exe export table";
-        target->validation_evidence = L"mangled_export=no";
+        target->discovery_method = discovery_method == nullptr ? L"export_lookup" : discovery_method;
+        target->reason = missing_reason == nullptr
+            ? L"exact export not found in eqgame.exe export table"
+            : missing_reason;
+        target->validation_evidence = L"exact_export=no";
         return false;
     }
 
     target->module_base = reinterpret_cast<std::uintptr_t>(image.base);
-    target->candidate_rva = mangled.export_rva;
-    target->candidate_address = mangled.export_address;
-    target->resolved_symbol = AsWide(mangled.name);
-    target->discovery_method = L"export_mangled";
+    target->candidate_rva = export_match.export_rva;
+    target->candidate_address = export_match.export_address;
+    target->resolved_symbol = AsWide(export_match.name);
+    target->discovery_method = discovery_method == nullptr ? L"export_lookup" : discovery_method;
 
-    if (!IsExecutableAddress(image, mangled.export_address)) {
+    if (!IsExecutableAddress(image, export_match.export_address)) {
         target->state = TargetState::kFailed;
-        target->reason = L"exact mangled export resolved outside an executable image section";
-        target->validation_evidence = L"mangled_export=yes executable=no";
+        target->reason = L"exact export resolved outside an executable image section";
+        target->validation_evidence = L"exact_export=yes executable=no";
         return false;
     }
 
-    const auto* code = reinterpret_cast<const std::uint8_t*>(mangled.export_address);
+    const auto* code = reinterpret_cast<const std::uint8_t*>(export_match.export_address);
     if (!HasPlausibleX86Prologue(code, 8)) {
         target->state = TargetState::kFoundUnvalidated;
-        target->reason = L"exact mangled export resolved but entry prologue shape is not confidently recognized";
-        target->validation_evidence = L"mangled_export=yes executable=yes prologue=unsupported";
+        target->reason = L"exact export resolved but entry prologue shape is not confidently recognized";
+        target->validation_evidence = L"exact_export=yes executable=yes prologue=unsupported";
         return false;
     }
 
     target->state = TargetState::kFoundUnvalidated;
-    target->reason = L"exact mangled export resolved but target-specific validation is incomplete";
-    target->validation_evidence = L"mangled_export=yes executable=yes prologue=plausible";
+    target->reason = L"exact export resolved but target-specific validation is incomplete";
+    target->validation_evidence = L"exact_export=yes executable=yes prologue=plausible";
     return true;
+}
+
+TargetResult DiscoverHandleRButtonUp(const ImageView& image) {
+    TargetResult target = {L"CInvSlot::HandleRButtonUp"};
+    ExportMatch mangled = {};
+    ExportMatch wrapper = {};
+    FindExportByName(image, kHandleRButtonUpMangled, &mangled);
+    FindExportByName(image, kHandleRButtonUpWrapper, &wrapper);
+
+    if (!PopulateBaseTargetFields(
+            image,
+            mangled,
+            L"export_mangled",
+            L"exact mangled export not found in eqgame.exe export table",
+            &target)) {
+        return target;
+    }
+
+    WrapperForward wrapper_forward = {};
+    if (wrapper.found) {
+        wrapper_forward = AnalyzeWrapperForward(image, wrapper);
+    } else {
+        wrapper_forward.evidence = L"wrapper export missing";
+    }
+
+    const bool wrapper_matches =
+        wrapper_forward.resolved && wrapper_forward.target_address == target.candidate_address;
+    std::wstring evidence = L"mangled_export=yes executable=yes prologue=plausible";
+    evidence += L" wrapper=";
+    evidence += wrapper.found ? L"yes" : L"no";
+    evidence += L" wrapper_evidence=";
+    evidence += wrapper_forward.evidence;
+    evidence += L" wrapper_matches=";
+    evidence += wrapper_matches ? L"yes" : L"no";
+    target.validation_evidence = evidence;
+
+    if (wrapper_matches) {
+        target.state = TargetState::kValidated;
+        target.exact_signature_validated = true;
+        target.trace_safe = true;
+        target.reason = L"validated by exact mangled export and wrapper forward match";
+        return target;
+    }
+
+    target.reason =
+        L"exact mangled export resolved but wrapper forwarding evidence did not confirm the exact target";
+    return target;
 }
 
 TargetResult DiscoverGetSpellLevelNeeded(const ImageView& image) {
@@ -455,7 +513,12 @@ TargetResult DiscoverGetSpellLevelNeeded(const ImageView& image) {
     FindExportByName(image, kGetSpellLevelNeededMangled, &mangled);
     FindExportByName(image, kGetSpellLevelNeededWrapper, &wrapper);
 
-    if (!PopulateBaseTargetFields(image, mangled, &target)) {
+    if (!PopulateBaseTargetFields(
+            image,
+            mangled,
+            L"export_mangled",
+            L"exact mangled export not found in eqgame.exe export table",
+            &target)) {
         return target;
     }
 
@@ -534,7 +597,12 @@ TargetResult DiscoverCanStartMemming(const ImageView& image) {
     FindExportByName(image, kCanStartMemmingMangled, &mangled);
     FindExportByName(image, kCanStartMemmingWrapper, &wrapper);
 
-    if (!PopulateBaseTargetFields(image, mangled, &target)) {
+    if (!PopulateBaseTargetFields(
+            image,
+            mangled,
+            L"export_mangled",
+            L"exact mangled export not found in eqgame.exe export table",
+            &target)) {
         return target;
     }
 
@@ -570,12 +638,84 @@ TargetResult DiscoverCanStartMemming(const ImageView& image) {
     return target;
 }
 
+TargetResult DiscoverGetUsableClasses(const ImageView& image) {
+    TargetResult target = {L"GetUsableClasses"};
+    ExportMatch wrapper = {};
+    FindExportByName(image, kGetUsableClassesWrapper, &wrapper);
+
+    if (!PopulateBaseTargetFields(
+            image,
+            wrapper,
+            L"export_wrapper",
+            L"exact wrapper export not found in eqgame.exe export table",
+            &target)) {
+        return target;
+    }
+
+    target.validation_evidence = L"wrapper_export=yes executable=yes prologue=plausible";
+    target.state = TargetState::kValidated;
+    target.exact_signature_validated = true;
+    target.trace_safe = true;
+    target.reason = L"validated by exact wrapper export";
+    return target;
+}
+
+TargetResult DiscoverCanEquip(const ImageView& image) {
+    TargetResult target = {L"CanEquip"};
+    ExportMatch mangled = {};
+    ExportMatch wrapper = {};
+    FindExportByName(image, kCanEquipMangled, &mangled);
+    FindExportByName(image, kCanEquipWrapper, &wrapper);
+
+    if (!PopulateBaseTargetFields(
+            image,
+            mangled,
+            L"export_mangled",
+            L"exact mangled export not found in eqgame.exe export table",
+            &target)) {
+        return target;
+    }
+
+    WrapperForward wrapper_forward = {};
+    if (wrapper.found) {
+        wrapper_forward = AnalyzeWrapperForward(image, wrapper);
+    } else {
+        wrapper_forward.evidence = L"wrapper export missing";
+    }
+
+    const bool wrapper_matches =
+        wrapper_forward.resolved && wrapper_forward.target_address == target.candidate_address;
+    std::wstring evidence = L"mangled_export=yes executable=yes prologue=plausible";
+    evidence += L" wrapper=";
+    evidence += wrapper.found ? L"yes" : L"no";
+    evidence += L" wrapper_evidence=";
+    evidence += wrapper_forward.evidence;
+    evidence += L" wrapper_matches=";
+    evidence += wrapper_matches ? L"yes" : L"no";
+    target.validation_evidence = evidence;
+
+    if (wrapper_matches) {
+        target.state = TargetState::kValidated;
+        target.exact_signature_validated = true;
+        target.trace_safe = true;
+        target.reason = L"validated by exact mangled export and wrapper forward match";
+        return target;
+    }
+
+    target.reason =
+        L"exact mangled export resolved but wrapper forwarding evidence did not confirm the exact target";
+    return target;
+}
+
 }  // namespace
 
 void Initialize() noexcept {
     g_result = {};
     g_result.reason = L"initialized";
+    g_result.handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
+    g_result.get_usable_classes = {L"GetUsableClasses"};
+    g_result.can_equip = {L"CanEquip"};
     g_result.can_start_memming = {L"CanStartMemming"};
 }
 
@@ -583,14 +723,23 @@ Result Run(bool discovery_allowed) noexcept {
     g_result = {};
     g_result.allowed = discovery_allowed;
     g_result.trace_dev_opt_in = IsTraceDevOptInPresent();
+    g_result.handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
+    g_result.get_usable_classes = {L"GetUsableClasses"};
+    g_result.can_equip = {L"CanEquip"};
     g_result.can_start_memming = {L"CanStartMemming"};
 
     if (!discovery_allowed) {
         g_result.reason =
             L"skipped because capability manifest denied spell usability discovery";
+        g_result.handle_rbutton_up.reason = L"discovery skipped by capability";
+        g_result.handle_rbutton_up.validation_evidence = L"capability_gate=denied";
         g_result.get_spell_level_needed.reason = L"discovery skipped by capability";
         g_result.get_spell_level_needed.validation_evidence = L"capability_gate=denied";
+        g_result.get_usable_classes.reason = L"discovery skipped by capability";
+        g_result.get_usable_classes.validation_evidence = L"capability_gate=denied";
+        g_result.can_equip.reason = L"discovery skipped by capability";
+        g_result.can_equip.validation_evidence = L"capability_gate=denied";
         g_result.can_start_memming.reason = L"discovery skipped by capability";
         g_result.can_start_memming.validation_evidence = L"capability_gate=denied";
         return g_result;
@@ -599,10 +748,22 @@ Result Run(bool discovery_allowed) noexcept {
     ImageView image = {};
     if (!BuildImageView(&image)) {
         g_result.reason = L"failed because host PE image unavailable";
+        g_result.handle_rbutton_up.state = TargetState::kFailed;
+        g_result.handle_rbutton_up.discovery_method = L"export_lookup";
+        g_result.handle_rbutton_up.reason = L"host PE image unavailable";
+        g_result.handle_rbutton_up.validation_evidence = L"image_view=no";
         g_result.get_spell_level_needed.state = TargetState::kFailed;
         g_result.get_spell_level_needed.discovery_method = L"export_lookup";
         g_result.get_spell_level_needed.reason = L"host PE image unavailable";
         g_result.get_spell_level_needed.validation_evidence = L"image_view=no";
+        g_result.get_usable_classes.state = TargetState::kFailed;
+        g_result.get_usable_classes.discovery_method = L"export_lookup";
+        g_result.get_usable_classes.reason = L"host PE image unavailable";
+        g_result.get_usable_classes.validation_evidence = L"image_view=no";
+        g_result.can_equip.state = TargetState::kFailed;
+        g_result.can_equip.discovery_method = L"export_lookup";
+        g_result.can_equip.reason = L"host PE image unavailable";
+        g_result.can_equip.validation_evidence = L"image_view=no";
         g_result.can_start_memming.state = TargetState::kFailed;
         g_result.can_start_memming.discovery_method = L"export_lookup";
         g_result.can_start_memming.reason = L"host PE image unavailable";
@@ -611,7 +772,10 @@ Result Run(bool discovery_allowed) noexcept {
     }
 
     g_result.reason = L"attempted export-based spell usability discovery";
+    g_result.handle_rbutton_up = DiscoverHandleRButtonUp(image);
     g_result.get_spell_level_needed = DiscoverGetSpellLevelNeeded(image);
+    g_result.get_usable_classes = DiscoverGetUsableClasses(image);
+    g_result.can_equip = DiscoverCanEquip(image);
     g_result.can_start_memming = DiscoverCanStartMemming(image);
     return g_result;
 }
@@ -619,7 +783,10 @@ Result Run(bool discovery_allowed) noexcept {
 void Shutdown() noexcept {
     g_result = {};
     g_result.reason = L"shutdown";
+    g_result.handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
+    g_result.get_usable_classes = {L"GetUsableClasses"};
+    g_result.can_equip = {L"CanEquip"};
     g_result.can_start_memming = {L"CanStartMemming"};
 }
 
@@ -644,7 +811,10 @@ const wchar_t* TargetStateName(TargetState state) noexcept {
 
 void LogResult(const Result& result) noexcept {
     const TargetResult* targets[] = {
+        &result.handle_rbutton_up,
         &result.get_spell_level_needed,
+        &result.get_usable_classes,
+        &result.can_equip,
         &result.can_start_memming,
     };
 

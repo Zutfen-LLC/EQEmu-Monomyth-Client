@@ -41,9 +41,17 @@ using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
     std::uint32_t opcode,
     const void* payload,
     std::uint32_t payload_length);
+using HandleRButtonUpFn = void (MONOMYTH_THISCALL*)(
+    void* this_slot,
+    void* point);
 using GetSpellLevelNeededFn = std::uint8_t (MONOMYTH_THISCALL*)(
     const void* this_spell,
     unsigned int class_id);
+using CanEquipFn = int (MONOMYTH_THISCALL*)(
+    void* this_character,
+    const void* item_or_contents,
+    std::uint32_t arg2,
+    std::uint32_t arg3);
 using CanStartMemmingFn = bool (MONOMYTH_THISCALL*)(
     void* this_window,
     int spell_or_book_index);
@@ -59,16 +67,33 @@ struct InlineDetour {
 };
 
 InlineDetour g_receive_dispatch_detour = {};
+InlineDetour g_handle_rbutton_up_detour = {};
 InlineDetour g_get_spell_level_needed_detour = {};
+InlineDetour g_get_usable_classes_detour = {};
+InlineDetour g_can_equip_detour = {};
 InlineDetour g_can_start_memming_detour = {};
 ReceiveDispatchFn g_original_receive_dispatch = nullptr;
+HandleRButtonUpFn g_original_handle_rbutton_up = nullptr;
 GetSpellLevelNeededFn g_original_get_spell_level_needed = nullptr;
+void* g_original_get_usable_classes = nullptr;
+CanEquipFn g_original_can_equip = nullptr;
 CanStartMemmingFn g_original_can_start_memming = nullptr;
 std::uint64_t g_get_spell_level_needed_trace_count = 0;
 std::uint64_t g_can_start_memming_trace_count = 0;
+std::uint64_t g_scroll_scribe_event_count = 0;
+std::uint32_t g_scroll_scribe_active_correlation_id = 0;
+bool g_scroll_scribe_active_logging = false;
+void* g_scroll_scribe_last_get_usable_classes_this = nullptr;
+std::uintptr_t g_scroll_scribe_last_get_usable_classes_arg0 = 0;
 bool g_multiclass_spell_usability_enabled = false;
 
 std::wstring HexPtr(std::uintptr_t value) {
+    std::wstringstream stream;
+    stream << L"0x" << std::hex << value;
+    return stream.str();
+}
+
+std::wstring Hex32(std::uint32_t value) {
     std::wstringstream stream;
     stream << L"0x" << std::hex << value;
     return stream.str();
@@ -362,10 +387,119 @@ bool ShouldLogSpellTrace(std::uint64_t count) noexcept {
     return count <= kSpellTraceInitialLogCount || (count % kSpellTraceLogInterval) == 0;
 }
 
-std::wstring Hex32(std::uint32_t value) {
-    std::wstringstream stream;
-    stream << L"0x" << std::hex << value;
-    return stream.str();
+bool ShouldLogScrollScribeTrace(std::uint64_t count) noexcept {
+    constexpr std::uint64_t kInitialLogCount = 100;
+    constexpr std::uint64_t kLogInterval = 25;
+    return count <= kInitialLogCount || (count % kLogInterval) == 0;
+}
+
+std::wstring FormatAssignedMask(const monomyth::server_auth_stats::Snapshot& snapshot) {
+    return Hex32(snapshot.has_classes_bitmask ? snapshot.classes_bitmask : 0);
+}
+
+void AppendActiveScrollCorrelation(std::wstring* message) {
+    if (message == nullptr || g_scroll_scribe_active_correlation_id == 0) {
+        return;
+    }
+
+    message->append(L" scroll_scribe_correlation=");
+    message->append(std::to_wstring(g_scroll_scribe_active_correlation_id));
+}
+
+void LogScrollScribeTrace(
+    const wchar_t* target,
+    const std::wstring& suffix) {
+    if (target == nullptr || !g_scroll_scribe_active_logging) {
+        return;
+    }
+
+    std::wstring message = L"ScrollScribeTrace target=";
+    message += target;
+    message += L" correlation=";
+    message += std::to_wstring(g_scroll_scribe_active_correlation_id);
+    message += L" ";
+    message += suffix;
+    monomyth::logger::Log(message);
+}
+
+void LogHandleRButtonUpTrace(
+    const wchar_t* phase,
+    void* this_slot,
+    void* point) {
+    if (!g_scroll_scribe_active_logging) {
+        return;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    std::wstring suffix = L"phase=";
+    suffix += phase == nullptr ? L"unknown" : phase;
+    suffix += L" this=";
+    suffix += HexPtr(reinterpret_cast<std::uintptr_t>(this_slot));
+    suffix += L" point=";
+    suffix += HexPtr(reinterpret_cast<std::uintptr_t>(point));
+    suffix += L" assigned_mask=";
+    suffix += FormatAssignedMask(snapshot);
+    suffix += L" has_assigned_mask=";
+    suffix += snapshot.has_classes_bitmask ? L"true" : L"false";
+    suffix += L" scroll_hint=unknown";
+    suffix += L" observed_count=";
+    suffix += std::to_wstring(g_scroll_scribe_event_count);
+    LogScrollScribeTrace(L"CInvSlot::HandleRButtonUp", suffix);
+}
+
+void LogGetUsableClassesTrace(
+    void* this_character,
+    std::uintptr_t raw_arg0,
+    std::uint32_t result) {
+    if (!g_scroll_scribe_active_logging) {
+        return;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    std::wstring suffix = L"this=";
+    suffix += HexPtr(reinterpret_cast<std::uintptr_t>(this_character));
+    suffix += L" raw_arg0=";
+    suffix += HexPtr(raw_arg0);
+    suffix += L" original_result=";
+    suffix += std::to_wstring(result);
+    suffix += L" assigned_mask=";
+    suffix += FormatAssignedMask(snapshot);
+    suffix += L" has_assigned_mask=";
+    suffix += snapshot.has_classes_bitmask ? L"true" : L"false";
+    suffix += L" scroll_hint=unknown";
+    LogScrollScribeTrace(L"GetUsableClasses", suffix);
+}
+
+void LogCanEquipTrace(
+    void* this_character,
+    const void* item_or_contents,
+    std::uint32_t arg2,
+    std::uint32_t arg3,
+    int result) {
+    if (!g_scroll_scribe_active_logging) {
+        return;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    std::wstring suffix = L"this=";
+    suffix += HexPtr(reinterpret_cast<std::uintptr_t>(this_character));
+    suffix += L" item_or_contents=";
+    suffix += HexPtr(reinterpret_cast<std::uintptr_t>(item_or_contents));
+    suffix += L" arg2=";
+    suffix += Hex32(arg2);
+    suffix += L" arg3=";
+    suffix += Hex32(arg3);
+    suffix += L" original_result=";
+    suffix += std::to_wstring(result);
+    suffix += L" assigned_mask=";
+    suffix += FormatAssignedMask(snapshot);
+    suffix += L" has_assigned_mask=";
+    suffix += snapshot.has_classes_bitmask ? L"true" : L"false";
+    suffix += L" scroll_hint=unknown";
+    LogScrollScribeTrace(L"CanEquip", suffix);
 }
 
 std::uint8_t QueryOriginalSpellLevel(
@@ -392,6 +526,7 @@ std::uint8_t MONOMYTH_FASTCALL GetSpellLevelNeededHook(
             message += std::to_wstring(class_id);
             message += L" original_level=";
             message += std::to_wstring(static_cast<unsigned int>(original_level));
+            AppendActiveScrollCorrelation(&message);
             message += L" observed_count=";
             message += std::to_wstring(g_get_spell_level_needed_trace_count);
             monomyth::logger::Log(message);
@@ -430,6 +565,7 @@ std::uint8_t MONOMYTH_FASTCALL GetSpellLevelNeededHook(
         message += selection.used_assigned_class ? L"" : selection.fallback_reason;
         message += L"\"";
         message += L" behavior_enabled=true";
+        AppendActiveScrollCorrelation(&message);
         message += L" observed_count=";
         message += std::to_wstring(g_get_spell_level_needed_trace_count);
         monomyth::logger::Log(message);
@@ -449,10 +585,85 @@ bool MONOMYTH_FASTCALL CanStartMemmingHook(
         message += std::to_wstring(spell_or_book_index);
         message += L" original_result=";
         message += original_result ? L"true" : L"false";
+        AppendActiveScrollCorrelation(&message);
         message += L" observed_count=";
         message += std::to_wstring(g_can_start_memming_trace_count);
         monomyth::logger::Log(message);
     }
+    return original_result;
+}
+
+void MONOMYTH_FASTCALL HandleRButtonUpHook(
+    void* this_slot,
+    void*,
+    void* point) noexcept {
+    const std::uint32_t previous_correlation = g_scroll_scribe_active_correlation_id;
+    const bool previous_logging = g_scroll_scribe_active_logging;
+    ++g_scroll_scribe_event_count;
+    g_scroll_scribe_active_correlation_id =
+        static_cast<std::uint32_t>(g_scroll_scribe_event_count);
+    g_scroll_scribe_active_logging =
+        ShouldLogScrollScribeTrace(g_scroll_scribe_event_count);
+
+    LogHandleRButtonUpTrace(L"enter", this_slot, point);
+    g_original_handle_rbutton_up(this_slot, point);
+    LogHandleRButtonUpTrace(L"exit", this_slot, point);
+
+    g_scroll_scribe_active_correlation_id = previous_correlation;
+    g_scroll_scribe_active_logging = previous_logging;
+}
+
+#if defined(_MSC_VER)
+void CaptureGetUsableClassesContextFromHook(
+    void* this_character,
+    std::uintptr_t raw_arg0) noexcept {
+    g_scroll_scribe_last_get_usable_classes_this = this_character;
+    g_scroll_scribe_last_get_usable_classes_arg0 = raw_arg0;
+}
+
+void LogGetUsableClassesTraceFromHook(std::uint32_t result) noexcept {
+    LogGetUsableClassesTrace(
+        g_scroll_scribe_last_get_usable_classes_this,
+        g_scroll_scribe_last_get_usable_classes_arg0,
+        result);
+}
+
+__declspec(naked) void GetUsableClassesHook() {
+    __asm {
+        pushfd
+        pushad
+        mov eax, ecx
+        mov edx, [esp + 40]
+        push edx
+        push eax
+        call CaptureGetUsableClassesContextFromHook
+        add esp, 8
+        popad
+        popfd
+        mov eax, g_original_get_usable_classes
+        call eax
+        pushfd
+        pushad
+        mov edx, eax
+        push edx
+        call LogGetUsableClassesTraceFromHook
+        add esp, 4
+        popad
+        popfd
+        ret
+    }
+}
+#endif
+
+int MONOMYTH_FASTCALL CanEquipHook(
+    void* this_character,
+    void*,
+    const void* item_or_contents,
+    std::uint32_t arg2,
+    std::uint32_t arg3) noexcept {
+    const int original_result =
+        g_original_can_equip(this_character, item_or_contents, arg2, arg3);
+    LogCanEquipTrace(this_character, item_or_contents, arg2, arg3, original_result);
     return original_result;
 }
 
@@ -515,6 +726,81 @@ bool InstallGetSpellLevelNeededHook(const monomyth::runtime::Manifest& manifest)
     return true;
 }
 
+bool InstallScrollScribeTraceHooks(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.scroll_scribe_trace_allowed ||
+        manifest.handle_rbutton_up_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.handle_rbutton_up_address == 0 ||
+        manifest.get_usable_classes_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.get_usable_classes_address == 0 ||
+        manifest.can_equip_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.can_equip_address == 0) {
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.handle_rbutton_up_address),
+            reinterpret_cast<void*>(&HandleRButtonUpHook),
+            &g_handle_rbutton_up_detour,
+            reinterpret_cast<void**>(&g_original_handle_rbutton_up),
+            L"CInvSlot::HandleRButtonUp trace")) {
+        RemoveInlineDetour(&g_handle_rbutton_up_detour);
+        g_original_handle_rbutton_up = nullptr;
+        return false;
+    }
+
+#if defined(_MSC_VER)
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.get_usable_classes_address),
+            reinterpret_cast<void*>(&GetUsableClassesHook),
+            &g_get_usable_classes_detour,
+            &g_original_get_usable_classes,
+            L"GetUsableClasses trace")) {
+        RemoveInlineDetour(&g_get_usable_classes_detour);
+        RemoveInlineDetour(&g_handle_rbutton_up_detour);
+        g_original_get_usable_classes = nullptr;
+        g_original_handle_rbutton_up = nullptr;
+        return false;
+    }
+#else
+    RemoveInlineDetour(&g_handle_rbutton_up_detour);
+    g_original_handle_rbutton_up = nullptr;
+    monomyth::logger::Log(
+        L"hook_manager: GetUsableClasses trace requires MSVC x86 naked-hook support; scroll trace disabled");
+    return false;
+#endif
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.can_equip_address),
+            reinterpret_cast<void*>(&CanEquipHook),
+            &g_can_equip_detour,
+            reinterpret_cast<void**>(&g_original_can_equip),
+            L"CanEquip trace")) {
+        RemoveInlineDetour(&g_can_equip_detour);
+        RemoveInlineDetour(&g_get_usable_classes_detour);
+        RemoveInlineDetour(&g_handle_rbutton_up_detour);
+        g_original_can_equip = nullptr;
+        g_original_get_usable_classes = nullptr;
+        g_original_handle_rbutton_up = nullptr;
+        return false;
+    }
+
+    std::wstring message =
+        L"hook_manager: scroll scribe trace installed targets=CInvSlot::HandleRButtonUp,GetUsableClasses,CanEquip addresses=";
+    message += HexPtr(manifest.handle_rbutton_up_address);
+    message += L",";
+    message += HexPtr(manifest.get_usable_classes_address);
+    message += L",";
+    message += HexPtr(manifest.can_equip_address);
+    monomyth::logger::Log(message);
+    g_scroll_scribe_event_count = 0;
+    g_scroll_scribe_active_correlation_id = 0;
+    g_scroll_scribe_active_logging = false;
+    return true;
+}
+
 bool InstallCanStartMemmingTrace(const monomyth::runtime::Manifest& manifest) noexcept {
     if (!manifest.spell_usability_trace_allowed ||
         manifest.can_start_memming_state !=
@@ -570,6 +856,37 @@ bool RemoveGetSpellLevelNeededTrace() noexcept {
     return false;
 }
 
+bool RemoveScrollScribeTraceHooks() noexcept {
+    bool ok = true;
+    if (g_can_equip_detour.installed && RemoveInlineDetour(&g_can_equip_detour)) {
+        g_original_can_equip = nullptr;
+    } else if (g_can_equip_detour.installed) {
+        ok = false;
+    }
+
+    if (g_get_usable_classes_detour.installed &&
+        RemoveInlineDetour(&g_get_usable_classes_detour)) {
+        g_original_get_usable_classes = nullptr;
+    } else if (g_get_usable_classes_detour.installed) {
+        ok = false;
+    }
+
+    if (g_handle_rbutton_up_detour.installed &&
+        RemoveInlineDetour(&g_handle_rbutton_up_detour)) {
+        g_original_handle_rbutton_up = nullptr;
+    } else if (g_handle_rbutton_up_detour.installed) {
+        ok = false;
+    }
+
+    if (ok) {
+        g_scroll_scribe_active_correlation_id = 0;
+        g_scroll_scribe_active_logging = false;
+        monomyth::logger::Log(
+            L"hook_manager: scroll scribe trace removed targets=CInvSlot::HandleRButtonUp,GetUsableClasses,CanEquip");
+    }
+    return ok;
+}
+
 bool RemoveCanStartMemmingTrace() noexcept {
     if (!g_can_start_memming_detour.installed) {
         return true;
@@ -600,11 +917,19 @@ bool InstallGetSpellLevelNeededHook(const monomyth::runtime::Manifest&) noexcept
     return false;
 }
 
+bool InstallScrollScribeTraceHooks(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
 bool InstallCanStartMemmingTrace(const monomyth::runtime::Manifest&) noexcept {
     return false;
 }
 
 bool RemoveGetSpellLevelNeededTrace() noexcept {
+    return true;
+}
+
+bool RemoveScrollScribeTraceHooks() noexcept {
     return true;
 }
 
@@ -623,6 +948,7 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
 
     bool receive_hook_active = false;
     bool spell_trace_active = false;
+    bool scroll_scribe_trace_active = false;
     bool spell_behavior_active = false;
 
     if (manifest.packet_hooks_allowed && !InstallReceiveDispatchHook(manifest)) {
@@ -663,25 +989,59 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         monomyth::logger::Log(message);
     }
 
+    if (manifest.scroll_scribe_trace_allowed) {
+        if (InstallScrollScribeTraceHooks(manifest)) {
+            scroll_scribe_trace_active = true;
+        } else if (
+            manifest.handle_rbutton_up_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated &&
+            manifest.get_usable_classes_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated &&
+            manifest.can_equip_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: scroll scribe trace install failed targets=CInvSlot::HandleRButtonUp,GetUsableClasses,CanEquip");
+        }
+    } else if (manifest.scroll_scribe_trace_dev_opt_in) {
+        std::wstring message =
+            L"hook_manager: scroll scribe trace skipped reason=\"";
+        message += manifest.scroll_scribe_trace_reason.empty()
+            ? L"unknown"
+            : manifest.scroll_scribe_trace_reason;
+        message += L"\"";
+        monomyth::logger::Log(message);
+    }
+
     g_initialized = true;
-    if (receive_hook_active && spell_trace_active && spell_behavior_active) {
-        monomyth::logger::Log(
-            L"hook_manager: initialized (receive dispatcher hook, spell usability trace, and multiclass spell usability active)");
-    } else if (receive_hook_active && spell_behavior_active) {
-        monomyth::logger::Log(
-            L"hook_manager: initialized (receive dispatcher hook and multiclass spell usability active)");
-    } else if (spell_trace_active && spell_behavior_active) {
-        monomyth::logger::Log(
-            L"hook_manager: initialized (spell usability trace and multiclass spell usability active)");
-    } else if (spell_behavior_active) {
-        monomyth::logger::Log(L"hook_manager: initialized (multiclass spell usability active)");
-    } else if (receive_hook_active && spell_trace_active) {
-        monomyth::logger::Log(
-            L"hook_manager: initialized (receive dispatcher hook and spell usability trace active)");
-    } else if (receive_hook_active) {
-        monomyth::logger::Log(L"hook_manager: initialized (receive dispatcher hook active)");
-    } else if (spell_trace_active) {
-        monomyth::logger::Log(L"hook_manager: initialized (spell usability trace active)");
+    if (receive_hook_active || spell_trace_active || scroll_scribe_trace_active || spell_behavior_active) {
+        std::wstring message = L"hook_manager: initialized (";
+        bool first = true;
+        if (receive_hook_active) {
+            message += L"receive dispatcher hook";
+            first = false;
+        }
+        if (spell_trace_active) {
+            if (!first) {
+                message += L", ";
+            }
+            message += L"spell usability trace";
+            first = false;
+        }
+        if (scroll_scribe_trace_active) {
+            if (!first) {
+                message += L", ";
+            }
+            message += L"scroll scribe trace";
+            first = false;
+        }
+        if (spell_behavior_active) {
+            if (!first) {
+                message += L", ";
+            }
+            message += L"multiclass spell usability";
+        }
+        message += L" active)";
+        monomyth::logger::Log(message);
     } else {
         std::wstring message = L"hook_manager: initialized (no active hooks) packet_hooks_reason=\"";
         if (manifest.packet_hooks_reason.empty()) {
@@ -694,6 +1054,11 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         message += manifest.multiclass_spell_usability_reason.empty()
             ? L"unknown"
             : manifest.multiclass_spell_usability_reason;
+        message += L"\"";
+        message += L" scroll_scribe_trace_reason=\"";
+        message += manifest.scroll_scribe_trace_reason.empty()
+            ? L"unknown"
+            : manifest.scroll_scribe_trace_reason;
         message += L"\"";
         monomyth::logger::Log(message);
     }
@@ -716,6 +1081,11 @@ void Shutdown() noexcept {
     if (!RemoveGetSpellLevelNeededTrace()) {
         monomyth::logger::Log(
             L"hook_manager: shutdown deferred because GetSpellLevelNeeded trace removal failed");
+        return;
+    }
+    if (!RemoveScrollScribeTraceHooks()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because scroll scribe trace removal failed");
         return;
     }
     if (!RemoveCanStartMemmingTrace()) {

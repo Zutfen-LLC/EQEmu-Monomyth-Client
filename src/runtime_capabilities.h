@@ -25,6 +25,8 @@ struct Manifest {
     bool spell_usability_discovery_allowed = false;
     bool spell_usability_trace_dev_opt_in = false;
     bool spell_usability_trace_allowed = false;
+    bool scroll_scribe_trace_dev_opt_in = false;
+    bool scroll_scribe_trace_allowed = false;
     bool multiclass_spell_usability_dev_opt_in = false;
     bool multiclass_spell_usability_allowed = false;
     bool ui_hooks_allowed = false;
@@ -34,13 +36,25 @@ struct Manifest {
     bool receive_dispatch_validated = false;
     monomyth::spell_usability_discovery::TargetState get_spell_level_needed_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState handle_rbutton_up_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState get_usable_classes_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState can_equip_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     monomyth::spell_usability_discovery::TargetState can_start_memming_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     std::uintptr_t runtime_module_base = 0;
     std::uint32_t receive_dispatch_rva = 0;
     std::uintptr_t receive_dispatch_address = 0;
+    std::uint32_t handle_rbutton_up_rva = 0;
+    std::uintptr_t handle_rbutton_up_address = 0;
     std::uint32_t get_spell_level_needed_rva = 0;
     std::uintptr_t get_spell_level_needed_address = 0;
+    std::uint32_t get_usable_classes_rva = 0;
+    std::uintptr_t get_usable_classes_address = 0;
+    std::uint32_t can_equip_rva = 0;
+    std::uintptr_t can_equip_address = 0;
     std::uint32_t can_start_memming_rva = 0;
     std::uintptr_t can_start_memming_address = 0;
     std::wstring reason = L"manifest unavailable";
@@ -48,6 +62,7 @@ struct Manifest {
     std::wstring receive_introspection_reason = L"receive introspection unavailable";
     std::wstring spell_usability_discovery_reason = L"spell usability discovery unavailable";
     std::wstring spell_usability_trace_reason = L"spell usability trace unavailable";
+    std::wstring scroll_scribe_trace_reason = L"scroll scribe trace unavailable";
     std::wstring multiclass_spell_usability_reason =
         L"multiclass spell usability unavailable";
 };
