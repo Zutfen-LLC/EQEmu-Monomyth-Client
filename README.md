@@ -21,8 +21,9 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - Falls back once at startup to a fail-closed `eqgame.exe` byte scan when version resources are unavailable or inconclusive; both markers must be present or the fingerprint remains false.
 - Runs a fail-closed receive dispatcher discovery pass only after the fingerprint/capability path allows enhancement discovery.
 - Keeps spell usability discovery disabled by default unless the local developer explicitly sets `MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY=1`.
-- When spell usability discovery is enabled on a supported ROF2 client, attempts read-only discovery for `EQ_Spell::GetSpellLevelNeeded` and `CSpellBookWnd::CanStartMemming` using export-based evidence only.
+- When spell usability discovery is enabled on a supported ROF2 client, it uses fingerprint-gated cleanroom evidence for the known non-export spell/UI targets and fails closed with per-target reason codes when a checked-in locator is not available.
 - Keeps passive spell usability tracing disabled by default unless the local developer additionally sets `MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1` and a target reaches validated trace-safe state.
+- Keeps scroll-scribe trace discovery and instrumentation disabled by default unless the local developer explicitly sets `MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE=1` and all three pre-scribe targets validate cleanly.
 - Keeps active multiclass spell usability disabled by default unless the local developer additionally sets `MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1` after `EQ_Spell::GetSpellLevelNeeded` validates.
 - Exposes a `HookManager` lifecycle that installs no active hook by default.
 - Keeps `packet_hooks_allowed=false` unless all of these gates pass:
@@ -45,6 +46,7 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - Receive payload introspection is also disabled by default and additionally requires `MONOMYTH_ENABLE_RECV_INTROSPECTION=1` after packet hook gating has already passed.
 - Spell usability discovery is disabled by default and separately requires `MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY=1` after the same ROF2 fingerprint/host guard has passed.
 - Passive spell usability tracing is disabled by default and additionally requires `MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1` plus a validated target address/signature.
+- Scroll-scribe trace instrumentation is disabled by default and additionally requires `MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE=1` plus validated `CInvSlot::HandleRButtonUp`, `EQ_Character::GetUsableClasses`, and `EQ_Character::CanEquip` targets.
 - Active multiclass spell usability is disabled by default and additionally requires `MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1` plus a validated `GetSpellLevelNeeded` target. Discovery or tracing alone never enables active behavior.
 - UI hook capability remains intentionally disabled.
 - Receive dispatcher discovery validates only static ROF2 executable-image structure and records success or failure in the internal runtime capability manifest.
@@ -57,7 +59,7 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - Hook uninstall is idempotent and runs before `PacketObserver` shutdown.
 - This slice does not implement gameplay/UI behavior or any send interception.
 - Multiclass spell usability changes only the validated `EQ_Spell::GetSpellLevelNeeded` return value when explicitly enabled. It uses the latest read-only `OP_ServerAuthStats` class mask, calls the original client function for each assigned class, selects the lowest valid required level, and falls back to the original requested-class result if the mask is absent, empty, invalid, or yields no valid class level.
-- `CSpellBookWnd::CanStartMemming` remains trace-only. `CastSpell`, `IsSpellcaster`, `GetUsableClasses`, spell records, player profile class data, spellbook UI state, packets, and database state are not mutated.
+- `CSpellBookWnd::CanStartMemming` remains trace-only. `CInvSlot::HandleRButtonUp`, `EQ_Character::GetUsableClasses`, and `EQ_Character::CanEquip` can now be traced behind a separate dev gate, but they still call through to the original client functions and do not mutate arguments, return values, spell records, player profile class data, spellbook UI state, packets, or database state.
 
 ## Non-goals in this slice
 
@@ -119,10 +121,11 @@ Startup logs include:
 - The `CapabilityManifest` line includes `receive_introspection_dev_opt_in` and `receive_introspection_allowed` so payload-prefix access is explicit in startup logs
 - The `CapabilityManifest` line includes `runtime_module_base`, `receive_dispatch_rva`, and `receive_dispatch_address` whenever discovery resolves the validated dispatcher candidate at runtime
 - The `CapabilityManifest` line includes `spell_usability_discovery_dev_opt_in`, `spell_usability_discovery_allowed`, `spell_usability_trace_dev_opt_in`, and `spell_usability_trace_allowed`
+- The `CapabilityManifest` line includes `scroll_scribe_trace_dev_opt_in`, `scroll_scribe_trace_allowed`, `scroll_scribe_trace_reason`, and per-target states/RVAs/addresses for `handle_rbutton_up`, `get_usable_classes`, and `can_equip`
 - The `CapabilityManifest` line includes `multiclass_spell_usability_dev_opt_in`, `multiclass_spell_usability_allowed`, and `multiclass_spell_usability_reason`
-- The `CapabilityManifest` line includes per-target spell usability fields `get_spell_level_needed_state`, `get_spell_level_needed_rva`, `get_spell_level_needed_address`, `can_start_memming_state`, `can_start_memming_rva`, and `can_start_memming_address` when available
+- The `CapabilityManifest` line includes per-target spell usability fields `handle_rbutton_up_state`, `handle_rbutton_up_rva`, `handle_rbutton_up_address`, `get_spell_level_needed_state`, `get_spell_level_needed_rva`, `get_spell_level_needed_address`, `get_usable_classes_state`, `get_usable_classes_rva`, `get_usable_classes_address`, `can_equip_state`, `can_equip_rva`, `can_equip_address`, `can_start_memming_state`, `can_start_memming_rva`, and `can_start_memming_address` when available
 - One `ReceiveDispatchDiscovery ...` line with the discovery state, runtime module base, validated candidate RVA/resolved address when available, a concise reason, and per-check pass/fail/advisory diagnostics
-- One `SpellUsabilityDiscovery ...` line per target with the target name, discovery state, runtime module base, candidate RVA/resolved address when available, whether passive tracing is considered safe, the discovery method, a concise reason, and validation evidence
+- One `SpellUsabilityDiscovery ...` line per target with the target name, discovery state, runtime module base, candidate RVA/resolved address when available, `evidence_source`, `validation`, `failure_reason`, whether passive tracing is considered safe, the discovery method, a concise reason, and validation evidence
 - Post-guard heartbeat when hooks are allowed
 - One `PacketObserver state=...` line indicating current observer state
 - When the dev hook is enabled, rate-limited metadata lines beginning with `PacketObserverRecv`
@@ -207,9 +210,12 @@ This module does **not** install hooks, detours, callbacks, or memory patches. I
 
 ## Spell usability discovery
 
-The `SpellUsabilityDiscovery` module (`src/spell_usability_discovery.h` / `src/spell_usability_discovery.cpp`) is a fail-closed read-only discovery scaffold for two ROF2 spell usability gate candidates:
+The `SpellUsabilityDiscovery` module (`src/spell_usability_discovery.h` / `src/spell_usability_discovery.cpp`) is a fail-closed read-only discovery scaffold for five ROF2 spell usability and pre-scribe gate candidates:
 
+- `CInvSlot::HandleRButtonUp`
 - `EQ_Spell::GetSpellLevelNeeded`
+- `EQ_Character::GetUsableClasses`
+- `EQ_Character::CanEquip`
 - `CSpellBookWnd::CanStartMemming`
 
 This discovery path is disabled by default and runs only when the existing ROF2 fingerprint/host guard passes and the local developer explicitly sets:
@@ -218,12 +224,13 @@ This discovery path is disabled by default and runs only when the existing ROF2 
 $env:MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY = "1"
 ```
 
-The implementation does not guess RVAs. It tries the loaded `eqgame.exe` export table first, prefers the exact mangled symbol, records wrapper-export evidence when present, verifies that any resolved address lands in an executable image section, and then applies target-specific validation:
+The implementation does not guess RVAs. It keeps the existing ROF2 fingerprint gate, skips live `eqgame.exe` export-table discovery for the five known non-export targets in this slice, resolves pinned targets only from checked-in cleanroom RVAs plus runtime byte/call-shape validation, and otherwise fails closed with `missing_cleanroom_target` until a checked-in cleanroom locator exists for the target:
 
-- `GetSpellLevelNeeded` requires the exact mangled export and diagnostic-string evidence, plus wrapper-forward evidence when a wrapper export is present.
-- `CanStartMemming` requires the exact mangled export plus wrapper-forward evidence when present.
+- `GetSpellLevelNeeded` resolves from fingerprint-gated cleanroom RVA `0x000af700` and exact byte-shape validation.
+- `CSpellBookWnd::CanStartMemming` resolves from fingerprint-gated cleanroom RVA `0x0035bd40`, exact cleanroom entry-byte validation, and validation that its known callsite still targets `GetSpellLevelNeeded`.
+- `CInvSlot::HandleRButtonUp`, `EQ_Character::GetUsableClasses`, and `EQ_Character::CanEquip` stay disabled until the repo has checked-in cleanroom locators that can survive the same fail-closed validation path.
 
-Per-target discovery states are `not_attempted`, `found_unvalidated`, `validated`, or `failed`. Discovery only logs evidence. It does not patch spell records, change return values, mutate UI state, hook `CastSpell`, or change packets.
+Per-target discovery states are `not_attempted`, `found_unvalidated`, `validated`, or `failed`. The logs now also include `enabled`, `evidence_source`, `module_base`, `rva`, `address`, `validation`, `failure_reason`, `resolver`, and `packet_id`. Expected `evidence_source` values include `fingerprint_rva`, `runtime_export`, `cleanroom_rva`, and `unavailable`. Discovery only logs evidence. It does not patch spell records, change return values, mutate UI state, hook `CastSpell`, or change packets. The checked-in locator notes for the current pinned spell targets live in `docs/cleanroom-dll-research/eqgame-spell-ui-ghidra-notes.md`.
 
 ## Passive spell usability trace
 
@@ -234,6 +241,29 @@ $env:MONOMYTH_ENABLE_SPELL_USABILITY_TRACE = "1"
 ```
 
 Passive spell usability tracing is separate from packet hooks. It installs only for validated targets, calls the original function, logs the original arguments/result in a rate-limited way, and returns the original value unchanged. If validation is incomplete or detour installation is ambiguous, tracing stays disabled for that target.
+
+## Scroll-scribe trace
+
+To investigate why extra-class spell scrolls stop before `GetSpellLevelNeeded`, set:
+
+```powershell
+$env:MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE = "1"
+```
+
+This trace slice is separate from `MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1`. When enabled, it installs trace-only detours for validated `CInvSlot::HandleRButtonUp`, `EQ_Character::GetUsableClasses`, and `EQ_Character::CanEquip`, always calls the original client functions, and logs grep-friendly lines beginning with:
+
+- `ScrollScribeTrace target=CInvSlot::HandleRButtonUp`
+- `ScrollScribeTrace target=GetUsableClasses`
+- `ScrollScribeTrace target=CanEquip`
+
+Each log line includes a bounded monotonic `correlation` value, raw pointer-safe context only, the current assigned class-mask snapshot, and `scroll_hint=unknown` when safe item/spell identification is not proven. Existing `SpellUsabilityTrace` logs for `GetSpellLevelNeeded` and `CanStartMemming` remain independently available and now append `scroll_scribe_correlation=<n>` when they occur inside a traced right-click flow.
+
+Runtime interpretation for the trace:
+
+- `ScrollScribeTrace target=CInvSlot::HandleRButtonUp` with no downstream `GetUsableClasses`, `CanEquip`, or `SpellUsabilityTrace` on the same correlation means the observed right-click did not traverse the expected downstream gate path.
+- `HandleRButtonUp` plus `GetUsableClasses` and/or `CanEquip`, but no `GetSpellLevelNeeded`, indicates a pre-level item/class usability gate blocked the flow.
+- `GetSpellLevelNeeded` with a correlated extra-class level selection, but no later successful scribe behavior, indicates a later gate after the spell-level check.
+- `CanStartMemming` is only expected after the spell reaches the spellbook path; it should not appear for scrolls that never scribe.
 
 ## Multiclass spell usability
 

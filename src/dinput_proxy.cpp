@@ -14,6 +14,9 @@
 namespace monomyth::proxy {
 namespace {
 
+constexpr wchar_t kSpellUiDiscoveryPacketId[] = L"CLIENT-SPELL-UI-DISCOVERY-FIX-V3";
+constexpr wchar_t kSpellUiDiscoveryResolver[] = L"v3_cleanroom_rva";
+
 INIT_ONCE g_init_once = INIT_ONCE_STATIC_INIT;
 HMODULE g_real_module = nullptr;
 HRESULT g_init_result = E_FAIL;
@@ -35,13 +38,20 @@ DllUnregisterServerFn g_dll_unregister_server = nullptr;
 GetdfDIJoystickFn g_getdf_dijoystick = nullptr;
 
 void PublishCapabilitiesWithDiscovery() noexcept {
+    std::wstring marker = L"spell_ui_discovery_marker packet_id=";
+    marker += kSpellUiDiscoveryPacketId;
+    marker += L" resolver=";
+    marker += kSpellUiDiscoveryResolver;
+    monomyth::logger::Log(marker);
     monomyth::receive_dispatch_discovery::Initialize();
     const monomyth::receive_dispatch_discovery::Result discovery =
         monomyth::receive_dispatch_discovery::Run(g_capabilities.hooks_allowed);
     monomyth::runtime::ApplyReceiveDispatchDiscovery(&g_capabilities, discovery);
     monomyth::spell_usability_discovery::Initialize();
     const monomyth::spell_usability_discovery::Result spell_discovery =
-        monomyth::spell_usability_discovery::Run(g_capabilities.spell_usability_discovery_allowed);
+        monomyth::spell_usability_discovery::Run(
+            g_capabilities.spell_usability_discovery_allowed,
+            g_capabilities.fingerprint_matched);
     monomyth::runtime::ApplySpellUsabilityDiscovery(&g_capabilities, spell_discovery);
     monomyth::runtime::LogCapabilityManifest(g_capabilities);
     monomyth::receive_dispatch_discovery::LogResult(discovery);

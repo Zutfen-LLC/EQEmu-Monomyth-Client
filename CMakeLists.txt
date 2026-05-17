@@ -14,6 +14,7 @@ add_library(dinput8 SHARED
     src/runtime_capabilities.cpp
     src/server_auth_stats_observer.cpp
     src/spell_level_selection.cpp
+    src/spell_usability_discovery_policy.cpp
     src/spell_usability_discovery.cpp
     dinput8.def
 )
@@ -75,3 +76,15 @@ target_include_directories(spell_level_selection_tests PRIVATE src)
 target_compile_features(spell_level_selection_tests PRIVATE cxx_std_20)
 
 add_test(NAME spell_level_selection_tests COMMAND spell_level_selection_tests)
+
+add_executable(spell_usability_discovery_policy_tests
+    tests/spell_usability_discovery_policy_tests.cpp
+    src/spell_usability_discovery_policy.cpp
+)
+target_include_directories(spell_usability_discovery_policy_tests PRIVATE src)
+target_compile_features(spell_usability_discovery_policy_tests PRIVATE cxx_std_20)
+
+add_test(
+    NAME spell_usability_discovery_policy_tests
+    COMMAND spell_usability_discovery_policy_tests
+)

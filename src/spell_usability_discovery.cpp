@@ -11,19 +11,27 @@
 #include <string>
 
 #include "logger.h"
+#include "spell_usability_discovery_policy.h"
 
 namespace monomyth::spell_usability_discovery {
 namespace {
 
-constexpr char kGetSpellLevelNeededMangled[] =
-    "?GetSpellLevelNeeded@EQ_Spell@EQClasses@@QBEEI@Z";
-constexpr char kGetSpellLevelNeededWrapper[] = "EQ_Spell__GetSpellLevelNeeded";
-constexpr char kCanStartMemmingMangled[] =
-    "?CanStartMemming@CSpellBookWnd@EQClasses@@QAE_NH@Z";
-constexpr char kCanStartMemmingWrapper[] = "CSpellBookWnd__CanStartMemming";
-constexpr char kGetSpellLevelNeededErrorString[] =
-    "GetSpellLevelNeeded: Unable to get Class Data.";
-constexpr std::size_t kStringReferenceScanBytes = 0x400;
+constexpr std::uint32_t kGetSpellLevelNeededRva = 0x000af700;
+constexpr std::uint32_t kCanStartMemmingRva = 0x0035bd40;
+constexpr std::uint32_t kCanStartMemmingCallsGetSpellLevelNeededAtRva = 0x0035bea5;
+constexpr wchar_t kResolverVersion[] = L"v3_cleanroom_rva";
+constexpr wchar_t kPacketId[] = L"CLIENT-SPELL-UI-DISCOVERY-FIX-V3";
+constexpr std::array<std::uint8_t, 37> kGetSpellLevelNeededBytes = {{
+    0x8b, 0x44, 0x24, 0x04, 0x8d, 0x50, 0xff, 0x83, 0xfa, 0x22, 0x77, 0x10,
+    0x83, 0xf8, 0x24, 0x72, 0x01, 0xcc, 0x8a, 0x84, 0x01, 0x46, 0x02, 0x00,
+    0x00, 0xc2, 0x04, 0x00, 0x8a, 0x81, 0x47, 0x02, 0x00, 0x00, 0xc2, 0x04,
+    0x00,
+}};
+constexpr std::array<std::uint8_t, 33> kCanStartMemmingEntryBytes = {{
+    0x83, 0x3d, 0xac, 0x35, 0xe6, 0x00, 0x00, 0x53, 0x56, 0x8b, 0xf1,
+    0xb3, 0x01, 0x0f, 0x8f, 0x8f, 0x01, 0x00, 0x00, 0x8b, 0x0d, 0x7c,
+    0xfc, 0xd1, 0x00, 0x6a, 0x01, 0xe8, 0xd0, 0x51, 0xf0, 0xff, 0x84,
+}};
 
 Result g_result = {};
 
@@ -37,20 +45,12 @@ struct ImageView {
     std::uint32_t export_directory_size = 0;
 };
 
-struct ExportMatch {
-    bool found = false;
-    const char* name = nullptr;
-    std::uint32_t export_rva = 0;
-    std::uintptr_t export_address = 0;
-};
-
-struct WrapperForward {
-    bool resolved = false;
-    bool direct_alias = false;
-    bool direct_jump = false;
-    bool direct_call = false;
-    std::uintptr_t target_address = 0;
-    std::wstring evidence = L"wrapper evidence unavailable";
+struct CandidateSource {
+    EvidenceSource evidence_source = EvidenceSource::kUnavailable;
+    std::uintptr_t address = 0;
+    std::uint32_t rva = 0;
+    std::wstring resolved_symbol;
+    std::wstring discovery_method = L"image_lookup";
 };
 
 std::wstring Hex32(std::uint32_t value) {
@@ -63,18 +63,6 @@ std::wstring HexPtr(std::uintptr_t value) {
     std::wstringstream stream;
     stream << L"0x" << std::hex << value;
     return stream.str();
-}
-
-std::wstring AsWide(const char* text) {
-    if (text == nullptr || text[0] == '\0') {
-        return L"";
-    }
-
-    std::wstring wide;
-    for (const char* cursor = text; *cursor != '\0'; ++cursor) {
-        wide.push_back(static_cast<wchar_t>(*cursor));
-    }
-    return wide;
 }
 
 bool IsTraceDevOptInPresent() noexcept {
@@ -199,67 +187,6 @@ bool IsRvaWithinImage(
     return end <= image.image_size;
 }
 
-bool FindExportByName(
-    const ImageView& image,
-    const char* name,
-    ExportMatch* match) noexcept {
-    if (name == nullptr || name[0] == '\0' || match == nullptr) {
-        return false;
-    }
-
-    *match = {};
-    match->name = name;
-
-    if (image.export_directory == nullptr) {
-        return false;
-    }
-
-    const auto names_rva = image.export_directory->AddressOfNames;
-    const auto ordinals_rva = image.export_directory->AddressOfNameOrdinals;
-    const auto functions_rva = image.export_directory->AddressOfFunctions;
-    const DWORD name_count = image.export_directory->NumberOfNames;
-    const DWORD function_count = image.export_directory->NumberOfFunctions;
-    if (!IsRvaWithinImage(image, names_rva, name_count * sizeof(DWORD)) ||
-        !IsRvaWithinImage(image, ordinals_rva, name_count * sizeof(WORD)) ||
-        !IsRvaWithinImage(image, functions_rva, function_count * sizeof(DWORD))) {
-        return false;
-    }
-
-    const auto* names = reinterpret_cast<const DWORD*>(image.base + names_rva);
-    const auto* ordinals = reinterpret_cast<const WORD*>(image.base + ordinals_rva);
-    const auto* functions = reinterpret_cast<const DWORD*>(image.base + functions_rva);
-
-    for (DWORD i = 0; i < name_count; ++i) {
-        const DWORD export_name_rva = names[i];
-        if (!IsRvaWithinImage(image, export_name_rva, 1)) {
-            continue;
-        }
-
-        const char* export_name = reinterpret_cast<const char*>(image.base + export_name_rva);
-        if (std::strcmp(export_name, name) != 0) {
-            continue;
-        }
-
-        const WORD ordinal = ordinals[i];
-        if (ordinal >= function_count) {
-            return false;
-        }
-
-        const DWORD export_rva = functions[ordinal];
-        if (!IsRvaWithinImage(image, export_rva, 1)) {
-            return false;
-        }
-
-        match->found = true;
-        match->export_rva = export_rva;
-        match->export_address =
-            reinterpret_cast<std::uintptr_t>(image.base) + export_rva;
-        return true;
-    }
-
-    return false;
-}
-
 bool IsExecutableAddress(
     const ImageView& image,
     std::uintptr_t address) noexcept {
@@ -270,116 +197,6 @@ bool IsExecutableAddress(
     const std::uint32_t rva =
         static_cast<std::uint32_t>(address - reinterpret_cast<std::uintptr_t>(image.base));
     return FindSection(image, rva, 1, IMAGE_SCN_MEM_EXECUTE) != nullptr;
-}
-
-WrapperForward AnalyzeWrapperForward(
-    const ImageView& image,
-    const ExportMatch& wrapper) noexcept {
-    WrapperForward forward = {};
-    if (!wrapper.found || wrapper.export_address == 0 || !IsExecutableAddress(image, wrapper.export_address)) {
-        forward.evidence = L"wrapper export missing or non-executable";
-        return forward;
-    }
-
-    if (wrapper.export_rva != 0) {
-        forward.resolved = true;
-        forward.direct_alias = true;
-        forward.target_address = wrapper.export_address;
-        forward.evidence = L"wrapper direct_alias";
-    }
-
-    const auto* code = reinterpret_cast<const std::uint8_t*>(wrapper.export_address);
-    if (wrapper.export_rva + 1 > image.image_size) {
-        forward.evidence = L"wrapper RVA resolves outside loaded image";
-        return forward;
-    }
-
-    if (code[0] == 0xe9 && IsRvaWithinImage(image, wrapper.export_rva, 5)) {
-        std::int32_t relative = 0;
-        std::memcpy(&relative, code + 1, sizeof(relative));
-        const std::uintptr_t next_instruction = wrapper.export_address + 5;
-        forward.resolved = true;
-        forward.direct_jump = true;
-        forward.target_address = next_instruction + relative;
-        forward.evidence = L"wrapper direct_jmp";
-        return forward;
-    }
-
-    if (code[0] == 0xe8 && IsRvaWithinImage(image, wrapper.export_rva, 6) &&
-        (code[5] == 0xc3 || code[5] == 0xc2)) {
-        std::int32_t relative = 0;
-        std::memcpy(&relative, code + 1, sizeof(relative));
-        const std::uintptr_t next_instruction = wrapper.export_address + 5;
-        forward.resolved = true;
-        forward.direct_call = true;
-        forward.target_address = next_instruction + relative;
-        forward.evidence = L"wrapper direct_call_then_ret";
-        return forward;
-    }
-
-    forward.evidence = L"wrapper present but forwarding shape unsupported";
-    return forward;
-}
-
-const std::uint8_t* FindAsciiString(
-    const ImageView& image,
-    const char* needle,
-    std::size_t needle_size) noexcept {
-    if (needle == nullptr || needle_size == 0) {
-        return nullptr;
-    }
-
-    const auto* bytes = reinterpret_cast<const std::uint8_t*>(needle);
-    for (WORD i = 0; i < image.section_count; ++i) {
-        const IMAGE_SECTION_HEADER& section = image.sections[i];
-        const bool readable = (section.Characteristics & IMAGE_SCN_MEM_READ) != 0;
-        const bool executable = (section.Characteristics & IMAGE_SCN_MEM_EXECUTE) != 0;
-        if (!readable || executable || SectionSpan(section) < needle_size) {
-            continue;
-        }
-
-        const auto* start = image.base + section.VirtualAddress;
-        const std::uint32_t span = SectionSpan(section);
-        const auto* found = SearchBytes(start, span, bytes, needle_size);
-        if (found != nullptr) {
-            return found;
-        }
-    }
-
-    return nullptr;
-}
-
-bool HasImmediateReference(
-    const ImageView& image,
-    std::uintptr_t function_address,
-    std::size_t scan_bytes,
-    std::uintptr_t referenced_address) noexcept {
-    if (!IsExecutableAddress(image, function_address) ||
-        function_address < reinterpret_cast<std::uintptr_t>(image.base)) {
-        return false;
-    }
-
-    const std::uint32_t function_rva = static_cast<std::uint32_t>(
-        function_address - reinterpret_cast<std::uintptr_t>(image.base));
-    const IMAGE_SECTION_HEADER* section =
-        FindSection(image, function_rva, 1, IMAGE_SCN_MEM_EXECUTE);
-    if (section == nullptr) {
-        return false;
-    }
-
-    const std::uint32_t available = section->VirtualAddress + SectionSpan(*section) - function_rva;
-    const std::size_t bounded_scan = std::min(scan_bytes, static_cast<std::size_t>(available));
-    if (bounded_scan < sizeof(std::uint32_t)) {
-        return false;
-    }
-
-    const std::uint32_t referenced_address_32 =
-        static_cast<std::uint32_t>(referenced_address);
-    return SearchBytes(
-               reinterpret_cast<const std::uint8_t*>(function_address),
-               bounded_scan,
-               reinterpret_cast<const std::uint8_t*>(&referenced_address_32),
-               sizeof(referenced_address_32)) != nullptr;
 }
 
 bool HasPlausibleX86Prologue(
@@ -405,168 +222,271 @@ bool HasPlausibleX86Prologue(
     return code[0] == 0x8b || code[0] == 0x55 || code[0] == 0x56 || code[0] == 0x57;
 }
 
-bool PopulateBaseTargetFields(
+bool ResolveRvaAddress(
     const ImageView& image,
-    const ExportMatch& mangled,
-    TargetResult* target) {
-    if (target == nullptr) {
+    std::uint32_t rva,
+    std::size_t length,
+    std::uintptr_t* address) noexcept {
+    if (address == nullptr || !IsRvaWithinImage(image, rva, length)) {
         return false;
     }
 
-    if (!mangled.found) {
-        target->state = TargetState::kFailed;
-        target->discovery_method = L"export_lookup";
-        target->reason = L"exact mangled export not found in eqgame.exe export table";
-        target->validation_evidence = L"mangled_export=no";
+    *address = reinterpret_cast<std::uintptr_t>(image.base) + rva;
+    return true;
+}
+
+bool BytesMatchAtRva(
+    const ImageView& image,
+    std::uint32_t rva,
+    const std::uint8_t* expected,
+    std::size_t length) noexcept {
+    if (expected == nullptr || length == 0 || !IsRvaWithinImage(image, rva, length)) {
         return false;
+    }
+
+    return std::memcmp(image.base + rva, expected, length) == 0;
+}
+
+bool CallAtRvaTargets(
+    const ImageView& image,
+    std::uint32_t call_rva,
+    std::uintptr_t expected_target) noexcept {
+    if (!IsRvaWithinImage(image, call_rva, 5)) {
+        return false;
+    }
+
+    const auto* code = image.base + call_rva;
+    if (code[0] != 0xe8) {
+        return false;
+    }
+
+    std::int32_t relative = 0;
+    std::memcpy(&relative, code + 1, sizeof(relative));
+    const std::uintptr_t call_site =
+        reinterpret_cast<std::uintptr_t>(image.base) + call_rva;
+    const std::uintptr_t resolved_target = call_site + 5 + relative;
+    return resolved_target == expected_target;
+}
+
+void PopulateCandidateFields(
+    const ImageView& image,
+    const CandidateSource& candidate,
+    TargetResult* target) {
+    if (target == nullptr) {
+        return;
     }
 
     target->module_base = reinterpret_cast<std::uintptr_t>(image.base);
-    target->candidate_rva = mangled.export_rva;
-    target->candidate_address = mangled.export_address;
-    target->resolved_symbol = AsWide(mangled.name);
-    target->discovery_method = L"export_mangled";
+    target->candidate_rva = candidate.rva;
+    target->candidate_address = candidate.address;
+    target->resolved_symbol = candidate.resolved_symbol;
+    target->discovery_method = candidate.discovery_method;
+    target->evidence_source = EvidenceSourceName(candidate.evidence_source);
+}
 
-    if (!IsExecutableAddress(image, mangled.export_address)) {
-        target->state = TargetState::kFailed;
-        target->reason = L"exact mangled export resolved outside an executable image section";
-        target->validation_evidence = L"mangled_export=yes executable=no";
-        return false;
+CandidateSource BuildFingerprintCandidate(
+    const ImageView& image,
+    std::uintptr_t address,
+    const wchar_t* discovery_method,
+    const wchar_t* resolved_symbol) {
+    CandidateSource candidate = {};
+    if (address == 0 || address < reinterpret_cast<std::uintptr_t>(image.base)) {
+        return candidate;
     }
 
-    const auto* code = reinterpret_cast<const std::uint8_t*>(mangled.export_address);
-    if (!HasPlausibleX86Prologue(code, 8)) {
-        target->state = TargetState::kFoundUnvalidated;
-        target->reason = L"exact mangled export resolved but entry prologue shape is not confidently recognized";
-        target->validation_evidence = L"mangled_export=yes executable=yes prologue=unsupported";
-        return false;
+    candidate.evidence_source = EvidenceSource::kFingerprintRva;
+    candidate.address = address;
+    candidate.rva = static_cast<std::uint32_t>(
+        candidate.address - reinterpret_cast<std::uintptr_t>(image.base));
+    candidate.resolved_symbol = resolved_symbol == nullptr ? L"" : resolved_symbol;
+    candidate.discovery_method =
+        discovery_method == nullptr ? L"fingerprint_locator" : discovery_method;
+    return candidate;
+}
+
+void ApplyDecision(
+    const ImageView& image,
+    const CandidateSource& candidate,
+    const DecisionResult& decision,
+    const std::wstring& validation_evidence,
+    const wchar_t* success_reason,
+    const wchar_t* failure_reason,
+    TargetResult* target) {
+    if (target == nullptr) {
+        return;
     }
 
-    target->state = TargetState::kFoundUnvalidated;
-    target->reason = L"exact mangled export resolved but target-specific validation is incomplete";
-    target->validation_evidence = L"mangled_export=yes executable=yes prologue=plausible";
-    return true;
+    PopulateCandidateFields(image, candidate, target);
+    target->state = decision.state;
+    target->exact_signature_validated = decision.exact_signature_validated;
+    target->trace_safe = decision.trace_safe;
+    target->validation = decision.validation;
+    target->failure_reason = decision.failure_reason;
+    target->evidence_source = EvidenceSourceName(decision.evidence_source);
+    target->validation_evidence = validation_evidence;
+    target->reason =
+        decision.state == TargetState::kValidated
+        ? (success_reason == nullptr ? L"validated" : success_reason)
+        : (failure_reason == nullptr ? L"validation failed" : failure_reason);
+}
+
+TargetResult DiscoverHandleRButtonUp(const ImageView& image) {
+    TargetResult target = {L"CInvSlot::HandleRButtonUp"};
+    target.module_base = reinterpret_cast<std::uintptr_t>(image.base);
+    target.state = TargetState::kFailed;
+    target.evidence_source = EvidenceSourceName(EvidenceSource::kUnavailable);
+    target.discovery_method = L"cleanroom_rva_required";
+    target.validation = L"failed";
+    target.failure_reason = L"missing_cleanroom_target";
+    target.validation_evidence = L"cleanroom_rva=absent";
+    target.reason = L"no checked-in cleanroom locator for CInvSlot::HandleRButtonUp";
+    return target;
 }
 
 TargetResult DiscoverGetSpellLevelNeeded(const ImageView& image) {
     TargetResult target = {L"GetSpellLevelNeeded"};
-    ExportMatch mangled = {};
-    ExportMatch wrapper = {};
-    FindExportByName(image, kGetSpellLevelNeededMangled, &mangled);
-    FindExportByName(image, kGetSpellLevelNeededWrapper, &wrapper);
-
-    if (!PopulateBaseTargetFields(image, mangled, &target)) {
-        return target;
-    }
-
-    WrapperForward wrapper_forward = {};
-    if (wrapper.found) {
-        wrapper_forward = AnalyzeWrapperForward(image, wrapper);
-    } else {
-        wrapper_forward.evidence = L"wrapper export missing";
-    }
-
-    const std::uint8_t* error_string = FindAsciiString(
+    std::uintptr_t function_start = 0;
+    const bool rva_found = ResolveRvaAddress(
         image,
-        kGetSpellLevelNeededErrorString,
-        sizeof(kGetSpellLevelNeededErrorString));
-    const bool string_found = error_string != nullptr;
-    const bool string_xref = string_found && HasImmediateReference(
+        kGetSpellLevelNeededRva,
+        kGetSpellLevelNeededBytes.size(),
+        &function_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
         image,
-        target.candidate_address,
-        kStringReferenceScanBytes,
-        reinterpret_cast<std::uintptr_t>(error_string));
-    const bool wrapper_matches =
-        wrapper_forward.resolved && wrapper_forward.target_address == target.candidate_address;
+        function_start,
+        L"fingerprint_cleanroom_rva",
+        L"GetSpellLevelNeeded");
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const auto* code = reinterpret_cast<const std::uint8_t*>(candidate.address);
+    const bool plausible_prologue =
+        candidate_executable && HasPlausibleX86Prologue(code, 8);
+    const bool exact_bytes_match = rva_found && BytesMatchAtRva(
+        image,
+        kGetSpellLevelNeededRva,
+        kGetSpellLevelNeededBytes.data(),
+        kGetSpellLevelNeededBytes.size());
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        plausible_prologue && exact_bytes_match,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
 
-    std::wstring evidence = L"mangled_export=yes executable=yes prologue=plausible";
-    evidence += L" wrapper=";
-    evidence += wrapper.found ? L"yes" : L"no";
-    evidence += L" wrapper_evidence=";
-    evidence += wrapper_forward.evidence;
-    evidence += L" wrapper_matches=";
-    evidence += wrapper_matches ? L"yes" : L"no";
-    evidence += L" diagnostic_string=";
-    evidence += string_found ? L"yes" : L"no";
-    evidence += L" diagnostic_xref=";
-    evidence += string_xref ? L"yes" : L"no";
-    target.validation_evidence = evidence;
-
-    if (wrapper_matches && string_xref) {
-        target.state = TargetState::kValidated;
-        target.exact_signature_validated = true;
-        target.trace_safe = true;
-        target.reason =
-            L"validated by exact mangled export, wrapper forward match, and diagnostic string reference";
-        return target;
-    }
-
-    if (!wrapper.found && string_xref) {
-        target.state = TargetState::kValidated;
-        target.exact_signature_validated = true;
-        target.trace_safe = true;
-        target.reason =
-            L"validated by exact mangled export and diagnostic string reference";
-        return target;
-    }
-
-    if (!wrapper_matches && string_xref) {
-        target.reason =
-            L"diagnostic string reference matched but wrapper forwarding evidence did not confirm the exact target";
-        return target;
-    }
-
-    if (wrapper_matches && !string_xref) {
-        target.reason =
-            L"wrapper forwarding matched exact export but diagnostic string reference was not found near the candidate";
-        return target;
-    }
-
-    target.reason =
-        L"exact mangled export resolved but wrapper forwarding and diagnostic string evidence were insufficient";
+    std::wstring evidence = L"cleanroom_rva=";
+    evidence += Hex32(kGetSpellLevelNeededRva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" prologue=";
+    evidence += plausible_prologue ? L"plausible" : L"unsupported";
+    evidence += L" exact_bytes=";
+    evidence += exact_bytes_match ? L"yes" : L"no";
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        L"validated by fingerprint-gated cleanroom RVA and exact byte shape",
+        L"GetSpellLevelNeeded candidate did not satisfy cleanroom RVA validation",
+        &target);
     return target;
 }
 
 TargetResult DiscoverCanStartMemming(const ImageView& image) {
     TargetResult target = {L"CanStartMemming"};
-    ExportMatch mangled = {};
-    ExportMatch wrapper = {};
-    FindExportByName(image, kCanStartMemmingMangled, &mangled);
-    FindExportByName(image, kCanStartMemmingWrapper, &wrapper);
+    std::uintptr_t function_start = 0;
+    const bool rva_found = ResolveRvaAddress(
+        image,
+        kCanStartMemmingRva,
+        kCanStartMemmingEntryBytes.size(),
+        &function_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
+        image,
+        function_start,
+        L"fingerprint_cleanroom_rva",
+        L"CanStartMemming");
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const bool exact_entry_bytes = rva_found && BytesMatchAtRva(
+        image,
+        kCanStartMemmingRva,
+        kCanStartMemmingEntryBytes.data(),
+        kCanStartMemmingEntryBytes.size());
+    const bool calls_get_spell_level_needed =
+        candidate_executable &&
+        CallAtRvaTargets(
+            image,
+            kCanStartMemmingCallsGetSpellLevelNeededAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) + kGetSpellLevelNeededRva);
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        exact_entry_bytes && calls_get_spell_level_needed,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
 
-    if (!PopulateBaseTargetFields(image, mangled, &target)) {
-        return target;
-    }
+    std::wstring evidence = L"cleanroom_rva=";
+    evidence += Hex32(kCanStartMemmingRva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" exact_entry_bytes=";
+    evidence += exact_entry_bytes ? L"yes" : L"no";
+    evidence += L" callsite_rva=";
+    evidence += Hex32(kCanStartMemmingCallsGetSpellLevelNeededAtRva);
+    evidence += L" calls_get_spell_level_needed=";
+    evidence += calls_get_spell_level_needed ? L"yes" : L"no";
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and GetSpellLevelNeeded caller shape",
+        L"CanStartMemming candidate did not satisfy cleanroom RVA validation",
+        &target);
+    return target;
+}
 
-    WrapperForward wrapper_forward = {};
-    if (wrapper.found) {
-        wrapper_forward = AnalyzeWrapperForward(image, wrapper);
-    } else {
-        wrapper_forward.evidence = L"wrapper export missing";
-    }
+TargetResult DiscoverGetUsableClasses(const ImageView& image) {
+    TargetResult target = {L"GetUsableClasses"};
+    target.module_base = reinterpret_cast<std::uintptr_t>(image.base);
+    target.state = TargetState::kFailed;
+    target.evidence_source = EvidenceSourceName(EvidenceSource::kUnavailable);
+    target.discovery_method = L"cleanroom_rva_required";
+    target.validation = L"failed";
+    target.failure_reason = L"missing_cleanroom_target";
+    target.validation_evidence = L"cleanroom_rva=absent";
+    target.reason = L"no checked-in cleanroom locator for GetUsableClasses";
+    return target;
+}
 
-    const bool wrapper_matches =
-        wrapper_forward.resolved && wrapper_forward.target_address == target.candidate_address;
-
-    std::wstring evidence = L"mangled_export=yes executable=yes prologue=plausible";
-    evidence += L" wrapper=";
-    evidence += wrapper.found ? L"yes" : L"no";
-    evidence += L" wrapper_evidence=";
-    evidence += wrapper_forward.evidence;
-    evidence += L" wrapper_matches=";
-    evidence += wrapper_matches ? L"yes" : L"no";
-    target.validation_evidence = evidence;
-
-    if (wrapper_matches) {
-        target.state = TargetState::kValidated;
-        target.exact_signature_validated = true;
-        target.trace_safe = true;
-        target.reason = L"validated by exact mangled export and wrapper forward match";
-        return target;
-    }
-
-    target.reason =
-        L"exact mangled export resolved but wrapper forwarding evidence did not confirm the exact target";
+TargetResult DiscoverCanEquip(const ImageView& image) {
+    TargetResult target = {L"CanEquip"};
+    target.module_base = reinterpret_cast<std::uintptr_t>(image.base);
+    target.state = TargetState::kFailed;
+    target.evidence_source = EvidenceSourceName(EvidenceSource::kUnavailable);
+    target.discovery_method = L"cleanroom_rva_required";
+    target.validation = L"failed";
+    target.failure_reason = L"missing_cleanroom_target";
+    target.validation_evidence = L"cleanroom_rva=absent";
+    target.reason = L"no checked-in cleanroom locator for CanEquip";
     return target;
 }
 
@@ -575,23 +495,63 @@ TargetResult DiscoverCanStartMemming(const ImageView& image) {
 void Initialize() noexcept {
     g_result = {};
     g_result.reason = L"initialized";
+    g_result.handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
+    g_result.get_usable_classes = {L"GetUsableClasses"};
+    g_result.can_equip = {L"CanEquip"};
     g_result.can_start_memming = {L"CanStartMemming"};
 }
 
-Result Run(bool discovery_allowed) noexcept {
+Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
     g_result = {};
     g_result.allowed = discovery_allowed;
     g_result.trace_dev_opt_in = IsTraceDevOptInPresent();
+    g_result.handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
+    g_result.get_usable_classes = {L"GetUsableClasses"};
+    g_result.can_equip = {L"CanEquip"};
     g_result.can_start_memming = {L"CanStartMemming"};
 
     if (!discovery_allowed) {
         g_result.reason =
             L"skipped because capability manifest denied spell usability discovery";
+        if (!fingerprint_matched) {
+            g_result.reason = L"skipped because ROF2 fingerprint did not match";
+        }
+        const wchar_t* failure_reason =
+            fingerprint_matched ? L"capability_denied" : L"fingerprint_mismatch";
+        g_result.handle_rbutton_up.reason = L"discovery skipped by capability";
+        g_result.handle_rbutton_up.state = TargetState::kFailed;
+        g_result.handle_rbutton_up.validation = L"failed";
+        g_result.handle_rbutton_up.failure_reason = failure_reason;
+        g_result.handle_rbutton_up.evidence_source = EvidenceSourceName(EvidenceSource::kNotAttempted);
+        g_result.handle_rbutton_up.validation_evidence = L"capability_gate=denied";
         g_result.get_spell_level_needed.reason = L"discovery skipped by capability";
+        g_result.get_spell_level_needed.state = TargetState::kFailed;
+        g_result.get_spell_level_needed.validation = L"failed";
+        g_result.get_spell_level_needed.failure_reason = failure_reason;
+        g_result.get_spell_level_needed.evidence_source =
+            EvidenceSourceName(EvidenceSource::kNotAttempted);
         g_result.get_spell_level_needed.validation_evidence = L"capability_gate=denied";
+        g_result.get_usable_classes.reason = L"discovery skipped by capability";
+        g_result.get_usable_classes.state = TargetState::kFailed;
+        g_result.get_usable_classes.validation = L"failed";
+        g_result.get_usable_classes.failure_reason = failure_reason;
+        g_result.get_usable_classes.evidence_source =
+            EvidenceSourceName(EvidenceSource::kNotAttempted);
+        g_result.get_usable_classes.validation_evidence = L"capability_gate=denied";
+        g_result.can_equip.reason = L"discovery skipped by capability";
+        g_result.can_equip.state = TargetState::kFailed;
+        g_result.can_equip.validation = L"failed";
+        g_result.can_equip.failure_reason = failure_reason;
+        g_result.can_equip.evidence_source = EvidenceSourceName(EvidenceSource::kNotAttempted);
+        g_result.can_equip.validation_evidence = L"capability_gate=denied";
         g_result.can_start_memming.reason = L"discovery skipped by capability";
+        g_result.can_start_memming.state = TargetState::kFailed;
+        g_result.can_start_memming.validation = L"failed";
+        g_result.can_start_memming.failure_reason = failure_reason;
+        g_result.can_start_memming.evidence_source =
+            EvidenceSourceName(EvidenceSource::kNotAttempted);
         g_result.can_start_memming.validation_evidence = L"capability_gate=denied";
         return g_result;
     }
@@ -599,19 +559,54 @@ Result Run(bool discovery_allowed) noexcept {
     ImageView image = {};
     if (!BuildImageView(&image)) {
         g_result.reason = L"failed because host PE image unavailable";
+        g_result.handle_rbutton_up.state = TargetState::kFailed;
+        g_result.handle_rbutton_up.discovery_method = L"image_lookup";
+        g_result.handle_rbutton_up.evidence_source = EvidenceSourceName(EvidenceSource::kUnavailable);
+        g_result.handle_rbutton_up.validation = L"failed";
+        g_result.handle_rbutton_up.failure_reason = L"image_view_unavailable";
+        g_result.handle_rbutton_up.reason = L"host PE image unavailable";
+        g_result.handle_rbutton_up.validation_evidence = L"image_view=no";
         g_result.get_spell_level_needed.state = TargetState::kFailed;
-        g_result.get_spell_level_needed.discovery_method = L"export_lookup";
+        g_result.get_spell_level_needed.discovery_method = L"image_lookup";
+        g_result.get_spell_level_needed.evidence_source =
+            EvidenceSourceName(EvidenceSource::kUnavailable);
+        g_result.get_spell_level_needed.validation = L"failed";
+        g_result.get_spell_level_needed.failure_reason = L"image_view_unavailable";
         g_result.get_spell_level_needed.reason = L"host PE image unavailable";
         g_result.get_spell_level_needed.validation_evidence = L"image_view=no";
+        g_result.get_usable_classes.state = TargetState::kFailed;
+        g_result.get_usable_classes.discovery_method = L"image_lookup";
+        g_result.get_usable_classes.evidence_source = EvidenceSourceName(EvidenceSource::kUnavailable);
+        g_result.get_usable_classes.validation = L"failed";
+        g_result.get_usable_classes.failure_reason = L"image_view_unavailable";
+        g_result.get_usable_classes.reason = L"host PE image unavailable";
+        g_result.get_usable_classes.validation_evidence = L"image_view=no";
+        g_result.can_equip.state = TargetState::kFailed;
+        g_result.can_equip.discovery_method = L"image_lookup";
+        g_result.can_equip.evidence_source = EvidenceSourceName(EvidenceSource::kUnavailable);
+        g_result.can_equip.validation = L"failed";
+        g_result.can_equip.failure_reason = L"image_view_unavailable";
+        g_result.can_equip.reason = L"host PE image unavailable";
+        g_result.can_equip.validation_evidence = L"image_view=no";
         g_result.can_start_memming.state = TargetState::kFailed;
-        g_result.can_start_memming.discovery_method = L"export_lookup";
+        g_result.can_start_memming.discovery_method = L"image_lookup";
+        g_result.can_start_memming.evidence_source = EvidenceSourceName(EvidenceSource::kUnavailable);
+        g_result.can_start_memming.validation = L"failed";
+        g_result.can_start_memming.failure_reason = L"image_view_unavailable";
         g_result.can_start_memming.reason = L"host PE image unavailable";
         g_result.can_start_memming.validation_evidence = L"image_view=no";
         return g_result;
     }
 
-    g_result.reason = L"attempted export-based spell usability discovery";
+    g_result.reason = L"resolver=";
+    g_result.reason += kResolverVersion;
+    g_result.reason += L" packet_id=";
+    g_result.reason += kPacketId;
+    g_result.reason += L" known_non_export_targets=cleanroom_or_fail_closed";
+    g_result.handle_rbutton_up = DiscoverHandleRButtonUp(image);
     g_result.get_spell_level_needed = DiscoverGetSpellLevelNeeded(image);
+    g_result.get_usable_classes = DiscoverGetUsableClasses(image);
+    g_result.can_equip = DiscoverCanEquip(image);
     g_result.can_start_memming = DiscoverCanStartMemming(image);
     return g_result;
 }
@@ -619,7 +614,10 @@ Result Run(bool discovery_allowed) noexcept {
 void Shutdown() noexcept {
     g_result = {};
     g_result.reason = L"shutdown";
+    g_result.handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
+    g_result.get_usable_classes = {L"GetUsableClasses"};
+    g_result.can_equip = {L"CanEquip"};
     g_result.can_start_memming = {L"CanStartMemming"};
 }
 
@@ -627,24 +625,12 @@ Result GetResult() noexcept {
     return g_result;
 }
 
-const wchar_t* TargetStateName(TargetState state) noexcept {
-    switch (state) {
-        case TargetState::kNotAttempted:
-            return L"not_attempted";
-        case TargetState::kFoundUnvalidated:
-            return L"found_unvalidated";
-        case TargetState::kValidated:
-            return L"validated";
-        case TargetState::kFailed:
-            return L"failed";
-    }
-
-    return L"unknown";
-}
-
 void LogResult(const Result& result) noexcept {
     const TargetResult* targets[] = {
+        &result.handle_rbutton_up,
         &result.get_spell_level_needed,
+        &result.get_usable_classes,
+        &result.can_equip,
         &result.can_start_memming,
     };
 
@@ -655,8 +641,20 @@ void LogResult(const Result& result) noexcept {
 
         std::wstring message = L"SpellUsabilityDiscovery target=";
         message += target->target;
+        message += L" enabled=";
+        message += target->state == TargetState::kValidated ? L"true" : L"false";
         message += L" state=";
         message += TargetStateName(target->state);
+        message += L" evidence_source=";
+        message += target->evidence_source;
+        message += L" validation=";
+        message += target->validation;
+        message += L" failure_reason=";
+        message += target->failure_reason;
+        message += L" resolver=";
+        message += kResolverVersion;
+        message += L" packet_id=";
+        message += kPacketId;
         if (target->module_base != 0) {
             message += L" module_base=";
             message += HexPtr(target->module_base);

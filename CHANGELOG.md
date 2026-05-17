@@ -8,6 +8,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Changed
 
+- Spell/UI discovery no longer uses live `eqgame.exe` export lookup as the final path for the five known ROF2 non-export targets; it now resolves `GetSpellLevelNeeded` from fingerprint-gated cleanroom RVA `0x000af700` plus exact byte validation, resolves trace-only `CanStartMemming` from cleanroom RVA `0x0035bd40` plus exact entry-byte and callsite validation, hard-denies unresolved sibling targets with `missing_cleanroom_target`, emits per-target receipts with `enabled`/`evidence_source`/`module_base`/`rva`/`address`/`validation`/`failure_reason`, and logs a visible `CLIENT-SPELL-UI-DISCOVERY-FIX-V3` startup marker plus resolver version.
 - Win32 MSVC builds now statically link the C/C++ runtime for `dinput8.dll` (`/MT` in `Release`, `/MTd` in `Debug`) so the client DLL no longer depends on `MSVCP140.dll` or `VCRUNTIME140.dll` at loader startup.
 - Receive dispatcher discovery now resolves the validated ROF2 dispatcher candidate as runtime `module_base + 0x000c3250`, logs the runtime module base and resolved candidate address, and still fails closed if the resolved address falls outside the loaded image or structural validation does not match.
 - Receive dispatcher discovery now validates the large ROF2 dispatcher with layered named checks: mandatory range, entry/compare-tree, unknown-message path, and feeder-call evidence remain fail-closed, while `ret 0x10` epilogue evidence is logged as bounded advisory diagnostics near the known epilogue RVA instead of being required in a small entry-adjacent scan window.
@@ -16,6 +17,9 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Added
 
+- Cross-platform unit coverage for spell/UI discovery decision policy, including fingerprint-backed validation without runtime exports, missing-cleanroom-target denial, fingerprint mismatch denial, diagnostic-string gating, and independent target outcomes.
+- Checked-in cleanroom Ghidra notes for pinned `eqgame.exe` spell/UI locator candidates in `docs/cleanroom-dll-research/eqgame-spell-ui-ghidra-notes.md`.
+- Dev-gated scroll-scribe trace instrumentation behind `MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE=1`, with fail-closed discovery/validation for `CInvSlot::HandleRButtonUp`, `EQ_Character::GetUsableClasses`, and `EQ_Character::CanEquip`, plus correlation-friendly trace logs that do not alter client behavior.
 - Dev-gated multiclass spell usability behavior behind `MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1`, using validated `EQ_Spell::GetSpellLevelNeeded` discovery and the latest `OP_ServerAuthStats` class mask to select the lowest valid original client-required level across assigned classes.
 - Helper-level coverage for class-mask spell-level selection, including no/empty/invalid masks, shared Magician+Paladin selection, unassigned-class ignoring, sentinel filtering, and no-valid-class fallback.
 - Read-only receive handler for THJ `OP_ServerAuthStats` (`0x1338`) that parses the minimal server-authored stat payload, captures only `statClassesBitmask` in internal DLL state, and logs valid/malformed diagnostics without packet mutation, UI behavior, or client-memory writes.
@@ -35,6 +39,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Documentation
 
+- README documentation for the new scroll-scribe trace gate, target set, correlation log format, and runtime interpretation matrix for right-click gate vs item usability gate vs spell-level gate vs spellbook gate.
 - README documentation for the multiclass spell usability opt-in, expected `GetSpellLevelNeeded` selection behavior, and intentional absence of `CanStartMemming` behavior overrides or `CastSpell` hooks in v1.
 - README now documents the read-only THJ `OP_ServerAuthStats` handler, including minimal `Stat_Struct` parsing, key-based `statClassesBitmask` extraction, malformed-packet rejection, and the no-mutation/no-UI safety boundary.
 - README documentation for the ROF2 fingerprint byte-scan fallback, required dual-marker match, and `fingerprint_method` capability logging.
