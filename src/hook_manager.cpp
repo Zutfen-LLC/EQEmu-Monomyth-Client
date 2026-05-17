@@ -8,6 +8,7 @@
 #include <cstring>
 #include <limits>
 #include <sstream>
+#include <string>
 
 #include "logger.h"
 #include "packet_observer.h"
@@ -29,6 +30,8 @@ bool g_initialized = false;
 
 constexpr std::size_t kJmpPatchBytes = 5;
 constexpr std::size_t kMaxStolenBytes = 16;
+constexpr std::uint64_t kSpellTraceInitialLogCount = 20;
+constexpr std::uint64_t kSpellTraceLogInterval = 100;
 
 using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
@@ -36,6 +39,12 @@ using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
     std::uint32_t opcode,
     const void* payload,
     std::uint32_t payload_length);
+using GetSpellLevelNeededFn = std::uint8_t (MONOMYTH_THISCALL*)(
+    const void* this_spell,
+    unsigned int class_id);
+using CanStartMemmingFn = bool (MONOMYTH_THISCALL*)(
+    void* this_window,
+    int spell_or_book_index);
 
 struct InlineDetour {
     std::uint8_t* target = nullptr;
@@ -48,7 +57,13 @@ struct InlineDetour {
 };
 
 InlineDetour g_receive_dispatch_detour = {};
+InlineDetour g_get_spell_level_needed_detour = {};
+InlineDetour g_can_start_memming_detour = {};
 ReceiveDispatchFn g_original_receive_dispatch = nullptr;
+GetSpellLevelNeededFn g_original_get_spell_level_needed = nullptr;
+CanStartMemmingFn g_original_can_start_memming = nullptr;
+std::uint64_t g_get_spell_level_needed_trace_count = 0;
+std::uint64_t g_can_start_memming_trace_count = 0;
 
 std::wstring HexPtr(std::uintptr_t value) {
     std::wstringstream stream;
@@ -209,7 +224,8 @@ bool InstallInlineDetour(
     void* target,
     void* hook,
     InlineDetour* detour,
-    ReceiveDispatchFn* original_out) noexcept {
+    void** original_out,
+    const wchar_t* failure_label) noexcept {
     if (target == nullptr || hook == nullptr || detour == nullptr ||
         original_out == nullptr || detour->installed) {
         return false;
@@ -218,8 +234,10 @@ bool InstallInlineDetour(
     auto* target_bytes = reinterpret_cast<std::uint8_t*>(target);
     std::size_t patch_length = 0;
     if (!CalculatePatchLength(target_bytes, &patch_length)) {
-        monomyth::logger::Log(
-            L"hook_manager: receive dispatcher prologue unsupported; packet hook disabled");
+        std::wstring message = L"hook_manager: ";
+        message += failure_label;
+        message += L" prologue unsupported; hook disabled";
+        monomyth::logger::Log(message);
         return false;
     }
 
@@ -229,7 +247,10 @@ bool InstallInlineDetour(
         MEM_COMMIT | MEM_RESERVE,
         PAGE_EXECUTE_READWRITE));
     if (trampoline == nullptr) {
-        monomyth::logger::Log(L"hook_manager: trampoline allocation failed; packet hook disabled");
+        std::wstring message = L"hook_manager: ";
+        message += failure_label;
+        message += L" trampoline allocation failed; hook disabled";
+        monomyth::logger::Log(message);
         return false;
     }
 
@@ -239,14 +260,20 @@ bool InstallInlineDetour(
             target_bytes + patch_length,
             &trampoline_jump)) {
         VirtualFree(trampoline, 0, MEM_RELEASE);
-        monomyth::logger::Log(L"hook_manager: trampoline jump out of range; packet hook disabled");
+        std::wstring message = L"hook_manager: ";
+        message += failure_label;
+        message += L" trampoline jump out of range; hook disabled";
+        monomyth::logger::Log(message);
         return false;
     }
 
     std::array<std::uint8_t, kJmpPatchBytes> target_jump = {};
     if (!BuildRelativeJump(target_bytes, hook, &target_jump)) {
         VirtualFree(trampoline, 0, MEM_RELEASE);
-        monomyth::logger::Log(L"hook_manager: target jump out of range; packet hook disabled");
+        std::wstring message = L"hook_manager: ";
+        message += failure_label;
+        message += L" target jump out of range; hook disabled";
+        monomyth::logger::Log(message);
         return false;
     }
 
@@ -258,7 +285,10 @@ bool InstallInlineDetour(
     if (!VirtualProtect(target_bytes, patch_length, PAGE_EXECUTE_READWRITE, &old_protect)) {
         VirtualFree(trampoline, 0, MEM_RELEASE);
         *original_out = nullptr;
-        monomyth::logger::Log(L"hook_manager: target memory protection failed; packet hook disabled");
+        std::wstring message = L"hook_manager: ";
+        message += failure_label;
+        message += L" target memory protection failed; hook disabled";
+        monomyth::logger::Log(message);
         return false;
     }
 
@@ -267,7 +297,7 @@ bool InstallInlineDetour(
     detour->trampoline = trampoline;
     detour->patch_length = patch_length;
     detour->patch = target_jump;
-    *original_out = reinterpret_cast<ReceiveDispatchFn>(trampoline);
+    *original_out = trampoline;
 
     std::memcpy(detour->original.data(), target_bytes, patch_length);
     std::memcpy(target_bytes, target_jump.data(), target_jump.size());
@@ -325,6 +355,47 @@ void MONOMYTH_FASTCALL ReceiveDispatchHook(
     g_original_receive_dispatch(this_context, source_context, opcode, payload, payload_length);
 }
 
+bool ShouldLogSpellTrace(std::uint64_t count) noexcept {
+    return count <= kSpellTraceInitialLogCount || (count % kSpellTraceLogInterval) == 0;
+}
+
+std::uint8_t MONOMYTH_FASTCALL GetSpellLevelNeededHook(
+    const void* this_spell,
+    void*,
+    unsigned int class_id) noexcept {
+    const std::uint8_t original_level = g_original_get_spell_level_needed(this_spell, class_id);
+    ++g_get_spell_level_needed_trace_count;
+    if (ShouldLogSpellTrace(g_get_spell_level_needed_trace_count)) {
+        std::wstring message = L"SpellUsabilityTrace target=GetSpellLevelNeeded class=";
+        message += std::to_wstring(class_id);
+        message += L" original_level=";
+        message += std::to_wstring(static_cast<unsigned int>(original_level));
+        message += L" observed_count=";
+        message += std::to_wstring(g_get_spell_level_needed_trace_count);
+        monomyth::logger::Log(message);
+    }
+    return original_level;
+}
+
+bool MONOMYTH_FASTCALL CanStartMemmingHook(
+    void* this_window,
+    void*,
+    int spell_or_book_index) noexcept {
+    const bool original_result =
+        g_original_can_start_memming(this_window, spell_or_book_index);
+    ++g_can_start_memming_trace_count;
+    if (ShouldLogSpellTrace(g_can_start_memming_trace_count)) {
+        std::wstring message = L"SpellUsabilityTrace target=CanStartMemming spell_or_book_index=";
+        message += std::to_wstring(spell_or_book_index);
+        message += L" original_result=";
+        message += original_result ? L"true" : L"false";
+        message += L" observed_count=";
+        message += std::to_wstring(g_can_start_memming_trace_count);
+        monomyth::logger::Log(message);
+    }
+    return original_result;
+}
+
 bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest& manifest) noexcept {
     if (!manifest.receive_dispatch_validated || manifest.receive_dispatch_address == 0) {
         monomyth::logger::Log(
@@ -337,7 +408,8 @@ bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest& manifest) noe
             target,
             reinterpret_cast<void*>(&ReceiveDispatchHook),
             &g_receive_dispatch_detour,
-            &g_original_receive_dispatch)) {
+            reinterpret_cast<void**>(&g_original_receive_dispatch),
+            L"receive dispatcher")) {
         RemoveInlineDetour(&g_receive_dispatch_detour);
         return false;
     }
@@ -351,6 +423,58 @@ bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest& manifest) noe
     return true;
 }
 
+bool InstallGetSpellLevelNeededTrace(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.get_spell_level_needed_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.get_spell_level_needed_address == 0) {
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.get_spell_level_needed_address),
+            reinterpret_cast<void*>(&GetSpellLevelNeededHook),
+            &g_get_spell_level_needed_detour,
+            reinterpret_cast<void**>(&g_original_get_spell_level_needed),
+            L"GetSpellLevelNeeded trace")) {
+        RemoveInlineDetour(&g_get_spell_level_needed_detour);
+        g_original_get_spell_level_needed = nullptr;
+        return false;
+    }
+
+    std::wstring message = L"hook_manager: spell usability trace installed target=GetSpellLevelNeeded address=";
+    message += HexPtr(manifest.get_spell_level_needed_address);
+    monomyth::logger::Log(message);
+    g_get_spell_level_needed_trace_count = 0;
+    return true;
+}
+
+bool InstallCanStartMemmingTrace(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.can_start_memming_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.can_start_memming_address == 0) {
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.can_start_memming_address),
+            reinterpret_cast<void*>(&CanStartMemmingHook),
+            &g_can_start_memming_detour,
+            reinterpret_cast<void**>(&g_original_can_start_memming),
+            L"CanStartMemming trace")) {
+        RemoveInlineDetour(&g_can_start_memming_detour);
+        g_original_can_start_memming = nullptr;
+        return false;
+    }
+
+    std::wstring message = L"hook_manager: spell usability trace installed target=CanStartMemming address=";
+    message += HexPtr(manifest.can_start_memming_address);
+    monomyth::logger::Log(message);
+    g_can_start_memming_trace_count = 0;
+    return true;
+}
+
 bool RemoveReceiveDispatchHook() noexcept {
     if (!g_receive_dispatch_detour.installed) {
         return true;
@@ -359,6 +483,34 @@ bool RemoveReceiveDispatchHook() noexcept {
     if (RemoveInlineDetour(&g_receive_dispatch_detour)) {
         g_original_receive_dispatch = nullptr;
         monomyth::logger::Log(L"hook_manager: receive dispatcher hook removed");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveGetSpellLevelNeededTrace() noexcept {
+    if (!g_get_spell_level_needed_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_get_spell_level_needed_detour)) {
+        g_original_get_spell_level_needed = nullptr;
+        monomyth::logger::Log(L"hook_manager: spell usability trace removed target=GetSpellLevelNeeded");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveCanStartMemmingTrace() noexcept {
+    if (!g_can_start_memming_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_can_start_memming_detour)) {
+        g_original_can_start_memming = nullptr;
+        monomyth::logger::Log(L"hook_manager: spell usability trace removed target=CanStartMemming");
         return true;
     }
 
@@ -377,6 +529,22 @@ bool RemoveReceiveDispatchHook() noexcept {
     return true;
 }
 
+bool InstallGetSpellLevelNeededTrace(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallCanStartMemmingTrace(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool RemoveGetSpellLevelNeededTrace() noexcept {
+    return true;
+}
+
+bool RemoveCanStartMemmingTrace() noexcept {
+    return true;
+}
+
 #endif
 
 }  // namespace
@@ -386,15 +554,52 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         return true;
     }
 
+    bool receive_hook_active = false;
+    bool spell_trace_active = false;
+
     if (manifest.packet_hooks_allowed && !InstallReceiveDispatchHook(manifest)) {
         monomyth::packet_observer::DisableBecauseHookUnavailable(
             L"receive dispatcher hook install failed or was ambiguous");
         return false;
     }
+    receive_hook_active = g_receive_dispatch_detour.installed;
+
+    if (manifest.spell_usability_trace_allowed) {
+        if (InstallGetSpellLevelNeededTrace(manifest)) {
+            spell_trace_active = true;
+        } else if (
+            manifest.get_spell_level_needed_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=GetSpellLevelNeeded");
+        }
+
+        if (InstallCanStartMemmingTrace(manifest)) {
+            spell_trace_active = true;
+        } else if (
+            manifest.can_start_memming_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=CanStartMemming");
+        }
+    } else if (manifest.spell_usability_trace_dev_opt_in) {
+        std::wstring message =
+            L"hook_manager: spell usability trace skipped reason=\"";
+        message += manifest.spell_usability_trace_reason.empty()
+            ? L"unknown"
+            : manifest.spell_usability_trace_reason;
+        message += L"\"";
+        monomyth::logger::Log(message);
+    }
 
     g_initialized = true;
-    if (manifest.packet_hooks_allowed) {
+    if (receive_hook_active && spell_trace_active) {
+        monomyth::logger::Log(
+            L"hook_manager: initialized (receive dispatcher hook and spell usability trace active)");
+    } else if (receive_hook_active) {
         monomyth::logger::Log(L"hook_manager: initialized (receive dispatcher hook active)");
+    } else if (spell_trace_active) {
+        monomyth::logger::Log(L"hook_manager: initialized (spell usability trace active)");
     } else {
         std::wstring message = L"hook_manager: initialized (no active hooks) packet_hooks_reason=\"";
         if (manifest.packet_hooks_reason.empty()) {
@@ -419,6 +624,16 @@ void Shutdown() noexcept {
 
     if (!RemoveReceiveDispatchHook()) {
         monomyth::logger::Log(L"hook_manager: shutdown deferred because receive hook removal failed");
+        return;
+    }
+    if (!RemoveGetSpellLevelNeededTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because GetSpellLevelNeeded trace removal failed");
+        return;
+    }
+    if (!RemoveCanStartMemmingTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because CanStartMemming trace removal failed");
         return;
     }
 

@@ -61,6 +61,34 @@ bool IsReceiveIntrospectionDevOptInPresent() noexcept {
     return value[0] == L'1' && value[1] == L'\0';
 }
 
+bool IsSpellUsabilityDiscoveryDevOptInPresent() noexcept {
+    wchar_t value[16] = {};
+    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
+    const DWORD length = GetEnvironmentVariableW(
+        L"MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY",
+        value,
+        kValueCapacity);
+    if (length == 0 || length >= kValueCapacity) {
+        return false;
+    }
+
+    return value[0] == L'1' && value[1] == L'\0';
+}
+
+bool IsSpellUsabilityTraceDevOptInPresent() noexcept {
+    wchar_t value[16] = {};
+    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
+    const DWORD length = GetEnvironmentVariableW(
+        L"MONOMYTH_ENABLE_SPELL_USABILITY_TRACE",
+        value,
+        kValueCapacity);
+    if (length == 0 || length >= kValueCapacity) {
+        return false;
+    }
+
+    return value[0] == L'1' && value[1] == L'\0';
+}
+
 std::wstring PacketHookDiscoveryReason(
     const monomyth::receive_dispatch_discovery::Result& discovery) {
     std::wstring reason = L"receive dispatcher discovery not validated";
@@ -93,6 +121,13 @@ Manifest BuildCapabilityManifest(
     manifest.packet_hooks_allowed = false;
     manifest.receive_introspection_dev_opt_in = IsReceiveIntrospectionDevOptInPresent();
     manifest.receive_introspection_allowed = false;
+    manifest.spell_usability_discovery_dev_opt_in = IsSpellUsabilityDiscoveryDevOptInPresent();
+    manifest.spell_usability_discovery_allowed =
+        manifest.hooks_allowed &&
+        manifest.fingerprint_matched &&
+        manifest.spell_usability_discovery_dev_opt_in;
+    manifest.spell_usability_trace_dev_opt_in = IsSpellUsabilityTraceDevOptInPresent();
+    manifest.spell_usability_trace_allowed = false;
     manifest.ui_hooks_allowed = false;
     manifest.heartbeat_allowed = manifest.hooks_allowed;
     manifest.reason = NormalizeReason(fingerprint.reason.c_str());
@@ -102,6 +137,12 @@ Manifest BuildCapabilityManifest(
     manifest.receive_introspection_reason = manifest.receive_introspection_dev_opt_in
         ? L"receive introspection requested but packet hook gate has not passed"
         : L"dev opt-in absent: set MONOMYTH_ENABLE_RECV_INTROSPECTION=1";
+    manifest.spell_usability_discovery_reason = manifest.spell_usability_discovery_dev_opt_in
+        ? L"spell usability discovery requested but validation has not run"
+        : L"dev opt-in absent: set MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY=1";
+    manifest.spell_usability_trace_reason = manifest.spell_usability_trace_dev_opt_in
+        ? L"spell usability trace requested but validated targets are not available"
+        : L"dev opt-in absent: set MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1";
     return manifest;
 }
 
@@ -115,8 +156,12 @@ Manifest BuildDisabledCapabilityManifest(
     manifest.reason = NormalizeReason(reason);
     manifest.packet_hooks_dev_opt_in = IsPacketHookDevOptInPresent();
     manifest.receive_introspection_dev_opt_in = IsReceiveIntrospectionDevOptInPresent();
+    manifest.spell_usability_discovery_dev_opt_in = IsSpellUsabilityDiscoveryDevOptInPresent();
+    manifest.spell_usability_trace_dev_opt_in = IsSpellUsabilityTraceDevOptInPresent();
     manifest.packet_hooks_reason = L"disabled before fingerprint/discovery gates";
     manifest.receive_introspection_reason = L"disabled before fingerprint/discovery gates";
+    manifest.spell_usability_discovery_reason = L"disabled before fingerprint/discovery gates";
+    manifest.spell_usability_trace_reason = L"disabled before fingerprint/discovery gates";
     return manifest;
 }
 
@@ -150,6 +195,26 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
         L"receive_introspection_allowed=",
         manifest.receive_introspection_allowed);
     message += L" ";
+    AppendBoolField(
+        &message,
+        L"spell_usability_discovery_dev_opt_in=",
+        manifest.spell_usability_discovery_dev_opt_in);
+    message += L" ";
+    AppendBoolField(
+        &message,
+        L"spell_usability_discovery_allowed=",
+        manifest.spell_usability_discovery_allowed);
+    message += L" ";
+    AppendBoolField(
+        &message,
+        L"spell_usability_trace_dev_opt_in=",
+        manifest.spell_usability_trace_dev_opt_in);
+    message += L" ";
+    AppendBoolField(
+        &message,
+        L"spell_usability_trace_allowed=",
+        manifest.spell_usability_trace_allowed);
+    message += L" ";
     AppendBoolField(&message, L"ui_hooks_allowed=", manifest.ui_hooks_allowed);
     message += L" ";
     AppendBoolField(&message, L"heartbeat_allowed=", manifest.heartbeat_allowed);
@@ -170,6 +235,28 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
         message += L" receive_dispatch_address=";
         message += HexPtr(manifest.receive_dispatch_address);
     }
+    message += L" get_spell_level_needed_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.get_spell_level_needed_state);
+    if (manifest.get_spell_level_needed_rva != 0) {
+        message += L" get_spell_level_needed_rva=";
+        message += Hex32(manifest.get_spell_level_needed_rva);
+    }
+    if (manifest.get_spell_level_needed_address != 0) {
+        message += L" get_spell_level_needed_address=";
+        message += HexPtr(manifest.get_spell_level_needed_address);
+    }
+    message += L" can_start_memming_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.can_start_memming_state);
+    if (manifest.can_start_memming_rva != 0) {
+        message += L" can_start_memming_rva=";
+        message += Hex32(manifest.can_start_memming_rva);
+    }
+    if (manifest.can_start_memming_address != 0) {
+        message += L" can_start_memming_address=";
+        message += HexPtr(manifest.can_start_memming_address);
+    }
     message += L" reason=\"";
     message += NormalizeReason(manifest.reason.c_str());
     message += L"\"";
@@ -178,6 +265,12 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L"\"";
     message += L" receive_introspection_reason=\"";
     message += NormalizeReason(manifest.receive_introspection_reason.c_str());
+    message += L"\"";
+    message += L" spell_usability_discovery_reason=\"";
+    message += NormalizeReason(manifest.spell_usability_discovery_reason.c_str());
+    message += L"\"";
+    message += L" spell_usability_trace_reason=\"";
+    message += NormalizeReason(manifest.spell_usability_trace_reason.c_str());
     message += L"\"";
     monomyth::logger::Log(message);
 }
@@ -233,6 +326,60 @@ void ApplyReceiveDispatchDiscovery(
     } else {
         manifest->receive_introspection_reason =
             L"receive introspection gate denied for unknown reason";
+    }
+}
+
+void ApplySpellUsabilityDiscovery(
+    Manifest* manifest,
+    const monomyth::spell_usability_discovery::Result& discovery) noexcept {
+    if (manifest == nullptr) {
+        return;
+    }
+
+    manifest->spell_usability_discovery_allowed = discovery.allowed;
+    manifest->spell_usability_trace_dev_opt_in = discovery.trace_dev_opt_in;
+    manifest->get_spell_level_needed_state = discovery.get_spell_level_needed.state;
+    manifest->get_spell_level_needed_rva = discovery.get_spell_level_needed.candidate_rva;
+    manifest->get_spell_level_needed_address = discovery.get_spell_level_needed.candidate_address;
+    manifest->can_start_memming_state = discovery.can_start_memming.state;
+    manifest->can_start_memming_rva = discovery.can_start_memming.candidate_rva;
+    manifest->can_start_memming_address = discovery.can_start_memming.candidate_address;
+
+    const bool any_trace_safe =
+        (discovery.get_spell_level_needed.state ==
+             monomyth::spell_usability_discovery::TargetState::kValidated &&
+         discovery.get_spell_level_needed.trace_safe) ||
+        (discovery.can_start_memming.state ==
+             monomyth::spell_usability_discovery::TargetState::kValidated &&
+         discovery.can_start_memming.trace_safe);
+    manifest->spell_usability_trace_allowed =
+        discovery.allowed &&
+        discovery.trace_dev_opt_in &&
+        any_trace_safe;
+
+    if (!discovery.allowed) {
+        manifest->spell_usability_discovery_reason =
+            L"capability guard denied spell usability discovery";
+    } else {
+        manifest->spell_usability_discovery_reason =
+            NormalizeReason(discovery.reason.c_str());
+    }
+
+    if (manifest->spell_usability_trace_allowed) {
+        manifest->spell_usability_trace_reason =
+            L"enabled by explicit dev opt-in and validated spell usability targets";
+    } else if (!discovery.trace_dev_opt_in) {
+        manifest->spell_usability_trace_reason =
+            L"dev opt-in absent: set MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1";
+    } else if (!discovery.allowed) {
+        manifest->spell_usability_trace_reason =
+            L"spell usability trace requires the ROF2 discovery capability gate";
+    } else if (!any_trace_safe) {
+        manifest->spell_usability_trace_reason =
+            L"spell usability trace denied because no target reached validated trace-safe state";
+    } else {
+        manifest->spell_usability_trace_reason =
+            L"spell usability trace gate denied for unknown reason";
     }
 }
 
