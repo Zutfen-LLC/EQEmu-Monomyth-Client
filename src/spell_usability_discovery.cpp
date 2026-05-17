@@ -27,6 +27,11 @@ constexpr std::array<std::uint8_t, 37> kGetSpellLevelNeededBytes = {{
     0x00, 0xc2, 0x04, 0x00, 0x8a, 0x81, 0x47, 0x02, 0x00, 0x00, 0xc2, 0x04,
     0x00,
 }};
+constexpr std::array<std::uint8_t, 33> kCanStartMemmingEntryBytes = {{
+    0x83, 0x3d, 0xac, 0x35, 0xe6, 0x00, 0x00, 0x53, 0x56, 0x8b, 0xf1,
+    0xb3, 0x01, 0x0f, 0x8f, 0x8f, 0x01, 0x00, 0x00, 0x8b, 0x0d, 0x7c,
+    0xfc, 0xd1, 0x00, 0x6a, 0x01, 0xe8, 0xd0, 0x51, 0xf0, 0xff, 0x84,
+}};
 
 Result g_result = {};
 
@@ -402,7 +407,7 @@ TargetResult DiscoverCanStartMemming(const ImageView& image) {
     const bool rva_found = ResolveRvaAddress(
         image,
         kCanStartMemmingRva,
-        8,
+        kCanStartMemmingEntryBytes.size(),
         &function_start);
     CandidateSource candidate = BuildFingerprintCandidate(
         image,
@@ -411,9 +416,11 @@ TargetResult DiscoverCanStartMemming(const ImageView& image) {
         L"CanStartMemming");
     const bool candidate_executable =
         candidate.address != 0 && IsExecutableAddress(image, candidate.address);
-    const auto* code = reinterpret_cast<const std::uint8_t*>(candidate.address);
-    const bool plausible_prologue =
-        candidate_executable && HasPlausibleX86Prologue(code, 8);
+    const bool exact_entry_bytes = rva_found && BytesMatchAtRva(
+        image,
+        kCanStartMemmingRva,
+        kCanStartMemmingEntryBytes.data(),
+        kCanStartMemmingEntryBytes.size());
     const bool calls_get_spell_level_needed =
         candidate_executable &&
         CallAtRvaTargets(
@@ -428,7 +435,7 @@ TargetResult DiscoverCanStartMemming(const ImageView& image) {
         false,
         false,
         candidate_executable,
-        plausible_prologue && calls_get_spell_level_needed,
+        exact_entry_bytes && calls_get_spell_level_needed,
         false,
         false,
         false,
@@ -440,8 +447,8 @@ TargetResult DiscoverCanStartMemming(const ImageView& image) {
     evidence += Hex32(kCanStartMemmingRva);
     evidence += L" executable=";
     evidence += candidate_executable ? L"yes" : L"no";
-    evidence += L" prologue=";
-    evidence += plausible_prologue ? L"plausible" : L"unsupported";
+    evidence += L" exact_entry_bytes=";
+    evidence += exact_entry_bytes ? L"yes" : L"no";
     evidence += L" callsite_rva=";
     evidence += Hex32(kCanStartMemmingCallsGetSpellLevelNeededAtRva);
     evidence += L" calls_get_spell_level_needed=";
@@ -451,7 +458,7 @@ TargetResult DiscoverCanStartMemming(const ImageView& image) {
         candidate,
         decision,
         evidence,
-        L"validated by fingerprint-gated cleanroom RVA and GetSpellLevelNeeded caller shape",
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and GetSpellLevelNeeded caller shape",
         L"CanStartMemming candidate did not satisfy cleanroom RVA validation",
         &target);
     return target;

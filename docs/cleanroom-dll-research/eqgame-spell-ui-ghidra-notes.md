@@ -22,6 +22,9 @@ Pinned candidates:
   - VA: `0x0075bd40`
   - RVA: `0x0035bd40`
   - Shape: `thiscall`, one stack arg, returns bool in `AL`, `ret 4`
+  - Entry bytes:
+    - `83 3d ac 35 e6 00 00 53 56 8b f1 b3 01 0f 8f 8f 01 00 00`
+    - `8b 0d 7c fc d1 00 6a 01 e8 d0 51 f0 ff 84`
   - Caller evidence: calls `GetSpellLevelNeeded` at `0x0075bea5`
 
 Related caller anchors:
