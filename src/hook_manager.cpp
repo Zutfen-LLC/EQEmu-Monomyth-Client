@@ -12,6 +12,8 @@
 
 #include "logger.h"
 #include "packet_observer.h"
+#include "server_auth_stats_observer.h"
+#include "spell_level_selection.h"
 
 namespace monomyth::hooks {
 namespace {
@@ -64,6 +66,7 @@ GetSpellLevelNeededFn g_original_get_spell_level_needed = nullptr;
 CanStartMemmingFn g_original_can_start_memming = nullptr;
 std::uint64_t g_get_spell_level_needed_trace_count = 0;
 std::uint64_t g_can_start_memming_trace_count = 0;
+bool g_multiclass_spell_usability_enabled = false;
 
 std::wstring HexPtr(std::uintptr_t value) {
     std::wstringstream stream;
@@ -359,22 +362,79 @@ bool ShouldLogSpellTrace(std::uint64_t count) noexcept {
     return count <= kSpellTraceInitialLogCount || (count % kSpellTraceLogInterval) == 0;
 }
 
+std::wstring Hex32(std::uint32_t value) {
+    std::wstringstream stream;
+    stream << L"0x" << std::hex << value;
+    return stream.str();
+}
+
+std::uint8_t QueryOriginalSpellLevel(
+    void* context,
+    const void* this_spell,
+    unsigned int class_id) noexcept {
+    const auto original = reinterpret_cast<GetSpellLevelNeededFn>(context);
+    if (original == nullptr) {
+        return 255;
+    }
+
+    return original(this_spell, class_id);
+}
+
 std::uint8_t MONOMYTH_FASTCALL GetSpellLevelNeededHook(
     const void* this_spell,
     void*,
     unsigned int class_id) noexcept {
     const std::uint8_t original_level = g_original_get_spell_level_needed(this_spell, class_id);
     ++g_get_spell_level_needed_trace_count;
+    if (!g_multiclass_spell_usability_enabled) {
+        if (ShouldLogSpellTrace(g_get_spell_level_needed_trace_count)) {
+            std::wstring message = L"SpellUsabilityTrace target=GetSpellLevelNeeded class=";
+            message += std::to_wstring(class_id);
+            message += L" original_level=";
+            message += std::to_wstring(static_cast<unsigned int>(original_level));
+            message += L" observed_count=";
+            message += std::to_wstring(g_get_spell_level_needed_trace_count);
+            monomyth::logger::Log(message);
+        }
+        return original_level;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    const monomyth::spell_level_selection::SelectionResult selection =
+        monomyth::spell_level_selection::SelectLowestValidRequiredLevel(
+            &QueryOriginalSpellLevel,
+            reinterpret_cast<void*>(g_original_get_spell_level_needed),
+            this_spell,
+            class_id,
+            snapshot.has_classes_bitmask,
+            snapshot.classes_bitmask,
+            original_level);
+
     if (ShouldLogSpellTrace(g_get_spell_level_needed_trace_count)) {
         std::wstring message = L"SpellUsabilityTrace target=GetSpellLevelNeeded class=";
         message += std::to_wstring(class_id);
+        message += L" requested_class=";
+        message += std::to_wstring(class_id);
+        message += L" assigned_mask=";
+        message += Hex32(snapshot.has_classes_bitmask ? snapshot.classes_bitmask : 0);
         message += L" original_level=";
         message += std::to_wstring(static_cast<unsigned int>(original_level));
+        message += L" selected_class=";
+        message += selection.used_assigned_class
+            ? std::to_wstring(selection.selected_class)
+            : L"none";
+        message += L" selected_level=";
+        message += std::to_wstring(static_cast<unsigned int>(selection.level));
+        message += L" fallback_reason=\"";
+        message += selection.used_assigned_class ? L"" : selection.fallback_reason;
+        message += L"\"";
+        message += L" behavior_enabled=true";
         message += L" observed_count=";
         message += std::to_wstring(g_get_spell_level_needed_trace_count);
         monomyth::logger::Log(message);
     }
-    return original_level;
+    return selection.level;
 }
 
 bool MONOMYTH_FASTCALL CanStartMemmingHook(
@@ -423,8 +483,9 @@ bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest& manifest) noe
     return true;
 }
 
-bool InstallGetSpellLevelNeededTrace(const monomyth::runtime::Manifest& manifest) noexcept {
-    if (!manifest.spell_usability_trace_allowed ||
+bool InstallGetSpellLevelNeededHook(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!(manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) ||
         manifest.get_spell_level_needed_state !=
             monomyth::spell_usability_discovery::TargetState::kValidated ||
         manifest.get_spell_level_needed_address == 0) {
@@ -436,14 +497,19 @@ bool InstallGetSpellLevelNeededTrace(const monomyth::runtime::Manifest& manifest
             reinterpret_cast<void*>(&GetSpellLevelNeededHook),
             &g_get_spell_level_needed_detour,
             reinterpret_cast<void**>(&g_original_get_spell_level_needed),
-            L"GetSpellLevelNeeded trace")) {
+            L"GetSpellLevelNeeded")) {
         RemoveInlineDetour(&g_get_spell_level_needed_detour);
         g_original_get_spell_level_needed = nullptr;
         return false;
     }
 
-    std::wstring message = L"hook_manager: spell usability trace installed target=GetSpellLevelNeeded address=";
+    g_multiclass_spell_usability_enabled = manifest.multiclass_spell_usability_allowed;
+    std::wstring message = L"hook_manager: spell usability hook installed target=GetSpellLevelNeeded address=";
     message += HexPtr(manifest.get_spell_level_needed_address);
+    message += L" trace_enabled=";
+    message += manifest.spell_usability_trace_allowed ? L"true" : L"false";
+    message += L" multiclass_spell_usability_enabled=";
+    message += g_multiclass_spell_usability_enabled ? L"true" : L"false";
     monomyth::logger::Log(message);
     g_get_spell_level_needed_trace_count = 0;
     return true;
@@ -496,7 +562,8 @@ bool RemoveGetSpellLevelNeededTrace() noexcept {
 
     if (RemoveInlineDetour(&g_get_spell_level_needed_detour)) {
         g_original_get_spell_level_needed = nullptr;
-        monomyth::logger::Log(L"hook_manager: spell usability trace removed target=GetSpellLevelNeeded");
+        g_multiclass_spell_usability_enabled = false;
+        monomyth::logger::Log(L"hook_manager: spell usability hook removed target=GetSpellLevelNeeded");
         return true;
     }
 
@@ -529,7 +596,7 @@ bool RemoveReceiveDispatchHook() noexcept {
     return true;
 }
 
-bool InstallGetSpellLevelNeededTrace(const monomyth::runtime::Manifest&) noexcept {
+bool InstallGetSpellLevelNeededHook(const monomyth::runtime::Manifest&) noexcept {
     return false;
 }
 
@@ -556,6 +623,7 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
 
     bool receive_hook_active = false;
     bool spell_trace_active = false;
+    bool spell_behavior_active = false;
 
     if (manifest.packet_hooks_allowed && !InstallReceiveDispatchHook(manifest)) {
         monomyth::packet_observer::DisableBecauseHookUnavailable(
@@ -564,16 +632,19 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     }
     receive_hook_active = g_receive_dispatch_detour.installed;
 
-    if (manifest.spell_usability_trace_allowed) {
-        if (InstallGetSpellLevelNeededTrace(manifest)) {
-            spell_trace_active = true;
+    if (manifest.spell_usability_trace_allowed || manifest.multiclass_spell_usability_allowed) {
+        if (InstallGetSpellLevelNeededHook(manifest)) {
+            spell_trace_active = manifest.spell_usability_trace_allowed;
+            spell_behavior_active = manifest.multiclass_spell_usability_allowed;
         } else if (
             manifest.get_spell_level_needed_state ==
                 monomyth::spell_usability_discovery::TargetState::kValidated) {
             monomyth::logger::Log(
-                L"hook_manager: spell usability trace install failed target=GetSpellLevelNeeded");
+                L"hook_manager: spell usability hook install failed target=GetSpellLevelNeeded");
         }
+    }
 
+    if (manifest.spell_usability_trace_allowed) {
         if (InstallCanStartMemmingTrace(manifest)) {
             spell_trace_active = true;
         } else if (
@@ -593,7 +664,18 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     }
 
     g_initialized = true;
-    if (receive_hook_active && spell_trace_active) {
+    if (receive_hook_active && spell_trace_active && spell_behavior_active) {
+        monomyth::logger::Log(
+            L"hook_manager: initialized (receive dispatcher hook, spell usability trace, and multiclass spell usability active)");
+    } else if (receive_hook_active && spell_behavior_active) {
+        monomyth::logger::Log(
+            L"hook_manager: initialized (receive dispatcher hook and multiclass spell usability active)");
+    } else if (spell_trace_active && spell_behavior_active) {
+        monomyth::logger::Log(
+            L"hook_manager: initialized (spell usability trace and multiclass spell usability active)");
+    } else if (spell_behavior_active) {
+        monomyth::logger::Log(L"hook_manager: initialized (multiclass spell usability active)");
+    } else if (receive_hook_active && spell_trace_active) {
         monomyth::logger::Log(
             L"hook_manager: initialized (receive dispatcher hook and spell usability trace active)");
     } else if (receive_hook_active) {
@@ -607,6 +689,11 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         } else {
             message += manifest.packet_hooks_reason;
         }
+        message += L"\"";
+        message += L" multiclass_spell_usability_reason=\"";
+        message += manifest.multiclass_spell_usability_reason.empty()
+            ? L"unknown"
+            : manifest.multiclass_spell_usability_reason;
         message += L"\"";
         monomyth::logger::Log(message);
     }

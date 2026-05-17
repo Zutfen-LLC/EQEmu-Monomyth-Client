@@ -16,6 +16,8 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Added
 
+- Dev-gated multiclass spell usability behavior behind `MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1`, using validated `EQ_Spell::GetSpellLevelNeeded` discovery and the latest `OP_ServerAuthStats` class mask to select the lowest valid original client-required level across assigned classes.
+- Helper-level coverage for class-mask spell-level selection, including no/empty/invalid masks, shared Magician+Paladin selection, unassigned-class ignoring, sentinel filtering, and no-valid-class fallback.
 - Read-only receive handler for THJ `OP_ServerAuthStats` (`0x1338`) that parses the minimal server-authored stat payload, captures only `statClassesBitmask` in internal DLL state, and logs valid/malformed diagnostics without packet mutation, UI behavior, or client-memory writes.
 - ROF2 opcode reference entry for THJ `OP_ServerAuthStats` (`0x1338`) from `C:\Code\THJ-Server-Original\utils\patches\patch_RoF2.conf`, enabling exact-name receive-introspection allowlist overrides and exact opcode routing for the read-only handler.
 - Fail-closed ROF2 fingerprint byte-scan fallback for `eqgame.exe` that runs once at startup when version resources are unavailable or inconclusive and matches only when both known markers `May 10 2013` and `23:30:08` are present.
@@ -33,6 +35,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Documentation
 
+- README documentation for the multiclass spell usability opt-in, expected `GetSpellLevelNeeded` selection behavior, and intentional absence of `CanStartMemming` behavior overrides or `CastSpell` hooks in v1.
 - README now documents the read-only THJ `OP_ServerAuthStats` handler, including minimal `Stat_Struct` parsing, key-based `statClassesBitmask` extraction, malformed-packet rejection, and the no-mutation/no-UI safety boundary.
 - README documentation for the ROF2 fingerprint byte-scan fallback, required dual-marker match, and `fingerprint_method` capability logging.
 - README documentation for receive dispatcher discovery, layered fail-closed validation, advisory epilogue handling for the large dispatcher, and the no-hooks/no-packet-data safety boundary.

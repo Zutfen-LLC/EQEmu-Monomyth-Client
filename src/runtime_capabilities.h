@@ -25,6 +25,8 @@ struct Manifest {
     bool spell_usability_discovery_allowed = false;
     bool spell_usability_trace_dev_opt_in = false;
     bool spell_usability_trace_allowed = false;
+    bool multiclass_spell_usability_dev_opt_in = false;
+    bool multiclass_spell_usability_allowed = false;
     bool ui_hooks_allowed = false;
     bool heartbeat_allowed = false;
     monomyth::receive_dispatch_discovery::State receive_dispatch_discovery_state =
@@ -46,6 +48,8 @@ struct Manifest {
     std::wstring receive_introspection_reason = L"receive introspection unavailable";
     std::wstring spell_usability_discovery_reason = L"spell usability discovery unavailable";
     std::wstring spell_usability_trace_reason = L"spell usability trace unavailable";
+    std::wstring multiclass_spell_usability_reason =
+        L"multiclass spell usability unavailable";
 };
 
 Manifest BuildCapabilityManifest(
