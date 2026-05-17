@@ -21,7 +21,7 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - Falls back once at startup to a fail-closed `eqgame.exe` byte scan when version resources are unavailable or inconclusive; both markers must be present or the fingerprint remains false.
 - Runs a fail-closed receive dispatcher discovery pass only after the fingerprint/capability path allows enhancement discovery.
 - Keeps spell usability discovery disabled by default unless the local developer explicitly sets `MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY=1`.
-- When spell usability discovery is enabled on a supported ROF2 client, attempts read-only discovery for `EQ_Spell::GetSpellLevelNeeded` and `CSpellBookWnd::CanStartMemming` using export-based evidence only.
+- When spell usability discovery is enabled on a supported ROF2 client, it attempts read-only discovery for the spell/UI targets using runtime exports when available and checked-in cleanroom wrapper evidence when exact mangled exports are absent.
 - Keeps passive spell usability tracing disabled by default unless the local developer additionally sets `MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1` and a target reaches validated trace-safe state.
 - Keeps scroll-scribe trace discovery and instrumentation disabled by default unless the local developer explicitly sets `MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE=1` and all three pre-scribe targets validate cleanly.
 - Keeps active multiclass spell usability disabled by default unless the local developer additionally sets `MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1` after `EQ_Spell::GetSpellLevelNeeded` validates.
@@ -125,7 +125,7 @@ Startup logs include:
 - The `CapabilityManifest` line includes `multiclass_spell_usability_dev_opt_in`, `multiclass_spell_usability_allowed`, and `multiclass_spell_usability_reason`
 - The `CapabilityManifest` line includes per-target spell usability fields `handle_rbutton_up_state`, `handle_rbutton_up_rva`, `handle_rbutton_up_address`, `get_spell_level_needed_state`, `get_spell_level_needed_rva`, `get_spell_level_needed_address`, `get_usable_classes_state`, `get_usable_classes_rva`, `get_usable_classes_address`, `can_equip_state`, `can_equip_rva`, `can_equip_address`, `can_start_memming_state`, `can_start_memming_rva`, and `can_start_memming_address` when available
 - One `ReceiveDispatchDiscovery ...` line with the discovery state, runtime module base, validated candidate RVA/resolved address when available, a concise reason, and per-check pass/fail/advisory diagnostics
-- One `SpellUsabilityDiscovery ...` line per target with the target name, discovery state, runtime module base, candidate RVA/resolved address when available, whether passive tracing is considered safe, the discovery method, a concise reason, and validation evidence
+- One `SpellUsabilityDiscovery ...` line per target with the target name, discovery state, runtime module base, candidate RVA/resolved address when available, `evidence_source`, `validation`, `failure_reason`, whether passive tracing is considered safe, the discovery method, a concise reason, and validation evidence
 - Post-guard heartbeat when hooks are allowed
 - One `PacketObserver state=...` line indicating current observer state
 - When the dev hook is enabled, rate-limited metadata lines beginning with `PacketObserverRecv`
@@ -224,15 +224,15 @@ This discovery path is disabled by default and runs only when the existing ROF2 
 $env:MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY = "1"
 ```
 
-The implementation does not guess RVAs. It tries the loaded `eqgame.exe` export table first, prefers the exact mangled symbol where available, records wrapper-export evidence when present, verifies that any resolved address lands in an executable image section, and then applies target-specific validation:
+The implementation does not guess RVAs. It keeps the existing ROF2 fingerprint gate, tries the loaded `eqgame.exe` export table first, accepts checked-in cleanroom wrapper evidence for known ROF2 targets when exact mangled exports are absent, verifies that any resolved address lands in an executable image section, and then applies target-specific validation:
 
-- `CInvSlot::HandleRButtonUp` requires the exact mangled export plus wrapper-forward evidence when the wrapper export is present.
-- `GetSpellLevelNeeded` requires the exact mangled export and diagnostic-string evidence, plus wrapper-forward evidence when a wrapper export is present.
-- `GetUsableClasses` currently validates from the exact `EQ_Character__GetUsableClasses` wrapper export because that is the symbol evidence available in the local clean-room research set.
-- `CanEquip` requires the exact mangled export plus wrapper-forward evidence when the wrapper export is present.
-- `CanStartMemming` requires the exact mangled export plus wrapper-forward evidence when present.
+- `CInvSlot::HandleRButtonUp` validates from either the exact mangled export plus wrapper-forward confirmation, or the checked-in `CInvSlot__HandleRButtonUp` wrapper-forward target when the mangled export is absent at runtime.
+- `GetSpellLevelNeeded` validates from either the exact mangled export or the checked-in `EQ_Spell__GetSpellLevelNeeded` wrapper-forward target, but still requires the known diagnostic-string reference before the hook can be enabled.
+- `GetUsableClasses` validates from the checked-in `EQ_Character__GetUsableClasses` wrapper-forward target because that is the cleanroom symbol evidence available in the repo.
+- `CanEquip` validates from either the exact mangled export plus wrapper-forward confirmation, or the checked-in `EQ_Character__CanEquip` wrapper-forward target when the mangled export is absent at runtime.
+- `CanStartMemming` validates from either the exact mangled export plus wrapper-forward confirmation, or the checked-in `CSpellBookWnd__CanStartMemming` wrapper-forward target when the mangled export is absent at runtime.
 
-Per-target discovery states are `not_attempted`, `found_unvalidated`, `validated`, or `failed`. Discovery only logs evidence. It does not patch spell records, change return values, mutate UI state, hook `CastSpell`, or change packets.
+Per-target discovery states are `not_attempted`, `found_unvalidated`, `validated`, or `failed`. The logs now also include `evidence_source` and `failure_reason`, with expected values such as `runtime_export`, `wrapper_validation`, `unavailable`, `fingerprint_mismatch`, `missing_cleanroom_target`, `wrapper_validation_failed`, and `diagnostic_string_xref_missing`. Discovery only logs evidence. It does not patch spell records, change return values, mutate UI state, hook `CastSpell`, or change packets.
 
 ## Passive spell usability trace
 

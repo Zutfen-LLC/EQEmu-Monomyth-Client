@@ -35,6 +35,39 @@ std::wstring HexPtr(std::uintptr_t value) {
     return stream.str();
 }
 
+void AppendTargetSourceAndFailure(
+    std::wstring* message,
+    const wchar_t* prefix,
+    const std::wstring& evidence_source,
+    const std::wstring& failure_reason) {
+    if (message == nullptr || prefix == nullptr) {
+        return;
+    }
+
+    message->append(L" ");
+    message->append(prefix);
+    message->append(L"_evidence_source=");
+    message->append(NormalizeReason(evidence_source.c_str()));
+    message->append(L" ");
+    message->append(prefix);
+    message->append(L"_failure_reason=");
+    message->append(NormalizeReason(failure_reason.c_str()));
+}
+
+std::wstring DescribeTargetFailure(
+    const wchar_t* target,
+    monomyth::spell_usability_discovery::TargetState state,
+    const std::wstring& failure_reason) {
+    if (state == monomyth::spell_usability_discovery::TargetState::kValidated) {
+        return L"";
+    }
+
+    std::wstring message = target == nullptr ? L"target" : target;
+    message += L" failure_reason=";
+    message += NormalizeReason(failure_reason.c_str());
+    return message;
+}
+
 bool IsPacketHookDevOptInPresent() noexcept {
     wchar_t value[16] = {};
     constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
@@ -325,9 +358,19 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" get_spell_level_needed_state=";
     message += monomyth::spell_usability_discovery::TargetStateName(
         manifest.get_spell_level_needed_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"get_spell_level_needed",
+        manifest.get_spell_level_needed_evidence_source,
+        manifest.get_spell_level_needed_failure_reason);
     message += L" handle_rbutton_up_state=";
     message += monomyth::spell_usability_discovery::TargetStateName(
         manifest.handle_rbutton_up_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"handle_rbutton_up",
+        manifest.handle_rbutton_up_evidence_source,
+        manifest.handle_rbutton_up_failure_reason);
     if (manifest.handle_rbutton_up_rva != 0) {
         message += L" handle_rbutton_up_rva=";
         message += Hex32(manifest.handle_rbutton_up_rva);
@@ -347,6 +390,11 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" get_usable_classes_state=";
     message += monomyth::spell_usability_discovery::TargetStateName(
         manifest.get_usable_classes_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"get_usable_classes",
+        manifest.get_usable_classes_evidence_source,
+        manifest.get_usable_classes_failure_reason);
     if (manifest.get_usable_classes_rva != 0) {
         message += L" get_usable_classes_rva=";
         message += Hex32(manifest.get_usable_classes_rva);
@@ -358,6 +406,11 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" can_equip_state=";
     message += monomyth::spell_usability_discovery::TargetStateName(
         manifest.can_equip_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"can_equip",
+        manifest.can_equip_evidence_source,
+        manifest.can_equip_failure_reason);
     if (manifest.can_equip_rva != 0) {
         message += L" can_equip_rva=";
         message += Hex32(manifest.can_equip_rva);
@@ -369,6 +422,11 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" can_start_memming_state=";
     message += monomyth::spell_usability_discovery::TargetStateName(
         manifest.can_start_memming_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"can_start_memming",
+        manifest.can_start_memming_evidence_source,
+        manifest.can_start_memming_failure_reason);
     if (manifest.can_start_memming_rva != 0) {
         message += L" can_start_memming_rva=";
         message += Hex32(manifest.can_start_memming_rva);
@@ -467,18 +525,30 @@ void ApplySpellUsabilityDiscovery(
     manifest->handle_rbutton_up_state = discovery.handle_rbutton_up.state;
     manifest->handle_rbutton_up_rva = discovery.handle_rbutton_up.candidate_rva;
     manifest->handle_rbutton_up_address = discovery.handle_rbutton_up.candidate_address;
+    manifest->handle_rbutton_up_evidence_source = discovery.handle_rbutton_up.evidence_source;
+    manifest->handle_rbutton_up_failure_reason = discovery.handle_rbutton_up.failure_reason;
     manifest->get_spell_level_needed_state = discovery.get_spell_level_needed.state;
     manifest->get_spell_level_needed_rva = discovery.get_spell_level_needed.candidate_rva;
     manifest->get_spell_level_needed_address = discovery.get_spell_level_needed.candidate_address;
+    manifest->get_spell_level_needed_evidence_source =
+        discovery.get_spell_level_needed.evidence_source;
+    manifest->get_spell_level_needed_failure_reason =
+        discovery.get_spell_level_needed.failure_reason;
     manifest->get_usable_classes_state = discovery.get_usable_classes.state;
     manifest->get_usable_classes_rva = discovery.get_usable_classes.candidate_rva;
     manifest->get_usable_classes_address = discovery.get_usable_classes.candidate_address;
+    manifest->get_usable_classes_evidence_source = discovery.get_usable_classes.evidence_source;
+    manifest->get_usable_classes_failure_reason = discovery.get_usable_classes.failure_reason;
     manifest->can_equip_state = discovery.can_equip.state;
     manifest->can_equip_rva = discovery.can_equip.candidate_rva;
     manifest->can_equip_address = discovery.can_equip.candidate_address;
+    manifest->can_equip_evidence_source = discovery.can_equip.evidence_source;
+    manifest->can_equip_failure_reason = discovery.can_equip.failure_reason;
     manifest->can_start_memming_state = discovery.can_start_memming.state;
     manifest->can_start_memming_rva = discovery.can_start_memming.candidate_rva;
     manifest->can_start_memming_address = discovery.can_start_memming.candidate_address;
+    manifest->can_start_memming_evidence_source = discovery.can_start_memming.evidence_source;
+    manifest->can_start_memming_failure_reason = discovery.can_start_memming.failure_reason;
     manifest->scroll_scribe_trace_dev_opt_in = IsScrollScribeTraceDevOptInPresent();
     manifest->multiclass_spell_usability_dev_opt_in =
         IsMulticlassSpellUsabilityDevOptInPresent();
@@ -550,8 +620,35 @@ void ApplySpellUsabilityDiscovery(
         manifest->scroll_scribe_trace_reason =
             L"scroll scribe trace requires the ROF2 discovery capability gate";
     } else if (!scroll_scribe_targets_validated) {
-        manifest->scroll_scribe_trace_reason =
+        std::wstring reason =
             L"scroll scribe trace denied because one or more target validations were missing or ambiguous";
+        const std::wstring handle_reason = DescribeTargetFailure(
+            L"CInvSlot::HandleRButtonUp",
+            discovery.handle_rbutton_up.state,
+            discovery.handle_rbutton_up.failure_reason);
+        const std::wstring usable_reason = DescribeTargetFailure(
+            L"GetUsableClasses",
+            discovery.get_usable_classes.state,
+            discovery.get_usable_classes.failure_reason);
+        const std::wstring equip_reason = DescribeTargetFailure(
+            L"CanEquip",
+            discovery.can_equip.state,
+            discovery.can_equip.failure_reason);
+        if (!handle_reason.empty() || !usable_reason.empty() || !equip_reason.empty()) {
+            reason += L": ";
+            bool first = true;
+            for (const auto& item : {handle_reason, usable_reason, equip_reason}) {
+                if (item.empty()) {
+                    continue;
+                }
+                if (!first) {
+                    reason += L"; ";
+                }
+                reason += item;
+                first = false;
+            }
+        }
+        manifest->scroll_scribe_trace_reason = reason;
     } else {
         manifest->scroll_scribe_trace_reason =
             L"scroll scribe trace gate denied for unknown reason";
@@ -570,8 +667,11 @@ void ApplySpellUsabilityDiscovery(
         discovery.get_spell_level_needed.state !=
             monomyth::spell_usability_discovery::TargetState::kValidated ||
         !discovery.get_spell_level_needed.trace_safe) {
-        manifest->multiclass_spell_usability_reason =
+        std::wstring reason =
             L"multiclass spell usability denied because GetSpellLevelNeeded is not validated trace-safe";
+        reason += L" failure_reason=";
+        reason += NormalizeReason(discovery.get_spell_level_needed.failure_reason.c_str());
+        manifest->multiclass_spell_usability_reason = reason;
     } else {
         manifest->multiclass_spell_usability_reason =
             L"multiclass spell usability gate denied for unknown reason";

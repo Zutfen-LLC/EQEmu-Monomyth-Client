@@ -57,6 +57,16 @@ struct Manifest {
     std::uintptr_t can_equip_address = 0;
     std::uint32_t can_start_memming_rva = 0;
     std::uintptr_t can_start_memming_address = 0;
+    std::wstring handle_rbutton_up_evidence_source = L"not_attempted";
+    std::wstring handle_rbutton_up_failure_reason = L"not_attempted";
+    std::wstring get_spell_level_needed_evidence_source = L"not_attempted";
+    std::wstring get_spell_level_needed_failure_reason = L"not_attempted";
+    std::wstring get_usable_classes_evidence_source = L"not_attempted";
+    std::wstring get_usable_classes_failure_reason = L"not_attempted";
+    std::wstring can_equip_evidence_source = L"not_attempted";
+    std::wstring can_equip_failure_reason = L"not_attempted";
+    std::wstring can_start_memming_evidence_source = L"not_attempted";
+    std::wstring can_start_memming_failure_reason = L"not_attempted";
     std::wstring reason = L"manifest unavailable";
     std::wstring packet_hooks_reason = L"packet hooks unavailable";
     std::wstring receive_introspection_reason = L"receive introspection unavailable";

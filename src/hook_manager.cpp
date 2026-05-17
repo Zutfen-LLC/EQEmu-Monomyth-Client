@@ -99,6 +99,18 @@ std::wstring Hex32(std::uint32_t value) {
     return stream.str();
 }
 
+std::wstring FormatDiscoveryDetails(
+    const wchar_t* target,
+    const std::wstring& evidence_source,
+    const std::wstring& failure_reason) {
+    std::wstring message = target == nullptr ? L"target" : target;
+    message += L" evidence_source=";
+    message += evidence_source.empty() ? L"unknown" : evidence_source;
+    message += L" failure_reason=";
+    message += failure_reason.empty() ? L"unknown" : failure_reason;
+    return message;
+}
+
 bool RelativeOffsetFits(std::int64_t offset) noexcept {
     return offset >= std::numeric_limits<std::int32_t>::min() &&
         offset <= std::numeric_limits<std::int32_t>::max();
@@ -700,6 +712,15 @@ bool InstallGetSpellLevelNeededHook(const monomyth::runtime::Manifest& manifest)
         manifest.get_spell_level_needed_state !=
             monomyth::spell_usability_discovery::TargetState::kValidated ||
         manifest.get_spell_level_needed_address == 0) {
+        if (manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) {
+            std::wstring message = L"hook_manager: spell usability hook denied ";
+            message += FormatDiscoveryDetails(
+                L"GetSpellLevelNeeded",
+                manifest.get_spell_level_needed_evidence_source,
+                manifest.get_spell_level_needed_failure_reason);
+            monomyth::logger::Log(message);
+        }
         return false;
     }
 
@@ -737,6 +758,24 @@ bool InstallScrollScribeTraceHooks(const monomyth::runtime::Manifest& manifest) 
         manifest.can_equip_state !=
             monomyth::spell_usability_discovery::TargetState::kValidated ||
         manifest.can_equip_address == 0) {
+        if (manifest.scroll_scribe_trace_dev_opt_in) {
+            std::wstring message = L"hook_manager: scroll scribe trace denied ";
+            message += FormatDiscoveryDetails(
+                L"CInvSlot::HandleRButtonUp",
+                manifest.handle_rbutton_up_evidence_source,
+                manifest.handle_rbutton_up_failure_reason);
+            message += L"; ";
+            message += FormatDiscoveryDetails(
+                L"GetUsableClasses",
+                manifest.get_usable_classes_evidence_source,
+                manifest.get_usable_classes_failure_reason);
+            message += L"; ";
+            message += FormatDiscoveryDetails(
+                L"CanEquip",
+                manifest.can_equip_evidence_source,
+                manifest.can_equip_failure_reason);
+            monomyth::logger::Log(message);
+        }
         return false;
     }
 
@@ -806,6 +845,14 @@ bool InstallCanStartMemmingTrace(const monomyth::runtime::Manifest& manifest) no
         manifest.can_start_memming_state !=
             monomyth::spell_usability_discovery::TargetState::kValidated ||
         manifest.can_start_memming_address == 0) {
+        if (manifest.spell_usability_trace_dev_opt_in) {
+            std::wstring message = L"hook_manager: spell usability trace denied ";
+            message += FormatDiscoveryDetails(
+                L"CanStartMemming",
+                manifest.can_start_memming_evidence_source,
+                manifest.can_start_memming_failure_reason);
+            monomyth::logger::Log(message);
+        }
         return false;
     }
 

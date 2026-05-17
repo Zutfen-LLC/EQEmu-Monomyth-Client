@@ -41,7 +41,9 @@ void PublishCapabilitiesWithDiscovery() noexcept {
     monomyth::runtime::ApplyReceiveDispatchDiscovery(&g_capabilities, discovery);
     monomyth::spell_usability_discovery::Initialize();
     const monomyth::spell_usability_discovery::Result spell_discovery =
-        monomyth::spell_usability_discovery::Run(g_capabilities.spell_usability_discovery_allowed);
+        monomyth::spell_usability_discovery::Run(
+            g_capabilities.spell_usability_discovery_allowed,
+            g_capabilities.fingerprint_matched);
     monomyth::runtime::ApplySpellUsabilityDiscovery(&g_capabilities, spell_discovery);
     monomyth::runtime::LogCapabilityManifest(g_capabilities);
     monomyth::receive_dispatch_discovery::LogResult(discovery);
