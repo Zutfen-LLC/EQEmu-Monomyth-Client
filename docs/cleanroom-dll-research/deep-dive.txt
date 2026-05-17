@@ -3119,6 +3119,9 @@ LAB_10005c30:
       }
       else {
         if (param_2 == 0x339) goto LAB_10005c30;
+        // THJ OP_ServerAuthStats / ROF2 0x1338. Monomyth currently recognizes
+        // this opcode name as reference metadata only; no parser or handler is
+        // implemented in the client bootstrap.
         if (param_2 == 0x1338) {
           FUN_100c4090(this,param_3,param_4);
         }
