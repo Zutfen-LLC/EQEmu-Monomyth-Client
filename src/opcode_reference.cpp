@@ -14,7 +14,8 @@ struct OpcodeNameEntry {
 
 // Reference-only metadata table derived from the local EQEmu RoF2 opcode
 // config at `utils/patches/patch_RoF2.conf`, plus custom THJ RoF2 opcode
-// mappings recorded in THJ-Server-Original. Duplicate numeric ids retain the
+// mappings recorded in THJ-Server-Original, including reference-only
+// OP_ServerAuthStats recognition at 0x1338. Duplicate numeric ids retain the
 // first name that appears in source order so lookup stays deterministic.
 constexpr std::array<OpcodeNameEntry, 527> kRof2OpcodeNames = {{
     {0x000f, L"OP_RestState"},

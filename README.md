@@ -42,6 +42,7 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - Receive dispatcher discovery validates only static ROF2 executable-image structure and records success or failure in the internal runtime capability manifest.
 - The receive hook is receive-only and metadata-only. It observes opcode/message id, payload length, and source/context pointer value.
 - Known ROF2 opcode ids are enriched with a reference-only `opcode_name` field derived from the local EQEmu RoF2 opcode config plus custom THJ RoF2 opcode mappings; unknown ids log `opcode_name=unknown`.
+- THJ `OP_ServerAuthStats` is recognized by opcode reference only as ROF2 opcode `0x1338`, imported from `C:\Code\THJ-Server-Original\utils\patches\patch_RoF2.conf`. There is no `OP_ServerAuthStats` parser, handler, `Stat_Struct` parsing, or class-bitmask extraction in this client DLL.
 - Without the second opt-in, the hook does **not** read, copy, decode, log, retain, or mutate packet payload bytes.
 - With both opt-ins enabled, payload access is still fail-closed: only allowlisted opcodes are considered, reads are bounded to at most 16 bytes and never past `payload_length`, suspicious lengths are skipped conservatively, and bytes are logged only as a compact one-line hex prefix.
 - The hook always calls through to the original dispatcher.
@@ -167,6 +168,7 @@ The `PacketObserver` module (`src/packet_observer.h` / `src/packet_observer.cpp`
 - It receives immutable metadata only: opcode/message id, payload length, source/context pointer value, and an internal observed packet counter.
 - By default it receives immutable metadata only: opcode/message id, payload length, source/context pointer value, and an internal observed packet counter.
 - It adds ROF2 `opcode_name` as reference-only metadata using a static table derived from EQEmu's `patch_RoF2.conf` plus custom THJ RoF2 opcode mappings; unknown ids stay numeric and log as `opcode_name=unknown`.
+- It recognizes THJ `OP_ServerAuthStats` as ROF2 opcode `0x1338` for exact-name lookup and logging metadata only. Recognition does not decode the payload, dispatch opcode-specific behavior, parse `Stat_Struct`, or extract class bitmasks.
 - It reads packet bytes only when both packet-hook and receive-introspection dev opt-ins are enabled, and even then only for allowlisted opcodes, only up to a 16-byte prefix, only within `payload_length`, and only for compact hex logging.
 - It does **not** define opcode-specific behavior.
 - It logs the first 50 observed receive packets, then every 500th packet, plus the final observed count on shutdown.

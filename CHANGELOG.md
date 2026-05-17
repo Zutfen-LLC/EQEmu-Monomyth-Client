@@ -32,6 +32,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Documentation
 
+- README and cleanroom notes now clarify that THJ `OP_ServerAuthStats` is recognized as ROF2 opcode `0x1338` for opcode-reference metadata and exact-name allowlist lookup only; no parser, handler, `Stat_Struct` parsing, or class-bitmask extraction is implemented.
 - README documentation for the ROF2 fingerprint byte-scan fallback, required dual-marker match, and `fingerprint_method` capability logging.
 - README documentation for receive dispatcher discovery, layered fail-closed validation, advisory epilogue handling for the large dispatcher, and the no-hooks/no-packet-data safety boundary.
 - README documentation for the unsafe local packet-hook opt-in, metadata-only receive observation, no payload access, no send interception, and rate-limited logging.
