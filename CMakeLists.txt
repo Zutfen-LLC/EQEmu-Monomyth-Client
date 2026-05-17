@@ -13,6 +13,7 @@ add_library(dinput8 SHARED
     src/receive_dispatch_discovery.cpp
     src/runtime_capabilities.cpp
     src/server_auth_stats_observer.cpp
+    src/spell_usability_discovery.cpp
     dinput8.def
 )
 

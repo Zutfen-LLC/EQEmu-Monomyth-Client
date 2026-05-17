@@ -9,6 +9,7 @@
 #include "packet_observer.h"
 #include "receive_dispatch_discovery.h"
 #include "runtime_capabilities.h"
+#include "spell_usability_discovery.h"
 
 namespace monomyth::proxy {
 namespace {
@@ -38,8 +39,13 @@ void PublishCapabilitiesWithDiscovery() noexcept {
     const monomyth::receive_dispatch_discovery::Result discovery =
         monomyth::receive_dispatch_discovery::Run(g_capabilities.hooks_allowed);
     monomyth::runtime::ApplyReceiveDispatchDiscovery(&g_capabilities, discovery);
+    monomyth::spell_usability_discovery::Initialize();
+    const monomyth::spell_usability_discovery::Result spell_discovery =
+        monomyth::spell_usability_discovery::Run(g_capabilities.spell_usability_discovery_allowed);
+    monomyth::runtime::ApplySpellUsabilityDiscovery(&g_capabilities, spell_discovery);
     monomyth::runtime::LogCapabilityManifest(g_capabilities);
     monomyth::receive_dispatch_discovery::LogResult(discovery);
+    monomyth::spell_usability_discovery::LogResult(spell_discovery);
 }
 
 std::wstring BuildSystemDinputPath() noexcept {
@@ -154,6 +160,7 @@ void Shutdown() noexcept {
 
     monomyth::packet_observer::Shutdown();
     monomyth::receive_dispatch_discovery::Shutdown();
+    monomyth::spell_usability_discovery::Shutdown();
 
     if (g_real_module != nullptr) {
         FreeLibrary(g_real_module);
