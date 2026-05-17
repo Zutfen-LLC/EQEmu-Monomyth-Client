@@ -38,9 +38,7 @@ struct Manifest {
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     monomyth::spell_usability_discovery::TargetState handle_rbutton_up_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
-    monomyth::spell_usability_discovery::TargetState get_usable_classes_state =
-        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
-    monomyth::spell_usability_discovery::TargetState can_equip_state =
+    monomyth::spell_usability_discovery::TargetState is_class_usable_predicate_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     monomyth::spell_usability_discovery::TargetState can_start_memming_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
@@ -51,20 +49,16 @@ struct Manifest {
     std::uintptr_t handle_rbutton_up_address = 0;
     std::uint32_t get_spell_level_needed_rva = 0;
     std::uintptr_t get_spell_level_needed_address = 0;
-    std::uint32_t get_usable_classes_rva = 0;
-    std::uintptr_t get_usable_classes_address = 0;
-    std::uint32_t can_equip_rva = 0;
-    std::uintptr_t can_equip_address = 0;
+    std::uint32_t is_class_usable_predicate_rva = 0;
+    std::uintptr_t is_class_usable_predicate_address = 0;
     std::uint32_t can_start_memming_rva = 0;
     std::uintptr_t can_start_memming_address = 0;
     std::wstring handle_rbutton_up_evidence_source = L"not_attempted";
     std::wstring handle_rbutton_up_failure_reason = L"not_attempted";
     std::wstring get_spell_level_needed_evidence_source = L"not_attempted";
     std::wstring get_spell_level_needed_failure_reason = L"not_attempted";
-    std::wstring get_usable_classes_evidence_source = L"not_attempted";
-    std::wstring get_usable_classes_failure_reason = L"not_attempted";
-    std::wstring can_equip_evidence_source = L"not_attempted";
-    std::wstring can_equip_failure_reason = L"not_attempted";
+    std::wstring is_class_usable_predicate_evidence_source = L"not_attempted";
+    std::wstring is_class_usable_predicate_failure_reason = L"not_attempted";
     std::wstring can_start_memming_evidence_source = L"not_attempted";
     std::wstring can_start_memming_failure_reason = L"not_attempted";
     std::wstring reason = L"manifest unavailable";

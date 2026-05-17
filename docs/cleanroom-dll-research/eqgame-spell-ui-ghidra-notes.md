@@ -26,17 +26,34 @@ Pinned candidates:
     - `83 3d ac 35 e6 00 00 53 56 8b f1 b3 01 0f 8f 8f 01 00 00`
     - `8b 0d 7c fc d1 00 6a 01 e8 d0 51 f0 ff 84`
   - Caller evidence: calls `GetSpellLevelNeeded` at `0x0075bea5`
+- `CInvSlot::HandleRButtonUp`
+  - VA: `0x00697250`
+  - RVA: `0x00297250`
+  - Shape: conservative `thiscall` assumption, `ECX=this`, one pushed pointer arg
+  - Entry-byte prefix:
+    - `6a ff 64 a1 00 00 00 00 68 81 a8 98 00 50 b8 08 21 00 00`
+    - `64 89 25 00 00 00 00 e8 21 4d 24 00 53 55 33 db 56 8b f1`
+    - `33 ed 89 5c 24 24 38 5e 10 0f 84 a8 08 00 00 57 83 cf ff`
+    - `8b c7 89 44 24 1c 66 89 44 24 20`
+  - Caller anchor: `CInvSlotWnd` vtable slot 19 handler at `0x00699e10` calls this target at `0x00699e61`
+- `EQ_Character::IsClassUsablePredicate`
+  - VA: `0x004a1f50`
+  - RVA: `0x000a1f50`
+  - Shape: conservative bool-like predicate, `ECX=this`, one stack arg `class_id`, returns via `ret 4`
+  - Exact bytes:
+    - `8b c1 8b 4c 24 04 8d 51 ff 83 fa 0f 77 15 8b 40 68 ba 01 00 00 00`
+    - `d3 e2 23 c2 f7 d8 1b c0 f7 d8 c2 04 00 32 c0 c2 04 00`
 
 Related caller anchors:
 
 - `StartSpellScribe`-like path at VA `0x0075ddf0` / RVA `0x0035ddf0`
 - Spellbook dispatcher at VA `0x0075e790` / RVA `0x0035e790`
 
-Unpinned targets:
+Intentionally unpinned targets:
 
-- `CInvSlot::HandleRButtonUp`
-- `EQ_Character::GetUsableClasses`
 - `EQ_Character::CanEquip`
+- Raw `GetUsableClasses` mask getter
 
-These remained intentionally unpinned because the available strings/xrefs did not
-identify safe hook entry points.
+These remain intentionally unpinned because the current cleanroom evidence only
+supports trace-safe pinning of the right-click target and the class-usability
+predicate, not a broader item-usability or raw mask-getter hook.

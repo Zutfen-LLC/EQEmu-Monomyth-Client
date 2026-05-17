@@ -30,8 +30,7 @@ struct Result {
     std::wstring reason = L"not run";
     TargetResult handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     TargetResult get_spell_level_needed = {L"GetSpellLevelNeeded"};
-    TargetResult get_usable_classes = {L"GetUsableClasses"};
-    TargetResult can_equip = {L"CanEquip"};
+    TargetResult is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
     TargetResult can_start_memming = {L"CanStartMemming"};
 };
 
