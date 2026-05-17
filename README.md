@@ -27,6 +27,7 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
   - Receive dispatcher discovery validates the known ROF2 dispatcher.
   - The local developer explicitly sets `MONOMYTH_ENABLE_PACKET_HOOKS=1`.
 - When enabled, installs exactly one receive dispatcher hook at the validated candidate and routes metadata to `PacketObserver`.
+- When that receive hook observes THJ `OP_ServerAuthStats` (`0x1338`), parses the server-authored stat payload read-only, extracts only `statClassesBitmask`, stores the latest valid bitmask in internal DLL state, and logs concise diagnostics.
 - A second explicit developer opt-in can enable bounded receive payload-prefix introspection for an allowlisted opcode set only.
 - Leaves `ui_hooks_allowed=false`.
 
@@ -40,10 +41,10 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - Receive payload introspection is also disabled by default and additionally requires `MONOMYTH_ENABLE_RECV_INTROSPECTION=1` after packet hook gating has already passed.
 - UI hook capability remains intentionally disabled.
 - Receive dispatcher discovery validates only static ROF2 executable-image structure and records success or failure in the internal runtime capability manifest.
-- The receive hook is receive-only and metadata-only. It observes opcode/message id, payload length, and source/context pointer value.
+- The receive hook is receive-only and non-mutating. It observes opcode/message id, payload length, and source/context pointer value, with one read-only `OP_ServerAuthStats` parser for server-authored class-bitmask capture.
 - Known ROF2 opcode ids are enriched with a reference-only `opcode_name` field derived from the local EQEmu RoF2 opcode config plus custom THJ RoF2 opcode mappings; unknown ids log `opcode_name=unknown`.
-- THJ `OP_ServerAuthStats` is recognized by opcode reference only as ROF2 opcode `0x1338`, imported from `C:\Code\THJ-Server-Original\utils\patches\patch_RoF2.conf`. There is no `OP_ServerAuthStats` parser, handler, `Stat_Struct` parsing, or class-bitmask extraction in this client DLL.
-- Without the second opt-in, the hook does **not** read, copy, decode, log, retain, or mutate packet payload bytes.
+- THJ `OP_ServerAuthStats` is recognized as ROF2 opcode `0x1338`, imported from `C:\Code\THJ-Server-Original\utils\patches\patch_RoF2.conf`. The receive observer has a read-only handler for this opcode that parses the minimal `Stat_Struct` wire layout and stores only `statClassesBitmask`; it does not write client memory, mutate packet bytes, update UI, or decode unrelated stat keys.
+- Without the second opt-in, the hook does **not** perform generic payload-prefix introspection. The only payload decode outside that generic introspection mode is the read-only `OP_ServerAuthStats` handler.
 - With both opt-ins enabled, payload access is still fail-closed: only allowlisted opcodes are considered, reads are bounded to at most 16 bytes and never past `payload_length`, suspicious lengths are skipped conservatively, and bytes are logged only as a compact one-line hex prefix.
 - The hook always calls through to the original dispatcher.
 - Hook uninstall is idempotent and runs before `PacketObserver` shutdown.
@@ -112,6 +113,7 @@ Startup logs include:
 - Post-guard heartbeat when hooks are allowed
 - One `PacketObserver state=...` line indicating current observer state
 - When the dev hook is enabled, rate-limited metadata lines beginning with `PacketObserverRecv`
+- When the dev hook observes `OP_ServerAuthStats`, handler lines beginning with `ServerAuthStats` log whether the packet parsed, the entry count, whether `statClassesBitmask` was present, and the bitmask in hex with recognized class names when available
 - When both dev opt-ins are enabled, separate rate-limited allowlisted prefix lines begin with `PacketObserverRecvIntrospection` and skip diagnostics begin with `PacketObserverRecvIntrospectionSkip`
 - Receive metadata and introspection log lines include `opcode_name=<name>` for known ROF2 ids and `opcode_name=unknown` otherwise
 - One `PacketObserver state=shutdown observed_receive_count=...` line on shutdown
@@ -165,12 +167,13 @@ The `PacketObserver` module (`src/packet_observer.h` / `src/packet_observer.cpp`
 
 - It is disabled by default because `packet_hooks_allowed=false`.
 - It can initialize only when the manifest says packet hooks are allowed.
-- It receives immutable metadata only: opcode/message id, payload length, source/context pointer value, and an internal observed packet counter.
-- By default it receives immutable metadata only: opcode/message id, payload length, source/context pointer value, and an internal observed packet counter.
+- It receives immutable metadata: opcode/message id, payload length, source/context pointer value, and an internal observed packet counter.
+- By default it receives immutable metadata plus the read-only `OP_ServerAuthStats` class-bitmask capture when that exact opcode is observed.
 - It adds ROF2 `opcode_name` as reference-only metadata using a static table derived from EQEmu's `patch_RoF2.conf` plus custom THJ RoF2 opcode mappings; unknown ids stay numeric and log as `opcode_name=unknown`.
-- It recognizes THJ `OP_ServerAuthStats` as ROF2 opcode `0x1338` for exact-name lookup and logging metadata only. Recognition does not decode the payload, dispatch opcode-specific behavior, parse `Stat_Struct`, or extract class bitmasks.
+- It recognizes THJ `OP_ServerAuthStats` as ROF2 opcode `0x1338` for exact-name lookup, receive metadata logging, and one read-only handler.
+- The `OP_ServerAuthStats` handler parses `uint32 count` followed by `count` entries of `uint32 statKey` and `uint64 statValue`, scans entries by key, extracts only `statKey == 1`, rejects truncated or malformed packets, ignores key `0` and unknown keys, and stores the latest valid `uint32` class bitmask internally when present.
 - It reads packet bytes only when both packet-hook and receive-introspection dev opt-ins are enabled, and even then only for allowlisted opcodes, only up to a 16-byte prefix, only within `payload_length`, and only for compact hex logging.
-- It does **not** define opcode-specific behavior.
+- Aside from the read-only `OP_ServerAuthStats` class-bitmask capture, it does **not** define opcode-specific behavior.
 - It logs the first 50 observed receive packets, then every 500th packet, plus the final observed count on shutdown.
 - Log lines start with `PacketObserverRecv` and include opcode/message id, `opcode_name`, and payload length.
 - Introspection logs default to the allowlisted opcode `0x7dfc` / `OP_ClientUpdate`, and the allowlist can be overridden locally with exact opcode names and/or numeric values such as `MONOMYTH_RECV_INTROSPECT_OPCODES=OP_ClientUpdate,OP_ServerAuthStats` or `MONOMYTH_RECV_INTROSPECT_OPCODES=0x7dfc,0x1338` for targeted experiments.
@@ -204,7 +207,7 @@ To opt in to bounded payload-prefix introspection on top of the metadata hook, s
 $env:MONOMYTH_ENABLE_RECV_INTROSPECTION = "1"
 ```
 
-`MONOMYTH_ENABLE_RECV_INTROSPECTION=1` is optional and separate. Without it, the hook remains metadata-only and does not touch packet bytes. With it, bounded payload-prefix reads are still fail-closed and limited to the allowlisted opcode set. The allowlist defaults to `0x7dfc` / `OP_ClientUpdate` and can be overridden locally with exact opcode names and/or numeric values such as `MONOMYTH_RECV_INTROSPECT_OPCODES=OP_ClientUpdate`, `MONOMYTH_RECV_INTROSPECT_OPCODES=OP_ServerAuthStats,OP_ManaUpdate,0x7dfc`, or `MONOMYTH_RECV_INTROSPECT_OPCODES=0x7dfc,0x1338`. Invalid tokens are ignored and logged during initialization; if every configured token is invalid, introspection stays enabled but the configured allowlist is empty.
+`MONOMYTH_ENABLE_RECV_INTROSPECTION=1` is optional and separate. Without it, the hook skips generic payload-prefix introspection; the read-only `OP_ServerAuthStats` handler remains the only opcode-specific payload decode. With it, bounded payload-prefix reads are still fail-closed and limited to the allowlisted opcode set. The allowlist defaults to `0x7dfc` / `OP_ClientUpdate` and can be overridden locally with exact opcode names and/or numeric values such as `MONOMYTH_RECV_INTROSPECT_OPCODES=OP_ClientUpdate`, `MONOMYTH_RECV_INTROSPECT_OPCODES=OP_ServerAuthStats,OP_ManaUpdate,0x7dfc`, or `MONOMYTH_RECV_INTROSPECT_OPCODES=0x7dfc,0x1338`. Invalid tokens are ignored and logged during initialization; if every configured token is invalid, introspection stays enabled but the configured allowlist is empty.
 
 The packet-hook opt-in is not sufficient by itself. The hook installs only when DirectInput proxy bootstrap is ready, the ROF2 fingerprint guard passes, receive dispatcher discovery validates the known candidate, and `MONOMYTH_ENABLE_PACKET_HOOKS=1` is present. If any gate fails, if the detour cannot be installed cleanly, or if the dispatcher prologue is ambiguous, packet observation is disabled and the DLL continues proxy-only behavior where possible.
 

@@ -18,10 +18,11 @@
 
 #include "logger.h"
 #include "opcode_reference.h"
+#include "server_auth_stats_observer.h"
 
-// PacketObserver remains metadata-only unless both packet hook and receive
-// introspection dev opt-ins are enabled. Even then, payload access is bounded
-// to a small allowlisted prefix and never affects control flow.
+// PacketObserver remains non-mutating. The only opcode-specific payload decode
+// is the read-only OP_ServerAuthStats class-bitmask capture; optional generic
+// introspection still requires both dev opt-ins and reads only a small prefix.
 
 namespace monomyth::packet_observer {
 namespace {
@@ -32,6 +33,7 @@ constexpr std::uint64_t kFirstIntrospectionLogLimit = 10;
 constexpr std::uint64_t kIntrospectionLogSampleInterval = 1000;
 constexpr std::uint32_t kPayloadSafetyCeiling = 4096;
 constexpr std::size_t kPrefixByteCap = 16;
+constexpr std::uint32_t kServerAuthStatsOpcode = 0x1338;
 constexpr std::array<std::uint32_t, 1> kDefaultAllowlist = {
     0x7dfc,
 };
@@ -152,6 +154,13 @@ bool IsIntrospectionAllowlisted(std::uint32_t opcode) noexcept {
         }
     }
     return false;
+}
+
+bool IsServerAuthStatsOpcode(std::uint32_t opcode) noexcept {
+    std::uint32_t resolved = 0;
+    return opcode == kServerAuthStatsOpcode &&
+        monomyth::opcode_reference::TryLookupRof2OpcodeValue(L"OP_ServerAuthStats", &resolved) &&
+        resolved == kServerAuthStatsOpcode;
 }
 
 std::wstring BuildAllowlistSummary() {
@@ -344,6 +353,10 @@ void ObserveReceiveMetadata(
             << L" payload_length=" << payload_length
             << L" source_context=" << HexPtr(source_context);
         monomyth::logger::Log(message.str());
+    }
+
+    if (IsServerAuthStatsOpcode(opcode)) {
+        monomyth::server_auth_stats::ObserveReceivePayload(payload, payload_length);
     }
 
     if (!g_introspection_enabled.load() || !IsIntrospectionAllowlisted(opcode)) {

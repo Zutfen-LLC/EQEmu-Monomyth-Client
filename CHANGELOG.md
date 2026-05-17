@@ -16,7 +16,8 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Added
 
-- ROF2 opcode reference entry for THJ `OP_ServerAuthStats` (`0x1338`) from `C:\Code\THJ-Server-Original\utils\patches\patch_RoF2.conf`, enabling exact-name receive-introspection allowlist overrides without adding packet parsing or handler behavior.
+- Read-only receive handler for THJ `OP_ServerAuthStats` (`0x1338`) that parses the minimal server-authored stat payload, captures only `statClassesBitmask` in internal DLL state, and logs valid/malformed diagnostics without packet mutation, UI behavior, or client-memory writes.
+- ROF2 opcode reference entry for THJ `OP_ServerAuthStats` (`0x1338`) from `C:\Code\THJ-Server-Original\utils\patches\patch_RoF2.conf`, enabling exact-name receive-introspection allowlist overrides and exact opcode routing for the read-only handler.
 - Fail-closed ROF2 fingerprint byte-scan fallback for `eqgame.exe` that runs once at startup when version resources are unavailable or inconclusive and matches only when both known markers `May 10 2013` and `23:30:08` are present.
 - Capability manifest fingerprint method reporting (`version_resource`, `byte_scan`, or `unavailable`) to make startup guard results grep-friendly.
 - Fail-closed receive dispatcher discovery scaffold for the validated ROF2 candidate at VA `0x004c3250` / RVA `0x000c3250`, with layered static structural checks and one startup log line.
@@ -32,10 +33,10 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Documentation
 
-- README and cleanroom notes now clarify that THJ `OP_ServerAuthStats` is recognized as ROF2 opcode `0x1338` for opcode-reference metadata and exact-name allowlist lookup only; no parser, handler, `Stat_Struct` parsing, or class-bitmask extraction is implemented.
+- README now documents the read-only THJ `OP_ServerAuthStats` handler, including minimal `Stat_Struct` parsing, key-based `statClassesBitmask` extraction, malformed-packet rejection, and the no-mutation/no-UI safety boundary.
 - README documentation for the ROF2 fingerprint byte-scan fallback, required dual-marker match, and `fingerprint_method` capability logging.
 - README documentation for receive dispatcher discovery, layered fail-closed validation, advisory epilogue handling for the large dispatcher, and the no-hooks/no-packet-data safety boundary.
-- README documentation for the unsafe local packet-hook opt-in, metadata-only receive observation, no payload access, no send interception, and rate-limited logging.
+- README documentation for the unsafe local packet-hook opt-in, receive-only observation, no send interception, and rate-limited logging.
 - README documentation for the separate receive-introspection opt-in, bounded 16-byte prefix logging, default opcode allowlist, and fail-closed payload safety checks.
 - README documentation now reflects the hardened default receive-introspection allowlist and notes that `0x2958` can be re-added only through the existing local override for targeted experiments.
 - README documentation now reflects exact-name receive-introspection allowlist overrides, mixed name/numeric examples, and invalid-token fail-closed behavior.
