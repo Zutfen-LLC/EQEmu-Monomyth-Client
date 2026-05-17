@@ -21,7 +21,7 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - Falls back once at startup to a fail-closed `eqgame.exe` byte scan when version resources are unavailable or inconclusive; both markers must be present or the fingerprint remains false.
 - Runs a fail-closed receive dispatcher discovery pass only after the fingerprint/capability path allows enhancement discovery.
 - Keeps spell usability discovery disabled by default unless the local developer explicitly sets `MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY=1`.
-- When spell usability discovery is enabled on a supported ROF2 client, it attempts read-only discovery for the spell/UI targets using runtime exports when available and checked-in cleanroom wrapper evidence when exact mangled exports are absent.
+- When spell usability discovery is enabled on a supported ROF2 client, it uses fingerprint-gated cleanroom evidence for the known non-export spell/UI targets and fails closed with per-target reason codes when a checked-in locator is not available.
 - Keeps passive spell usability tracing disabled by default unless the local developer additionally sets `MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1` and a target reaches validated trace-safe state.
 - Keeps scroll-scribe trace discovery and instrumentation disabled by default unless the local developer explicitly sets `MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE=1` and all three pre-scribe targets validate cleanly.
 - Keeps active multiclass spell usability disabled by default unless the local developer additionally sets `MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1` after `EQ_Spell::GetSpellLevelNeeded` validates.
@@ -224,15 +224,12 @@ This discovery path is disabled by default and runs only when the existing ROF2 
 $env:MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY = "1"
 ```
 
-The implementation does not guess RVAs. It keeps the existing ROF2 fingerprint gate, tries the loaded `eqgame.exe` export table first, accepts checked-in cleanroom wrapper evidence for known ROF2 targets when exact mangled exports are absent, verifies that any resolved address lands in an executable image section, and then applies target-specific validation:
+The implementation does not guess RVAs. It keeps the existing ROF2 fingerprint gate, skips live `eqgame.exe` export-table discovery for the five known non-export targets in this slice, resolves `GetSpellLevelNeeded` only from the checked-in diagnostic-string evidence plus runtime xref/prologue validation, and otherwise fails closed with `missing_cleanroom_target` until a checked-in cleanroom locator exists for the target:
 
-- `CInvSlot::HandleRButtonUp` validates from either the exact mangled export plus wrapper-forward confirmation, or the checked-in `CInvSlot__HandleRButtonUp` wrapper-forward target when the mangled export is absent at runtime.
-- `GetSpellLevelNeeded` validates from either the exact mangled export or the checked-in `EQ_Spell__GetSpellLevelNeeded` wrapper-forward target, but still requires the known diagnostic-string reference before the hook can be enabled.
-- `GetUsableClasses` validates from the checked-in `EQ_Character__GetUsableClasses` wrapper-forward target because that is the cleanroom symbol evidence available in the repo.
-- `CanEquip` validates from either the exact mangled export plus wrapper-forward confirmation, or the checked-in `EQ_Character__CanEquip` wrapper-forward target when the mangled export is absent at runtime.
-- `CanStartMemming` validates from either the exact mangled export plus wrapper-forward confirmation, or the checked-in `CSpellBookWnd__CanStartMemming` wrapper-forward target when the mangled export is absent at runtime.
+- `GetSpellLevelNeeded` resolves from fingerprint-gated diagnostic-string xref evidence and still requires the known diagnostic-string reference before the hook can be enabled.
+- `CInvSlot::HandleRButtonUp`, `EQ_Character::GetUsableClasses`, `EQ_Character::CanEquip`, and `CSpellBookWnd::CanStartMemming` stay disabled until the repo has checked-in cleanroom locators that can survive the same fail-closed validation path.
 
-Per-target discovery states are `not_attempted`, `found_unvalidated`, `validated`, or `failed`. The logs now also include `evidence_source` and `failure_reason`, with expected values such as `runtime_export`, `wrapper_validation`, `unavailable`, `fingerprint_mismatch`, `missing_cleanroom_target`, `wrapper_validation_failed`, and `diagnostic_string_xref_missing`. Discovery only logs evidence. It does not patch spell records, change return values, mutate UI state, hook `CastSpell`, or change packets.
+Per-target discovery states are `not_attempted`, `found_unvalidated`, `validated`, or `failed`. The logs now also include `enabled`, `evidence_source`, `module_base`, `rva`, `address`, `validation`, `failure_reason`, `resolver`, and `packet_id`. Expected `evidence_source` values include `fingerprint_rva`, `runtime_export`, `cleanroom_rva`, and `unavailable`. Discovery only logs evidence. It does not patch spell records, change return values, mutate UI state, hook `CastSpell`, or change packets.
 
 ## Passive spell usability trace
 

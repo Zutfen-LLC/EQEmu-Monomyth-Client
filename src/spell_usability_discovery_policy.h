@@ -7,6 +7,7 @@ namespace monomyth::spell_usability_discovery {
 struct DecisionInput {
     bool discovery_allowed = false;
     bool fingerprint_matched = false;
+    bool fingerprint_rva_found = false;
     bool runtime_export_found = false;
     bool cleanroom_rva_found = false;
     bool wrapper_candidate_found = false;

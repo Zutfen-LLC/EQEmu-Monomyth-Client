@@ -4,11 +4,14 @@ namespace monomyth::spell_usability_discovery {
 namespace {
 
 EvidenceSource SelectEvidenceSource(const DecisionInput& input) noexcept {
-    if (input.runtime_export_found) {
-        return EvidenceSource::kRuntimeExport;
+    if (input.fingerprint_rva_found) {
+        return EvidenceSource::kFingerprintRva;
     }
     if (input.cleanroom_rva_found) {
         return EvidenceSource::kCleanroomRva;
+    }
+    if (input.runtime_export_found) {
+        return EvidenceSource::kRuntimeExport;
     }
     if (input.wrapper_candidate_found) {
         return EvidenceSource::kWrapperValidation;
@@ -37,6 +40,8 @@ const wchar_t* EvidenceSourceName(EvidenceSource source) noexcept {
     switch (source) {
         case EvidenceSource::kNotAttempted:
             return L"not_attempted";
+        case EvidenceSource::kFingerprintRva:
+            return L"fingerprint_rva";
         case EvidenceSource::kRuntimeExport:
             return L"runtime_export";
         case EvidenceSource::kCleanroomRva:

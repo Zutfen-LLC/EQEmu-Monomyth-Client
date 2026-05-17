@@ -24,6 +24,7 @@ int main() {
         true,
         false,
         false,
+        false,
         true,
         true,
         true,
@@ -55,6 +56,7 @@ int main() {
         false,
         false,
         false,
+        false,
     });
     passed &= Expect(
         missing_cleanroom.state ==
@@ -67,6 +69,7 @@ int main() {
     const auto fingerprint_mismatch = monomyth::spell_usability_discovery::EvaluateDecision({
         false,
         false,
+        true,
         false,
         true,
         false,
@@ -89,13 +92,14 @@ int main() {
     const auto spell_string_missing = monomyth::spell_usability_discovery::EvaluateDecision({
         true,
         true,
+        true,
+        false,
         false,
         false,
         true,
         true,
-        true,
         false,
-        true,
+        false,
         true,
         false,
         false,
@@ -113,6 +117,7 @@ int main() {
         true,
         false,
         false,
+        false,
         true,
         true,
         true,
@@ -125,6 +130,7 @@ int main() {
     const auto sibling_failure = monomyth::spell_usability_discovery::EvaluateDecision({
         true,
         true,
+        false,
         false,
         false,
         true,
@@ -144,6 +150,30 @@ int main() {
         sibling_failure.state !=
             monomyth::spell_usability_discovery::TargetState::kValidated,
         "another target can still fail independently");
+
+    const auto fingerprint_success = monomyth::spell_usability_discovery::EvaluateDecision({
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+    });
+    passed &= Expect(
+        fingerprint_success.state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated,
+        "fingerprint locator validates without runtime export");
+    passed &= Expect(
+        fingerprint_success.evidence_source ==
+            monomyth::spell_usability_discovery::EvidenceSource::kFingerprintRva,
+        "fingerprint locator preferred over runtime export");
 
     return passed ? 0 : 1;
 }

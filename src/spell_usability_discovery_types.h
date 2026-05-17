@@ -11,6 +11,7 @@ enum class TargetState {
 
 enum class EvidenceSource {
     kNotAttempted,
+    kFingerprintRva,
     kRuntimeExport,
     kCleanroomRva,
     kWrapperValidation,

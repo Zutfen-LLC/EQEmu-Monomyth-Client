@@ -14,6 +14,9 @@
 namespace monomyth::proxy {
 namespace {
 
+constexpr wchar_t kSpellUiDiscoveryPacketId[] = L"CLIENT-SPELL-UI-DISCOVERY-FIX-V2";
+constexpr wchar_t kSpellUiDiscoveryResolver[] = L"v2_fingerprint_cleanroom";
+
 INIT_ONCE g_init_once = INIT_ONCE_STATIC_INIT;
 HMODULE g_real_module = nullptr;
 HRESULT g_init_result = E_FAIL;
@@ -35,6 +38,11 @@ DllUnregisterServerFn g_dll_unregister_server = nullptr;
 GetdfDIJoystickFn g_getdf_dijoystick = nullptr;
 
 void PublishCapabilitiesWithDiscovery() noexcept {
+    std::wstring marker = L"spell_ui_discovery_marker packet_id=";
+    marker += kSpellUiDiscoveryPacketId;
+    marker += L" resolver=";
+    marker += kSpellUiDiscoveryResolver;
+    monomyth::logger::Log(marker);
     monomyth::receive_dispatch_discovery::Initialize();
     const monomyth::receive_dispatch_discovery::Result discovery =
         monomyth::receive_dispatch_discovery::Run(g_capabilities.hooks_allowed);
