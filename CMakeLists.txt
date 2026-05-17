@@ -13,6 +13,7 @@ add_library(dinput8 SHARED
     src/receive_dispatch_discovery.cpp
     src/runtime_capabilities.cpp
     src/server_auth_stats_observer.cpp
+    src/spell_level_selection.cpp
     src/spell_usability_discovery.cpp
     dinput8.def
 )
@@ -65,3 +66,12 @@ if(MSVC)
 endif()
 
 add_test(NAME server_auth_stats_observer_tests COMMAND server_auth_stats_observer_tests)
+
+add_executable(spell_level_selection_tests
+    tests/spell_level_selection_tests.cpp
+    src/spell_level_selection.cpp
+)
+target_include_directories(spell_level_selection_tests PRIVATE src)
+target_compile_features(spell_level_selection_tests PRIVATE cxx_std_20)
+
+add_test(NAME spell_level_selection_tests COMMAND spell_level_selection_tests)

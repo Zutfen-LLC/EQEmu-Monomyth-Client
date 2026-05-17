@@ -1,6 +1,6 @@
 # Monomyth Client Bootstrap
 
-This repository contains a fresh minimal `dinput8.dll` bootstrap for the EverQuest ROF2 client used by Monomyth. This slice is intentionally narrow: it proxies the system `dinput8.dll`, records low-noise startup diagnostics, applies a fail-closed ROF2 fingerprint guard, centralizes runtime capability state in one internal manifest, performs fail-closed receive dispatcher discovery for the known ROF2 candidate, performs fail-closed read-only spell usability discovery for two ROF2 candidates when explicitly enabled, and can install dev-gated passive observation hooks only when every safety gate passes.
+This repository contains a fresh minimal `dinput8.dll` bootstrap for the EverQuest ROF2 client used by Monomyth. This slice is intentionally narrow: it proxies the system `dinput8.dll`, records low-noise startup diagnostics, applies a fail-closed ROF2 fingerprint guard, centralizes runtime capability state in one internal manifest, performs fail-closed receive dispatcher discovery for the known ROF2 candidate, performs fail-closed read-only spell usability discovery for two ROF2 candidates when explicitly enabled, and can install dev-gated observation or multiclass spell usability hooks only when every safety gate passes.
 
 Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 
@@ -23,6 +23,7 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - Keeps spell usability discovery disabled by default unless the local developer explicitly sets `MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY=1`.
 - When spell usability discovery is enabled on a supported ROF2 client, attempts read-only discovery for `EQ_Spell::GetSpellLevelNeeded` and `CSpellBookWnd::CanStartMemming` using export-based evidence only.
 - Keeps passive spell usability tracing disabled by default unless the local developer additionally sets `MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1` and a target reaches validated trace-safe state.
+- Keeps active multiclass spell usability disabled by default unless the local developer additionally sets `MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1` after `EQ_Spell::GetSpellLevelNeeded` validates.
 - Exposes a `HookManager` lifecycle that installs no active hook by default.
 - Keeps `packet_hooks_allowed=false` unless all of these gates pass:
   - DirectInput proxy bootstrap is ready.
@@ -44,6 +45,7 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - Receive payload introspection is also disabled by default and additionally requires `MONOMYTH_ENABLE_RECV_INTROSPECTION=1` after packet hook gating has already passed.
 - Spell usability discovery is disabled by default and separately requires `MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY=1` after the same ROF2 fingerprint/host guard has passed.
 - Passive spell usability tracing is disabled by default and additionally requires `MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1` plus a validated target address/signature.
+- Active multiclass spell usability is disabled by default and additionally requires `MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1` plus a validated `GetSpellLevelNeeded` target. Discovery or tracing alone never enables active behavior.
 - UI hook capability remains intentionally disabled.
 - Receive dispatcher discovery validates only static ROF2 executable-image structure and records success or failure in the internal runtime capability manifest.
 - The receive hook is receive-only and non-mutating. It observes opcode/message id, payload length, and source/context pointer value, with one read-only `OP_ServerAuthStats` parser for server-authored class-bitmask capture.
@@ -54,6 +56,8 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - The hook always calls through to the original dispatcher.
 - Hook uninstall is idempotent and runs before `PacketObserver` shutdown.
 - This slice does not implement gameplay/UI behavior or any send interception.
+- Multiclass spell usability changes only the validated `EQ_Spell::GetSpellLevelNeeded` return value when explicitly enabled. It uses the latest read-only `OP_ServerAuthStats` class mask, calls the original client function for each assigned class, selects the lowest valid required level, and falls back to the original requested-class result if the mask is absent, empty, invalid, or yields no valid class level.
+- `CSpellBookWnd::CanStartMemming` remains trace-only. `CastSpell`, `IsSpellcaster`, `GetUsableClasses`, spell records, player profile class data, spellbook UI state, packets, and database state are not mutated.
 
 ## Non-goals in this slice
 
@@ -115,6 +119,7 @@ Startup logs include:
 - The `CapabilityManifest` line includes `receive_introspection_dev_opt_in` and `receive_introspection_allowed` so payload-prefix access is explicit in startup logs
 - The `CapabilityManifest` line includes `runtime_module_base`, `receive_dispatch_rva`, and `receive_dispatch_address` whenever discovery resolves the validated dispatcher candidate at runtime
 - The `CapabilityManifest` line includes `spell_usability_discovery_dev_opt_in`, `spell_usability_discovery_allowed`, `spell_usability_trace_dev_opt_in`, and `spell_usability_trace_allowed`
+- The `CapabilityManifest` line includes `multiclass_spell_usability_dev_opt_in`, `multiclass_spell_usability_allowed`, and `multiclass_spell_usability_reason`
 - The `CapabilityManifest` line includes per-target spell usability fields `get_spell_level_needed_state`, `get_spell_level_needed_rva`, `get_spell_level_needed_address`, `can_start_memming_state`, `can_start_memming_rva`, and `can_start_memming_address` when available
 - One `ReceiveDispatchDiscovery ...` line with the discovery state, runtime module base, validated candidate RVA/resolved address when available, a concise reason, and per-check pass/fail/advisory diagnostics
 - One `SpellUsabilityDiscovery ...` line per target with the target name, discovery state, runtime module base, candidate RVA/resolved address when available, whether passive tracing is considered safe, the discovery method, a concise reason, and validation evidence
@@ -229,6 +234,18 @@ $env:MONOMYTH_ENABLE_SPELL_USABILITY_TRACE = "1"
 ```
 
 Passive spell usability tracing is separate from packet hooks. It installs only for validated targets, calls the original function, logs the original arguments/result in a rate-limited way, and returns the original value unchanged. If validation is incomplete or detour installation is ambiguous, tracing stays disabled for that target.
+
+## Multiclass spell usability
+
+Active multiclass spell usability requires the spell usability discovery gate plus a separate explicit opt-in:
+
+```powershell
+$env:MONOMYTH_ENABLE_PACKET_HOOKS = "1"
+$env:MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY = "1"
+$env:MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY = "1"
+```
+
+The packet hook opt-in is needed for live `OP_ServerAuthStats` capture. When enabled, the `GetSpellLevelNeeded` hook reads the latest captured `statClassesBitmask`, calls the original client function for each assigned class bit 1-16, and returns the lowest valid required level. Missing, empty, invalid, or unusable masks fall back to the original requested-class result. This v1 intentionally does not enable `CanStartMemming` behavior overrides or any `CastSpell` hook.
 
 ## Dev receive hook
 

@@ -89,6 +89,20 @@ bool IsSpellUsabilityTraceDevOptInPresent() noexcept {
     return value[0] == L'1' && value[1] == L'\0';
 }
 
+bool IsMulticlassSpellUsabilityDevOptInPresent() noexcept {
+    wchar_t value[16] = {};
+    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
+    const DWORD length = GetEnvironmentVariableW(
+        L"MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY",
+        value,
+        kValueCapacity);
+    if (length == 0 || length >= kValueCapacity) {
+        return false;
+    }
+
+    return value[0] == L'1' && value[1] == L'\0';
+}
+
 std::wstring PacketHookDiscoveryReason(
     const monomyth::receive_dispatch_discovery::Result& discovery) {
     std::wstring reason = L"receive dispatcher discovery not validated";
@@ -128,6 +142,9 @@ Manifest BuildCapabilityManifest(
         manifest.spell_usability_discovery_dev_opt_in;
     manifest.spell_usability_trace_dev_opt_in = IsSpellUsabilityTraceDevOptInPresent();
     manifest.spell_usability_trace_allowed = false;
+    manifest.multiclass_spell_usability_dev_opt_in =
+        IsMulticlassSpellUsabilityDevOptInPresent();
+    manifest.multiclass_spell_usability_allowed = false;
     manifest.ui_hooks_allowed = false;
     manifest.heartbeat_allowed = manifest.hooks_allowed;
     manifest.reason = NormalizeReason(fingerprint.reason.c_str());
@@ -143,6 +160,10 @@ Manifest BuildCapabilityManifest(
     manifest.spell_usability_trace_reason = manifest.spell_usability_trace_dev_opt_in
         ? L"spell usability trace requested but validated targets are not available"
         : L"dev opt-in absent: set MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1";
+    manifest.multiclass_spell_usability_reason =
+        manifest.multiclass_spell_usability_dev_opt_in
+        ? L"multiclass spell usability requested but validated GetSpellLevelNeeded target is not available"
+        : L"dev opt-in absent: set MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1";
     return manifest;
 }
 
@@ -158,10 +179,14 @@ Manifest BuildDisabledCapabilityManifest(
     manifest.receive_introspection_dev_opt_in = IsReceiveIntrospectionDevOptInPresent();
     manifest.spell_usability_discovery_dev_opt_in = IsSpellUsabilityDiscoveryDevOptInPresent();
     manifest.spell_usability_trace_dev_opt_in = IsSpellUsabilityTraceDevOptInPresent();
+    manifest.multiclass_spell_usability_dev_opt_in =
+        IsMulticlassSpellUsabilityDevOptInPresent();
     manifest.packet_hooks_reason = L"disabled before fingerprint/discovery gates";
     manifest.receive_introspection_reason = L"disabled before fingerprint/discovery gates";
     manifest.spell_usability_discovery_reason = L"disabled before fingerprint/discovery gates";
     manifest.spell_usability_trace_reason = L"disabled before fingerprint/discovery gates";
+    manifest.multiclass_spell_usability_reason =
+        L"disabled before fingerprint/discovery gates";
     return manifest;
 }
 
@@ -214,6 +239,16 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
         &message,
         L"spell_usability_trace_allowed=",
         manifest.spell_usability_trace_allowed);
+    message += L" ";
+    AppendBoolField(
+        &message,
+        L"multiclass_spell_usability_dev_opt_in=",
+        manifest.multiclass_spell_usability_dev_opt_in);
+    message += L" ";
+    AppendBoolField(
+        &message,
+        L"multiclass_spell_usability_allowed=",
+        manifest.multiclass_spell_usability_allowed);
     message += L" ";
     AppendBoolField(&message, L"ui_hooks_allowed=", manifest.ui_hooks_allowed);
     message += L" ";
@@ -271,6 +306,9 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L"\"";
     message += L" spell_usability_trace_reason=\"";
     message += NormalizeReason(manifest.spell_usability_trace_reason.c_str());
+    message += L"\"";
+    message += L" multiclass_spell_usability_reason=\"";
+    message += NormalizeReason(manifest.multiclass_spell_usability_reason.c_str());
     message += L"\"";
     monomyth::logger::Log(message);
 }
@@ -344,6 +382,8 @@ void ApplySpellUsabilityDiscovery(
     manifest->can_start_memming_state = discovery.can_start_memming.state;
     manifest->can_start_memming_rva = discovery.can_start_memming.candidate_rva;
     manifest->can_start_memming_address = discovery.can_start_memming.candidate_address;
+    manifest->multiclass_spell_usability_dev_opt_in =
+        IsMulticlassSpellUsabilityDevOptInPresent();
 
     const bool any_trace_safe =
         (discovery.get_spell_level_needed.state ==
@@ -356,6 +396,12 @@ void ApplySpellUsabilityDiscovery(
         discovery.allowed &&
         discovery.trace_dev_opt_in &&
         any_trace_safe;
+    manifest->multiclass_spell_usability_allowed =
+        discovery.allowed &&
+        manifest->multiclass_spell_usability_dev_opt_in &&
+        discovery.get_spell_level_needed.state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated &&
+        discovery.get_spell_level_needed.trace_safe;
 
     if (!discovery.allowed) {
         manifest->spell_usability_discovery_reason =
@@ -380,6 +426,26 @@ void ApplySpellUsabilityDiscovery(
     } else {
         manifest->spell_usability_trace_reason =
             L"spell usability trace gate denied for unknown reason";
+    }
+
+    if (manifest->multiclass_spell_usability_allowed) {
+        manifest->multiclass_spell_usability_reason =
+            L"enabled by explicit dev opt-in and validated GetSpellLevelNeeded target";
+    } else if (!manifest->multiclass_spell_usability_dev_opt_in) {
+        manifest->multiclass_spell_usability_reason =
+            L"dev opt-in absent: set MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1";
+    } else if (!discovery.allowed) {
+        manifest->multiclass_spell_usability_reason =
+            L"multiclass spell usability requires the ROF2 discovery capability gate";
+    } else if (
+        discovery.get_spell_level_needed.state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        !discovery.get_spell_level_needed.trace_safe) {
+        manifest->multiclass_spell_usability_reason =
+            L"multiclass spell usability denied because GetSpellLevelNeeded is not validated trace-safe";
+    } else {
+        manifest->multiclass_spell_usability_reason =
+            L"multiclass spell usability gate denied for unknown reason";
     }
 }
 
