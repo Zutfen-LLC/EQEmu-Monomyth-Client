@@ -73,10 +73,12 @@ bool ResolveExports() noexcept {
         g_dll_can_unload_now != nullptr &&
         g_dll_get_class_object != nullptr &&
         g_dll_register_server != nullptr &&
-        g_dll_unregister_server != nullptr &&
-        g_getdf_dijoystick != nullptr;
+        g_dll_unregister_server != nullptr;
 
-    monomyth::logger::Log(ok ? L"proxy: export resolution succeeded" : L"proxy: export resolution failed");
+    monomyth::logger::Log(ok ? L"proxy: required export resolution succeeded" : L"proxy: required export resolution failed");
+    if (g_getdf_dijoystick == nullptr) {
+        monomyth::logger::Log(L"proxy: optional GetdfDIJoystick export missing from real dinput8.dll");
+    }
     return ok;
 }
 
