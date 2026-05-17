@@ -224,12 +224,13 @@ This discovery path is disabled by default and runs only when the existing ROF2 
 $env:MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY = "1"
 ```
 
-The implementation does not guess RVAs. It keeps the existing ROF2 fingerprint gate, skips live `eqgame.exe` export-table discovery for the five known non-export targets in this slice, resolves `GetSpellLevelNeeded` only from the checked-in diagnostic-string evidence plus runtime xref/prologue validation, and otherwise fails closed with `missing_cleanroom_target` until a checked-in cleanroom locator exists for the target:
+The implementation does not guess RVAs. It keeps the existing ROF2 fingerprint gate, skips live `eqgame.exe` export-table discovery for the five known non-export targets in this slice, resolves pinned targets only from checked-in cleanroom RVAs plus runtime byte/call-shape validation, and otherwise fails closed with `missing_cleanroom_target` until a checked-in cleanroom locator exists for the target:
 
-- `GetSpellLevelNeeded` resolves from fingerprint-gated diagnostic-string xref evidence and still requires the known diagnostic-string reference before the hook can be enabled.
-- `CInvSlot::HandleRButtonUp`, `EQ_Character::GetUsableClasses`, `EQ_Character::CanEquip`, and `CSpellBookWnd::CanStartMemming` stay disabled until the repo has checked-in cleanroom locators that can survive the same fail-closed validation path.
+- `GetSpellLevelNeeded` resolves from fingerprint-gated cleanroom RVA `0x000af700` and exact byte-shape validation.
+- `CSpellBookWnd::CanStartMemming` resolves from fingerprint-gated cleanroom RVA `0x0035bd40` and validation that its known callsite still targets `GetSpellLevelNeeded`.
+- `CInvSlot::HandleRButtonUp`, `EQ_Character::GetUsableClasses`, and `EQ_Character::CanEquip` stay disabled until the repo has checked-in cleanroom locators that can survive the same fail-closed validation path.
 
-Per-target discovery states are `not_attempted`, `found_unvalidated`, `validated`, or `failed`. The logs now also include `enabled`, `evidence_source`, `module_base`, `rva`, `address`, `validation`, `failure_reason`, `resolver`, and `packet_id`. Expected `evidence_source` values include `fingerprint_rva`, `runtime_export`, `cleanroom_rva`, and `unavailable`. Discovery only logs evidence. It does not patch spell records, change return values, mutate UI state, hook `CastSpell`, or change packets.
+Per-target discovery states are `not_attempted`, `found_unvalidated`, `validated`, or `failed`. The logs now also include `enabled`, `evidence_source`, `module_base`, `rva`, `address`, `validation`, `failure_reason`, `resolver`, and `packet_id`. Expected `evidence_source` values include `fingerprint_rva`, `runtime_export`, `cleanroom_rva`, and `unavailable`. Discovery only logs evidence. It does not patch spell records, change return values, mutate UI state, hook `CastSpell`, or change packets. The checked-in locator notes for the current pinned spell targets live in `docs/cleanroom-dll-research/eqgame-spell-ui-ghidra-notes.md`.
 
 ## Passive spell usability trace
 

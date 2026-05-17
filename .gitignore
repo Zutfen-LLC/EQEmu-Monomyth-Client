@@ -10,6 +10,7 @@
 /RelWithDebInfo/
 /MinSizeRel/
 /cmake-build-*/
+build-cross-i686/
 
 # CMake
 CMakeCache.txt
