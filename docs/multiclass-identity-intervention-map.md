@@ -29,8 +29,8 @@ Current implementation paths:
 
 ### One narrow "client sees both classes" behavior already exists
 
-- `EQ_Spell::GetSpellLevelNeeded` can already be overridden behind
-  `MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1`.
+- `EQ_Spell::GetSpellLevelNeeded` can already be overridden as part of the
+  native validated ROF2 multiclass spell usability behavior.
 - That hook queries the original client spell level for each assigned class in
   `statClassesBitmask` and returns the lowest valid required level.
 - This is a targeted multiclass identity seam, not global class spoofing.

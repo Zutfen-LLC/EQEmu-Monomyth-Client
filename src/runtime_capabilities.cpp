@@ -68,142 +68,6 @@ std::wstring DescribeTargetFailure(
     return message;
 }
 
-bool IsPacketHookDevOptInPresent() noexcept {
-    wchar_t value[16] = {};
-    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
-    const DWORD length =
-        GetEnvironmentVariableW(L"MONOMYTH_ENABLE_PACKET_HOOKS", value, kValueCapacity);
-    if (length == 0 || length >= kValueCapacity) {
-        return false;
-    }
-
-    return value[0] == L'1' && value[1] == L'\0';
-}
-
-bool IsReceiveIntrospectionDevOptInPresent() noexcept {
-    wchar_t value[16] = {};
-    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
-    const DWORD length = GetEnvironmentVariableW(
-        L"MONOMYTH_ENABLE_RECV_INTROSPECTION",
-        value,
-        kValueCapacity);
-    if (length == 0 || length >= kValueCapacity) {
-        return false;
-    }
-
-    return value[0] == L'1' && value[1] == L'\0';
-}
-
-bool IsFullPacketTraceDevOptInPresent() noexcept {
-    wchar_t value[16] = {};
-    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
-    const DWORD length = GetEnvironmentVariableW(
-        L"MONOMYTH_ENABLE_FULL_PACKET_TRACE",
-        value,
-        kValueCapacity);
-    if (length == 0 || length >= kValueCapacity) {
-        return false;
-    }
-
-    return value[0] == L'1' && value[1] == L'\0';
-}
-
-bool IsSpellUsabilityDiscoveryDevOptInPresent() noexcept {
-    wchar_t value[16] = {};
-    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
-    const DWORD length = GetEnvironmentVariableW(
-        L"MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY",
-        value,
-        kValueCapacity);
-    if (length == 0 || length >= kValueCapacity) {
-        return false;
-    }
-
-    return value[0] == L'1' && value[1] == L'\0';
-}
-
-bool IsSpellUsabilityTraceDevOptInPresent() noexcept {
-    wchar_t value[16] = {};
-    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
-    const DWORD length = GetEnvironmentVariableW(
-        L"MONOMYTH_ENABLE_SPELL_USABILITY_TRACE",
-        value,
-        kValueCapacity);
-    if (length == 0 || length >= kValueCapacity) {
-        return false;
-    }
-
-    return value[0] == L'1' && value[1] == L'\0';
-}
-
-bool IsScrollScribeTraceDevOptInPresent() noexcept {
-    wchar_t value[16] = {};
-    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
-    const DWORD length = GetEnvironmentVariableW(
-        L"MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE",
-        value,
-        kValueCapacity);
-    if (length == 0 || length >= kValueCapacity) {
-        return false;
-    }
-
-    return value[0] == L'1' && value[1] == L'\0';
-}
-
-bool IsMemorizeSendTraceDevOptInPresent() noexcept {
-    wchar_t value[16] = {};
-    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
-    const DWORD length = GetEnvironmentVariableW(
-        L"MONOMYTH_ENABLE_MEMORIZE_SEND_TRACE",
-        value,
-        kValueCapacity);
-    if (length == 0 || length >= kValueCapacity) {
-        return false;
-    }
-
-    return value[0] == L'1' && value[1] == L'\0';
-}
-
-bool IsMulticlassSpellUsabilityDevOptInPresent() noexcept {
-    wchar_t value[16] = {};
-    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
-    const DWORD length = GetEnvironmentVariableW(
-        L"MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY",
-        value,
-        kValueCapacity);
-    if (length == 0 || length >= kValueCapacity) {
-        return false;
-    }
-
-    return value[0] == L'1' && value[1] == L'\0';
-}
-
-std::wstring PacketHookDiscoveryReason(
-    const monomyth::receive_dispatch_discovery::Result& discovery) {
-    std::wstring reason = L"receive dispatcher discovery not validated";
-    reason += L" state=";
-    reason += monomyth::receive_dispatch_discovery::StateName(discovery.state);
-    if (!discovery.reason.empty()) {
-        reason += L" reason=\"";
-        reason += discovery.reason;
-        reason += L"\"";
-    }
-    return reason;
-}
-
-bool AnySpellUsabilityDiscoveryRequestPresent(
-    bool discovery_dev_opt_in,
-    bool spell_trace_dev_opt_in,
-    bool scroll_scribe_trace_dev_opt_in,
-    bool memorize_send_trace_dev_opt_in,
-    bool multiclass_spell_usability_dev_opt_in) noexcept {
-    return discovery_dev_opt_in ||
-        spell_trace_dev_opt_in ||
-        scroll_scribe_trace_dev_opt_in ||
-        memorize_send_trace_dev_opt_in ||
-        multiclass_spell_usability_dev_opt_in;
-}
-
 }  // namespace
 
 Manifest BuildCapabilityManifest(
@@ -219,27 +83,20 @@ Manifest BuildCapabilityManifest(
     manifest.fingerprint_matched = fingerprint.process_name_match && fingerprint.matched;
     manifest.fingerprint_method = fingerprint.method;
     manifest.hooks_allowed = proxy_ready && fingerprint.hooks_allowed;
-    manifest.packet_hooks_dev_opt_in = IsPacketHookDevOptInPresent();
+    manifest.packet_hooks_dev_opt_in = false;
     manifest.packet_hooks_allowed = false;
-    manifest.full_packet_trace_dev_opt_in = IsFullPacketTraceDevOptInPresent();
+    manifest.full_packet_trace_dev_opt_in = false;
     manifest.full_packet_trace_allowed = false;
-    manifest.receive_introspection_dev_opt_in = IsReceiveIntrospectionDevOptInPresent();
+    manifest.receive_introspection_dev_opt_in = false;
     manifest.receive_introspection_allowed = false;
-    manifest.spell_usability_discovery_dev_opt_in = IsSpellUsabilityDiscoveryDevOptInPresent();
-    manifest.spell_usability_trace_dev_opt_in = IsSpellUsabilityTraceDevOptInPresent();
-    manifest.scroll_scribe_trace_dev_opt_in = IsScrollScribeTraceDevOptInPresent();
-    manifest.memorize_send_trace_dev_opt_in = IsMemorizeSendTraceDevOptInPresent();
-    manifest.multiclass_spell_usability_dev_opt_in =
-        IsMulticlassSpellUsabilityDevOptInPresent();
+    manifest.spell_usability_discovery_dev_opt_in = false;
+    manifest.spell_usability_trace_dev_opt_in = false;
+    manifest.scroll_scribe_trace_dev_opt_in = false;
+    manifest.memorize_send_trace_dev_opt_in = false;
+    manifest.multiclass_spell_usability_dev_opt_in = false;
     manifest.spell_usability_discovery_allowed =
         manifest.hooks_allowed &&
-        manifest.fingerprint_matched &&
-        AnySpellUsabilityDiscoveryRequestPresent(
-            manifest.spell_usability_discovery_dev_opt_in,
-            manifest.spell_usability_trace_dev_opt_in,
-            manifest.scroll_scribe_trace_dev_opt_in,
-            manifest.memorize_send_trace_dev_opt_in,
-            manifest.multiclass_spell_usability_dev_opt_in);
+        manifest.fingerprint_matched;
     manifest.spell_usability_trace_allowed = false;
     manifest.scroll_scribe_trace_allowed = false;
     manifest.memorize_send_trace_allowed = false;
@@ -247,38 +104,23 @@ Manifest BuildCapabilityManifest(
     manifest.ui_hooks_allowed = false;
     manifest.heartbeat_allowed = manifest.hooks_allowed;
     manifest.reason = NormalizeReason(fingerprint.reason.c_str());
-    manifest.packet_hooks_reason = manifest.packet_hooks_dev_opt_in
-        ? L"receive dispatcher discovery not run"
-        : L"dev opt-in absent: set MONOMYTH_ENABLE_PACKET_HOOKS=1";
-    manifest.full_packet_trace_reason = manifest.full_packet_trace_dev_opt_in
-        ? L"full packet trace requested but packet observation is not yet available"
-        : L"dev opt-in absent: set MONOMYTH_ENABLE_FULL_PACKET_TRACE=1";
-    manifest.receive_introspection_reason = manifest.receive_introspection_dev_opt_in
-        ? L"receive introspection requested but packet hook gate has not passed"
-        : L"dev opt-in absent: set MONOMYTH_ENABLE_RECV_INTROSPECTION=1";
-    manifest.spell_usability_discovery_reason = manifest.spell_usability_discovery_dev_opt_in
-        ? L"spell usability discovery requested but validation has not run"
-        : AnySpellUsabilityDiscoveryRequestPresent(
-              false,
-              manifest.spell_usability_trace_dev_opt_in,
-              manifest.scroll_scribe_trace_dev_opt_in,
-              manifest.memorize_send_trace_dev_opt_in,
-              manifest.multiclass_spell_usability_dev_opt_in)
-        ? L"spell usability discovery requested by a dependent trace/behavior opt-in but validation has not run"
-        : L"dev opt-in absent: set MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY=1";
-    manifest.spell_usability_trace_reason = manifest.spell_usability_trace_dev_opt_in
-        ? L"spell usability trace requested but validated targets are not available"
-        : L"dev opt-in absent: set MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1";
-    manifest.scroll_scribe_trace_reason = manifest.scroll_scribe_trace_dev_opt_in
-        ? L"scroll scribe trace requested but validated targets are not available"
-        : L"dev opt-in absent: set MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE=1";
-    manifest.memorize_send_trace_reason = manifest.memorize_send_trace_dev_opt_in
-        ? L"memorize send trace requested but validated targets are not available"
-        : L"dev opt-in absent: set MONOMYTH_ENABLE_MEMORIZE_SEND_TRACE=1";
+    manifest.packet_hooks_reason =
+        L"validated receive dispatcher capture pending for native server auth stats observation";
+    manifest.full_packet_trace_reason =
+        L"full packet tracing retired; capability disabled by default";
+    manifest.receive_introspection_reason =
+        L"receive introspection retired; capability disabled by default";
+    manifest.spell_usability_discovery_reason = manifest.spell_usability_discovery_allowed
+        ? L"validated ROF2 spell usability discovery pending target resolution"
+        : L"spell usability discovery requires validated ROF2 fingerprint and hook allowance";
+    manifest.spell_usability_trace_reason =
+        L"spell usability tracing retired; re-add explicitly if needed";
+    manifest.scroll_scribe_trace_reason =
+        L"scroll scribe tracing retired; re-add explicitly if needed";
+    manifest.memorize_send_trace_reason =
+        L"memorize send tracing retired; re-add explicitly if needed";
     manifest.multiclass_spell_usability_reason =
-        manifest.multiclass_spell_usability_dev_opt_in
-        ? L"multiclass spell usability requested but validated GetSpellLevelNeeded target is not available"
-        : L"dev opt-in absent: set MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1";
+        L"default ROF2 multiclass spell usability pending target validation";
     return manifest;
 }
 
@@ -290,24 +132,30 @@ Manifest BuildDisabledCapabilityManifest(
     manifest.proxy_loaded = proxy_loaded;
     manifest.proxy_ready = proxy_ready;
     manifest.reason = NormalizeReason(reason);
-    manifest.packet_hooks_dev_opt_in = IsPacketHookDevOptInPresent();
-    manifest.full_packet_trace_dev_opt_in = IsFullPacketTraceDevOptInPresent();
-    manifest.receive_introspection_dev_opt_in = IsReceiveIntrospectionDevOptInPresent();
-    manifest.spell_usability_discovery_dev_opt_in = IsSpellUsabilityDiscoveryDevOptInPresent();
-    manifest.spell_usability_trace_dev_opt_in = IsSpellUsabilityTraceDevOptInPresent();
-    manifest.scroll_scribe_trace_dev_opt_in = IsScrollScribeTraceDevOptInPresent();
-    manifest.memorize_send_trace_dev_opt_in = IsMemorizeSendTraceDevOptInPresent();
-    manifest.multiclass_spell_usability_dev_opt_in =
-        IsMulticlassSpellUsabilityDevOptInPresent();
-    manifest.packet_hooks_reason = L"disabled before fingerprint/discovery gates";
-    manifest.full_packet_trace_reason = L"disabled before fingerprint/discovery gates";
-    manifest.receive_introspection_reason = L"disabled before fingerprint/discovery gates";
-    manifest.spell_usability_discovery_reason = L"disabled before fingerprint/discovery gates";
-    manifest.spell_usability_trace_reason = L"disabled before fingerprint/discovery gates";
-    manifest.scroll_scribe_trace_reason = L"disabled before fingerprint/discovery gates";
-    manifest.memorize_send_trace_reason = L"disabled before fingerprint/discovery gates";
+    manifest.packet_hooks_dev_opt_in = false;
+    manifest.full_packet_trace_dev_opt_in = false;
+    manifest.receive_introspection_dev_opt_in = false;
+    manifest.spell_usability_discovery_dev_opt_in = false;
+    manifest.spell_usability_trace_dev_opt_in = false;
+    manifest.scroll_scribe_trace_dev_opt_in = false;
+    manifest.memorize_send_trace_dev_opt_in = false;
+    manifest.multiclass_spell_usability_dev_opt_in = false;
+    manifest.packet_hooks_reason =
+        L"receive dispatcher capture disabled before fingerprint/discovery gates";
+    manifest.full_packet_trace_reason =
+        L"full packet tracing retired; disabled before fingerprint/discovery gates";
+    manifest.receive_introspection_reason =
+        L"receive introspection retired; disabled before fingerprint/discovery gates";
+    manifest.spell_usability_discovery_reason =
+        L"spell usability discovery disabled before fingerprint/discovery gates";
+    manifest.spell_usability_trace_reason =
+        L"spell usability tracing retired; disabled before fingerprint/discovery gates";
+    manifest.scroll_scribe_trace_reason =
+        L"scroll scribe tracing retired; disabled before fingerprint/discovery gates";
+    manifest.memorize_send_trace_reason =
+        L"memorize send tracing retired; disabled before fingerprint/discovery gates";
     manifest.multiclass_spell_usability_reason =
-        L"disabled before fingerprint/discovery gates";
+        L"default multiclass spell usability disabled before fingerprint/discovery gates";
     return manifest;
 }
 
@@ -327,14 +175,7 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" ";
     AppendBoolField(&message, L"hooks_allowed=", manifest.hooks_allowed);
     message += L" ";
-    AppendBoolField(&message, L"packet_hooks_dev_opt_in=", manifest.packet_hooks_dev_opt_in);
-    message += L" ";
     AppendBoolField(&message, L"packet_hooks_allowed=", manifest.packet_hooks_allowed);
-    message += L" ";
-    AppendBoolField(
-        &message,
-        L"full_packet_trace_dev_opt_in=",
-        manifest.full_packet_trace_dev_opt_in);
     message += L" ";
     AppendBoolField(
         &message,
@@ -343,18 +184,8 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" ";
     AppendBoolField(
         &message,
-        L"receive_introspection_dev_opt_in=",
-        manifest.receive_introspection_dev_opt_in);
-    message += L" ";
-    AppendBoolField(
-        &message,
         L"receive_introspection_allowed=",
         manifest.receive_introspection_allowed);
-    message += L" ";
-    AppendBoolField(
-        &message,
-        L"spell_usability_discovery_dev_opt_in=",
-        manifest.spell_usability_discovery_dev_opt_in);
     message += L" ";
     AppendBoolField(
         &message,
@@ -363,18 +194,8 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" ";
     AppendBoolField(
         &message,
-        L"spell_usability_trace_dev_opt_in=",
-        manifest.spell_usability_trace_dev_opt_in);
-    message += L" ";
-    AppendBoolField(
-        &message,
         L"spell_usability_trace_allowed=",
         manifest.spell_usability_trace_allowed);
-    message += L" ";
-    AppendBoolField(
-        &message,
-        L"scroll_scribe_trace_dev_opt_in=",
-        manifest.scroll_scribe_trace_dev_opt_in);
     message += L" ";
     AppendBoolField(
         &message,
@@ -383,18 +204,8 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" ";
     AppendBoolField(
         &message,
-        L"memorize_send_trace_dev_opt_in=",
-        manifest.memorize_send_trace_dev_opt_in);
-    message += L" ";
-    AppendBoolField(
-        &message,
         L"memorize_send_trace_allowed=",
         manifest.memorize_send_trace_allowed);
-    message += L" ";
-    AppendBoolField(
-        &message,
-        L"multiclass_spell_usability_dev_opt_in=",
-        manifest.multiclass_spell_usability_dev_opt_in);
     message += L" ";
     AppendBoolField(
         &message,
@@ -772,50 +583,27 @@ void ApplyReceiveDispatchDiscovery(
         manifest->proxy_ready &&
         manifest->hooks_allowed &&
         manifest->fingerprint_matched &&
-        discovery.validated &&
-        manifest->packet_hooks_dev_opt_in;
+        discovery.validated;
     manifest->full_packet_trace_allowed = false;
-    manifest->receive_introspection_allowed =
-        manifest->packet_hooks_allowed &&
-        manifest->receive_introspection_dev_opt_in;
-
+    manifest->receive_introspection_allowed = false;
     if (manifest->packet_hooks_allowed) {
         manifest->packet_hooks_reason =
-            L"enabled by explicit dev opt-in, ROF2 fingerprint, and receive dispatcher validation";
-    } else if (!manifest->packet_hooks_dev_opt_in) {
-        manifest->packet_hooks_reason =
-            L"dev opt-in absent: set MONOMYTH_ENABLE_PACKET_HOOKS=1";
+            L"enabled by default for validated ROF2 server auth stats observation";
     } else if (!manifest->proxy_ready) {
         manifest->packet_hooks_reason = L"proxy is not ready";
     } else if (!manifest->hooks_allowed || !manifest->fingerprint_matched) {
         manifest->packet_hooks_reason = L"ROF2 fingerprint/host guard denied hook capability";
     } else if (!discovery.validated) {
-        manifest->packet_hooks_reason = PacketHookDiscoveryReason(discovery);
+        manifest->packet_hooks_reason =
+            L"receive dispatcher discovery not validated";
     } else {
-        manifest->packet_hooks_reason = L"packet hook gate denied for unknown reason";
+        manifest->packet_hooks_reason =
+            L"receive dispatcher capture denied for unknown reason";
     }
-
-    if (manifest->full_packet_trace_dev_opt_in) {
-        manifest->full_packet_trace_reason =
-            L"full packet trace requested but packet observation has not yet been validated";
-    } else {
-        manifest->full_packet_trace_reason =
-            L"dev opt-in absent: set MONOMYTH_ENABLE_FULL_PACKET_TRACE=1";
-    }
-
-    if (manifest->receive_introspection_allowed) {
-        manifest->receive_introspection_reason =
-            L"enabled by explicit dev opt-in on top of packet hook gating";
-    } else if (!manifest->receive_introspection_dev_opt_in) {
-        manifest->receive_introspection_reason =
-            L"dev opt-in absent: set MONOMYTH_ENABLE_RECV_INTROSPECTION=1";
-    } else if (!manifest->packet_hooks_allowed) {
-        manifest->receive_introspection_reason =
-            L"receive introspection requires packet hook gating and remains fail-closed";
-    } else {
-        manifest->receive_introspection_reason =
-            L"receive introspection gate denied for unknown reason";
-    }
+    manifest->full_packet_trace_reason =
+        L"full packet tracing retired; capability disabled by default";
+    manifest->receive_introspection_reason =
+        L"receive introspection retired; capability disabled by default";
 }
 
 void ApplySpellUsabilityDiscovery(
@@ -826,7 +614,7 @@ void ApplySpellUsabilityDiscovery(
     }
 
     manifest->spell_usability_discovery_allowed = discovery.allowed;
-    manifest->spell_usability_trace_dev_opt_in = discovery.trace_dev_opt_in;
+    manifest->spell_usability_trace_dev_opt_in = false;
     manifest->handle_rbutton_up_state = discovery.handle_rbutton_up.state;
     manifest->handle_rbutton_up_rva = discovery.handle_rbutton_up.candidate_rva;
     manifest->handle_rbutton_up_address = discovery.handle_rbutton_up.candidate_address;
@@ -999,63 +787,17 @@ void ApplySpellUsabilityDiscovery(
         discovery.memorize_send_packet_wrapper.evidence_source;
     manifest->memorize_send_packet_wrapper_failure_reason =
         discovery.memorize_send_packet_wrapper.failure_reason;
-    manifest->scroll_scribe_trace_dev_opt_in = IsScrollScribeTraceDevOptInPresent();
-    manifest->memorize_send_trace_dev_opt_in = IsMemorizeSendTraceDevOptInPresent();
-    manifest->multiclass_spell_usability_dev_opt_in =
-        IsMulticlassSpellUsabilityDevOptInPresent();
-    manifest->full_packet_trace_dev_opt_in = IsFullPacketTraceDevOptInPresent();
+    manifest->scroll_scribe_trace_dev_opt_in = false;
+    manifest->memorize_send_trace_dev_opt_in = false;
+    manifest->multiclass_spell_usability_dev_opt_in = false;
+    manifest->full_packet_trace_dev_opt_in = false;
 
-    const bool any_trace_safe =
-        (discovery.get_spell_level_needed.state ==
-             monomyth::spell_usability_discovery::TargetState::kValidated &&
-         discovery.get_spell_level_needed.trace_safe) ||
-        (discovery.spellbook_dispatcher.state ==
-             monomyth::spell_usability_discovery::TargetState::kValidated &&
-         discovery.spellbook_dispatcher.trace_safe) ||
-        (discovery.start_spell_scribe_path.state ==
-             monomyth::spell_usability_discovery::TargetState::kValidated &&
-         discovery.start_spell_scribe_path.trace_safe) ||
-        (discovery.start_spell_scribe_precheck_mode_getter.state ==
-             monomyth::spell_usability_discovery::TargetState::kValidated &&
-         discovery.start_spell_scribe_precheck_mode_getter.trace_safe) ||
-        (discovery.start_spell_scribe_precheck_gate.state ==
-             monomyth::spell_usability_discovery::TargetState::kValidated &&
-         discovery.start_spell_scribe_precheck_gate.trace_safe) ||
-        (discovery.start_spell_scribe_precheck_lookup.state ==
-             monomyth::spell_usability_discovery::TargetState::kValidated &&
-         discovery.start_spell_scribe_precheck_lookup.trace_safe) ||
-        (discovery.can_start_memming.state ==
-             monomyth::spell_usability_discovery::TargetState::kValidated &&
-         discovery.can_start_memming.trace_safe);
-    const bool scroll_scribe_targets_validated =
-        discovery.handle_rbutton_up.state ==
-            monomyth::spell_usability_discovery::TargetState::kValidated &&
-        discovery.handle_rbutton_up.trace_safe &&
-        discovery.is_class_usable_predicate.state ==
-            monomyth::spell_usability_discovery::TargetState::kValidated &&
-        discovery.is_class_usable_predicate.trace_safe;
-    const bool memorize_send_target_validated =
-        discovery.memorize_send_packet_wrapper.state ==
-            monomyth::spell_usability_discovery::TargetState::kValidated &&
-        discovery.memorize_send_packet_wrapper.trace_safe;
-    manifest->spell_usability_trace_allowed =
-        discovery.allowed &&
-        discovery.trace_dev_opt_in &&
-        any_trace_safe;
-    manifest->scroll_scribe_trace_allowed =
-        discovery.allowed &&
-        manifest->scroll_scribe_trace_dev_opt_in &&
-        scroll_scribe_targets_validated;
-    manifest->memorize_send_trace_allowed =
-        discovery.allowed &&
-        manifest->memorize_send_trace_dev_opt_in &&
-        memorize_send_target_validated;
-    manifest->full_packet_trace_allowed =
-        manifest->full_packet_trace_dev_opt_in &&
-        (manifest->packet_hooks_allowed || manifest->memorize_send_trace_allowed);
+    manifest->spell_usability_trace_allowed = false;
+    manifest->scroll_scribe_trace_allowed = false;
+    manifest->memorize_send_trace_allowed = false;
+    manifest->full_packet_trace_allowed = false;
     manifest->multiclass_spell_usability_allowed =
         discovery.allowed &&
-        manifest->multiclass_spell_usability_dev_opt_in &&
         discovery.get_spell_level_needed.state ==
             monomyth::spell_usability_discovery::TargetState::kValidated &&
         discovery.get_spell_level_needed.trace_safe;
@@ -1068,103 +810,18 @@ void ApplySpellUsabilityDiscovery(
             NormalizeReason(discovery.reason.c_str());
     }
 
-    if (manifest->spell_usability_trace_allowed) {
-        manifest->spell_usability_trace_reason =
-            L"enabled by explicit dev opt-in and validated spell usability targets";
-    } else if (!discovery.trace_dev_opt_in) {
-        manifest->spell_usability_trace_reason =
-            L"dev opt-in absent: set MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1";
-    } else if (!discovery.allowed) {
-        manifest->spell_usability_trace_reason =
-            L"spell usability trace requires the ROF2 discovery capability gate";
-    } else if (!any_trace_safe) {
-        manifest->spell_usability_trace_reason =
-            L"spell usability trace denied because no target reached validated trace-safe state";
-    } else {
-        manifest->spell_usability_trace_reason =
-            L"spell usability trace gate denied for unknown reason";
-    }
-
-    if (manifest->scroll_scribe_trace_allowed) {
-        manifest->scroll_scribe_trace_reason =
-            L"enabled by explicit dev opt-in and validated scroll scribe trace targets";
-    } else if (!manifest->scroll_scribe_trace_dev_opt_in) {
-        manifest->scroll_scribe_trace_reason =
-            L"dev opt-in absent: set MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE=1";
-    } else if (!discovery.allowed) {
-        manifest->scroll_scribe_trace_reason =
-            L"scroll scribe trace requires the ROF2 discovery capability gate";
-    } else if (!scroll_scribe_targets_validated) {
-        std::wstring reason =
-            L"scroll scribe trace denied because one or more target validations were missing or ambiguous";
-        const std::wstring handle_reason = DescribeTargetFailure(
-            L"CInvSlot::HandleRButtonUp",
-            discovery.handle_rbutton_up.state,
-            discovery.handle_rbutton_up.failure_reason);
-        const std::wstring usable_reason = DescribeTargetFailure(
-            L"EQ_Character::IsClassUsablePredicate",
-            discovery.is_class_usable_predicate.state,
-            discovery.is_class_usable_predicate.failure_reason);
-        if (!handle_reason.empty() || !usable_reason.empty()) {
-            reason += L": ";
-            bool first = true;
-            for (const auto& item : {handle_reason, usable_reason}) {
-                if (item.empty()) {
-                    continue;
-                }
-                if (!first) {
-                    reason += L"; ";
-                }
-                reason += item;
-                first = false;
-            }
-        }
-        manifest->scroll_scribe_trace_reason = reason;
-    } else {
-        manifest->scroll_scribe_trace_reason =
-            L"scroll scribe trace gate denied for unknown reason";
-    }
-
-    if (manifest->memorize_send_trace_allowed) {
-        manifest->memorize_send_trace_reason =
-            L"enabled by explicit dev opt-in and validated OP_MemorizeSpell send wrapper target";
-    } else if (!manifest->memorize_send_trace_dev_opt_in) {
-        manifest->memorize_send_trace_reason =
-            L"dev opt-in absent: set MONOMYTH_ENABLE_MEMORIZE_SEND_TRACE=1";
-    } else if (!discovery.allowed) {
-        manifest->memorize_send_trace_reason =
-            L"memorize send trace requires the ROF2 discovery capability gate";
-    } else if (!memorize_send_target_validated) {
-        std::wstring reason =
-            L"memorize send trace denied because the OP_MemorizeSpell send wrapper target is not validated trace-safe";
-        reason += L" failure_reason=";
-        reason += NormalizeReason(discovery.memorize_send_packet_wrapper.failure_reason.c_str());
-        manifest->memorize_send_trace_reason = reason;
-    } else {
-        manifest->memorize_send_trace_reason =
-            L"memorize send trace gate denied for unknown reason";
-    }
-
-    if (manifest->full_packet_trace_allowed) {
-        manifest->full_packet_trace_reason =
-            L"enabled by explicit dev opt-in and active packet observation";
-    } else if (!manifest->full_packet_trace_dev_opt_in) {
-        manifest->full_packet_trace_reason =
-            L"dev opt-in absent: set MONOMYTH_ENABLE_FULL_PACKET_TRACE=1";
-    } else if (!(manifest->packet_hooks_allowed || manifest->memorize_send_trace_allowed)) {
-        manifest->full_packet_trace_reason =
-            L"full packet trace requires packet hooks and/or memorize send trace";
-    } else {
-        manifest->full_packet_trace_reason =
-            L"full packet trace gate denied for unknown reason";
-    }
+    manifest->spell_usability_trace_reason =
+        L"spell usability tracing retired; re-add explicitly if needed";
+    manifest->scroll_scribe_trace_reason =
+        L"scroll scribe tracing retired; re-add explicitly if needed";
+    manifest->memorize_send_trace_reason =
+        L"memorize send tracing retired; re-add explicitly if needed";
+    manifest->full_packet_trace_reason =
+        L"full packet tracing retired; capability disabled by default";
 
     if (manifest->multiclass_spell_usability_allowed) {
         manifest->multiclass_spell_usability_reason =
-            L"enabled by explicit dev opt-in and validated GetSpellLevelNeeded target";
-    } else if (!manifest->multiclass_spell_usability_dev_opt_in) {
-        manifest->multiclass_spell_usability_reason =
-            L"dev opt-in absent: set MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1";
+            L"enabled by default for validated ROF2 multiclass spell usability";
     } else if (!discovery.allowed) {
         manifest->multiclass_spell_usability_reason =
             L"multiclass spell usability requires the ROF2 discovery capability gate";
