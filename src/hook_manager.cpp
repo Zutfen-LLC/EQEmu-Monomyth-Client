@@ -34,6 +34,7 @@ bool g_initialized = false;
 
 constexpr std::size_t kJmpPatchBytes = 5;
 constexpr std::size_t kMaxStolenBytes = 16;
+constexpr std::size_t kIntermediateSendPrefixByteCap = 16;
 constexpr std::uint64_t kSpellTraceInitialLogCount = 20;
 constexpr std::uint64_t kSpellTraceLogInterval = 100;
 constexpr std::uint32_t kMemorizeSpellOpcode = 0x217c;
@@ -74,6 +75,35 @@ struct InlineDetour {
     std::array<std::uint8_t, kJmpPatchBytes> patch = {};
     bool installed = false;
 };
+
+struct KnownMemorizeFollowupCallsite {
+    std::uint32_t return_rva = 0;
+    std::uint32_t mode_like = 0;
+    const wchar_t* label = L"unknown";
+    std::array<std::uint8_t, kMaxStolenBytes> caller_context_bytes = {};
+};
+
+struct KnownMemorizeFollowupCallsiteMatch {
+    const KnownMemorizeFollowupCallsite* site = nullptr;
+    bool bytes_match = false;
+};
+
+constexpr std::array<KnownMemorizeFollowupCallsite, 2> kKnownMemorizeFollowupCallsites = {{
+    {
+        0x0013e1cd,
+        0,
+        L"PostCanStartMemmingClientUpdateBranch",
+        {{0x00, 0x66, 0xa5, 0xe8, 0x23, 0x70, 0x38, 0x00,
+          0x6a, 0x00, 0x8a, 0xd8, 0xe8, 0x7b, 0xcf, 0x39}}
+    },
+    {
+        0x0018caba,
+        4,
+        L"PostCanStartMemmingFloatListThingBranch",
+        {{0x56, 0x6a, 0x04, 0xe8, 0x36, 0x87, 0x33, 0x00,
+          0x55, 0x8a, 0xd8, 0xe8, 0x8f, 0xe6, 0x34, 0x00}}
+    },
+}};
 
 InlineDetour g_receive_dispatch_detour = {};
 InlineDetour g_handle_rbutton_up_detour = {};
@@ -157,6 +187,31 @@ std::wstring HexBytes(const std::uint8_t* bytes, std::size_t length) {
         stream << std::setw(2) << static_cast<unsigned int>(bytes[i]);
     }
     return stream.str();
+}
+
+KnownMemorizeFollowupCallsiteMatch MatchKnownMemorizeFollowupCallsite(
+    std::uint32_t caller_return_rva,
+    std::uint32_t mode_like,
+    const std::uint8_t* caller_context_bytes,
+    std::size_t caller_context_length,
+    bool caller_context_available) noexcept {
+    for (const auto& candidate : kKnownMemorizeFollowupCallsites) {
+        if (candidate.return_rva != caller_return_rva || candidate.mode_like != mode_like) {
+            continue;
+        }
+
+        const bool bytes_match =
+            caller_context_available &&
+            caller_context_bytes != nullptr &&
+            caller_context_length >= candidate.caller_context_bytes.size() &&
+            std::memcmp(
+                caller_context_bytes,
+                candidate.caller_context_bytes.data(),
+                candidate.caller_context_bytes.size()) == 0;
+        return {&candidate, bytes_match};
+    }
+
+    return {};
 }
 
 std::uintptr_t GetHostModuleBase() noexcept {
@@ -568,6 +623,10 @@ void LogMemorizeSendIntermediateSend(
     constexpr std::size_t kCallerContextPrefixBytes = 8;
     constexpr std::size_t kCallerContextBytes = 16;
     const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_return_rva =
+        (module_base != 0 && caller_return_address >= module_base)
+        ? static_cast<std::uint32_t>(caller_return_address - module_base)
+        : 0;
     const std::uintptr_t caller_context_address =
         caller_return_address >= kCallerContextPrefixBytes
         ? caller_return_address - kCallerContextPrefixBytes
@@ -577,6 +636,20 @@ void LogMemorizeSendIntermediateSend(
         reinterpret_cast<const void*>(caller_context_address),
         caller_bytes.size(),
         caller_bytes.data());
+    std::array<std::uint8_t, kIntermediateSendPrefixByteCap> packet_prefix = {};
+    const std::size_t packet_prefix_length = total_length < kIntermediateSendPrefixByteCap
+        ? static_cast<std::size_t>(total_length)
+        : kIntermediateSendPrefixByteCap;
+    const bool packet_prefix_copied =
+        packet != nullptr &&
+        packet_prefix_length != 0 &&
+        TryCopyBytes(packet, packet_prefix_length, packet_prefix.data());
+    const KnownMemorizeFollowupCallsiteMatch caller_site = MatchKnownMemorizeFollowupCallsite(
+        caller_return_rva,
+        mode_like,
+        caller_bytes.data(),
+        caller_bytes.size(),
+        caller_bytes_copied);
 
     std::wstring message = L"SpellUsabilityTrace target=MemorizeSend status=intermediate_send correlation=";
     message += std::to_wstring(correlation_id);
@@ -596,13 +669,22 @@ void LogMemorizeSendIntermediateSend(
     message += std::to_wstring(total_length);
     message += L" packet_pointer=";
     message += HexPtr(reinterpret_cast<std::uintptr_t>(packet));
+    message += L" packet_prefix_status=";
+    message += packet_prefix_copied ? L"copied" : L"unavailable";
+    if (packet_prefix_copied) {
+        message += L" packet_prefix_len=";
+        message += std::to_wstring(packet_prefix_length);
+        message += L" packet_prefix_hex=\"";
+        message += HexBytes(packet_prefix.data(), packet_prefix_length);
+        message += L"\"";
+    }
     message += L" wrapper_this=";
     message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
     message += L" caller_return=";
     message += HexPtr(caller_return_address);
-    if (module_base != 0 && caller_return_address >= module_base) {
+    if (caller_return_rva != 0) {
         message += L" caller_return_rva=";
-        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+        message += Hex32(caller_return_rva);
     }
     message += L" caller_bytes_status=";
     message += caller_bytes_copied ? L"copied" : L"unavailable";
@@ -612,6 +694,25 @@ void LogMemorizeSendIntermediateSend(
         message += L" caller_bytes_hex=\"";
         message += HexBytes(caller_bytes.data(), caller_bytes.size());
         message += L"\"";
+    }
+    if (caller_site.site != nullptr) {
+        message += L" caller_site_label=";
+        message += caller_site.site->label;
+        message += L" caller_site_validation=";
+        message += caller_site.bytes_match ? L"matched" : L"drifted";
+        message += L" caller_site_expected_return_rva=";
+        message += Hex32(caller_site.site->return_rva);
+        message += L" caller_site_expected_mode_like=";
+        message += std::to_wstring(caller_site.site->mode_like);
+        if (!caller_site.bytes_match) {
+            message += L" caller_site_expected_bytes_hex=\"";
+            message += HexBytes(
+                caller_site.site->caller_context_bytes.data(),
+                caller_site.site->caller_context_bytes.size());
+            message += L"\"";
+        }
+    } else if (caller_return_rva != 0) {
+        message += L" caller_site_label=unknown";
     }
     message += L" original_result=";
     message += original_result ? L"true" : L"false";
