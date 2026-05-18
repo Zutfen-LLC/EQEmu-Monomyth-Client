@@ -19,6 +19,9 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Added
 
+- Dev-gated full packet metadata trace mode behind `MONOMYTH_ENABLE_FULL_PACKET_TRACE=1`, which keeps the existing packet observation hooks and safety boundaries but temporarily widens `PacketObserverRecv` / `PacketObserverSend` logging from the default sampled policy to `all_packets` for short bounded debugging sessions.
+- Dev-gated spellbook-scribe packet correlation receipts within the existing memorize-send wrapper trace, opening on observed `OP_DeleteSpell` and logging `SpellUsabilityTrace target=SpellbookScribeSend ...` through the subsequent `OP_MemorizeSpell` follow-up with caller-byte and resolved-call metadata for click-to-scribe archaeology.
+- Memorize-send tracing now also validates and installs a trace-only hook on the spellbook mem-start helper `StartSpellMemorizationPath` at `0x662290` / RVA `0x262290`, reached from the verified spellbook dispatcher callsite `0x75e7fd`. Correlated logs now capture the spellbook window's `0x234/0x238/0x23c/0x240/0x244` state before and after that call so the next runtime pass can prove whether pending mem state is ever initialized before `MemSpellCommitPath`.
 - Dev-gated trace-only `OP_MemorizeSpell` send observation behind `MONOMYTH_ENABLE_MEMORIZE_SEND_TRACE=1`, using a validated cleanroom `MemorizeSendPacketWrapper` target, correlated `CanStartMemming` pending/send-absent receipts, a dedicated memorize-send startup marker, bounded `not_decoded` handling for null/short/faulting packet reads, and richer `PacketObserverSend` logs without packet mutation or send-order changes.
 - Correlated post-`CanStartMemming` mismatch receipts now include the observed opcode name plus caller return RVA and a bounded caller-byte window, making downstream post-spellbook flow identification possible without adding a second speculative hook.
 - Post-`CanStartMemming` correlation no longer fails closed on the first non-`OP_MemorizeSpell` wrapper send; it now keeps a bounded watch window across several subsequent wrapper sends, logs each intermediate send with correlation metadata, and only emits `not_observed` once the bounded window is exhausted or another gap condition closes the correlation.
@@ -52,6 +55,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Documentation
 
+- README documentation for the new `MONOMYTH_ENABLE_FULL_PACKET_TRACE=1` opt-in, startup capability fields, and the intended short-session workflow for login/scribe/memorize/logout captures.
 - README documentation for the trace-only `MONOMYTH_ENABLE_MEMORIZE_SEND_TRACE=1` gate, the validated `OP_MemorizeSpell` wrapper seam, correlation semantics, and expected `PacketObserverSend` log format.
 - README documentation for the new scroll-scribe trace gate, target set, correlation log format, and runtime interpretation matrix for right-click gate vs item usability gate vs spell-level gate vs spellbook gate.
 - README documentation for the multiclass spell usability opt-in, expected `GetSpellLevelNeeded` selection behavior, and intentional absence of `CanStartMemming` behavior overrides or `CastSpell` hooks in v1.

@@ -94,6 +94,20 @@ bool IsReceiveIntrospectionDevOptInPresent() noexcept {
     return value[0] == L'1' && value[1] == L'\0';
 }
 
+bool IsFullPacketTraceDevOptInPresent() noexcept {
+    wchar_t value[16] = {};
+    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
+    const DWORD length = GetEnvironmentVariableW(
+        L"MONOMYTH_ENABLE_FULL_PACKET_TRACE",
+        value,
+        kValueCapacity);
+    if (length == 0 || length >= kValueCapacity) {
+        return false;
+    }
+
+    return value[0] == L'1' && value[1] == L'\0';
+}
+
 bool IsSpellUsabilityDiscoveryDevOptInPresent() noexcept {
     wchar_t value[16] = {};
     constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
@@ -207,6 +221,8 @@ Manifest BuildCapabilityManifest(
     manifest.hooks_allowed = proxy_ready && fingerprint.hooks_allowed;
     manifest.packet_hooks_dev_opt_in = IsPacketHookDevOptInPresent();
     manifest.packet_hooks_allowed = false;
+    manifest.full_packet_trace_dev_opt_in = IsFullPacketTraceDevOptInPresent();
+    manifest.full_packet_trace_allowed = false;
     manifest.receive_introspection_dev_opt_in = IsReceiveIntrospectionDevOptInPresent();
     manifest.receive_introspection_allowed = false;
     manifest.spell_usability_discovery_dev_opt_in = IsSpellUsabilityDiscoveryDevOptInPresent();
@@ -234,6 +250,9 @@ Manifest BuildCapabilityManifest(
     manifest.packet_hooks_reason = manifest.packet_hooks_dev_opt_in
         ? L"receive dispatcher discovery not run"
         : L"dev opt-in absent: set MONOMYTH_ENABLE_PACKET_HOOKS=1";
+    manifest.full_packet_trace_reason = manifest.full_packet_trace_dev_opt_in
+        ? L"full packet trace requested but packet observation is not yet available"
+        : L"dev opt-in absent: set MONOMYTH_ENABLE_FULL_PACKET_TRACE=1";
     manifest.receive_introspection_reason = manifest.receive_introspection_dev_opt_in
         ? L"receive introspection requested but packet hook gate has not passed"
         : L"dev opt-in absent: set MONOMYTH_ENABLE_RECV_INTROSPECTION=1";
@@ -272,6 +291,7 @@ Manifest BuildDisabledCapabilityManifest(
     manifest.proxy_ready = proxy_ready;
     manifest.reason = NormalizeReason(reason);
     manifest.packet_hooks_dev_opt_in = IsPacketHookDevOptInPresent();
+    manifest.full_packet_trace_dev_opt_in = IsFullPacketTraceDevOptInPresent();
     manifest.receive_introspection_dev_opt_in = IsReceiveIntrospectionDevOptInPresent();
     manifest.spell_usability_discovery_dev_opt_in = IsSpellUsabilityDiscoveryDevOptInPresent();
     manifest.spell_usability_trace_dev_opt_in = IsSpellUsabilityTraceDevOptInPresent();
@@ -280,6 +300,7 @@ Manifest BuildDisabledCapabilityManifest(
     manifest.multiclass_spell_usability_dev_opt_in =
         IsMulticlassSpellUsabilityDevOptInPresent();
     manifest.packet_hooks_reason = L"disabled before fingerprint/discovery gates";
+    manifest.full_packet_trace_reason = L"disabled before fingerprint/discovery gates";
     manifest.receive_introspection_reason = L"disabled before fingerprint/discovery gates";
     manifest.spell_usability_discovery_reason = L"disabled before fingerprint/discovery gates";
     manifest.spell_usability_trace_reason = L"disabled before fingerprint/discovery gates";
@@ -309,6 +330,16 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     AppendBoolField(&message, L"packet_hooks_dev_opt_in=", manifest.packet_hooks_dev_opt_in);
     message += L" ";
     AppendBoolField(&message, L"packet_hooks_allowed=", manifest.packet_hooks_allowed);
+    message += L" ";
+    AppendBoolField(
+        &message,
+        L"full_packet_trace_dev_opt_in=",
+        manifest.full_packet_trace_dev_opt_in);
+    message += L" ";
+    AppendBoolField(
+        &message,
+        L"full_packet_trace_allowed=",
+        manifest.full_packet_trace_allowed);
     message += L" ";
     AppendBoolField(
         &message,
@@ -454,6 +485,22 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
         message += L" can_start_memming_address=";
         message += HexPtr(manifest.can_start_memming_address);
     }
+    message += L" start_spell_memorization_path_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.start_spell_memorization_path_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"start_spell_memorization_path",
+        manifest.start_spell_memorization_path_evidence_source,
+        manifest.start_spell_memorization_path_failure_reason);
+    if (manifest.start_spell_memorization_path_rva != 0) {
+        message += L" start_spell_memorization_path_rva=";
+        message += Hex32(manifest.start_spell_memorization_path_rva);
+    }
+    if (manifest.start_spell_memorization_path_address != 0) {
+        message += L" start_spell_memorization_path_address=";
+        message += HexPtr(manifest.start_spell_memorization_path_address);
+    }
     message += L" memorize_send_packet_wrapper_state=";
     message += monomyth::spell_usability_discovery::TargetStateName(
         manifest.memorize_send_packet_wrapper_state);
@@ -508,6 +555,9 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" packet_hooks_reason=\"";
     message += NormalizeReason(manifest.packet_hooks_reason.c_str());
     message += L"\"";
+    message += L" full_packet_trace_reason=\"";
+    message += NormalizeReason(manifest.full_packet_trace_reason.c_str());
+    message += L"\"";
     message += L" receive_introspection_reason=\"";
     message += NormalizeReason(manifest.receive_introspection_reason.c_str());
     message += L"\"";
@@ -548,6 +598,7 @@ void ApplyReceiveDispatchDiscovery(
         manifest->fingerprint_matched &&
         discovery.validated &&
         manifest->packet_hooks_dev_opt_in;
+    manifest->full_packet_trace_allowed = false;
     manifest->receive_introspection_allowed =
         manifest->packet_hooks_allowed &&
         manifest->receive_introspection_dev_opt_in;
@@ -566,6 +617,14 @@ void ApplyReceiveDispatchDiscovery(
         manifest->packet_hooks_reason = PacketHookDiscoveryReason(discovery);
     } else {
         manifest->packet_hooks_reason = L"packet hook gate denied for unknown reason";
+    }
+
+    if (manifest->full_packet_trace_dev_opt_in) {
+        manifest->full_packet_trace_reason =
+            L"full packet trace requested but packet observation has not yet been validated";
+    } else {
+        manifest->full_packet_trace_reason =
+            L"dev opt-in absent: set MONOMYTH_ENABLE_FULL_PACKET_TRACE=1";
     }
 
     if (manifest->receive_introspection_allowed) {
@@ -618,6 +677,16 @@ void ApplySpellUsabilityDiscovery(
     manifest->can_start_memming_address = discovery.can_start_memming.candidate_address;
     manifest->can_start_memming_evidence_source = discovery.can_start_memming.evidence_source;
     manifest->can_start_memming_failure_reason = discovery.can_start_memming.failure_reason;
+    manifest->start_spell_memorization_path_state =
+        discovery.start_spell_memorization_path.state;
+    manifest->start_spell_memorization_path_rva =
+        discovery.start_spell_memorization_path.candidate_rva;
+    manifest->start_spell_memorization_path_address =
+        discovery.start_spell_memorization_path.candidate_address;
+    manifest->start_spell_memorization_path_evidence_source =
+        discovery.start_spell_memorization_path.evidence_source;
+    manifest->start_spell_memorization_path_failure_reason =
+        discovery.start_spell_memorization_path.failure_reason;
     manifest->memorize_send_packet_wrapper_state =
         discovery.memorize_send_packet_wrapper.state;
     manifest->memorize_send_packet_wrapper_rva =
@@ -652,6 +721,7 @@ void ApplySpellUsabilityDiscovery(
     manifest->memorize_send_trace_dev_opt_in = IsMemorizeSendTraceDevOptInPresent();
     manifest->multiclass_spell_usability_dev_opt_in =
         IsMulticlassSpellUsabilityDevOptInPresent();
+    manifest->full_packet_trace_dev_opt_in = IsFullPacketTraceDevOptInPresent();
 
     const bool any_trace_safe =
         (discovery.get_spell_level_needed.state ==
@@ -683,6 +753,9 @@ void ApplySpellUsabilityDiscovery(
         discovery.allowed &&
         manifest->memorize_send_trace_dev_opt_in &&
         memorize_send_target_validated;
+    manifest->full_packet_trace_allowed =
+        manifest->full_packet_trace_dev_opt_in &&
+        (manifest->packet_hooks_allowed || manifest->memorize_send_trace_allowed);
     manifest->multiclass_spell_usability_allowed =
         discovery.allowed &&
         manifest->multiclass_spell_usability_dev_opt_in &&
@@ -773,6 +846,20 @@ void ApplySpellUsabilityDiscovery(
     } else {
         manifest->memorize_send_trace_reason =
             L"memorize send trace gate denied for unknown reason";
+    }
+
+    if (manifest->full_packet_trace_allowed) {
+        manifest->full_packet_trace_reason =
+            L"enabled by explicit dev opt-in and active packet observation";
+    } else if (!manifest->full_packet_trace_dev_opt_in) {
+        manifest->full_packet_trace_reason =
+            L"dev opt-in absent: set MONOMYTH_ENABLE_FULL_PACKET_TRACE=1";
+    } else if (!(manifest->packet_hooks_allowed || manifest->memorize_send_trace_allowed)) {
+        manifest->full_packet_trace_reason =
+            L"full packet trace requires packet hooks and/or memorize send trace";
+    } else {
+        manifest->full_packet_trace_reason =
+            L"full packet trace gate denied for unknown reason";
     }
 
     if (manifest->multiclass_spell_usability_allowed) {

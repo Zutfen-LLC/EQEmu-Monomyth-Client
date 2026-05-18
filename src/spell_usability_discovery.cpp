@@ -21,6 +21,8 @@ constexpr std::uint32_t kIsClassUsablePredicateRva = 0x000a1f50;
 constexpr std::uint32_t kHandleRButtonUpRva = 0x00297250;
 constexpr std::uint32_t kCanStartMemmingRva = 0x0035bd40;
 constexpr std::uint32_t kCanStartMemmingCallsGetSpellLevelNeededAtRva = 0x0035bea5;
+constexpr std::uint32_t kStartSpellMemorizationPathRva = 0x00262290;
+constexpr std::uint32_t kSpellbookDispatcherCallsStartSpellMemorizationPathAtRva = 0x0035e7fd;
 constexpr std::uint32_t kMemSpellCommitPathRva = 0x0035e620;
 constexpr std::uint32_t kMemSpellCommitPathCallsMemorizeSendPacketWrapperAtRva = 0x0035e6fb;
 constexpr std::uint32_t kMemSpellCommitPathCallsFollowupThunkAtRva = 0x0035e705;
@@ -43,6 +45,14 @@ constexpr std::array<std::uint8_t, 33> kCanStartMemmingEntryBytes = {{
     0x83, 0x3d, 0xac, 0x35, 0xe6, 0x00, 0x00, 0x53, 0x56, 0x8b, 0xf1,
     0xb3, 0x01, 0x0f, 0x8f, 0x8f, 0x01, 0x00, 0x00, 0x8b, 0x0d, 0x7c,
     0xfc, 0xd1, 0x00, 0x6a, 0x01, 0xe8, 0xd0, 0x51, 0xf0, 0xff, 0x84,
+}};
+constexpr std::array<std::uint8_t, 62> kStartSpellMemorizationPathEntryBytes = {{
+    0x8b, 0x44, 0x24, 0x18, 0x83, 0xec, 0x14, 0x56, 0x8b, 0xf1, 0x8b, 0x4c,
+    0x24, 0x2c, 0x50, 0x51, 0x6a, 0x00, 0x8d, 0x4c, 0x24, 0x12, 0xe8, 0xf5,
+    0xa6, 0x1a, 0x00, 0x8b, 0x54, 0x24, 0x34, 0x8b, 0x4c, 0x24, 0x2c, 0x50,
+    0x8b, 0x44, 0x24, 0x34, 0x52, 0x8b, 0x54, 0x24, 0x30, 0x50, 0x51, 0x52,
+    0x8b, 0xce, 0xe8, 0x59, 0xf5, 0xff, 0xff, 0x5e, 0x83, 0xc4, 0x14, 0xc2,
+    0x18, 0x00,
 }};
 constexpr std::array<std::uint8_t, 48> kMemSpellCommitPathEntryBytes = {{
     0x83, 0xec, 0x14, 0x56, 0x8b, 0xf1, 0x83, 0xbe, 0x40, 0x02, 0x00, 0x00,
@@ -1068,6 +1078,84 @@ TargetResult DiscoverCanStartMemming(const ImageView& image) {
     return target;
 }
 
+TargetResult DiscoverStartSpellMemorizationPath(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    TargetResult target = {L"StartSpellMemorizationPath"};
+
+    if (!cleanroom_fingerprint.available || !cleanroom_fingerprint.matched) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = cleanroom_fingerprint.failure_reason;
+        target.validation_evidence = cleanroom_fingerprint.evidence;
+        target.reason =
+            L"checked-in cleanroom SHA-256 fingerprint did not match the live eqgame.exe";
+        return target;
+    }
+
+    std::uintptr_t function_start = 0;
+    const bool rva_found = ResolveRvaAddress(
+        image,
+        kStartSpellMemorizationPathRva,
+        kStartSpellMemorizationPathEntryBytes.size(),
+        &function_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
+        image,
+        function_start,
+        L"fingerprint_cleanroom_rva",
+        L"StartSpellMemorizationPath");
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const bool exact_entry_bytes = rva_found && BytesMatchAtRva(
+        image,
+        kStartSpellMemorizationPathRva,
+        kStartSpellMemorizationPathEntryBytes.data(),
+        kStartSpellMemorizationPathEntryBytes.size());
+    const bool spellbook_dispatch_calls_candidate =
+        candidate_executable &&
+        CallAtRvaTargets(
+            image,
+            kSpellbookDispatcherCallsStartSpellMemorizationPathAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) + kStartSpellMemorizationPathRva);
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        exact_entry_bytes && spellbook_dispatch_calls_candidate,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
+
+    std::wstring evidence = L"cleanroom_rva=";
+    evidence += Hex32(kStartSpellMemorizationPathRva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" exact_entry_bytes=";
+    evidence += exact_entry_bytes ? L"yes" : L"no";
+    evidence += L" dispatcher_callsite_rva=";
+    evidence += Hex32(kSpellbookDispatcherCallsStartSpellMemorizationPathAtRva);
+    evidence += L" spellbook_dispatch_calls_candidate=";
+    evidence += spellbook_dispatch_calls_candidate ? L"yes" : L"no";
+    evidence += L" ";
+    evidence += cleanroom_fingerprint.evidence;
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and spellbook dispatcher caller shape",
+        L"StartSpellMemorizationPath candidate did not satisfy spellbook mem-start validation",
+        &target);
+    return target;
+}
+
 TargetResult DiscoverMemorizeSendPacketWrapper(
     const ImageView& image,
     const CleanroomFingerprintStatus& cleanroom_fingerprint) {
@@ -1417,6 +1505,7 @@ void Initialize() noexcept {
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
     g_result.can_start_memming = {L"CanStartMemming"};
+    g_result.start_spell_memorization_path = {L"StartSpellMemorizationPath"};
     g_result.memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
     g_result.mem_spell_commit_path = {L"MemSpellCommitPath"};
     g_result.post_can_start_memming_followup_gate = {L"PostCanStartMemmingFollowupGate"};
@@ -1430,6 +1519,7 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
     g_result.can_start_memming = {L"CanStartMemming"};
+    g_result.start_spell_memorization_path = {L"StartSpellMemorizationPath"};
     g_result.memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
     g_result.mem_spell_commit_path = {L"MemSpellCommitPath"};
     g_result.post_can_start_memming_followup_gate = {L"PostCanStartMemmingFollowupGate"};
@@ -1454,6 +1544,9 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
         g_result.can_start_memming = BuildCapabilityDeniedTarget(
             L"CanStartMemming",
             failure_reason);
+        g_result.start_spell_memorization_path = BuildCapabilityDeniedTarget(
+            L"StartSpellMemorizationPath",
+            failure_reason);
         g_result.memorize_send_packet_wrapper = BuildCapabilityDeniedTarget(
             L"MemorizeSendPacketWrapper",
             failure_reason);
@@ -1474,6 +1567,8 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
         g_result.is_class_usable_predicate =
             BuildImageUnavailableTarget(L"EQ_Character::IsClassUsablePredicate");
         g_result.can_start_memming = BuildImageUnavailableTarget(L"CanStartMemming");
+        g_result.start_spell_memorization_path =
+            BuildImageUnavailableTarget(L"StartSpellMemorizationPath");
         g_result.memorize_send_packet_wrapper =
             BuildImageUnavailableTarget(L"MemorizeSendPacketWrapper");
         g_result.mem_spell_commit_path =
@@ -1495,6 +1590,8 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
     g_result.is_class_usable_predicate =
         DiscoverIsClassUsablePredicate(image, cleanroom_fingerprint);
     g_result.can_start_memming = DiscoverCanStartMemming(image);
+    g_result.start_spell_memorization_path =
+        DiscoverStartSpellMemorizationPath(image, cleanroom_fingerprint);
     g_result.memorize_send_packet_wrapper =
         DiscoverMemorizeSendPacketWrapper(image, cleanroom_fingerprint);
     g_result.mem_spell_commit_path =
@@ -1511,6 +1608,7 @@ void Shutdown() noexcept {
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
     g_result.can_start_memming = {L"CanStartMemming"};
+    g_result.start_spell_memorization_path = {L"StartSpellMemorizationPath"};
     g_result.memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
     g_result.mem_spell_commit_path = {L"MemSpellCommitPath"};
     g_result.post_can_start_memming_followup_gate = {L"PostCanStartMemmingFollowupGate"};
@@ -1526,6 +1624,7 @@ void LogResult(const Result& result) noexcept {
         &result.get_spell_level_needed,
         &result.is_class_usable_predicate,
         &result.can_start_memming,
+        &result.start_spell_memorization_path,
         &result.memorize_send_packet_wrapper,
         &result.mem_spell_commit_path,
         &result.post_can_start_memming_followup_gate,
