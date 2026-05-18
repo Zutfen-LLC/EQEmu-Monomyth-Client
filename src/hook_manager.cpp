@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <iomanip>
 #include <limits>
 #include <sstream>
 #include <string>
@@ -118,6 +119,46 @@ std::uintptr_t GetCallerReturnAddress() noexcept {
 #else
     return 0;
 #endif
+}
+
+bool TryCopyBytes(
+    const void* source,
+    std::size_t length,
+    std::uint8_t* destination) noexcept {
+    if (source == nullptr || destination == nullptr || length == 0) {
+        return false;
+    }
+
+#if defined(_MSC_VER)
+    __try {
+        std::memcpy(destination, source, length);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    std::memcpy(destination, source, length);
+#endif
+    return true;
+}
+
+std::wstring HexBytes(const std::uint8_t* bytes, std::size_t length) {
+    if (bytes == nullptr || length == 0) {
+        return L"";
+    }
+
+    std::wstringstream stream;
+    stream << std::hex << std::setfill(L'0');
+    for (std::size_t i = 0; i < length; ++i) {
+        if (i != 0) {
+            stream << L' ';
+        }
+        stream << std::setw(2) << static_cast<unsigned int>(bytes[i]);
+    }
+    return stream.str();
+}
+
+std::uintptr_t GetHostModuleBase() noexcept {
+    return reinterpret_cast<std::uintptr_t>(GetModuleHandleW(nullptr));
 }
 
 bool TryReadPacketOpcode(
@@ -519,6 +560,19 @@ void LogMemorizeSendOpcodeMismatch(
         return;
     }
 
+    constexpr std::size_t kCallerContextPrefixBytes = 8;
+    constexpr std::size_t kCallerContextBytes = 16;
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uintptr_t caller_context_address =
+        caller_return_address >= kCallerContextPrefixBytes
+        ? caller_return_address - kCallerContextPrefixBytes
+        : caller_return_address;
+    std::array<std::uint8_t, kCallerContextBytes> caller_bytes = {};
+    const bool caller_bytes_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(caller_context_address),
+        caller_bytes.size(),
+        caller_bytes.data());
+
     std::wstring message = L"SpellUsabilityTrace target=MemorizeSend status=not_observed correlation=";
     message += std::to_wstring(correlation_id);
     message += L" reason=opcode_mismatch observed_opcode=";
@@ -537,6 +591,19 @@ void LogMemorizeSendOpcodeMismatch(
     message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
     message += L" caller_return=";
     message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" caller_bytes_status=";
+    message += caller_bytes_copied ? L"copied" : L"unavailable";
+    if (caller_bytes_copied) {
+        message += L" caller_bytes_address=";
+        message += HexPtr(caller_context_address);
+        message += L" caller_bytes_hex=\"";
+        message += HexBytes(caller_bytes.data(), caller_bytes.size());
+        message += L"\"";
+    }
     message += L" original_result=";
     message += original_result ? L"true" : L"false";
     AppendActiveScrollCorrelation(&message);
