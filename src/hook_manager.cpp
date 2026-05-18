@@ -65,6 +65,9 @@ using MemorizeSendPacketWrapperFn = bool (MONOMYTH_THISCALL*)(
     std::uint32_t mode_like,
     const void* packet,
     std::uint32_t total_length);
+using MemSpellCommitPathFn = int (MONOMYTH_THISCALL*)(
+    void* this_window,
+    std::uint32_t entry_argument);
 using PostCanStartMemmingFollowupGateFn = int (__cdecl*)(
     void* gate_argument);
 
@@ -125,6 +128,7 @@ InlineDetour g_get_spell_level_needed_detour = {};
 InlineDetour g_is_class_usable_predicate_detour = {};
 InlineDetour g_can_start_memming_detour = {};
 InlineDetour g_memorize_send_packet_wrapper_detour = {};
+InlineDetour g_mem_spell_commit_path_detour = {};
 InlineDetour g_post_can_start_memming_followup_gate_detour = {};
 ReceiveDispatchFn g_original_receive_dispatch = nullptr;
 HandleRButtonUpFn g_original_handle_rbutton_up = nullptr;
@@ -132,6 +136,7 @@ GetSpellLevelNeededFn g_original_get_spell_level_needed = nullptr;
 IsClassUsablePredicateFn g_original_is_class_usable_predicate = nullptr;
 CanStartMemmingFn g_original_can_start_memming = nullptr;
 MemorizeSendPacketWrapperFn g_original_memorize_send_packet_wrapper = nullptr;
+MemSpellCommitPathFn g_original_mem_spell_commit_path = nullptr;
 PostCanStartMemmingFollowupGateFn g_original_post_can_start_memming_followup_gate = nullptr;
 std::uint64_t g_get_spell_level_needed_trace_count = 0;
 std::uint64_t g_can_start_memming_trace_count = 0;
@@ -142,6 +147,7 @@ std::uint32_t g_memorize_send_correlation_count = 0;
 std::uint32_t g_memorize_send_pending_wrapper_sends = 0;
 std::uint32_t g_scroll_scribe_active_correlation_id = 0;
 std::uintptr_t g_memorize_send_packet_wrapper_address = 0;
+std::uintptr_t g_mem_spell_commit_path_address = 0;
 std::uintptr_t g_post_can_start_memming_followup_gate_address = 0;
 bool g_scroll_scribe_active_logging = false;
 std::wstring g_handle_rbutton_up_evidence_source = L"unknown";
@@ -967,6 +973,58 @@ void LogPostCanStartMemmingFollowupGateCall(
     monomyth::logger::Log(message);
 }
 
+void LogMemSpellCommitPathCall(
+    std::uint32_t correlation_id,
+    void* this_window,
+    std::uint32_t entry_argument,
+    std::uintptr_t caller_return_address,
+    int original_result) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const auto* state = reinterpret_cast<const std::uint8_t*>(this_window);
+    const std::uint32_t state_238 =
+        this_window == nullptr ? 0 : *reinterpret_cast<const std::uint32_t*>(state + 0x238);
+    const std::uint32_t state_240 =
+        this_window == nullptr ? 0 : *reinterpret_cast<const std::uint32_t*>(state + 0x240);
+    const std::uint32_t state_244 =
+        this_window == nullptr ? 0 : *reinterpret_cast<const std::uint32_t*>(state + 0x244);
+
+    std::wstring message = L"SpellUsabilityTrace target=MemSpellCommitPath correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" path_address=";
+    message += HexPtr(g_mem_spell_commit_path_address);
+    if (module_base != 0 && g_mem_spell_commit_path_address >= module_base) {
+        message += L" path_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            g_mem_spell_commit_path_address - module_base));
+    }
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_window));
+    message += L" entry_argument=";
+    message += std::to_wstring(entry_argument);
+    message += L" state_238=";
+    message += Hex32(state_238);
+    message += L" state_240=";
+    message += Hex32(state_240);
+    message += L" state_244=";
+    message += std::to_wstring(state_244);
+    message += L" memorize_context_present=";
+    message += *reinterpret_cast<void* const*>(0x00dd25ac) == nullptr ? L"false" : L"true";
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
 void LogMemorizeSendTraceStartupMarker(
     const monomyth::runtime::Manifest& manifest,
     bool hook_installed) {
@@ -1261,6 +1319,23 @@ bool MONOMYTH_FASTCALL MemorizeSendPacketWrapperHook(
     return original_result;
 }
 
+int MONOMYTH_FASTCALL MemSpellCommitPathHook(
+    void* this_window,
+    void*,
+    std::uint32_t entry_argument) noexcept {
+    const std::uint32_t correlation_id = g_memorize_send_pending_correlation_id;
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const int original_result =
+        g_original_mem_spell_commit_path(this_window, entry_argument);
+    LogMemSpellCommitPathCall(
+        correlation_id,
+        this_window,
+        entry_argument,
+        caller_return_address,
+        original_result);
+    return original_result;
+}
+
 int __cdecl PostCanStartMemmingFollowupGateHook(
     void* gate_argument) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
@@ -1549,6 +1624,43 @@ bool InstallPostCanStartMemmingFollowupGateTrace(
     return true;
 }
 
+bool InstallMemSpellCommitPathTrace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.memorize_send_trace_allowed ||
+        manifest.mem_spell_commit_path_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.mem_spell_commit_path_address == 0) {
+        if (manifest.memorize_send_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: MemSpell commit trace denied ";
+            message += FormatDiscoveryDetails(
+                L"MemSpellCommitPath",
+                manifest.mem_spell_commit_path_evidence_source,
+                manifest.mem_spell_commit_path_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.mem_spell_commit_path_address),
+            reinterpret_cast<void*>(&MemSpellCommitPathHook),
+            &g_mem_spell_commit_path_detour,
+            reinterpret_cast<void**>(&g_original_mem_spell_commit_path),
+            L"MemSpellCommitPath trace")) {
+        RemoveInlineDetour(&g_mem_spell_commit_path_detour);
+        g_original_mem_spell_commit_path = nullptr;
+        return false;
+    }
+
+    g_mem_spell_commit_path_address = manifest.mem_spell_commit_path_address;
+    std::wstring message =
+        L"hook_manager: MemSpell commit trace installed target=MemSpellCommitPath address=";
+    message += HexPtr(manifest.mem_spell_commit_path_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
 bool RemoveReceiveDispatchHook() noexcept {
     if (!g_receive_dispatch_detour.installed) {
         return true;
@@ -1653,6 +1765,22 @@ bool RemovePostCanStartMemmingFollowupGateTrace() noexcept {
     return false;
 }
 
+bool RemoveMemSpellCommitPathTrace() noexcept {
+    if (!g_mem_spell_commit_path_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_mem_spell_commit_path_detour)) {
+        g_original_mem_spell_commit_path = nullptr;
+        g_mem_spell_commit_path_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: MemSpell commit trace removed target=MemSpellCommitPath");
+        return true;
+    }
+
+    return false;
+}
+
 #else
 
 bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest&) noexcept {
@@ -1685,6 +1813,10 @@ bool InstallPostCanStartMemmingFollowupGateTrace(const monomyth::runtime::Manife
     return false;
 }
 
+bool InstallMemSpellCommitPathTrace(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
 bool RemoveGetSpellLevelNeededTrace() noexcept {
     return true;
 }
@@ -1702,6 +1834,10 @@ bool RemoveMemorizeSendTrace() noexcept {
 }
 
 bool RemovePostCanStartMemmingFollowupGateTrace() noexcept {
+    return true;
+}
+
+bool RemoveMemSpellCommitPathTrace() noexcept {
     return true;
 }
 
@@ -1787,6 +1923,12 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
                 monomyth::spell_usability_discovery::TargetState::kValidated) {
             monomyth::logger::Log(
                 L"hook_manager: memorize send trace install failed target=MemorizeSendPacketWrapper");
+        }
+        if (!InstallMemSpellCommitPathTrace(manifest) &&
+            manifest.mem_spell_commit_path_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: MemSpell commit trace install failed target=MemSpellCommitPath");
         }
         if (!InstallPostCanStartMemmingFollowupGateTrace(manifest) &&
             manifest.post_can_start_memming_followup_gate_state ==
@@ -1905,6 +2047,11 @@ void Shutdown() noexcept {
     if (!RemoveMemorizeSendTrace()) {
         monomyth::logger::Log(
             L"hook_manager: shutdown deferred because memorize send trace removal failed");
+        return;
+    }
+    if (!RemoveMemSpellCommitPathTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because MemSpell commit trace removal failed");
         return;
     }
     if (!RemovePostCanStartMemmingFollowupGateTrace()) {

@@ -46,6 +46,8 @@ struct Manifest {
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     monomyth::spell_usability_discovery::TargetState memorize_send_packet_wrapper_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState mem_spell_commit_path_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     monomyth::spell_usability_discovery::TargetState post_can_start_memming_followup_gate_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     std::uintptr_t runtime_module_base = 0;
@@ -61,6 +63,8 @@ struct Manifest {
     std::uintptr_t can_start_memming_address = 0;
     std::uint32_t memorize_send_packet_wrapper_rva = 0;
     std::uintptr_t memorize_send_packet_wrapper_address = 0;
+    std::uint32_t mem_spell_commit_path_rva = 0;
+    std::uintptr_t mem_spell_commit_path_address = 0;
     std::uint32_t post_can_start_memming_followup_gate_rva = 0;
     std::uintptr_t post_can_start_memming_followup_gate_address = 0;
     std::wstring handle_rbutton_up_evidence_source = L"not_attempted";
@@ -73,6 +77,8 @@ struct Manifest {
     std::wstring can_start_memming_failure_reason = L"not_attempted";
     std::wstring memorize_send_packet_wrapper_evidence_source = L"not_attempted";
     std::wstring memorize_send_packet_wrapper_failure_reason = L"not_attempted";
+    std::wstring mem_spell_commit_path_evidence_source = L"not_attempted";
+    std::wstring mem_spell_commit_path_failure_reason = L"not_attempted";
     std::wstring post_can_start_memming_followup_gate_evidence_source = L"not_attempted";
     std::wstring post_can_start_memming_followup_gate_failure_reason = L"not_attempted";
     std::wstring reason = L"manifest unavailable";

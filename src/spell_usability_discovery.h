@@ -33,6 +33,7 @@ struct Result {
     TargetResult is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
     TargetResult can_start_memming = {L"CanStartMemming"};
     TargetResult memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
+    TargetResult mem_spell_commit_path = {L"MemSpellCommitPath"};
     TargetResult post_can_start_memming_followup_gate = {L"PostCanStartMemmingFollowupGate"};
 };
 

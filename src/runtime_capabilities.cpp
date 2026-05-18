@@ -470,6 +470,22 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
         message += L" memorize_send_packet_wrapper_address=";
         message += HexPtr(manifest.memorize_send_packet_wrapper_address);
     }
+    message += L" mem_spell_commit_path_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.mem_spell_commit_path_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"mem_spell_commit_path",
+        manifest.mem_spell_commit_path_evidence_source,
+        manifest.mem_spell_commit_path_failure_reason);
+    if (manifest.mem_spell_commit_path_rva != 0) {
+        message += L" mem_spell_commit_path_rva=";
+        message += Hex32(manifest.mem_spell_commit_path_rva);
+    }
+    if (manifest.mem_spell_commit_path_address != 0) {
+        message += L" mem_spell_commit_path_address=";
+        message += HexPtr(manifest.mem_spell_commit_path_address);
+    }
     message += L" post_can_start_memming_followup_gate_state=";
     message += monomyth::spell_usability_discovery::TargetStateName(
         manifest.post_can_start_memming_followup_gate_state);
@@ -612,6 +628,16 @@ void ApplySpellUsabilityDiscovery(
         discovery.memorize_send_packet_wrapper.evidence_source;
     manifest->memorize_send_packet_wrapper_failure_reason =
         discovery.memorize_send_packet_wrapper.failure_reason;
+    manifest->mem_spell_commit_path_state =
+        discovery.mem_spell_commit_path.state;
+    manifest->mem_spell_commit_path_rva =
+        discovery.mem_spell_commit_path.candidate_rva;
+    manifest->mem_spell_commit_path_address =
+        discovery.mem_spell_commit_path.candidate_address;
+    manifest->mem_spell_commit_path_evidence_source =
+        discovery.mem_spell_commit_path.evidence_source;
+    manifest->mem_spell_commit_path_failure_reason =
+        discovery.mem_spell_commit_path.failure_reason;
     manifest->post_can_start_memming_followup_gate_state =
         discovery.post_can_start_memming_followup_gate.state;
     manifest->post_can_start_memming_followup_gate_rva =
