@@ -1,0 +1,14 @@
+# Files overwritten by scripts/update-framework.sh
+.agents/README.md
+.agents/templates/mission-template.md
+.agents/templates/recon-brief-template.md
+.agents/templates/codex-brief-template.md
+.agents/templates/review-template.md
+.agents/templates/spec-template.md
+docs/process/workflow-overview.md
+docs/process/local-policy-template.md
+worktrees/README.md
+scripts/bootstrap.sh
+scripts/update-framework.sh
+CHANGELOG.md
+framework-managed-paths.txt
