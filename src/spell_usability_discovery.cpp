@@ -24,7 +24,7 @@ constexpr std::uint32_t kCanStartMemmingCallsGetSpellLevelNeededAtRva = 0x0035be
 constexpr wchar_t kResolverVersion[] = L"v4_scroll_scribe_trace_v2";
 constexpr wchar_t kPacketId[] = L"CLIENT-SCROLL-SCRIBE-TRACE-V2";
 constexpr char kExpectedEqgameSha256[] =
-    "b259cd6b9291777e265d7d9d39312b101c393285468faa0ce86dff695181fddf";
+    "2a8702ad9f722704f01355c0750be7d6f164a8b9c9128ba0cf286ea32b405b0e";
 constexpr std::array<std::uint8_t, 37> kGetSpellLevelNeededBytes = {{
     0x8b, 0x44, 0x24, 0x04, 0x8d, 0x50, 0xff, 0x83, 0xfa, 0x22, 0x77, 0x10,
     0x83, 0xf8, 0x24, 0x72, 0x01, 0xcc, 0x8a, 0x84, 0x01, 0x46, 0x02, 0x00,
@@ -36,7 +36,7 @@ constexpr std::array<std::uint8_t, 33> kCanStartMemmingEntryBytes = {{
     0xb3, 0x01, 0x0f, 0x8f, 0x8f, 0x01, 0x00, 0x00, 0x8b, 0x0d, 0x7c,
     0xfc, 0xd1, 0x00, 0x6a, 0x01, 0xe8, 0xd0, 0x51, 0xf0, 0xff, 0x84,
 }};
-constexpr std::array<std::uint8_t, 72> kHandleRButtonUpEntryBytesPrefix = {{
+constexpr std::array<std::uint8_t, 68> kHandleRButtonUpEntryBytesPrefix = {{
     0x6a, 0xff, 0x64, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x68, 0x81, 0xa8, 0x98,
     0x00, 0x50, 0xb8, 0x08, 0x21, 0x00, 0x00, 0x64, 0x89, 0x25, 0x00, 0x00,
     0x00, 0x00, 0xe8, 0x21, 0x4d, 0x24, 0x00, 0x53, 0x55, 0x33, 0xdb, 0x56,
@@ -109,6 +109,26 @@ std::wstring HexPtr(std::uintptr_t value) {
     std::wstringstream stream;
     stream << L"0x" << std::hex << value;
     return stream.str();
+}
+
+std::wstring HexBytes(
+    const std::uint8_t* bytes,
+    std::size_t length) {
+    if (bytes == nullptr || length == 0) {
+        return L"";
+    }
+
+    static constexpr wchar_t kHexDigits[] = L"0123456789abcdef";
+    std::wstring result;
+    result.reserve((length * 3) - 1);
+    for (std::size_t i = 0; i < length; ++i) {
+        if (i != 0) {
+            result.push_back(L' ');
+        }
+        result.push_back(kHexDigits[(bytes[i] >> 4) & 0x0f]);
+        result.push_back(kHexDigits[bytes[i] & 0x0f]);
+    }
+    return result;
 }
 
 std::uint32_t RotateRight(std::uint32_t value, std::uint32_t amount) noexcept {
@@ -727,11 +747,33 @@ TargetResult DiscoverPinnedCleanroomTarget(
     }
 
     if (!exact_bytes_match) {
+        const auto* actual_bytes = reinterpret_cast<const std::uint8_t*>(function_start);
+        const std::wstring expected_hex = HexBytes(expected_bytes, expected_length);
+        const std::wstring actual_hex = HexBytes(actual_bytes, expected_length);
+        target.validation_evidence += L" expected_bytes=\"";
+        target.validation_evidence += expected_hex;
+        target.validation_evidence += L"\" actual_bytes=\"";
+        target.validation_evidence += actual_hex;
+        target.validation_evidence += L"\"";
         target.state = TargetState::kFailed;
         target.validation = L"failed";
         target.failure_reason = L"entry_bytes_mismatch";
         target.reason = L"entry-byte validation failed for the pinned cleanroom RVA";
         target.trace_safe = false;
+        std::wstring message = L"SpellUsabilityDiscoveryMismatch target=";
+        message += target_name == nullptr ? L"unknown" : target_name;
+        message += L" rva=";
+        message += Hex32(rva);
+        message += L" ";
+        message += byte_label == nullptr ? L"entry_bytes" : byte_label;
+        message += L"_expected=\"";
+        message += expected_hex;
+        message += L"\" ";
+        message += byte_label == nullptr ? L"entry_bytes" : byte_label;
+        message += L"_actual=\"";
+        message += actual_hex;
+        message += L"\"";
+        monomyth::logger::Log(message);
         return target;
     }
 

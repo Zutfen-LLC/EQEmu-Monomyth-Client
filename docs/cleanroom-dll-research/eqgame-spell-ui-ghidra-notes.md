@@ -5,7 +5,7 @@ These notes capture cleanroom Ghidra findings for the fingerprinted ROF2
 
 Fingerprint:
 
-- SHA-256: `b259cd6b9291777e265d7d9d39312b101c393285468faa0ce86dff695181fddf`
+- SHA-256: `2a8702ad9f722704f01355c0750be7d6f164a8b9c9128ba0cf286ea32b405b0e`
 - Size: `8774656` bytes
 
 Pinned candidates:

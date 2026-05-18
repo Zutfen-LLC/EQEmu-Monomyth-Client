@@ -187,12 +187,31 @@ bool DecodeSupportedInstructionLength(
     }
 
     const std::uint8_t opcode = code[0];
+    if (opcode == 0x64 || opcode == 0x65) {
+        std::size_t prefixed_length = 0;
+        if (available < 2 ||
+            !DecodeSupportedInstructionLength(code + 1, available - 1, &prefixed_length)) {
+            return false;
+        }
+
+        *length = 1 + prefixed_length;
+        return true;
+    }
+
     if ((opcode >= 0x50 && opcode <= 0x5f) || opcode == 0x55 || opcode == 0x90) {
         *length = 1;
         return true;
     }
 
     if (opcode == 0x68) {
+        if (available < 5) {
+            return false;
+        }
+        *length = 5;
+        return true;
+    }
+
+    if (opcode == 0xa1 || opcode == 0xa3) {
         if (available < 5) {
             return false;
         }

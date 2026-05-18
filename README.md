@@ -226,7 +226,7 @@ $env:MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY = "1"
 The implementation does not guess RVAs. It keeps the existing ROF2 fingerprint gate, skips live `eqgame.exe` export-table discovery for the four known non-export targets in this slice, resolves pinned targets only from checked-in cleanroom RVAs plus runtime byte/call-shape validation, and otherwise fails closed with `missing_cleanroom_target` until a checked-in cleanroom locator exists for the target:
 
 - `GetSpellLevelNeeded` resolves from fingerprint-gated cleanroom RVA `0x000af700` and exact byte-shape validation.
-- `CInvSlot::HandleRButtonUp` resolves from cleanroom RVA `0x00297250`, requires the checked-in ROF2 SHA-256 `b259cd6b9291777e265d7d9d39312b101c393285468faa0ce86dff695181fddf`, and validates its pinned entry-byte prefix before any trace hook install.
+- `CInvSlot::HandleRButtonUp` resolves from cleanroom RVA `0x00297250`, requires the checked-in ROF2 SHA-256 `2a8702ad9f722704f01355c0750be7d6f164a8b9c9128ba0cf286ea32b405b0e`, and validates its pinned entry-byte prefix before any trace hook install.
 - `EQ_Character::IsClassUsablePredicate` resolves from cleanroom RVA `0x000a1f50`, requires that same checked-in ROF2 SHA-256, and validates its exact entry bytes before any trace hook install.
 - `CSpellBookWnd::CanStartMemming` resolves from fingerprint-gated cleanroom RVA `0x0035bd40`, exact cleanroom entry-byte validation, and validation that its known callsite still targets `GetSpellLevelNeeded`.
 - `CanEquip` remains intentionally unpinned and disabled.
