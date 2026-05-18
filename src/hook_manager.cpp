@@ -37,6 +37,7 @@ constexpr std::size_t kMaxStolenBytes = 16;
 constexpr std::uint64_t kSpellTraceInitialLogCount = 20;
 constexpr std::uint64_t kSpellTraceLogInterval = 100;
 constexpr std::uint32_t kMemorizeSpellOpcode = 0x217c;
+constexpr std::uint32_t kMemorizeSendCorrelationMaxWrapperSends = 8;
 constexpr wchar_t kMemorizeSendTraceSliceId[] = L"CLIENT-MEM-SEND-TRACE-001";
 
 using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
@@ -92,6 +93,7 @@ std::uint64_t g_memorize_send_trace_count = 0;
 std::uint64_t g_scroll_scribe_event_count = 0;
 std::uint32_t g_memorize_send_pending_correlation_id = 0;
 std::uint32_t g_memorize_send_correlation_count = 0;
+std::uint32_t g_memorize_send_pending_wrapper_sends = 0;
 std::uint32_t g_scroll_scribe_active_correlation_id = 0;
 std::uintptr_t g_memorize_send_packet_wrapper_address = 0;
 bool g_scroll_scribe_active_logging = false;
@@ -530,6 +532,7 @@ void LogPendingMemorizeSendGap(const wchar_t* reason) {
     AppendActiveScrollCorrelation(&message);
     monomyth::logger::Log(message);
     g_memorize_send_pending_correlation_id = 0;
+    g_memorize_send_pending_wrapper_sends = 0;
 }
 
 void LogMemorizeSendDecodeFailure(
@@ -547,7 +550,7 @@ void LogMemorizeSendDecodeFailure(
     monomyth::logger::Log(message);
 }
 
-void LogMemorizeSendOpcodeMismatch(
+void LogMemorizeSendIntermediateSend(
     std::uint32_t correlation_id,
     std::uint32_t opcode,
     std::uint32_t mode_like,
@@ -555,7 +558,9 @@ void LogMemorizeSendOpcodeMismatch(
     const void* packet,
     void* this_context,
     std::uintptr_t caller_return_address,
-    bool original_result) {
+    bool original_result,
+    std::uint32_t wrapper_send_index,
+    std::uint32_t wrapper_send_budget) {
     if (correlation_id == 0) {
         return;
     }
@@ -573,14 +578,18 @@ void LogMemorizeSendOpcodeMismatch(
         caller_bytes.size(),
         caller_bytes.data());
 
-    std::wstring message = L"SpellUsabilityTrace target=MemorizeSend status=not_observed correlation=";
+    std::wstring message = L"SpellUsabilityTrace target=MemorizeSend status=intermediate_send correlation=";
     message += std::to_wstring(correlation_id);
-    message += L" reason=opcode_mismatch observed_opcode=";
+    message += L" observed_opcode=";
     message += std::to_wstring(opcode);
     message += L" observed_opcode_hex=";
     message += Hex32(opcode);
     message += L" observed_opcode_name=";
     message += monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
+    message += L" wrapper_send_index=";
+    message += std::to_wstring(wrapper_send_index);
+    message += L" wrapper_send_budget=";
+    message += std::to_wstring(wrapper_send_budget);
     message += L" mode_like=";
     message += std::to_wstring(mode_like);
     message += L" total_length=";
@@ -606,6 +615,21 @@ void LogMemorizeSendOpcodeMismatch(
     }
     message += L" original_result=";
     message += original_result ? L"true" : L"false";
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogMemorizeSendBudgetExhausted(
+    std::uint32_t correlation_id,
+    std::uint32_t wrapper_send_budget) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    std::wstring message = L"SpellUsabilityTrace target=MemorizeSend status=not_observed correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" reason=wrapper_send_budget_exhausted wrapper_send_budget=";
+    message += std::to_wstring(wrapper_send_budget);
     AppendActiveScrollCorrelation(&message);
     monomyth::logger::Log(message);
 }
@@ -797,6 +821,7 @@ bool MONOMYTH_FASTCALL CanStartMemmingHook(
         }
         memorize_send_correlation = ++g_memorize_send_correlation_count;
         g_memorize_send_pending_correlation_id = memorize_send_correlation;
+        g_memorize_send_pending_wrapper_sends = 0;
     }
     if (ShouldLogSpellTrace(g_can_start_memming_trace_count)) {
         std::wstring message = L"SpellUsabilityTrace target=CanStartMemming spell_or_book_index=";
@@ -852,6 +877,10 @@ bool MONOMYTH_FASTCALL MemorizeSendPacketWrapperHook(
         total_length);
 
     const std::uint32_t correlation_id = g_memorize_send_pending_correlation_id;
+    std::uint32_t wrapper_send_index = 0;
+    if (correlation_id != 0) {
+        wrapper_send_index = ++g_memorize_send_pending_wrapper_sends;
+    }
     monomyth::packet_observer::ObserveSendMetadata(
         g_memorize_send_packet_wrapper_address,
         reinterpret_cast<std::uintptr_t>(this_context),
@@ -870,10 +899,12 @@ bool MONOMYTH_FASTCALL MemorizeSendPacketWrapperHook(
         if (!opcode_decoded) {
             LogMemorizeSendDecodeFailure(correlation_id, not_decoded_reason);
             g_memorize_send_pending_correlation_id = 0;
+            g_memorize_send_pending_wrapper_sends = 0;
         } else if (opcode == kMemorizeSpellOpcode) {
             g_memorize_send_pending_correlation_id = 0;
+            g_memorize_send_pending_wrapper_sends = 0;
         } else {
-            LogMemorizeSendOpcodeMismatch(
+            LogMemorizeSendIntermediateSend(
                 correlation_id,
                 opcode,
                 mode_like,
@@ -881,8 +912,16 @@ bool MONOMYTH_FASTCALL MemorizeSendPacketWrapperHook(
                 packet,
                 this_context,
                 caller_return_address,
-                original_result);
-            g_memorize_send_pending_correlation_id = 0;
+                original_result,
+                wrapper_send_index,
+                kMemorizeSendCorrelationMaxWrapperSends);
+            if (wrapper_send_index >= kMemorizeSendCorrelationMaxWrapperSends) {
+                LogMemorizeSendBudgetExhausted(
+                    correlation_id,
+                    kMemorizeSendCorrelationMaxWrapperSends);
+                g_memorize_send_pending_correlation_id = 0;
+                g_memorize_send_pending_wrapper_sends = 0;
+            }
         }
     }
 
@@ -1120,6 +1159,7 @@ bool InstallMemorizeSendTrace(const monomyth::runtime::Manifest& manifest) noexc
     g_memorize_send_trace_count = 0;
     g_memorize_send_pending_correlation_id = 0;
     g_memorize_send_correlation_count = 0;
+    g_memorize_send_pending_wrapper_sends = 0;
     return true;
 }
 
@@ -1202,6 +1242,7 @@ bool RemoveMemorizeSendTrace() noexcept {
         g_original_memorize_send_packet_wrapper = nullptr;
         g_memorize_send_packet_wrapper_address = 0;
         g_memorize_send_pending_correlation_id = 0;
+        g_memorize_send_pending_wrapper_sends = 0;
         monomyth::logger::Log(
             L"hook_manager: memorize send trace removed target=MemorizeSendPacketWrapper");
         return true;
