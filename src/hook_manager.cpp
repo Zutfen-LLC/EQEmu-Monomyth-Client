@@ -985,12 +985,32 @@ void LogMemSpellCommitPathCall(
 
     const std::uintptr_t module_base = GetHostModuleBase();
     const auto* state = reinterpret_cast<const std::uint8_t*>(this_window);
-    const std::uint32_t state_238 =
-        this_window == nullptr ? 0 : *reinterpret_cast<const std::uint32_t*>(state + 0x238);
-    const std::uint32_t state_240 =
-        this_window == nullptr ? 0 : *reinterpret_cast<const std::uint32_t*>(state + 0x240);
-    const std::uint32_t state_244 =
-        this_window == nullptr ? 0 : *reinterpret_cast<const std::uint32_t*>(state + 0x244);
+    std::uint32_t state_238 = 0;
+    std::uint32_t state_240 = 0;
+    std::uint32_t state_244 = 0;
+    bool state_238_copied = false;
+    bool state_240_copied = false;
+    bool state_244_copied = false;
+    if (state != nullptr) {
+        state_238_copied = TryCopyBytes(
+            state + 0x238,
+            sizeof(state_238),
+            reinterpret_cast<std::uint8_t*>(&state_238));
+        state_240_copied = TryCopyBytes(
+            state + 0x240,
+            sizeof(state_240),
+            reinterpret_cast<std::uint8_t*>(&state_240));
+        state_244_copied = TryCopyBytes(
+            state + 0x244,
+            sizeof(state_244),
+            reinterpret_cast<std::uint8_t*>(&state_244));
+    }
+    void* memorize_context = nullptr;
+    const bool memorize_context_copied =
+        TryCopyBytes(
+            reinterpret_cast<const void*>(0x00dd25ac),
+            sizeof(memorize_context),
+            reinterpret_cast<std::uint8_t*>(&memorize_context));
 
     std::wstring message = L"SpellUsabilityTrace target=MemSpellCommitPath correlation=";
     message += std::to_wstring(correlation_id);
@@ -1005,14 +1025,30 @@ void LogMemSpellCommitPathCall(
     message += HexPtr(reinterpret_cast<std::uintptr_t>(this_window));
     message += L" entry_argument=";
     message += std::to_wstring(entry_argument);
-    message += L" state_238=";
-    message += Hex32(state_238);
-    message += L" state_240=";
-    message += Hex32(state_240);
-    message += L" state_244=";
-    message += std::to_wstring(state_244);
-    message += L" memorize_context_present=";
-    message += *reinterpret_cast<void* const*>(0x00dd25ac) == nullptr ? L"false" : L"true";
+    message += L" state_238_status=";
+    message += state_238_copied ? L"copied" : L"unreadable";
+    if (state_238_copied) {
+        message += L" state_238=";
+        message += Hex32(state_238);
+    }
+    message += L" state_240_status=";
+    message += state_240_copied ? L"copied" : L"unreadable";
+    if (state_240_copied) {
+        message += L" state_240=";
+        message += Hex32(state_240);
+    }
+    message += L" state_244_status=";
+    message += state_244_copied ? L"copied" : L"unreadable";
+    if (state_244_copied) {
+        message += L" state_244=";
+        message += std::to_wstring(state_244);
+    }
+    message += L" memorize_context_status=";
+    message += memorize_context_copied ? L"copied" : L"unreadable";
+    if (memorize_context_copied) {
+        message += L" memorize_context_present=";
+        message += memorize_context == nullptr ? L"false" : L"true";
+    }
     message += L" caller_return=";
     message += HexPtr(caller_return_address);
     if (module_base != 0 && caller_return_address >= module_base) {
