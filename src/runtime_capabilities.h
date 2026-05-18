@@ -19,6 +19,8 @@ struct Manifest {
     bool hooks_allowed = false;
     bool packet_hooks_dev_opt_in = false;
     bool packet_hooks_allowed = false;
+    bool full_packet_trace_dev_opt_in = false;
+    bool full_packet_trace_allowed = false;
     bool receive_introspection_dev_opt_in = false;
     bool receive_introspection_allowed = false;
     bool spell_usability_discovery_dev_opt_in = false;
@@ -42,9 +44,47 @@ struct Manifest {
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     monomyth::spell_usability_discovery::TargetState is_class_usable_predicate_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState spellbook_dispatcher_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState start_spell_scribe_path_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState
+        start_spell_scribe_precheck_mode_getter_state =
+            monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState start_spell_scribe_precheck_gate_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState start_spell_scribe_precheck_lookup_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState
+        start_spell_scribe_precheck_fast_accept_state =
+            monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState
+        start_spell_scribe_precheck_class_resolver_state =
+            monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState
+        start_spell_scribe_precheck_assigned_mask_getter_state =
+            monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState
+        start_spell_scribe_precheck_rule_4462c0_state =
+            monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState
+        start_spell_scribe_precheck_rule_446190_state =
+            monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState
+        start_spell_scribe_precheck_rule_446200_state =
+            monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState
+        start_spell_scribe_precheck_rule_446380_state =
+            monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     monomyth::spell_usability_discovery::TargetState can_start_memming_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState start_spell_memorization_path_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     monomyth::spell_usability_discovery::TargetState memorize_send_packet_wrapper_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState mem_spell_commit_path_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState post_can_start_memming_followup_gate_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     std::uintptr_t runtime_module_base = 0;
     std::uint32_t receive_dispatch_rva = 0;
@@ -55,22 +95,87 @@ struct Manifest {
     std::uintptr_t get_spell_level_needed_address = 0;
     std::uint32_t is_class_usable_predicate_rva = 0;
     std::uintptr_t is_class_usable_predicate_address = 0;
+    std::uint32_t spellbook_dispatcher_rva = 0;
+    std::uintptr_t spellbook_dispatcher_address = 0;
+    std::uint32_t start_spell_scribe_path_rva = 0;
+    std::uintptr_t start_spell_scribe_path_address = 0;
+    std::uint32_t start_spell_scribe_precheck_mode_getter_rva = 0;
+    std::uintptr_t start_spell_scribe_precheck_mode_getter_address = 0;
+    std::uint32_t start_spell_scribe_precheck_gate_rva = 0;
+    std::uintptr_t start_spell_scribe_precheck_gate_address = 0;
+    std::uint32_t start_spell_scribe_precheck_lookup_rva = 0;
+    std::uintptr_t start_spell_scribe_precheck_lookup_address = 0;
+    std::uint32_t start_spell_scribe_precheck_fast_accept_rva = 0;
+    std::uintptr_t start_spell_scribe_precheck_fast_accept_address = 0;
+    std::uint32_t start_spell_scribe_precheck_class_resolver_rva = 0;
+    std::uintptr_t start_spell_scribe_precheck_class_resolver_address = 0;
+    std::uint32_t start_spell_scribe_precheck_assigned_mask_getter_rva = 0;
+    std::uintptr_t start_spell_scribe_precheck_assigned_mask_getter_address = 0;
+    std::uint32_t start_spell_scribe_precheck_rule_4462c0_rva = 0;
+    std::uintptr_t start_spell_scribe_precheck_rule_4462c0_address = 0;
+    std::uint32_t start_spell_scribe_precheck_rule_446190_rva = 0;
+    std::uintptr_t start_spell_scribe_precheck_rule_446190_address = 0;
+    std::uint32_t start_spell_scribe_precheck_rule_446200_rva = 0;
+    std::uintptr_t start_spell_scribe_precheck_rule_446200_address = 0;
+    std::uint32_t start_spell_scribe_precheck_rule_446380_rva = 0;
+    std::uintptr_t start_spell_scribe_precheck_rule_446380_address = 0;
     std::uint32_t can_start_memming_rva = 0;
     std::uintptr_t can_start_memming_address = 0;
+    std::uint32_t start_spell_memorization_path_rva = 0;
+    std::uintptr_t start_spell_memorization_path_address = 0;
     std::uint32_t memorize_send_packet_wrapper_rva = 0;
     std::uintptr_t memorize_send_packet_wrapper_address = 0;
+    std::uint32_t mem_spell_commit_path_rva = 0;
+    std::uintptr_t mem_spell_commit_path_address = 0;
+    std::uint32_t post_can_start_memming_followup_gate_rva = 0;
+    std::uintptr_t post_can_start_memming_followup_gate_address = 0;
     std::wstring handle_rbutton_up_evidence_source = L"not_attempted";
     std::wstring handle_rbutton_up_failure_reason = L"not_attempted";
     std::wstring get_spell_level_needed_evidence_source = L"not_attempted";
     std::wstring get_spell_level_needed_failure_reason = L"not_attempted";
     std::wstring is_class_usable_predicate_evidence_source = L"not_attempted";
     std::wstring is_class_usable_predicate_failure_reason = L"not_attempted";
+    std::wstring spellbook_dispatcher_evidence_source = L"not_attempted";
+    std::wstring spellbook_dispatcher_failure_reason = L"not_attempted";
+    std::wstring start_spell_scribe_path_evidence_source = L"not_attempted";
+    std::wstring start_spell_scribe_path_failure_reason = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_mode_getter_evidence_source = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_mode_getter_failure_reason = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_gate_evidence_source = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_gate_failure_reason = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_lookup_evidence_source = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_lookup_failure_reason = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_fast_accept_evidence_source = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_fast_accept_failure_reason = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_class_resolver_evidence_source =
+        L"not_attempted";
+    std::wstring start_spell_scribe_precheck_class_resolver_failure_reason =
+        L"not_attempted";
+    std::wstring start_spell_scribe_precheck_assigned_mask_getter_evidence_source =
+        L"not_attempted";
+    std::wstring start_spell_scribe_precheck_assigned_mask_getter_failure_reason =
+        L"not_attempted";
+    std::wstring start_spell_scribe_precheck_rule_4462c0_evidence_source = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_rule_4462c0_failure_reason = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_rule_446190_evidence_source = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_rule_446190_failure_reason = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_rule_446200_evidence_source = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_rule_446200_failure_reason = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_rule_446380_evidence_source = L"not_attempted";
+    std::wstring start_spell_scribe_precheck_rule_446380_failure_reason = L"not_attempted";
     std::wstring can_start_memming_evidence_source = L"not_attempted";
     std::wstring can_start_memming_failure_reason = L"not_attempted";
+    std::wstring start_spell_memorization_path_evidence_source = L"not_attempted";
+    std::wstring start_spell_memorization_path_failure_reason = L"not_attempted";
     std::wstring memorize_send_packet_wrapper_evidence_source = L"not_attempted";
     std::wstring memorize_send_packet_wrapper_failure_reason = L"not_attempted";
+    std::wstring mem_spell_commit_path_evidence_source = L"not_attempted";
+    std::wstring mem_spell_commit_path_failure_reason = L"not_attempted";
+    std::wstring post_can_start_memming_followup_gate_evidence_source = L"not_attempted";
+    std::wstring post_can_start_memming_followup_gate_failure_reason = L"not_attempted";
     std::wstring reason = L"manifest unavailable";
     std::wstring packet_hooks_reason = L"packet hooks unavailable";
+    std::wstring full_packet_trace_reason = L"full packet trace unavailable";
     std::wstring receive_introspection_reason = L"receive introspection unavailable";
     std::wstring spell_usability_discovery_reason = L"spell usability discovery unavailable";
     std::wstring spell_usability_trace_reason = L"spell usability trace unavailable";

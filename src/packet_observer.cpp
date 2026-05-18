@@ -41,6 +41,7 @@ constexpr std::array<std::uint32_t, 1> kDefaultAllowlist = {
 std::atomic<State> g_state = State::kUnavailable;
 std::atomic<std::uint64_t> g_observed_count = 0;
 std::atomic<std::uint64_t> g_observed_send_count = 0;
+std::atomic<bool> g_full_packet_trace_enabled = false;
 std::atomic<bool> g_introspection_enabled = false;
 std::atomic<std::uint64_t> g_introspection_match_count = 0;
 std::atomic<std::uint64_t> g_introspection_skip_count = 0;
@@ -65,6 +66,9 @@ std::wstring HexPtr(std::uintptr_t value) {
 }
 
 bool ShouldLogPacket(std::uint64_t sequence) noexcept {
+    if (g_full_packet_trace_enabled.load()) {
+        return true;
+    }
     return sequence <= kFirstPacketLogLimit ||
         (sequence % kPacketLogSampleInterval) == 0;
 }
@@ -281,6 +285,7 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
 
     g_observed_count.store(0);
     g_observed_send_count.store(0);
+    g_full_packet_trace_enabled.store(manifest.full_packet_trace_allowed);
     g_introspection_match_count.store(0);
     g_introspection_skip_count.store(0);
     g_introspection_enabled.store(manifest.receive_introspection_allowed);
@@ -299,12 +304,20 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
             L"PacketObserver recv_introspection_config_status=no_valid_opcodes");
     }
 
-    std::wstring message =
-        L"PacketObserver state=initialized recv_log_policy=first_50_then_every_500 send_log_policy=first_50_then_every_500";
+    std::wstring message = L"PacketObserver state=initialized recv_log_policy=";
+    message += manifest.full_packet_trace_allowed
+        ? L"all_packets"
+        : L"first_50_then_every_500";
+    message += L" send_log_policy=";
+    message += manifest.full_packet_trace_allowed
+        ? L"all_packets"
+        : L"first_50_then_every_500";
     message += L" recv_metadata=";
     message += manifest.packet_hooks_allowed ? L"true" : L"false";
     message += L" memorize_send_trace=";
     message += manifest.memorize_send_trace_allowed ? L"true" : L"false";
+    message += L" full_packet_trace=";
+    message += manifest.full_packet_trace_allowed ? L"true" : L"false";
     if (manifest.receive_introspection_allowed) {
         message += L" recv_introspection=true recv_introspection_prefix_cap=16";
         message += L" recv_introspection_safety_ceiling=";
@@ -419,9 +432,17 @@ void ObserveReceiveMetadata(
 }
 
 void ObserveSendMetadata(
+    std::uintptr_t wrapper_address,
+    std::uintptr_t source_context,
+    std::uintptr_t packet_pointer,
+    std::uint32_t total_length,
+    bool opcode_decoded,
     std::uint32_t opcode,
     std::uint32_t payload_length,
-    std::uintptr_t source_context,
+    const wchar_t* decode_status,
+    const wchar_t* not_decoded_reason,
+    bool original_result,
+    bool original_result_available,
     std::uint32_t correlation_id) noexcept {
     if (g_state.load() != State::kInitialized) {
         return;
@@ -433,15 +454,39 @@ void ObserveSendMetadata(
     }
 
     std::wstringstream message;
-    const std::wstring_view opcode_name = monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
+    const std::wstring_view opcode_name = opcode_decoded
+        ? monomyth::opcode_reference::LookupRof2OpcodeName(opcode)
+        : std::wstring_view(L"not_decoded");
     message
         << L"PacketObserverSend"
         << L" seq=" << sequence
-        << L" opcode=" << opcode
-        << L" opcode_hex=" << Hex32(opcode)
+        << L" target=MemorizeSendPacketWrapper"
+        << L" wrapper_address=" << HexPtr(wrapper_address)
+        << L" source_context=" << HexPtr(source_context)
+        << L" packet_pointer=" << HexPtr(packet_pointer)
+        << L" total_length=" << total_length
+        << L" decode_status="
+        << ((decode_status == nullptr || decode_status[0] == L'\0') ? L"unknown" : decode_status);
+    if (opcode_decoded) {
+        message << L" opcode=" << opcode
+                << L" opcode_hex=" << Hex32(opcode);
+    } else {
+        message << L" opcode=unknown opcode_hex=not_decoded";
+    }
+    message
         << L" opcode_name=" << opcode_name
-        << L" payload_length=" << payload_length
-        << L" source_context=" << HexPtr(source_context);
+        << L" payload_length=" << payload_length;
+    if (!opcode_decoded) {
+        message << L" not_decoded_reason="
+                << ((not_decoded_reason == nullptr || not_decoded_reason[0] == L'\0')
+                        ? L"unknown"
+                        : not_decoded_reason);
+    } else if (opcode_name == L"OP_MemorizeSpell") {
+        message << L" memorize_opcode_match=true";
+    }
+    if (original_result_available) {
+        message << L" original_result=" << (original_result ? L"true" : L"false");
+    }
     if (correlation_id != 0) {
         message << L" memorize_send_correlation=" << correlation_id;
     }
@@ -460,6 +505,7 @@ void Shutdown() noexcept {
             << L" observed_send_count=" << g_observed_send_count.load()
             << L" introspection_match_count=" << g_introspection_match_count.load()
             << L" introspection_skip_count=" << g_introspection_skip_count.load();
+    g_full_packet_trace_enabled.store(false);
     monomyth::logger::Log(message.str());
 }
 

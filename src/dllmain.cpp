@@ -3,11 +3,20 @@
 #include "dinput_proxy.h"
 #include "logger.h"
 
+#define MONOMYTH_WIDEN2(value) L##value
+#define MONOMYTH_WIDEN(value) MONOMYTH_WIDEN2(value)
+
+namespace {
+constexpr wchar_t kBuildMarker[] =
+    L"build_marker slice_id=CLIENT-MEM-SEND-TRACE-001 build=" MONOMYTH_WIDEN(__DATE__) L" " MONOMYTH_WIDEN(__TIME__);
+}  // namespace
+
 BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID reserved) {
     switch (reason) {
     case DLL_PROCESS_ATTACH:
         DisableThreadLibraryCalls(module);
         monomyth::logger::Log(L"dllmain: DLL_PROCESS_ATTACH");
+        monomyth::logger::Log(kBuildMarker);
         break;
     case DLL_PROCESS_DETACH:
         if (reserved == nullptr) {

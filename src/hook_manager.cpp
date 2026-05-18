@@ -6,11 +6,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <iomanip>
 #include <limits>
 #include <sstream>
 #include <string>
 
 #include "logger.h"
+#include "opcode_reference.h"
 #include "packet_observer.h"
 #include "server_auth_stats_observer.h"
 #include "spell_level_selection.h"
@@ -32,9 +34,23 @@ bool g_initialized = false;
 
 constexpr std::size_t kJmpPatchBytes = 5;
 constexpr std::size_t kMaxStolenBytes = 16;
+constexpr std::size_t kIntermediateSendPrefixByteCap = 16;
 constexpr std::uint64_t kSpellTraceInitialLogCount = 20;
 constexpr std::uint64_t kSpellTraceLogInterval = 100;
 constexpr std::uint32_t kMemorizeSpellOpcode = 0x217c;
+constexpr std::uint32_t kDeleteSpellOpcode = 0x3358;
+constexpr std::uint32_t kMemorizeSendCorrelationMaxWrapperSends = 8;
+constexpr std::uint32_t kSpellbookScribeCorrelationMaxWrapperSends = 8;
+constexpr std::size_t kScribeGateDescriptorTableOffset = 0x4;
+constexpr std::size_t kScribeGateRelativeOffsetField = 0x4;
+constexpr std::size_t kScribeGateLookupContextBias = 0x8;
+constexpr std::size_t kScribeGateLookupKeyOffset = 0x4;
+constexpr std::size_t kScribeGateNodeRecordOffset = 0x4;
+constexpr std::size_t kScribeGateNodeNextOffset = 0xc;
+constexpr std::size_t kScribeGateResolvedClassIdOffset = 0x3374;
+constexpr std::uint32_t kScribeGateMaxRelativeLookupOffset = 0x00100000;
+constexpr std::size_t kScribeGateMaxLookupNodes = 256;
+constexpr wchar_t kMemorizeSendTraceSliceId[] = L"CLIENT-MEM-SEND-TRACE-001";
 
 using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
@@ -52,14 +68,67 @@ using GetSpellLevelNeededFn = std::uint8_t (MONOMYTH_THISCALL*)(
 using IsClassUsablePredicateFn = int (MONOMYTH_THISCALL*)(
     void* this_character,
     unsigned int class_id);
+using SpellbookDispatcherFn = void (MONOMYTH_THISCALL*)(
+    void* this_window,
+    int slot_like);
+using StartSpellScribePathFn = int (MONOMYTH_THISCALL*)(
+    void* this_window,
+    int spellbook_entry_like);
+using StartSpellScribePrecheckModeGetterFn = int (MONOMYTH_THISCALL*)(
+    void* this_context);
+using StartSpellScribePrecheckGateFn = bool (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* descriptor_like,
+    int require_known_like,
+    int allow_recheck_like);
+using StartSpellScribePrecheckLookupFn = int (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* spell_or_scroll_like);
+using StartSpellScribePrecheckFastAcceptFn = int (MONOMYTH_THISCALL*)(
+    void* this_context);
+using StartSpellScribePrecheckClassResolverFn = void* (MONOMYTH_THISCALL*)(
+    void* this_context);
+using StartSpellScribePrecheckAssignedMaskGetterFn = std::uint32_t (MONOMYTH_THISCALL*)(
+    void* this_context,
+    int flag_like,
+    int extra_like);
+using StartSpellScribePrecheckRule4462c0Fn = bool (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* descriptor_like,
+    int flag_like);
+using StartSpellScribePrecheckRule446190Fn = bool (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* descriptor_like,
+    int flag_like);
+using StartSpellScribePrecheckRule446200Fn = bool (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* descriptor_like,
+    int flag_like);
+using StartSpellScribePrecheckRule446380Fn = bool (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* descriptor_like,
+    int flag_like,
+    int zero_like);
 using CanStartMemmingFn = bool (MONOMYTH_THISCALL*)(
     void* this_window,
     int spell_or_book_index);
+using StartSpellMemorizationPathFn = int (MONOMYTH_THISCALL*)(
+    void* this_window,
+    std::uint32_t pending_slot_state,
+    std::uint32_t zero_like_a,
+    std::uint32_t mode_like,
+    std::int32_t spell_or_book_index,
+    std::uint32_t zero_like_b,
+    std::int32_t slot_like);
 using MemorizeSendPacketWrapperFn = bool (MONOMYTH_THISCALL*)(
     void* this_context,
     std::uint32_t mode_like,
     const void* packet,
     std::uint32_t total_length);
+using MemSpellCommitPathFn = int (MONOMYTH_THISCALL*)(
+    void* this_window);
+using PostCanStartMemmingFollowupGateFn = int (__cdecl*)(
+    void* gate_argument);
 
 struct InlineDetour {
     std::uint8_t* target = nullptr;
@@ -71,26 +140,170 @@ struct InlineDetour {
     bool installed = false;
 };
 
+struct KnownMemorizeFollowupCallsite {
+    std::uint32_t return_rva = 0;
+    std::uint32_t mode_like = 0;
+    const wchar_t* label = L"unknown";
+    std::array<std::uint8_t, kMaxStolenBytes> caller_context_bytes = {};
+};
+
+struct KnownMemorizeFollowupCallsiteMatch {
+    const KnownMemorizeFollowupCallsite* site = nullptr;
+    bool bytes_match = false;
+};
+
+struct RelativeCallResolution {
+    std::uintptr_t call_site = 0;
+    std::uintptr_t target = 0;
+    bool resolved = false;
+};
+
+struct JumpThunkResolution {
+    std::uintptr_t terminal_target = 0;
+    std::uint32_t hop_count = 0;
+    bool resolved = false;
+};
+
+struct SpellbookMemStateSnapshot {
+    std::uint32_t state_234 = 0;
+    std::uint32_t state_238 = 0;
+    std::uint32_t state_23c = 0;
+    std::uint32_t state_240 = 0;
+    std::uint32_t state_244 = 0;
+    bool state_234_copied = false;
+    bool state_238_copied = false;
+    bool state_23c_copied = false;
+    bool state_240_copied = false;
+    bool state_244_copied = false;
+};
+
+struct StartSpellScribePrecheckClassMaskSnapshot {
+    bool active = false;
+    std::uint32_t correlation_id = 0;
+    bool class_resolver_called = false;
+    bool class_resolver_emulated = false;
+    void* class_resolver_this = nullptr;
+    std::uintptr_t class_lookup_context = 0;
+    bool class_lookup_context_copied = false;
+    std::uint32_t class_lookup_key = 0;
+    bool class_lookup_key_copied = false;
+    void* class_record = nullptr;
+    bool class_id_copied = false;
+    std::uint8_t class_id = 0;
+    bool assigned_mask_getter_called = false;
+    void* assigned_mask_getter_this = nullptr;
+    int assigned_mask_flag_like = 0;
+    int assigned_mask_extra_like = 0;
+    std::uint32_t assigned_mask = 0;
+    bool rule_4462c0_called = false;
+    bool rule_446190_called = false;
+    bool rule_446200_called = false;
+    bool rule_446380_called = false;
+    bool authoritative_mask_present = false;
+    std::uint32_t authoritative_mask = 0;
+    std::uint32_t authoritative_mask_intersection = 0;
+    bool authoritative_mask_intersects_spell_mask = false;
+    bool behavior_override_applied = false;
+};
+
+constexpr std::array<KnownMemorizeFollowupCallsite, 2> kKnownMemorizeFollowupCallsites = {{
+    {
+        0x0013e1cd,
+        0,
+        L"PostCanStartMemmingClientUpdateBranch",
+        {{0x00, 0x66, 0xa5, 0xe8, 0x23, 0x70, 0x38, 0x00,
+          0x6a, 0x00, 0x8a, 0xd8, 0xe8, 0x7b, 0xcf, 0x39}}
+    },
+    {
+        0x0018caba,
+        4,
+        L"PostCanStartMemmingFloatListThingBranch",
+        {{0x56, 0x6a, 0x04, 0xe8, 0x36, 0x87, 0x33, 0x00,
+          0x55, 0x8a, 0xd8, 0xe8, 0x8f, 0xe6, 0x34, 0x00}}
+    },
+}};
+
 InlineDetour g_receive_dispatch_detour = {};
 InlineDetour g_handle_rbutton_up_detour = {};
 InlineDetour g_get_spell_level_needed_detour = {};
 InlineDetour g_is_class_usable_predicate_detour = {};
+InlineDetour g_spellbook_dispatcher_detour = {};
+InlineDetour g_start_spell_scribe_path_detour = {};
+InlineDetour g_start_spell_scribe_precheck_mode_getter_detour = {};
+InlineDetour g_start_spell_scribe_precheck_gate_detour = {};
+InlineDetour g_start_spell_scribe_precheck_lookup_detour = {};
+InlineDetour g_start_spell_scribe_precheck_fast_accept_detour = {};
+InlineDetour g_start_spell_scribe_precheck_class_resolver_detour = {};
+InlineDetour g_start_spell_scribe_precheck_assigned_mask_getter_detour = {};
+InlineDetour g_start_spell_scribe_precheck_rule_4462c0_detour = {};
+InlineDetour g_start_spell_scribe_precheck_rule_446190_detour = {};
+InlineDetour g_start_spell_scribe_precheck_rule_446200_detour = {};
+InlineDetour g_start_spell_scribe_precheck_rule_446380_detour = {};
 InlineDetour g_can_start_memming_detour = {};
+InlineDetour g_start_spell_memorization_path_detour = {};
 InlineDetour g_memorize_send_packet_wrapper_detour = {};
+InlineDetour g_mem_spell_commit_path_detour = {};
+InlineDetour g_post_can_start_memming_followup_gate_detour = {};
 ReceiveDispatchFn g_original_receive_dispatch = nullptr;
 HandleRButtonUpFn g_original_handle_rbutton_up = nullptr;
 GetSpellLevelNeededFn g_original_get_spell_level_needed = nullptr;
 IsClassUsablePredicateFn g_original_is_class_usable_predicate = nullptr;
+SpellbookDispatcherFn g_original_spellbook_dispatcher = nullptr;
+StartSpellScribePathFn g_original_start_spell_scribe_path = nullptr;
+StartSpellScribePrecheckModeGetterFn g_original_start_spell_scribe_precheck_mode_getter =
+    nullptr;
+StartSpellScribePrecheckGateFn g_original_start_spell_scribe_precheck_gate = nullptr;
+StartSpellScribePrecheckLookupFn g_original_start_spell_scribe_precheck_lookup = nullptr;
+StartSpellScribePrecheckFastAcceptFn g_original_start_spell_scribe_precheck_fast_accept =
+    nullptr;
+StartSpellScribePrecheckClassResolverFn g_original_start_spell_scribe_precheck_class_resolver =
+    nullptr;
+StartSpellScribePrecheckAssignedMaskGetterFn
+    g_original_start_spell_scribe_precheck_assigned_mask_getter = nullptr;
+StartSpellScribePrecheckRule4462c0Fn g_original_start_spell_scribe_precheck_rule_4462c0 =
+    nullptr;
+StartSpellScribePrecheckRule446190Fn g_original_start_spell_scribe_precheck_rule_446190 =
+    nullptr;
+StartSpellScribePrecheckRule446200Fn g_original_start_spell_scribe_precheck_rule_446200 =
+    nullptr;
+StartSpellScribePrecheckRule446380Fn g_original_start_spell_scribe_precheck_rule_446380 =
+    nullptr;
 CanStartMemmingFn g_original_can_start_memming = nullptr;
+StartSpellMemorizationPathFn g_original_start_spell_memorization_path = nullptr;
 MemorizeSendPacketWrapperFn g_original_memorize_send_packet_wrapper = nullptr;
+MemSpellCommitPathFn g_original_mem_spell_commit_path = nullptr;
+PostCanStartMemmingFollowupGateFn g_original_post_can_start_memming_followup_gate = nullptr;
 std::uint64_t g_get_spell_level_needed_trace_count = 0;
 std::uint64_t g_can_start_memming_trace_count = 0;
 std::uint64_t g_memorize_send_trace_count = 0;
 std::uint64_t g_scroll_scribe_event_count = 0;
 std::uint32_t g_memorize_send_pending_correlation_id = 0;
 std::uint32_t g_memorize_send_correlation_count = 0;
+std::uint32_t g_memorize_send_pending_wrapper_sends = 0;
+std::uint32_t g_spellbook_scribe_pending_correlation_id = 0;
+std::uint32_t g_spellbook_scribe_correlation_count = 0;
+std::uint32_t g_spellbook_scribe_pending_wrapper_sends = 0;
+std::uint32_t g_spellbook_ui_active_correlation_id = 0;
+std::uint32_t g_spellbook_ui_correlation_count = 0;
 std::uint32_t g_scroll_scribe_active_correlation_id = 0;
+std::uintptr_t g_spellbook_dispatcher_address = 0;
+std::uintptr_t g_start_spell_scribe_path_address = 0;
+std::uintptr_t g_start_spell_scribe_precheck_mode_getter_address = 0;
+std::uintptr_t g_start_spell_scribe_precheck_gate_address = 0;
+std::uintptr_t g_start_spell_scribe_precheck_lookup_address = 0;
+std::uintptr_t g_start_spell_scribe_precheck_fast_accept_address = 0;
+std::uintptr_t g_start_spell_scribe_precheck_class_resolver_address = 0;
+std::uintptr_t g_start_spell_scribe_precheck_assigned_mask_getter_address = 0;
+std::uintptr_t g_start_spell_scribe_precheck_rule_4462c0_address = 0;
+std::uintptr_t g_start_spell_scribe_precheck_rule_446190_address = 0;
+std::uintptr_t g_start_spell_scribe_precheck_rule_446200_address = 0;
+std::uintptr_t g_start_spell_scribe_precheck_rule_446380_address = 0;
+std::uintptr_t g_start_spell_memorization_path_address = 0;
+std::uintptr_t g_memorize_send_packet_wrapper_address = 0;
+std::uintptr_t g_mem_spell_commit_path_address = 0;
+std::uintptr_t g_post_can_start_memming_followup_gate_address = 0;
 bool g_scroll_scribe_active_logging = false;
+StartSpellScribePrecheckClassMaskSnapshot g_start_spell_scribe_precheck_class_mask_snapshot = {};
 std::wstring g_handle_rbutton_up_evidence_source = L"unknown";
 std::wstring g_is_class_usable_predicate_evidence_source = L"unknown";
 bool g_multiclass_spell_usability_enabled = false;
@@ -105,6 +318,515 @@ std::wstring Hex32(std::uint32_t value) {
     std::wstringstream stream;
     stream << L"0x" << std::hex << value;
     return stream.str();
+}
+
+std::uintptr_t GetCallerReturnAddress() noexcept {
+#if defined(_MSC_VER)
+    return reinterpret_cast<std::uintptr_t>(_ReturnAddress());
+#elif defined(__clang__) || defined(__GNUC__)
+    return reinterpret_cast<std::uintptr_t>(__builtin_return_address(0));
+#else
+    return 0;
+#endif
+}
+
+bool TryCopyBytes(
+    const void* source,
+    std::size_t length,
+    std::uint8_t* destination) noexcept {
+    if (source == nullptr || destination == nullptr || length == 0) {
+        return false;
+    }
+
+#if defined(_MSC_VER)
+    __try {
+        std::memcpy(destination, source, length);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    std::memcpy(destination, source, length);
+#endif
+    return true;
+}
+
+template <typename T>
+bool TryCopyObject(const void* source, T* destination) noexcept {
+    return TryCopyBytes(
+        source,
+        sizeof(T),
+        reinterpret_cast<std::uint8_t*>(destination));
+}
+
+SpellbookMemStateSnapshot CaptureSpellbookMemState(const void* this_window) noexcept {
+    SpellbookMemStateSnapshot snapshot = {};
+    const auto* state = reinterpret_cast<const std::uint8_t*>(this_window);
+    if (state == nullptr) {
+        return snapshot;
+    }
+
+    snapshot.state_234_copied = TryCopyBytes(
+        state + 0x234,
+        sizeof(snapshot.state_234),
+        reinterpret_cast<std::uint8_t*>(&snapshot.state_234));
+    snapshot.state_238_copied = TryCopyBytes(
+        state + 0x238,
+        sizeof(snapshot.state_238),
+        reinterpret_cast<std::uint8_t*>(&snapshot.state_238));
+    snapshot.state_23c_copied = TryCopyBytes(
+        state + 0x23c,
+        sizeof(snapshot.state_23c),
+        reinterpret_cast<std::uint8_t*>(&snapshot.state_23c));
+    snapshot.state_240_copied = TryCopyBytes(
+        state + 0x240,
+        sizeof(snapshot.state_240),
+        reinterpret_cast<std::uint8_t*>(&snapshot.state_240));
+    snapshot.state_244_copied = TryCopyBytes(
+        state + 0x244,
+        sizeof(snapshot.state_244),
+        reinterpret_cast<std::uint8_t*>(&snapshot.state_244));
+    return snapshot;
+}
+
+void ResetStartSpellScribePrecheckClassMaskSnapshot(
+    std::uint32_t correlation_id) noexcept {
+    g_start_spell_scribe_precheck_class_mask_snapshot = {};
+    g_start_spell_scribe_precheck_class_mask_snapshot.active = correlation_id != 0;
+    g_start_spell_scribe_precheck_class_mask_snapshot.correlation_id = correlation_id;
+}
+
+void ClearStartSpellScribePrecheckClassMaskSnapshot() noexcept {
+    g_start_spell_scribe_precheck_class_mask_snapshot = {};
+}
+
+void CaptureStartSpellScribePrecheckClassResolverFromGateContext(
+    void* this_context) noexcept {
+    auto& snapshot = g_start_spell_scribe_precheck_class_mask_snapshot;
+    if (!snapshot.active || snapshot.class_resolver_called || this_context == nullptr) {
+        return;
+    }
+
+    std::uintptr_t descriptor_table = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(this_context) +
+                kScribeGateDescriptorTableOffset,
+            &descriptor_table) ||
+        descriptor_table == 0) {
+        return;
+    }
+
+    std::uint32_t relative_offset = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const void*>(descriptor_table + kScribeGateRelativeOffsetField),
+            &relative_offset) ||
+        relative_offset == 0 ||
+        relative_offset > kScribeGateMaxRelativeLookupOffset) {
+        return;
+    }
+
+    const std::uintptr_t this_context_address =
+        reinterpret_cast<std::uintptr_t>(this_context);
+    if (this_context_address >
+        (std::numeric_limits<std::uintptr_t>::max() - relative_offset -
+         kScribeGateLookupContextBias)) {
+        return;
+    }
+
+    const std::uintptr_t lookup_context =
+        this_context_address + relative_offset + kScribeGateLookupContextBias;
+    snapshot.class_lookup_context = lookup_context;
+    snapshot.class_lookup_context_copied = true;
+
+    std::uintptr_t node = 0;
+    if (!TryCopyObject(reinterpret_cast<const void*>(lookup_context), &node)) {
+        return;
+    }
+
+    snapshot.class_lookup_key_copied = TryCopyObject(
+        reinterpret_cast<const void*>(lookup_context + kScribeGateLookupKeyOffset),
+        &snapshot.class_lookup_key);
+    if (!snapshot.class_lookup_key_copied) {
+        return;
+    }
+
+    for (std::size_t visited_nodes = 0;
+         node != 0 && visited_nodes < kScribeGateMaxLookupNodes;
+         ++visited_nodes) {
+        std::uint32_t node_key = 0;
+        if (!TryCopyObject(reinterpret_cast<const void*>(node), &node_key)) {
+            return;
+        }
+
+        if (node_key == snapshot.class_lookup_key) {
+            std::uintptr_t class_record = 0;
+            if (!TryCopyObject(
+                    reinterpret_cast<const void*>(node + kScribeGateNodeRecordOffset),
+                    &class_record)) {
+                return;
+            }
+
+            snapshot.class_resolver_called = true;
+            snapshot.class_resolver_emulated = true;
+            snapshot.class_resolver_this = this_context;
+            snapshot.class_record = reinterpret_cast<void*>(class_record);
+            if (class_record != 0) {
+                snapshot.class_id_copied = TryCopyObject(
+                    reinterpret_cast<const void*>(
+                        class_record + kScribeGateResolvedClassIdOffset),
+                    &snapshot.class_id);
+            }
+            return;
+        }
+
+        if (!TryCopyObject(
+                reinterpret_cast<const void*>(node + kScribeGateNodeNextOffset),
+                &node)) {
+            return;
+        }
+    }
+
+    snapshot.class_resolver_called = true;
+    snapshot.class_resolver_emulated = true;
+    snapshot.class_resolver_this = this_context;
+    snapshot.class_record = nullptr;
+}
+
+void AppendStartSpellScribePrecheckClassMaskFields(std::wstring* message) {
+    if (message == nullptr) {
+        return;
+    }
+
+    const auto& snapshot = g_start_spell_scribe_precheck_class_mask_snapshot;
+    message->append(L" class_resolver_called=");
+    message->append(snapshot.class_resolver_called ? L"true" : L"false");
+    if (snapshot.class_resolver_called) {
+        message->append(L" class_resolver_source=");
+        message->append(snapshot.class_resolver_emulated ? L"emulated_gate_context" : L"hook");
+        message->append(L" class_resolver_this=");
+        message->append(HexPtr(reinterpret_cast<std::uintptr_t>(snapshot.class_resolver_this)));
+        message->append(L" class_lookup_context_status=");
+        message->append(snapshot.class_lookup_context_copied ? L"copied" : L"unavailable");
+        if (snapshot.class_lookup_context_copied) {
+            message->append(L" class_lookup_context=");
+            message->append(HexPtr(snapshot.class_lookup_context));
+        }
+        message->append(L" class_lookup_key_status=");
+        message->append(snapshot.class_lookup_key_copied ? L"copied" : L"unavailable");
+        if (snapshot.class_lookup_key_copied) {
+            message->append(L" class_lookup_key=");
+            message->append(Hex32(snapshot.class_lookup_key));
+        }
+        message->append(L" class_record=");
+        message->append(HexPtr(reinterpret_cast<std::uintptr_t>(snapshot.class_record)));
+        message->append(L" class_id_status=");
+        message->append(snapshot.class_id_copied ? L"copied" : L"unreadable");
+        if (snapshot.class_id_copied) {
+            message->append(L" class_id=");
+            message->append(std::to_wstring(snapshot.class_id));
+        }
+    }
+
+    message->append(L" assigned_mask_getter_called=");
+    message->append(snapshot.assigned_mask_getter_called ? L"true" : L"false");
+    if (snapshot.assigned_mask_getter_called) {
+        message->append(L" assigned_mask_getter_this=");
+        message->append(HexPtr(reinterpret_cast<std::uintptr_t>(
+            snapshot.assigned_mask_getter_this)));
+        message->append(L" assigned_mask_flag_like=");
+        message->append(std::to_wstring(snapshot.assigned_mask_flag_like));
+        message->append(L" assigned_mask_extra_like=");
+        message->append(std::to_wstring(snapshot.assigned_mask_extra_like));
+        message->append(L" assigned_mask=");
+        message->append(Hex32(snapshot.assigned_mask));
+    }
+
+    message->append(L" late_rule_4462c0_called=");
+    message->append(snapshot.rule_4462c0_called ? L"true" : L"false");
+    message->append(L" late_rule_446190_called=");
+    message->append(snapshot.rule_446190_called ? L"true" : L"false");
+    message->append(L" late_rule_446200_called=");
+    message->append(snapshot.rule_446200_called ? L"true" : L"false");
+    message->append(L" late_rule_446380_called=");
+    message->append(snapshot.rule_446380_called ? L"true" : L"false");
+    message->append(L" authoritative_mask_status=");
+    message->append(snapshot.authoritative_mask_present ? L"present" : L"absent");
+    if (snapshot.authoritative_mask_present) {
+        message->append(L" authoritative_mask=");
+        message->append(Hex32(snapshot.authoritative_mask));
+        message->append(L" authoritative_mask_intersection=");
+        message->append(Hex32(snapshot.authoritative_mask_intersection));
+        message->append(L" authoritative_mask_intersects_spell_mask=");
+        message->append(
+            snapshot.authoritative_mask_intersects_spell_mask ? L"true" : L"false");
+    }
+
+    if (snapshot.class_id_copied && snapshot.class_id != 0 && snapshot.class_id <= 32 &&
+        snapshot.assigned_mask_getter_called) {
+        const std::uint32_t class_bit = 1u << (snapshot.class_id - 1);
+        message->append(L" class_bit_status=derived class_bit=");
+        message->append(Hex32(class_bit));
+        message->append(L" class_mask_match=");
+        message->append((snapshot.assigned_mask & class_bit) != 0 ? L"true" : L"false");
+    } else if (snapshot.class_id_copied) {
+        message->append(L" class_bit_status=invalid_class_id");
+    } else {
+        message->append(L" class_bit_status=unavailable");
+    }
+
+    message->append(L" behavior_override_applied=");
+    message->append(snapshot.behavior_override_applied ? L"true" : L"false");
+}
+
+void AppendSpellbookMemStateFields(
+    std::wstring* message,
+    const wchar_t* prefix,
+    const SpellbookMemStateSnapshot& snapshot) {
+    if (message == nullptr || prefix == nullptr) {
+        return;
+    }
+
+    const struct {
+        const wchar_t* field;
+        bool copied;
+        std::uint32_t value;
+        bool render_hex;
+    } fields[] = {
+        {L"234", snapshot.state_234_copied, snapshot.state_234, true},
+        {L"238", snapshot.state_238_copied, snapshot.state_238, true},
+        {L"23c", snapshot.state_23c_copied, snapshot.state_23c, true},
+        {L"240", snapshot.state_240_copied, snapshot.state_240, true},
+        {L"244", snapshot.state_244_copied, snapshot.state_244, false},
+    };
+
+    for (const auto& field : fields) {
+        message->append(L" ");
+        message->append(prefix);
+        message->append(L"_state_");
+        message->append(field.field);
+        message->append(L"_status=");
+        message->append(field.copied ? L"copied" : L"unreadable");
+        if (field.copied) {
+            message->append(L" ");
+            message->append(prefix);
+            message->append(L"_state_");
+            message->append(field.field);
+            message->append(L"=");
+            message->append(field.render_hex ? Hex32(field.value) : std::to_wstring(field.value));
+        }
+    }
+}
+
+std::wstring HexBytes(const std::uint8_t* bytes, std::size_t length) {
+    if (bytes == nullptr || length == 0) {
+        return L"";
+    }
+
+    std::wstringstream stream;
+    stream << std::hex << std::setfill(L'0');
+    for (std::size_t i = 0; i < length; ++i) {
+        if (i != 0) {
+            stream << L' ';
+        }
+        stream << std::setw(2) << static_cast<unsigned int>(bytes[i]);
+    }
+    return stream.str();
+}
+
+RelativeCallResolution ResolveRelativeCall(
+    const std::uint8_t* code,
+    std::size_t available,
+    std::uintptr_t instruction_address) noexcept {
+    RelativeCallResolution resolution = {};
+    resolution.call_site = instruction_address;
+    if (code == nullptr || available < 5 || code[0] != 0xe8 || instruction_address == 0) {
+        return resolution;
+    }
+
+    std::int32_t relative = 0;
+    std::memcpy(&relative, code + 1, sizeof(relative));
+    resolution.target = instruction_address + 5 + relative;
+    resolution.resolved = true;
+    return resolution;
+}
+
+bool TryResolveRelativeJumpTarget(
+    std::uintptr_t instruction_address,
+    std::uintptr_t* target_out) noexcept {
+    if (instruction_address == 0 || target_out == nullptr) {
+        return false;
+    }
+
+    std::array<std::uint8_t, 5> bytes = {};
+    if (!TryCopyBytes(
+            reinterpret_cast<const void*>(instruction_address),
+            bytes.size(),
+            bytes.data()) ||
+        bytes[0] != 0xe9) {
+        return false;
+    }
+
+    std::int32_t relative = 0;
+    std::memcpy(&relative, bytes.data() + 1, sizeof(relative));
+    *target_out = instruction_address + bytes.size() + relative;
+    return true;
+}
+
+JumpThunkResolution ResolveJumpThunkTarget(std::uintptr_t target_address) noexcept {
+    JumpThunkResolution resolution = {};
+    if (target_address == 0) {
+        return resolution;
+    }
+
+    constexpr std::size_t kThunkPrefixLength = 8;
+    constexpr std::array<std::uint8_t, kThunkPrefixLength> kHotpatchJumpThunkPrefix = {{
+        0x8b, 0xff, 0x55, 0x8b, 0xec, 0x5d, 0xe9, 0x00,
+    }};
+
+    std::uintptr_t current = target_address;
+    for (std::uint32_t hop = 0; hop < 2; ++hop) {
+        std::array<std::uint8_t, kThunkPrefixLength> bytes = {};
+        if (!TryCopyBytes(
+                reinterpret_cast<const void*>(current),
+                bytes.size(),
+                bytes.data())) {
+            return resolution;
+        }
+
+        if (std::memcmp(
+                bytes.data(),
+                kHotpatchJumpThunkPrefix.data(),
+                kHotpatchJumpThunkPrefix.size() - 1) != 0 ||
+            bytes[6] != 0xe9) {
+            if (hop > 0) {
+                resolution.terminal_target = current;
+                resolution.hop_count = hop;
+                resolution.resolved = true;
+            }
+            return resolution;
+        }
+
+        std::uintptr_t jump_target = 0;
+        if (!TryResolveRelativeJumpTarget(current + 6, &jump_target)) {
+            return resolution;
+        }
+
+        current = jump_target;
+        resolution.terminal_target = current;
+        resolution.hop_count = hop + 1;
+        resolution.resolved = true;
+    }
+
+    return resolution;
+}
+
+KnownMemorizeFollowupCallsiteMatch MatchKnownMemorizeFollowupCallsite(
+    std::uint32_t caller_return_rva,
+    std::uint32_t mode_like,
+    const std::uint8_t* caller_context_bytes,
+    std::size_t caller_context_length,
+    bool caller_context_available) noexcept {
+    for (const auto& candidate : kKnownMemorizeFollowupCallsites) {
+        if (candidate.return_rva != caller_return_rva || candidate.mode_like != mode_like) {
+            continue;
+        }
+
+        const bool bytes_match =
+            caller_context_available &&
+            caller_context_bytes != nullptr &&
+            caller_context_length >= candidate.caller_context_bytes.size() &&
+            std::memcmp(
+                caller_context_bytes,
+                candidate.caller_context_bytes.data(),
+                candidate.caller_context_bytes.size()) == 0;
+        return {&candidate, bytes_match};
+    }
+
+    return {};
+}
+
+void AppendResolvedCallFields(
+    std::wstring* message,
+    const wchar_t* prefix,
+    const RelativeCallResolution& call,
+    std::uintptr_t module_base,
+    std::uintptr_t wrapper_address) {
+    if (message == nullptr || prefix == nullptr) {
+        return;
+    }
+
+    message->append(L" ");
+    message->append(prefix);
+    message->append(L"_site=");
+    message->append(HexPtr(call.call_site));
+    if (module_base != 0 && call.call_site >= module_base) {
+        message->append(L" ");
+        message->append(prefix);
+        message->append(L"_site_rva=");
+        message->append(Hex32(static_cast<std::uint32_t>(call.call_site - module_base)));
+    }
+    message->append(L" ");
+    message->append(prefix);
+    message->append(L"_target=");
+    message->append(HexPtr(call.target));
+    if (module_base != 0 && call.target >= module_base) {
+        message->append(L" ");
+        message->append(prefix);
+        message->append(L"_target_rva=");
+        message->append(Hex32(static_cast<std::uint32_t>(call.target - module_base)));
+    }
+    message->append(L" ");
+    message->append(prefix);
+    message->append(L"_role=");
+    if (wrapper_address != 0 && call.target == wrapper_address) {
+        message->append(L"wrapper_call");
+    } else {
+        message->append(L"followup_call");
+    }
+
+    const JumpThunkResolution thunk = ResolveJumpThunkTarget(call.target);
+    if (thunk.resolved && thunk.terminal_target != 0 && thunk.terminal_target != call.target) {
+        message->append(L" ");
+        message->append(prefix);
+        message->append(L"_terminal_target=");
+        message->append(HexPtr(thunk.terminal_target));
+        if (module_base != 0 && thunk.terminal_target >= module_base) {
+            message->append(L" ");
+            message->append(prefix);
+            message->append(L"_terminal_target_rva=");
+            message->append(
+                Hex32(static_cast<std::uint32_t>(thunk.terminal_target - module_base)));
+        }
+        message->append(L" ");
+        message->append(prefix);
+        message->append(L"_terminal_role=jump_thunk_target");
+        message->append(L" ");
+        message->append(prefix);
+        message->append(L"_terminal_hop_count=");
+        message->append(std::to_wstring(thunk.hop_count));
+    }
+}
+
+std::uintptr_t GetHostModuleBase() noexcept {
+    return reinterpret_cast<std::uintptr_t>(GetModuleHandleW(nullptr));
+}
+
+bool TryReadPacketOpcode(
+    const void* packet,
+    std::uint16_t* opcode_out) noexcept {
+    if (packet == nullptr || opcode_out == nullptr) {
+        return false;
+    }
+
+#if defined(_MSC_VER)
+    __try {
+        std::memcpy(opcode_out, packet, sizeof(*opcode_out));
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    std::memcpy(opcode_out, packet, sizeof(*opcode_out));
+#endif
+    return true;
 }
 
 std::wstring FormatDiscoveryDetails(
@@ -437,12 +1159,412 @@ std::wstring FormatAssignedMask(const monomyth::server_auth_stats::Snapshot& sna
 }
 
 void AppendActiveScrollCorrelation(std::wstring* message) {
-    if (message == nullptr || g_scroll_scribe_active_correlation_id == 0) {
+    if (message == nullptr) {
         return;
     }
 
-    message->append(L" scroll_scribe_correlation=");
-    message->append(std::to_wstring(g_scroll_scribe_active_correlation_id));
+    if (g_scroll_scribe_active_correlation_id != 0) {
+        message->append(L" scroll_scribe_correlation=");
+        message->append(std::to_wstring(g_scroll_scribe_active_correlation_id));
+    }
+
+    if (g_spellbook_ui_active_correlation_id == 0) {
+        return;
+    }
+
+    message->append(L" spellbook_ui_correlation=");
+    message->append(std::to_wstring(g_spellbook_ui_active_correlation_id));
+}
+
+void LogSpellbookDispatcherCall(
+    std::uint32_t correlation_id,
+    void* this_window,
+    int slot_like,
+    std::uintptr_t caller_return_address) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message = L"SpellUsabilityTrace target=SpellbookDispatcher correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" address=";
+    message += HexPtr(g_spellbook_dispatcher_address);
+    if (module_base != 0 && g_spellbook_dispatcher_address >= module_base) {
+        message += L" dispatcher_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            g_spellbook_dispatcher_address - module_base));
+    }
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_window));
+    message += L" slot_like=";
+    message += std::to_wstring(slot_like);
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogStartSpellScribePathCall(
+    std::uint32_t correlation_id,
+    void* this_window,
+    int spellbook_entry_like,
+    std::uintptr_t caller_return_address,
+    const SpellbookMemStateSnapshot& before_state,
+    const SpellbookMemStateSnapshot& after_state,
+    int original_result) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message = L"SpellUsabilityTrace target=StartSpellScribePath correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" address=";
+    message += HexPtr(g_start_spell_scribe_path_address);
+    if (module_base != 0 && g_start_spell_scribe_path_address >= module_base) {
+        message += L" path_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            g_start_spell_scribe_path_address - module_base));
+    }
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_window));
+    message += L" spellbook_entry_like=";
+    message += std::to_wstring(spellbook_entry_like);
+    AppendSpellbookMemStateFields(&message, L"before", before_state);
+    AppendSpellbookMemStateFields(&message, L"after", after_state);
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+        message += L" caller_site_label=";
+        message += (caller_return_address - module_base) == 0x35e7d0
+            ? L"SpellbookDispatcherScribeBranch"
+            : L"unknown";
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogStartSpellScribePrecheckModeGetterCall(
+    std::uint32_t correlation_id,
+    void* this_context,
+    std::uintptr_t caller_return_address,
+    int original_result) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"SpellUsabilityTrace target=StartSpellScribePrecheckModeGetter correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" address=";
+    message += HexPtr(g_start_spell_scribe_precheck_mode_getter_address);
+    if (module_base != 0 && g_start_spell_scribe_precheck_mode_getter_address >= module_base) {
+        message += L" target_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            g_start_spell_scribe_precheck_mode_getter_address - module_base));
+    }
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        const std::uint32_t caller_return_rva = static_cast<std::uint32_t>(
+            caller_return_address - module_base);
+        message += L" caller_return_rva=";
+        message += Hex32(caller_return_rva);
+        message += L" caller_site_label=";
+        message += caller_return_rva == 0x35df4c
+            ? L"StartSpellScribePathModeGate"
+            : caller_return_rva == 0x44c4c3
+            ? L"StartSpellScribePrecheckGateFallbackModeGate"
+            : L"unknown";
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogStartSpellScribePrecheckGateCall(
+    std::uint32_t correlation_id,
+    void* this_context,
+    void* descriptor_like,
+    int require_known_like,
+    int allow_recheck_like,
+    std::uintptr_t caller_return_address,
+    bool original_result,
+    bool returned_result) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"SpellUsabilityTrace target=StartSpellScribePrecheckGate correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" address=";
+    message += HexPtr(g_start_spell_scribe_precheck_gate_address);
+    if (module_base != 0 && g_start_spell_scribe_precheck_gate_address >= module_base) {
+        message += L" target_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            g_start_spell_scribe_precheck_gate_address - module_base));
+    }
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" descriptor_like=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(descriptor_like));
+    message += L" require_known_like=";
+    message += std::to_wstring(require_known_like);
+    message += L" allow_recheck_like=";
+    message += std::to_wstring(allow_recheck_like);
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        const std::uint32_t caller_return_rva = static_cast<std::uint32_t>(
+            caller_return_address - module_base);
+        message += L" caller_return_rva=";
+        message += Hex32(caller_return_rva);
+        message += L" caller_site_label=";
+        message += caller_return_rva == 0x35df6f
+            ? L"StartSpellScribePathPrecheckGate"
+            : L"unknown";
+    }
+    message += L" original_result=";
+    message += original_result ? L"true" : L"false";
+    message += L" returned_result=";
+    message += returned_result ? L"true" : L"false";
+    AppendStartSpellScribePrecheckClassMaskFields(&message);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogStartSpellScribePrecheckLookupCall(
+    std::uint32_t correlation_id,
+    void* this_context,
+    void* spell_or_scroll_like,
+    std::uintptr_t caller_return_address,
+    int original_result) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"SpellUsabilityTrace target=StartSpellScribePrecheckLookup correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" address=";
+    message += HexPtr(g_start_spell_scribe_precheck_lookup_address);
+    if (module_base != 0 && g_start_spell_scribe_precheck_lookup_address >= module_base) {
+        message += L" target_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            g_start_spell_scribe_precheck_lookup_address - module_base));
+    }
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" spell_or_scroll_like=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(spell_or_scroll_like));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        const std::uint32_t caller_return_rva = static_cast<std::uint32_t>(
+            caller_return_address - module_base);
+        message += L" caller_return_rva=";
+        message += Hex32(caller_return_rva);
+        message += L" caller_site_label=";
+        message += caller_return_rva == 0x35df94
+            ? L"StartSpellScribePathPrecheckLookup"
+            : L"unknown";
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogStartSpellScribeNestedPrecheckIntCall(
+    const wchar_t* target_name,
+    std::uintptr_t target_address,
+    std::uint32_t correlation_id,
+    void* this_context,
+    std::uintptr_t caller_return_address,
+    const wchar_t* caller_site_label,
+    int original_result) {
+    if (correlation_id == 0 || target_name == nullptr) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message = L"SpellUsabilityTrace target=";
+    message += target_name;
+    message += L" correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" address=";
+    message += HexPtr(target_address);
+    if (module_base != 0 && target_address >= module_base) {
+        message += L" target_rva=";
+        message += Hex32(static_cast<std::uint32_t>(target_address - module_base));
+    }
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" caller_site_label=";
+    message += caller_site_label == nullptr ? L"unknown" : caller_site_label;
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogStartSpellScribePrecheckClassResolverCall(
+    std::uint32_t correlation_id,
+    void* this_context,
+    std::uintptr_t caller_return_address,
+    void* original_result,
+    bool class_id_copied,
+    std::uint8_t class_id) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"SpellUsabilityTrace target=StartSpellScribePrecheckClassResolver correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" address=";
+    message += HexPtr(g_start_spell_scribe_precheck_class_resolver_address);
+    if (module_base != 0 &&
+        g_start_spell_scribe_precheck_class_resolver_address >= module_base) {
+        message += L" target_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            g_start_spell_scribe_precheck_class_resolver_address - module_base));
+    }
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" caller_site_label=StartSpellScribePrecheckGateClassResolver";
+    message += L" original_result=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(original_result));
+    message += L" class_id_status=";
+    message += class_id_copied ? L"copied" : L"unreadable";
+    if (class_id_copied) {
+        message += L" class_id=";
+        message += std::to_wstring(class_id);
+    }
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogStartSpellScribePrecheckAssignedMaskGetterCall(
+    std::uint32_t correlation_id,
+    void* this_context,
+    int flag_like,
+    int extra_like,
+    std::uintptr_t caller_return_address,
+    std::uint32_t original_result) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"SpellUsabilityTrace target=StartSpellScribePrecheckAssignedMaskGetter correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" address=";
+    message += HexPtr(g_start_spell_scribe_precheck_assigned_mask_getter_address);
+    if (module_base != 0 &&
+        g_start_spell_scribe_precheck_assigned_mask_getter_address >= module_base) {
+        message += L" target_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            g_start_spell_scribe_precheck_assigned_mask_getter_address - module_base));
+    }
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" flag_like=";
+    message += std::to_wstring(flag_like);
+    message += L" extra_like=";
+    message += std::to_wstring(extra_like);
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" caller_site_label=StartSpellScribePrecheckGateAssignedMaskGetter";
+    message += L" original_result=";
+    message += Hex32(original_result);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogStartSpellScribeNestedPrecheckBoolCall(
+    const wchar_t* target_name,
+    std::uintptr_t target_address,
+    std::uint32_t correlation_id,
+    void* this_context,
+    void* descriptor_like,
+    int flag_like,
+    int extra_like,
+    bool has_extra_like,
+    std::uintptr_t caller_return_address,
+    const wchar_t* caller_site_label,
+    bool original_result) {
+    if (correlation_id == 0 || target_name == nullptr) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message = L"SpellUsabilityTrace target=";
+    message += target_name;
+    message += L" correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" address=";
+    message += HexPtr(target_address);
+    if (module_base != 0 && target_address >= module_base) {
+        message += L" target_rva=";
+        message += Hex32(static_cast<std::uint32_t>(target_address - module_base));
+    }
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" descriptor_like=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(descriptor_like));
+    message += L" flag_like=";
+    message += std::to_wstring(flag_like);
+    if (has_extra_like) {
+        message += L" extra_like=";
+        message += std::to_wstring(extra_like);
+    }
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" caller_site_label=";
+    message += caller_site_label == nullptr ? L"unknown" : caller_site_label;
+    message += L" original_result=";
+    message += original_result ? L"true" : L"false";
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
 }
 
 void LogPendingMemorizeSendGap(const wchar_t* reason) {
@@ -457,6 +1579,555 @@ void LogPendingMemorizeSendGap(const wchar_t* reason) {
     AppendActiveScrollCorrelation(&message);
     monomyth::logger::Log(message);
     g_memorize_send_pending_correlation_id = 0;
+    g_memorize_send_pending_wrapper_sends = 0;
+}
+
+void LogMemorizeSendDecodeFailure(
+    std::uint32_t correlation_id,
+    const wchar_t* reason) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    std::wstring message = L"SpellUsabilityTrace target=MemorizeSend status=not_decoded correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" reason=";
+    message += reason == nullptr ? L"unknown" : reason;
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogMemorizeSendIntermediateSend(
+    std::uint32_t correlation_id,
+    std::uint32_t opcode,
+    std::uint32_t mode_like,
+    std::uint32_t total_length,
+    const void* packet,
+    void* this_context,
+    std::uintptr_t caller_return_address,
+    bool original_result,
+    std::uint32_t wrapper_send_index,
+    std::uint32_t wrapper_send_budget) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    constexpr std::size_t kCallerContextPrefixBytes = 8;
+    constexpr std::size_t kCallerContextBytes = 16;
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_return_rva =
+        (module_base != 0 && caller_return_address >= module_base)
+        ? static_cast<std::uint32_t>(caller_return_address - module_base)
+        : 0;
+    const std::uintptr_t caller_context_address =
+        caller_return_address >= kCallerContextPrefixBytes
+        ? caller_return_address - kCallerContextPrefixBytes
+        : caller_return_address;
+    std::array<std::uint8_t, kCallerContextBytes> caller_bytes = {};
+    const bool caller_bytes_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(caller_context_address),
+        caller_bytes.size(),
+        caller_bytes.data());
+    std::array<std::uint8_t, kIntermediateSendPrefixByteCap> packet_prefix = {};
+    const std::size_t packet_prefix_length = total_length < kIntermediateSendPrefixByteCap
+        ? static_cast<std::size_t>(total_length)
+        : kIntermediateSendPrefixByteCap;
+    const bool packet_prefix_copied =
+        packet != nullptr &&
+        packet_prefix_length != 0 &&
+        TryCopyBytes(packet, packet_prefix_length, packet_prefix.data());
+    std::array<RelativeCallResolution, 2> resolved_calls = {};
+    std::size_t resolved_call_count = 0;
+    if (caller_bytes_copied && caller_context_address != 0) {
+        for (std::size_t i = 0; i + 5 <= caller_bytes.size(); ++i) {
+            if (caller_bytes[i] != 0xe8) {
+                continue;
+            }
+
+            const RelativeCallResolution call = ResolveRelativeCall(
+                caller_bytes.data() + i,
+                caller_bytes.size() - i,
+                caller_context_address + i);
+            if (!call.resolved) {
+                continue;
+            }
+
+            resolved_calls[resolved_call_count++] = call;
+            if (resolved_call_count >= resolved_calls.size()) {
+                break;
+            }
+        }
+    }
+    const KnownMemorizeFollowupCallsiteMatch caller_site = MatchKnownMemorizeFollowupCallsite(
+        caller_return_rva,
+        mode_like,
+        caller_bytes.data(),
+        caller_bytes.size(),
+        caller_bytes_copied);
+
+    std::wstring message = L"SpellUsabilityTrace target=MemorizeSend status=intermediate_send correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" observed_opcode=";
+    message += std::to_wstring(opcode);
+    message += L" observed_opcode_hex=";
+    message += Hex32(opcode);
+    message += L" observed_opcode_name=";
+    message += monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
+    message += L" wrapper_send_index=";
+    message += std::to_wstring(wrapper_send_index);
+    message += L" wrapper_send_budget=";
+    message += std::to_wstring(wrapper_send_budget);
+    message += L" mode_like=";
+    message += std::to_wstring(mode_like);
+    message += L" total_length=";
+    message += std::to_wstring(total_length);
+    message += L" packet_pointer=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(packet));
+    message += L" packet_prefix_status=";
+    message += packet_prefix_copied ? L"copied" : L"unavailable";
+    if (packet_prefix_copied) {
+        message += L" packet_prefix_len=";
+        message += std::to_wstring(packet_prefix_length);
+        message += L" packet_prefix_hex=\"";
+        message += HexBytes(packet_prefix.data(), packet_prefix_length);
+        message += L"\"";
+    }
+    message += L" wrapper_this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (caller_return_rva != 0) {
+        message += L" caller_return_rva=";
+        message += Hex32(caller_return_rva);
+    }
+    message += L" caller_bytes_status=";
+    message += caller_bytes_copied ? L"copied" : L"unavailable";
+    if (caller_bytes_copied) {
+        message += L" caller_bytes_address=";
+        message += HexPtr(caller_context_address);
+        message += L" caller_bytes_hex=\"";
+        message += HexBytes(caller_bytes.data(), caller_bytes.size());
+        message += L"\"";
+    }
+    message += L" caller_resolved_call_count=";
+    message += std::to_wstring(resolved_call_count);
+    for (std::size_t i = 0; i < resolved_call_count; ++i) {
+        AppendResolvedCallFields(
+            &message,
+            i == 0 ? L"caller_call_1" : L"caller_call_2",
+            resolved_calls[i],
+            module_base,
+            g_memorize_send_packet_wrapper_address);
+    }
+    if (caller_site.site != nullptr) {
+        message += L" caller_site_label=";
+        message += caller_site.site->label;
+        message += L" caller_site_validation=";
+        message += caller_site.bytes_match ? L"matched" : L"drifted";
+        message += L" caller_site_expected_return_rva=";
+        message += Hex32(caller_site.site->return_rva);
+        message += L" caller_site_expected_mode_like=";
+        message += std::to_wstring(caller_site.site->mode_like);
+        if (!caller_site.bytes_match) {
+            message += L" caller_site_expected_bytes_hex=\"";
+            message += HexBytes(
+                caller_site.site->caller_context_bytes.data(),
+                caller_site.site->caller_context_bytes.size());
+            message += L"\"";
+        }
+    } else if (caller_return_rva != 0) {
+        message += L" caller_site_label=unknown";
+    }
+    message += L" original_result=";
+    message += original_result ? L"true" : L"false";
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogMemorizeSendBudgetExhausted(
+    std::uint32_t correlation_id,
+    std::uint32_t wrapper_send_budget) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    std::wstring message = L"SpellUsabilityTrace target=MemorizeSend status=not_observed correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" reason=wrapper_send_budget_exhausted wrapper_send_budget=";
+    message += std::to_wstring(wrapper_send_budget);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogPendingSpellbookScribeGap(const wchar_t* reason) {
+    if (g_spellbook_scribe_pending_correlation_id == 0) {
+        return;
+    }
+
+    std::wstring message =
+        L"SpellUsabilityTrace target=SpellbookScribeSend status=not_observed correlation=";
+    message += std::to_wstring(g_spellbook_scribe_pending_correlation_id);
+    message += L" reason=";
+    message += reason == nullptr ? L"unknown" : reason;
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+    g_spellbook_scribe_pending_correlation_id = 0;
+    g_spellbook_scribe_pending_wrapper_sends = 0;
+}
+
+void LogSpellbookScribeSendEvent(
+    const wchar_t* status,
+    std::uint32_t correlation_id,
+    std::uint32_t opcode,
+    std::uint32_t mode_like,
+    std::uint32_t total_length,
+    const void* packet,
+    void* this_context,
+    std::uintptr_t caller_return_address,
+    bool original_result,
+    std::uint32_t wrapper_send_index,
+    std::uint32_t wrapper_send_budget) {
+    if (status == nullptr || correlation_id == 0) {
+        return;
+    }
+
+    constexpr std::size_t kCallerContextPrefixBytes = 8;
+    constexpr std::size_t kCallerContextBytes = 16;
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_return_rva =
+        (module_base != 0 && caller_return_address >= module_base)
+        ? static_cast<std::uint32_t>(caller_return_address - module_base)
+        : 0;
+    const std::uintptr_t caller_context_address =
+        caller_return_address >= kCallerContextPrefixBytes
+        ? caller_return_address - kCallerContextPrefixBytes
+        : caller_return_address;
+    std::array<std::uint8_t, kCallerContextBytes> caller_bytes = {};
+    const bool caller_bytes_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(caller_context_address),
+        caller_bytes.size(),
+        caller_bytes.data());
+    std::array<std::uint8_t, kIntermediateSendPrefixByteCap> packet_prefix = {};
+    const std::size_t packet_prefix_length = total_length < kIntermediateSendPrefixByteCap
+        ? static_cast<std::size_t>(total_length)
+        : kIntermediateSendPrefixByteCap;
+    const bool packet_prefix_copied =
+        packet != nullptr &&
+        packet_prefix_length != 0 &&
+        TryCopyBytes(packet, packet_prefix_length, packet_prefix.data());
+    std::array<RelativeCallResolution, 2> resolved_calls = {};
+    std::size_t resolved_call_count = 0;
+    if (caller_bytes_copied && caller_context_address != 0) {
+        for (std::size_t i = 0; i + 5 <= caller_bytes.size(); ++i) {
+            if (caller_bytes[i] != 0xe8) {
+                continue;
+            }
+
+            const RelativeCallResolution call = ResolveRelativeCall(
+                caller_bytes.data() + i,
+                caller_bytes.size() - i,
+                caller_context_address + i);
+            if (!call.resolved) {
+                continue;
+            }
+
+            resolved_calls[resolved_call_count++] = call;
+            if (resolved_call_count >= resolved_calls.size()) {
+                break;
+            }
+        }
+    }
+    const KnownMemorizeFollowupCallsiteMatch caller_site = MatchKnownMemorizeFollowupCallsite(
+        caller_return_rva,
+        mode_like,
+        caller_bytes.data(),
+        caller_bytes.size(),
+        caller_bytes_copied);
+
+    std::wstring message = L"SpellUsabilityTrace target=SpellbookScribeSend status=";
+    message += status;
+    message += L" correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" observed_opcode=";
+    message += std::to_wstring(opcode);
+    message += L" observed_opcode_hex=";
+    message += Hex32(opcode);
+    message += L" observed_opcode_name=";
+    message += monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
+    message += L" wrapper_send_index=";
+    message += std::to_wstring(wrapper_send_index);
+    message += L" wrapper_send_budget=";
+    message += std::to_wstring(wrapper_send_budget);
+    message += L" mode_like=";
+    message += std::to_wstring(mode_like);
+    message += L" total_length=";
+    message += std::to_wstring(total_length);
+    message += L" packet_pointer=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(packet));
+    message += L" packet_prefix_status=";
+    message += packet_prefix_copied ? L"copied" : L"unavailable";
+    if (packet_prefix_copied) {
+        message += L" packet_prefix_len=";
+        message += std::to_wstring(packet_prefix_length);
+        message += L" packet_prefix_hex=\"";
+        message += HexBytes(packet_prefix.data(), packet_prefix_length);
+        message += L"\"";
+    }
+    message += L" wrapper_this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (caller_return_rva != 0) {
+        message += L" caller_return_rva=";
+        message += Hex32(caller_return_rva);
+    }
+    message += L" caller_bytes_status=";
+    message += caller_bytes_copied ? L"copied" : L"unavailable";
+    if (caller_bytes_copied) {
+        message += L" caller_bytes_address=";
+        message += HexPtr(caller_context_address);
+        message += L" caller_bytes_hex=\"";
+        message += HexBytes(caller_bytes.data(), caller_bytes.size());
+        message += L"\"";
+    }
+    message += L" caller_resolved_call_count=";
+    message += std::to_wstring(resolved_call_count);
+    for (std::size_t i = 0; i < resolved_call_count; ++i) {
+        AppendResolvedCallFields(
+            &message,
+            i == 0 ? L"caller_call_1" : L"caller_call_2",
+            resolved_calls[i],
+            module_base,
+            g_memorize_send_packet_wrapper_address);
+    }
+    if (caller_site.site != nullptr) {
+        message += L" caller_site_label=";
+        message += caller_site.site->label;
+        message += L" caller_site_validation=";
+        message += caller_site.bytes_match ? L"matched" : L"drifted";
+    } else if (caller_return_rva != 0) {
+        message += L" caller_site_label=unknown";
+    }
+    message += L" original_result=";
+    message += original_result ? L"true" : L"false";
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogSpellbookScribeBudgetExhausted(
+    std::uint32_t correlation_id,
+    std::uint32_t wrapper_send_budget) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    std::wstring message =
+        L"SpellUsabilityTrace target=SpellbookScribeSend status=not_observed correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" reason=wrapper_send_budget_exhausted wrapper_send_budget=";
+    message += std::to_wstring(wrapper_send_budget);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogPostCanStartMemmingFollowupGateCall(
+    std::uint32_t correlation_id,
+    void* gate_argument,
+    std::uintptr_t caller_return_address,
+    int original_result) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"SpellUsabilityTrace target=PostCanStartMemmingFollowupGate correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" gate_address=";
+    message += HexPtr(g_post_can_start_memming_followup_gate_address);
+    if (module_base != 0 && g_post_can_start_memming_followup_gate_address >= module_base) {
+        message += L" gate_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            g_post_can_start_memming_followup_gate_address - module_base));
+    }
+    message += L" gate_argument=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(gate_argument));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogStartSpellMemorizationPathCall(
+    std::uint32_t correlation_id,
+    void* this_window,
+    std::uint32_t pending_slot_state,
+    std::uint32_t mode_like,
+    std::int32_t spell_or_book_index,
+    std::int32_t slot_like,
+    std::uintptr_t caller_return_address,
+    const SpellbookMemStateSnapshot& before_state,
+    const SpellbookMemStateSnapshot& after_state,
+    int original_result) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message = L"SpellUsabilityTrace target=StartSpellMemorizationPath correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" path_address=";
+    message += HexPtr(g_start_spell_memorization_path_address);
+    if (module_base != 0 && g_start_spell_memorization_path_address >= module_base) {
+        message += L" path_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            g_start_spell_memorization_path_address - module_base));
+    }
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_window));
+    message += L" pending_slot_state=";
+    message += Hex32(pending_slot_state);
+    message += L" mode_like=";
+    message += std::to_wstring(mode_like);
+    message += L" spell_or_book_index=";
+    message += std::to_wstring(spell_or_book_index);
+    message += L" slot_like=";
+    message += std::to_wstring(slot_like);
+    AppendSpellbookMemStateFields(&message, L"before", before_state);
+    AppendSpellbookMemStateFields(&message, L"after", after_state);
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+        message += L" caller_site_label=";
+        if (caller_return_address - module_base == 0x35e802) {
+            message += L"SpellbookDispatcherMemStartCallsite";
+        } else {
+            message += L"unknown";
+        }
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogMemSpellCommitPathCall(
+    std::uint32_t correlation_id,
+    void* this_window,
+    std::uintptr_t caller_return_address,
+    int original_result) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const SpellbookMemStateSnapshot snapshot = CaptureSpellbookMemState(this_window);
+    void* memorize_context = nullptr;
+    const bool memorize_context_copied =
+        TryCopyBytes(
+            reinterpret_cast<const void*>(0x00dd25ac),
+            sizeof(memorize_context),
+            reinterpret_cast<std::uint8_t*>(&memorize_context));
+
+    std::wstring message = L"SpellUsabilityTrace target=MemSpellCommitPath correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" path_address=";
+    message += HexPtr(g_mem_spell_commit_path_address);
+    if (module_base != 0 && g_mem_spell_commit_path_address >= module_base) {
+        message += L" path_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            g_mem_spell_commit_path_address - module_base));
+    }
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_window));
+    message += L" state_238_status=";
+    message += snapshot.state_238_copied ? L"copied" : L"unreadable";
+    if (snapshot.state_238_copied) {
+        message += L" state_238=";
+        message += Hex32(snapshot.state_238);
+    }
+    message += L" state_240_status=";
+    message += snapshot.state_240_copied ? L"copied" : L"unreadable";
+    if (snapshot.state_240_copied) {
+        message += L" state_240=";
+        message += Hex32(snapshot.state_240);
+    }
+    message += L" state_244_status=";
+    message += snapshot.state_244_copied ? L"copied" : L"unreadable";
+    if (snapshot.state_244_copied) {
+        message += L" state_244=";
+        message += std::to_wstring(snapshot.state_244);
+    }
+    if (snapshot.state_240_copied) {
+        message += L" inferred_exit_reason=";
+        if (snapshot.state_240 == 0xffffffffu) {
+            message += L"state_240_unset_fast_exit";
+        } else {
+            message += L"state_240_not_unset";
+        }
+    }
+    message += L" memorize_context_status=";
+    message += memorize_context_copied ? L"copied" : L"unreadable";
+    if (memorize_context_copied) {
+        message += L" memorize_context_present=";
+        message += memorize_context == nullptr ? L"false" : L"true";
+    }
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+        message += L" caller_site_label=";
+        if (caller_return_address - module_base == 0x36275b) {
+            message += L"MemSpellCommitCaller";
+        } else {
+            message += L"unknown";
+        }
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogMemorizeSendTraceStartupMarker(
+    const monomyth::runtime::Manifest& manifest,
+    bool hook_installed) {
+    const bool target_validated =
+        manifest.memorize_send_packet_wrapper_state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated &&
+        manifest.memorize_send_packet_wrapper_address != 0;
+    std::wstring message = L"MemorizeSendTraceStartup slice_id=";
+    message += kMemorizeSendTraceSliceId;
+    message += L" env_enabled=";
+    message += manifest.memorize_send_trace_dev_opt_in ? L"true" : L"false";
+    message += L" target_validated=";
+    message += target_validated ? L"true" : L"false";
+    message += L" hook_installed=";
+    message += hook_installed ? L"true" : L"false";
+    message += L" target=MemorizeSendPacketWrapper";
+    if (manifest.memorize_send_packet_wrapper_rva != 0) {
+        message += L" wrapper_rva=";
+        message += Hex32(manifest.memorize_send_packet_wrapper_rva);
+    }
+    if (manifest.memorize_send_packet_wrapper_address != 0) {
+        message += L" wrapper_address=";
+        message += HexPtr(manifest.memorize_send_packet_wrapper_address);
+    }
+    message += L" reason=\"";
+    message += manifest.memorize_send_trace_reason.empty()
+        ? L"unknown"
+        : manifest.memorize_send_trace_reason;
+    message += L"\"";
+    monomyth::logger::Log(message);
 }
 
 void LogScrollScribeTrace(
@@ -600,6 +2271,373 @@ std::uint8_t MONOMYTH_FASTCALL GetSpellLevelNeededHook(
     return selection.level;
 }
 
+void MONOMYTH_FASTCALL SpellbookDispatcherHook(
+    void* this_window,
+    void*,
+    int slot_like) noexcept {
+    const std::uint32_t previous_correlation = g_spellbook_ui_active_correlation_id;
+    const bool assign_new_correlation = previous_correlation == 0;
+    if (assign_new_correlation) {
+        g_spellbook_ui_active_correlation_id = ++g_spellbook_ui_correlation_count;
+    }
+    const std::uint32_t correlation_id = g_spellbook_ui_active_correlation_id;
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    LogSpellbookDispatcherCall(
+        correlation_id,
+        this_window,
+        slot_like,
+        caller_return_address);
+    g_original_spellbook_dispatcher(this_window, slot_like);
+    if (assign_new_correlation) {
+        g_spellbook_ui_active_correlation_id = 0;
+    } else {
+        g_spellbook_ui_active_correlation_id = previous_correlation;
+    }
+}
+
+int MONOMYTH_FASTCALL StartSpellScribePathHook(
+    void* this_window,
+    void*,
+    int spellbook_entry_like) noexcept {
+    const std::uint32_t previous_correlation = g_spellbook_ui_active_correlation_id;
+    const bool assign_new_correlation = previous_correlation == 0;
+    if (assign_new_correlation) {
+        g_spellbook_ui_active_correlation_id = ++g_spellbook_ui_correlation_count;
+    }
+    const std::uint32_t correlation_id = g_spellbook_ui_active_correlation_id;
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const SpellbookMemStateSnapshot before_state = CaptureSpellbookMemState(this_window);
+    const int original_result =
+        g_original_start_spell_scribe_path(this_window, spellbook_entry_like);
+    const SpellbookMemStateSnapshot after_state = CaptureSpellbookMemState(this_window);
+    LogStartSpellScribePathCall(
+        correlation_id,
+        this_window,
+        spellbook_entry_like,
+        caller_return_address,
+        before_state,
+        after_state,
+        original_result);
+    if (assign_new_correlation) {
+        g_spellbook_ui_active_correlation_id = 0;
+    } else {
+        g_spellbook_ui_active_correlation_id = previous_correlation;
+    }
+    return original_result;
+}
+
+int MONOMYTH_FASTCALL StartSpellScribePrecheckModeGetterHook(
+    void* this_context,
+    void*) noexcept {
+    const int original_result = g_original_start_spell_scribe_precheck_mode_getter(this_context);
+    const std::uint32_t correlation_id = g_spellbook_ui_active_correlation_id;
+    if (correlation_id != 0) {
+        LogStartSpellScribePrecheckModeGetterCall(
+            correlation_id,
+            this_context,
+            GetCallerReturnAddress(),
+            original_result);
+    }
+    return original_result;
+}
+
+bool MONOMYTH_FASTCALL StartSpellScribePrecheckGateHook(
+    void* this_context,
+    void*,
+    void* descriptor_like,
+    int require_known_like,
+    int allow_recheck_like) noexcept {
+    const std::uint32_t correlation_id = g_spellbook_ui_active_correlation_id;
+    ResetStartSpellScribePrecheckClassMaskSnapshot(correlation_id);
+    const bool original_result = g_original_start_spell_scribe_precheck_gate(
+        this_context,
+        descriptor_like,
+        require_known_like,
+        allow_recheck_like);
+    CaptureStartSpellScribePrecheckClassResolverFromGateContext(this_context);
+    bool final_result = original_result;
+    auto& snapshot = g_start_spell_scribe_precheck_class_mask_snapshot;
+    const monomyth::server_auth_stats::Snapshot authoritative_snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    snapshot.authoritative_mask_present = authoritative_snapshot.has_classes_bitmask;
+    snapshot.authoritative_mask = authoritative_snapshot.classes_bitmask;
+    if (snapshot.authoritative_mask_present && snapshot.assigned_mask_getter_called) {
+        snapshot.authoritative_mask_intersection =
+            snapshot.authoritative_mask & snapshot.assigned_mask;
+        snapshot.authoritative_mask_intersects_spell_mask =
+            snapshot.authoritative_mask_intersection != 0;
+    }
+
+    const bool no_late_rule_called =
+        !snapshot.rule_4462c0_called && !snapshot.rule_446190_called &&
+        !snapshot.rule_446200_called && !snapshot.rule_446380_called;
+    const bool class_id_is_playable = snapshot.class_id_copied && snapshot.class_id != 0 &&
+        snapshot.class_id <= 32;
+    const std::uint32_t current_class_bit = class_id_is_playable
+        ? (1u << (snapshot.class_id - 1u))
+        : 0;
+    const bool current_class_rejected_by_spell_mask =
+        class_id_is_playable &&
+        snapshot.assigned_mask_getter_called &&
+        (snapshot.assigned_mask & current_class_bit) == 0;
+
+    // This override only clears the proven early native-class reject. Later rule helpers,
+    // native-mask hits, and missing authoritative intersections still fall through unchanged.
+    if (g_multiclass_spell_usability_enabled &&
+        !original_result &&
+        require_known_like != 0 &&
+        no_late_rule_called &&
+        current_class_rejected_by_spell_mask &&
+        snapshot.authoritative_mask_intersects_spell_mask) {
+        final_result = true;
+        snapshot.behavior_override_applied = true;
+    }
+
+    if (correlation_id != 0) {
+        LogStartSpellScribePrecheckGateCall(
+            correlation_id,
+            this_context,
+            descriptor_like,
+            require_known_like,
+            allow_recheck_like,
+            GetCallerReturnAddress(),
+            original_result,
+            final_result);
+    }
+    ClearStartSpellScribePrecheckClassMaskSnapshot();
+    return final_result;
+}
+
+int MONOMYTH_FASTCALL StartSpellScribePrecheckLookupHook(
+    void* this_context,
+    void*,
+    void* spell_or_scroll_like) noexcept {
+    const int original_result = g_original_start_spell_scribe_precheck_lookup(
+        this_context,
+        spell_or_scroll_like);
+    const std::uint32_t correlation_id = g_spellbook_ui_active_correlation_id;
+    if (correlation_id != 0) {
+        LogStartSpellScribePrecheckLookupCall(
+            correlation_id,
+            this_context,
+            spell_or_scroll_like,
+            GetCallerReturnAddress(),
+            original_result);
+    }
+    return original_result;
+}
+
+int MONOMYTH_FASTCALL StartSpellScribePrecheckFastAcceptHook(
+    void* this_context,
+    void*) noexcept {
+    const int original_result = g_original_start_spell_scribe_precheck_fast_accept(this_context);
+    const std::uint32_t correlation_id = g_spellbook_ui_active_correlation_id;
+    if (correlation_id != 0) {
+        LogStartSpellScribeNestedPrecheckIntCall(
+            L"StartSpellScribePrecheckFastAccept",
+            g_start_spell_scribe_precheck_fast_accept_address,
+            correlation_id,
+            this_context,
+            GetCallerReturnAddress(),
+            L"StartSpellScribePrecheckGateFastAccept",
+            original_result);
+    }
+    return original_result;
+}
+
+void* MONOMYTH_FASTCALL StartSpellScribePrecheckClassResolverHook(
+    void* this_context,
+    void*) noexcept {
+    void* const original_result =
+        g_original_start_spell_scribe_precheck_class_resolver(this_context);
+    const std::uint32_t correlation_id = g_spellbook_ui_active_correlation_id;
+    std::uint8_t class_id = 0;
+    const bool class_id_copied =
+        original_result != nullptr &&
+        TryCopyBytes(
+            reinterpret_cast<const std::uint8_t*>(original_result) +
+                kScribeGateResolvedClassIdOffset,
+            sizeof(class_id),
+            &class_id);
+    if (g_start_spell_scribe_precheck_class_mask_snapshot.active &&
+        g_start_spell_scribe_precheck_class_mask_snapshot.correlation_id == correlation_id) {
+        auto& snapshot = g_start_spell_scribe_precheck_class_mask_snapshot;
+        snapshot.class_resolver_called = true;
+        snapshot.class_resolver_this = this_context;
+        snapshot.class_record = original_result;
+        snapshot.class_id_copied = class_id_copied;
+        snapshot.class_id = class_id;
+    }
+    if (correlation_id != 0) {
+        LogStartSpellScribePrecheckClassResolverCall(
+            correlation_id,
+            this_context,
+            GetCallerReturnAddress(),
+            original_result,
+            class_id_copied,
+            class_id);
+    }
+    return original_result;
+}
+
+std::uint32_t MONOMYTH_FASTCALL StartSpellScribePrecheckAssignedMaskGetterHook(
+    void* this_context,
+    void*,
+    int flag_like,
+    int extra_like) noexcept {
+    const std::uint32_t original_result =
+        g_original_start_spell_scribe_precheck_assigned_mask_getter(
+            this_context,
+            flag_like,
+            extra_like);
+    const std::uint32_t correlation_id = g_spellbook_ui_active_correlation_id;
+    if (g_start_spell_scribe_precheck_class_mask_snapshot.active &&
+        g_start_spell_scribe_precheck_class_mask_snapshot.correlation_id == correlation_id) {
+        auto& snapshot = g_start_spell_scribe_precheck_class_mask_snapshot;
+        snapshot.assigned_mask_getter_called = true;
+        snapshot.assigned_mask_getter_this = this_context;
+        snapshot.assigned_mask_flag_like = flag_like;
+        snapshot.assigned_mask_extra_like = extra_like;
+        snapshot.assigned_mask = original_result;
+    }
+    if (correlation_id != 0) {
+        LogStartSpellScribePrecheckAssignedMaskGetterCall(
+            correlation_id,
+            this_context,
+            flag_like,
+            extra_like,
+            GetCallerReturnAddress(),
+            original_result);
+    }
+    return original_result;
+}
+
+bool MONOMYTH_FASTCALL StartSpellScribePrecheckRule4462c0Hook(
+    void* this_context,
+    void*,
+    void* descriptor_like,
+    int flag_like) noexcept {
+    const bool original_result = g_original_start_spell_scribe_precheck_rule_4462c0(
+        this_context,
+        descriptor_like,
+        flag_like);
+    const std::uint32_t correlation_id = g_spellbook_ui_active_correlation_id;
+    if (g_start_spell_scribe_precheck_class_mask_snapshot.active &&
+        g_start_spell_scribe_precheck_class_mask_snapshot.correlation_id == correlation_id) {
+        g_start_spell_scribe_precheck_class_mask_snapshot.rule_4462c0_called = true;
+    }
+    if (correlation_id != 0) {
+        LogStartSpellScribeNestedPrecheckBoolCall(
+            L"StartSpellScribePrecheckRule4462c0",
+            g_start_spell_scribe_precheck_rule_4462c0_address,
+            correlation_id,
+            this_context,
+            descriptor_like,
+            flag_like,
+            0,
+            false,
+            GetCallerReturnAddress(),
+            L"StartSpellScribePrecheckGateRule4462c0",
+            original_result);
+    }
+    return original_result;
+}
+
+bool MONOMYTH_FASTCALL StartSpellScribePrecheckRule446190Hook(
+    void* this_context,
+    void*,
+    void* descriptor_like,
+    int flag_like) noexcept {
+    const bool original_result = g_original_start_spell_scribe_precheck_rule_446190(
+        this_context,
+        descriptor_like,
+        flag_like);
+    const std::uint32_t correlation_id = g_spellbook_ui_active_correlation_id;
+    if (g_start_spell_scribe_precheck_class_mask_snapshot.active &&
+        g_start_spell_scribe_precheck_class_mask_snapshot.correlation_id == correlation_id) {
+        g_start_spell_scribe_precheck_class_mask_snapshot.rule_446190_called = true;
+    }
+    if (correlation_id != 0) {
+        LogStartSpellScribeNestedPrecheckBoolCall(
+            L"StartSpellScribePrecheckRule446190",
+            g_start_spell_scribe_precheck_rule_446190_address,
+            correlation_id,
+            this_context,
+            descriptor_like,
+            flag_like,
+            0,
+            false,
+            GetCallerReturnAddress(),
+            L"StartSpellScribePrecheckGateRule446190",
+            original_result);
+    }
+    return original_result;
+}
+
+bool MONOMYTH_FASTCALL StartSpellScribePrecheckRule446200Hook(
+    void* this_context,
+    void*,
+    void* descriptor_like,
+    int flag_like) noexcept {
+    const bool original_result = g_original_start_spell_scribe_precheck_rule_446200(
+        this_context,
+        descriptor_like,
+        flag_like);
+    const std::uint32_t correlation_id = g_spellbook_ui_active_correlation_id;
+    if (g_start_spell_scribe_precheck_class_mask_snapshot.active &&
+        g_start_spell_scribe_precheck_class_mask_snapshot.correlation_id == correlation_id) {
+        g_start_spell_scribe_precheck_class_mask_snapshot.rule_446200_called = true;
+    }
+    if (correlation_id != 0) {
+        LogStartSpellScribeNestedPrecheckBoolCall(
+            L"StartSpellScribePrecheckRule446200",
+            g_start_spell_scribe_precheck_rule_446200_address,
+            correlation_id,
+            this_context,
+            descriptor_like,
+            flag_like,
+            0,
+            false,
+            GetCallerReturnAddress(),
+            L"StartSpellScribePrecheckGateRule446200",
+            original_result);
+    }
+    return original_result;
+}
+
+bool MONOMYTH_FASTCALL StartSpellScribePrecheckRule446380Hook(
+    void* this_context,
+    void*,
+    void* descriptor_like,
+    int flag_like,
+    int zero_like) noexcept {
+    const bool original_result = g_original_start_spell_scribe_precheck_rule_446380(
+        this_context,
+        descriptor_like,
+        flag_like,
+        zero_like);
+    const std::uint32_t correlation_id = g_spellbook_ui_active_correlation_id;
+    if (g_start_spell_scribe_precheck_class_mask_snapshot.active &&
+        g_start_spell_scribe_precheck_class_mask_snapshot.correlation_id == correlation_id) {
+        g_start_spell_scribe_precheck_class_mask_snapshot.rule_446380_called = true;
+    }
+    if (correlation_id != 0) {
+        LogStartSpellScribeNestedPrecheckBoolCall(
+            L"StartSpellScribePrecheckRule446380",
+            g_start_spell_scribe_precheck_rule_446380_address,
+            correlation_id,
+            this_context,
+            descriptor_like,
+            flag_like,
+            zero_like,
+            true,
+            GetCallerReturnAddress(),
+            L"StartSpellScribePrecheckGateRule446380",
+            original_result);
+    }
+    return original_result;
+}
+
 bool MONOMYTH_FASTCALL CanStartMemmingHook(
     void* this_window,
     void*,
@@ -614,6 +2652,7 @@ bool MONOMYTH_FASTCALL CanStartMemmingHook(
         }
         memorize_send_correlation = ++g_memorize_send_correlation_count;
         g_memorize_send_pending_correlation_id = memorize_send_correlation;
+        g_memorize_send_pending_wrapper_sends = 0;
     }
     if (ShouldLogSpellTrace(g_can_start_memming_trace_count)) {
         std::wstring message = L"SpellUsabilityTrace target=CanStartMemming spell_or_book_index=";
@@ -633,35 +2672,212 @@ bool MONOMYTH_FASTCALL CanStartMemmingHook(
     return original_result;
 }
 
+int MONOMYTH_FASTCALL StartSpellMemorizationPathHook(
+    void* this_window,
+    void*,
+    std::uint32_t pending_slot_state,
+    std::uint32_t zero_like_a,
+    std::uint32_t mode_like,
+    std::int32_t spell_or_book_index,
+    std::uint32_t zero_like_b,
+    std::int32_t slot_like) noexcept {
+    (void)zero_like_a;
+    (void)zero_like_b;
+    const std::uint32_t correlation_id = g_memorize_send_pending_correlation_id;
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const SpellbookMemStateSnapshot before_state = CaptureSpellbookMemState(this_window);
+    const int original_result = g_original_start_spell_memorization_path(
+        this_window,
+        pending_slot_state,
+        zero_like_a,
+        mode_like,
+        spell_or_book_index,
+        zero_like_b,
+        slot_like);
+    const SpellbookMemStateSnapshot after_state = CaptureSpellbookMemState(this_window);
+    LogStartSpellMemorizationPathCall(
+        correlation_id,
+        this_window,
+        pending_slot_state,
+        mode_like,
+        spell_or_book_index,
+        slot_like,
+        caller_return_address,
+        before_state,
+        after_state,
+        original_result);
+    return original_result;
+}
+
 bool MONOMYTH_FASTCALL MemorizeSendPacketWrapperHook(
     void* this_context,
     void*,
     std::uint32_t mode_like,
     const void* packet,
     std::uint32_t total_length) noexcept {
-    if (packet != nullptr && total_length >= sizeof(std::uint16_t)) {
-        std::uint16_t opcode = 0;
-        std::memcpy(&opcode, packet, sizeof(opcode));
-        if (opcode == kMemorizeSpellOpcode) {
-            ++g_memorize_send_trace_count;
-            const std::uint32_t correlation_id = g_memorize_send_pending_correlation_id;
-            const std::uint32_t payload_length = total_length > sizeof(opcode)
-                ? total_length - static_cast<std::uint32_t>(sizeof(opcode))
-                : 0;
-            monomyth::packet_observer::ObserveSendMetadata(
-                opcode,
-                payload_length,
-                reinterpret_cast<std::uintptr_t>(this_context),
-                correlation_id);
-            g_memorize_send_pending_correlation_id = 0;
-        }
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    ++g_memorize_send_trace_count;
+
+    bool opcode_decoded = false;
+    std::uint16_t opcode = 0;
+    std::uint32_t payload_length = 0;
+    const wchar_t* decode_status = L"not_decoded";
+    const wchar_t* not_decoded_reason = L"unknown";
+    if (packet == nullptr) {
+        not_decoded_reason = L"null_packet";
+    } else if (total_length < sizeof(std::uint16_t)) {
+        not_decoded_reason = L"short_packet";
+    } else if (TryReadPacketOpcode(packet, &opcode)) {
+        opcode_decoded = true;
+        decode_status = L"decoded";
+        not_decoded_reason = L"";
+        payload_length = total_length > sizeof(opcode)
+            ? total_length - static_cast<std::uint32_t>(sizeof(opcode))
+            : 0;
+    } else {
+        not_decoded_reason = L"packet_read_fault";
     }
 
-    return g_original_memorize_send_packet_wrapper(
+    const bool original_result = g_original_memorize_send_packet_wrapper(
         this_context,
         mode_like,
         packet,
         total_length);
+
+    const std::uint32_t correlation_id = g_memorize_send_pending_correlation_id;
+    std::uint32_t wrapper_send_index = 0;
+    if (correlation_id != 0) {
+        wrapper_send_index = ++g_memorize_send_pending_wrapper_sends;
+    }
+    const std::uint32_t spellbook_scribe_correlation_id =
+        g_spellbook_scribe_pending_correlation_id;
+    std::uint32_t spellbook_scribe_wrapper_send_index = 0;
+    if (spellbook_scribe_correlation_id != 0) {
+        spellbook_scribe_wrapper_send_index = ++g_spellbook_scribe_pending_wrapper_sends;
+    }
+    monomyth::packet_observer::ObserveSendMetadata(
+        g_memorize_send_packet_wrapper_address,
+        reinterpret_cast<std::uintptr_t>(this_context),
+        reinterpret_cast<std::uintptr_t>(packet),
+        total_length,
+        opcode_decoded,
+        static_cast<std::uint32_t>(opcode),
+        payload_length,
+        decode_status,
+        not_decoded_reason,
+        original_result,
+        true,
+        correlation_id);
+
+    if (correlation_id != 0) {
+        if (!opcode_decoded) {
+            LogMemorizeSendDecodeFailure(correlation_id, not_decoded_reason);
+            g_memorize_send_pending_correlation_id = 0;
+            g_memorize_send_pending_wrapper_sends = 0;
+        } else if (opcode == kMemorizeSpellOpcode) {
+            g_memorize_send_pending_correlation_id = 0;
+            g_memorize_send_pending_wrapper_sends = 0;
+        } else {
+            LogMemorizeSendIntermediateSend(
+                correlation_id,
+                opcode,
+                mode_like,
+                total_length,
+                packet,
+                this_context,
+                caller_return_address,
+                original_result,
+                wrapper_send_index,
+                kMemorizeSendCorrelationMaxWrapperSends);
+            if (wrapper_send_index >= kMemorizeSendCorrelationMaxWrapperSends) {
+                LogMemorizeSendBudgetExhausted(
+                    correlation_id,
+                    kMemorizeSendCorrelationMaxWrapperSends);
+                g_memorize_send_pending_correlation_id = 0;
+                g_memorize_send_pending_wrapper_sends = 0;
+            }
+        }
+    }
+
+    if (opcode_decoded) {
+        const std::uint32_t opcode32 = static_cast<std::uint32_t>(opcode);
+        if (opcode32 == kDeleteSpellOpcode) {
+            if (g_spellbook_scribe_pending_correlation_id != 0) {
+                LogPendingSpellbookScribeGap(L"next_delete_spell_send");
+            }
+            g_spellbook_scribe_pending_correlation_id = ++g_spellbook_scribe_correlation_count;
+            g_spellbook_scribe_pending_wrapper_sends = 1;
+            LogSpellbookScribeSendEvent(
+                L"delete_send_start",
+                g_spellbook_scribe_pending_correlation_id,
+                opcode32,
+                mode_like,
+                total_length,
+                packet,
+                this_context,
+                caller_return_address,
+                original_result,
+                g_spellbook_scribe_pending_wrapper_sends,
+                kSpellbookScribeCorrelationMaxWrapperSends);
+        } else if (spellbook_scribe_correlation_id != 0) {
+            const bool completes_scribe = opcode32 == kMemorizeSpellOpcode;
+            LogSpellbookScribeSendEvent(
+                completes_scribe ? L"memorize_send_followup" : L"intermediate_send",
+                spellbook_scribe_correlation_id,
+                opcode32,
+                mode_like,
+                total_length,
+                packet,
+                this_context,
+                caller_return_address,
+                original_result,
+                spellbook_scribe_wrapper_send_index,
+                kSpellbookScribeCorrelationMaxWrapperSends);
+            if (completes_scribe) {
+                g_spellbook_scribe_pending_correlation_id = 0;
+                g_spellbook_scribe_pending_wrapper_sends = 0;
+            } else if (spellbook_scribe_wrapper_send_index >=
+                kSpellbookScribeCorrelationMaxWrapperSends) {
+                LogSpellbookScribeBudgetExhausted(
+                    spellbook_scribe_correlation_id,
+                    kSpellbookScribeCorrelationMaxWrapperSends);
+                g_spellbook_scribe_pending_correlation_id = 0;
+                g_spellbook_scribe_pending_wrapper_sends = 0;
+            }
+        }
+    }
+
+    return original_result;
+}
+
+int MONOMYTH_FASTCALL MemSpellCommitPathHook(
+    void* this_window,
+    void*) noexcept {
+    const std::uint32_t correlation_id = g_memorize_send_pending_correlation_id;
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const int original_result =
+        g_original_mem_spell_commit_path(this_window);
+    LogMemSpellCommitPathCall(
+        correlation_id,
+        this_window,
+        caller_return_address,
+        original_result);
+    return original_result;
+}
+
+int __cdecl PostCanStartMemmingFollowupGateHook(
+    void* gate_argument) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const int original_result =
+        g_original_post_can_start_memming_followup_gate(gate_argument);
+    if (g_memorize_send_pending_correlation_id != 0) {
+        LogPostCanStartMemmingFollowupGateCall(
+            g_memorize_send_pending_correlation_id,
+            gate_argument,
+            caller_return_address,
+            original_result);
+    }
+    return original_result;
 }
 
 void MONOMYTH_FASTCALL HandleRButtonUpHook(
@@ -859,6 +3075,497 @@ bool InstallCanStartMemmingTrace(const monomyth::runtime::Manifest& manifest) no
     return true;
 }
 
+bool InstallSpellbookDispatcherTrace(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.spellbook_dispatcher_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.spellbook_dispatcher_address == 0) {
+        if (manifest.spell_usability_trace_dev_opt_in) {
+            std::wstring message = L"hook_manager: spellbook dispatcher trace denied ";
+            message += FormatDiscoveryDetails(
+                L"SpellbookDispatcher",
+                manifest.spellbook_dispatcher_evidence_source,
+                manifest.spellbook_dispatcher_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.spellbook_dispatcher_address),
+            reinterpret_cast<void*>(&SpellbookDispatcherHook),
+            &g_spellbook_dispatcher_detour,
+            reinterpret_cast<void**>(&g_original_spellbook_dispatcher),
+            L"SpellbookDispatcher trace")) {
+        RemoveInlineDetour(&g_spellbook_dispatcher_detour);
+        g_original_spellbook_dispatcher = nullptr;
+        return false;
+    }
+
+    g_spellbook_dispatcher_address = manifest.spellbook_dispatcher_address;
+    std::wstring message =
+        L"hook_manager: spell usability trace installed target=SpellbookDispatcher address=";
+    message += HexPtr(manifest.spellbook_dispatcher_address);
+    monomyth::logger::Log(message);
+    g_spellbook_ui_active_correlation_id = 0;
+    g_spellbook_ui_correlation_count = 0;
+    return true;
+}
+
+bool InstallStartSpellScribePathTrace(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.start_spell_scribe_path_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.start_spell_scribe_path_address == 0) {
+        if (manifest.spell_usability_trace_dev_opt_in) {
+            std::wstring message = L"hook_manager: spellbook scribe path trace denied ";
+            message += FormatDiscoveryDetails(
+                L"StartSpellScribePath",
+                manifest.start_spell_scribe_path_evidence_source,
+                manifest.start_spell_scribe_path_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.start_spell_scribe_path_address),
+            reinterpret_cast<void*>(&StartSpellScribePathHook),
+            &g_start_spell_scribe_path_detour,
+            reinterpret_cast<void**>(&g_original_start_spell_scribe_path),
+            L"StartSpellScribePath trace")) {
+        RemoveInlineDetour(&g_start_spell_scribe_path_detour);
+        g_original_start_spell_scribe_path = nullptr;
+        return false;
+    }
+
+    g_start_spell_scribe_path_address = manifest.start_spell_scribe_path_address;
+    std::wstring message =
+        L"hook_manager: spell usability trace installed target=StartSpellScribePath address=";
+    message += HexPtr(manifest.start_spell_scribe_path_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool InstallStartSpellScribePrecheckModeGetterTrace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.start_spell_scribe_precheck_mode_getter_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.start_spell_scribe_precheck_mode_getter_address == 0) {
+        if (manifest.spell_usability_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: spellbook scribe precheck mode getter trace denied ";
+            message += FormatDiscoveryDetails(
+                L"StartSpellScribePrecheckModeGetter",
+                manifest.start_spell_scribe_precheck_mode_getter_evidence_source,
+                manifest.start_spell_scribe_precheck_mode_getter_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.start_spell_scribe_precheck_mode_getter_address),
+            reinterpret_cast<void*>(&StartSpellScribePrecheckModeGetterHook),
+            &g_start_spell_scribe_precheck_mode_getter_detour,
+            reinterpret_cast<void**>(&g_original_start_spell_scribe_precheck_mode_getter),
+            L"StartSpellScribePrecheckModeGetter trace")) {
+        RemoveInlineDetour(&g_start_spell_scribe_precheck_mode_getter_detour);
+        g_original_start_spell_scribe_precheck_mode_getter = nullptr;
+        return false;
+    }
+
+    g_start_spell_scribe_precheck_mode_getter_address =
+        manifest.start_spell_scribe_precheck_mode_getter_address;
+    std::wstring message =
+        L"hook_manager: spell usability trace installed target=StartSpellScribePrecheckModeGetter address=";
+    message += HexPtr(manifest.start_spell_scribe_precheck_mode_getter_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool InstallStartSpellScribePrecheckGateTrace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.start_spell_scribe_precheck_gate_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.start_spell_scribe_precheck_gate_address == 0) {
+        if (manifest.spell_usability_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: spellbook scribe precheck gate trace denied ";
+            message += FormatDiscoveryDetails(
+                L"StartSpellScribePrecheckGate",
+                manifest.start_spell_scribe_precheck_gate_evidence_source,
+                manifest.start_spell_scribe_precheck_gate_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.start_spell_scribe_precheck_gate_address),
+            reinterpret_cast<void*>(&StartSpellScribePrecheckGateHook),
+            &g_start_spell_scribe_precheck_gate_detour,
+            reinterpret_cast<void**>(&g_original_start_spell_scribe_precheck_gate),
+            L"StartSpellScribePrecheckGate trace")) {
+        RemoveInlineDetour(&g_start_spell_scribe_precheck_gate_detour);
+        g_original_start_spell_scribe_precheck_gate = nullptr;
+        return false;
+    }
+
+    g_start_spell_scribe_precheck_gate_address =
+        manifest.start_spell_scribe_precheck_gate_address;
+    std::wstring message =
+        L"hook_manager: spell usability trace installed target=StartSpellScribePrecheckGate address=";
+    message += HexPtr(manifest.start_spell_scribe_precheck_gate_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool InstallStartSpellScribePrecheckLookupTrace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.start_spell_scribe_precheck_lookup_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.start_spell_scribe_precheck_lookup_address == 0) {
+        if (manifest.spell_usability_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: spellbook scribe precheck lookup trace denied ";
+            message += FormatDiscoveryDetails(
+                L"StartSpellScribePrecheckLookup",
+                manifest.start_spell_scribe_precheck_lookup_evidence_source,
+                manifest.start_spell_scribe_precheck_lookup_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.start_spell_scribe_precheck_lookup_address),
+            reinterpret_cast<void*>(&StartSpellScribePrecheckLookupHook),
+            &g_start_spell_scribe_precheck_lookup_detour,
+            reinterpret_cast<void**>(&g_original_start_spell_scribe_precheck_lookup),
+            L"StartSpellScribePrecheckLookup trace")) {
+        RemoveInlineDetour(&g_start_spell_scribe_precheck_lookup_detour);
+        g_original_start_spell_scribe_precheck_lookup = nullptr;
+        return false;
+    }
+
+    g_start_spell_scribe_precheck_lookup_address =
+        manifest.start_spell_scribe_precheck_lookup_address;
+    std::wstring message =
+        L"hook_manager: spell usability trace installed target=StartSpellScribePrecheckLookup address=";
+    message += HexPtr(manifest.start_spell_scribe_precheck_lookup_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool InstallStartSpellScribePrecheckFastAcceptTrace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.start_spell_scribe_precheck_fast_accept_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.start_spell_scribe_precheck_fast_accept_address == 0) {
+        if (manifest.spell_usability_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: spellbook scribe precheck fast-accept trace denied ";
+            message += FormatDiscoveryDetails(
+                L"StartSpellScribePrecheckFastAccept",
+                manifest.start_spell_scribe_precheck_fast_accept_evidence_source,
+                manifest.start_spell_scribe_precheck_fast_accept_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.start_spell_scribe_precheck_fast_accept_address),
+            reinterpret_cast<void*>(&StartSpellScribePrecheckFastAcceptHook),
+            &g_start_spell_scribe_precheck_fast_accept_detour,
+            reinterpret_cast<void**>(&g_original_start_spell_scribe_precheck_fast_accept),
+            L"StartSpellScribePrecheckFastAccept trace")) {
+        RemoveInlineDetour(&g_start_spell_scribe_precheck_fast_accept_detour);
+        g_original_start_spell_scribe_precheck_fast_accept = nullptr;
+        return false;
+    }
+
+    g_start_spell_scribe_precheck_fast_accept_address =
+        manifest.start_spell_scribe_precheck_fast_accept_address;
+    std::wstring message =
+        L"hook_manager: spell usability trace installed target=StartSpellScribePrecheckFastAccept address=";
+    message += HexPtr(manifest.start_spell_scribe_precheck_fast_accept_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool InstallStartSpellScribePrecheckClassResolverTrace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.start_spell_scribe_precheck_class_resolver_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.start_spell_scribe_precheck_class_resolver_address == 0) {
+        if (manifest.spell_usability_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: spellbook scribe precheck class resolver trace denied ";
+            message += FormatDiscoveryDetails(
+                L"StartSpellScribePrecheckClassResolver",
+                manifest.start_spell_scribe_precheck_class_resolver_evidence_source,
+                manifest.start_spell_scribe_precheck_class_resolver_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.start_spell_scribe_precheck_class_resolver_address),
+            reinterpret_cast<void*>(&StartSpellScribePrecheckClassResolverHook),
+            &g_start_spell_scribe_precheck_class_resolver_detour,
+            reinterpret_cast<void**>(&g_original_start_spell_scribe_precheck_class_resolver),
+            L"StartSpellScribePrecheckClassResolver trace")) {
+        RemoveInlineDetour(&g_start_spell_scribe_precheck_class_resolver_detour);
+        g_original_start_spell_scribe_precheck_class_resolver = nullptr;
+        return false;
+    }
+
+    g_start_spell_scribe_precheck_class_resolver_address =
+        manifest.start_spell_scribe_precheck_class_resolver_address;
+    std::wstring message =
+        L"hook_manager: spell usability trace installed target=StartSpellScribePrecheckClassResolver address=";
+    message += HexPtr(manifest.start_spell_scribe_precheck_class_resolver_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool InstallStartSpellScribePrecheckAssignedMaskGetterTrace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.start_spell_scribe_precheck_assigned_mask_getter_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.start_spell_scribe_precheck_assigned_mask_getter_address == 0) {
+        if (manifest.spell_usability_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: spellbook scribe precheck assigned-mask getter trace denied ";
+            message += FormatDiscoveryDetails(
+                L"StartSpellScribePrecheckAssignedMaskGetter",
+                manifest.start_spell_scribe_precheck_assigned_mask_getter_evidence_source,
+                manifest.start_spell_scribe_precheck_assigned_mask_getter_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.start_spell_scribe_precheck_assigned_mask_getter_address),
+            reinterpret_cast<void*>(&StartSpellScribePrecheckAssignedMaskGetterHook),
+            &g_start_spell_scribe_precheck_assigned_mask_getter_detour,
+            reinterpret_cast<void**>(
+                &g_original_start_spell_scribe_precheck_assigned_mask_getter),
+            L"StartSpellScribePrecheckAssignedMaskGetter trace")) {
+        RemoveInlineDetour(&g_start_spell_scribe_precheck_assigned_mask_getter_detour);
+        g_original_start_spell_scribe_precheck_assigned_mask_getter = nullptr;
+        return false;
+    }
+
+    g_start_spell_scribe_precheck_assigned_mask_getter_address =
+        manifest.start_spell_scribe_precheck_assigned_mask_getter_address;
+    std::wstring message =
+        L"hook_manager: spell usability trace installed target=StartSpellScribePrecheckAssignedMaskGetter address=";
+    message += HexPtr(manifest.start_spell_scribe_precheck_assigned_mask_getter_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool InstallStartSpellScribePrecheckRule4462c0Trace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.start_spell_scribe_precheck_rule_4462c0_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.start_spell_scribe_precheck_rule_4462c0_address == 0) {
+        if (manifest.spell_usability_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: spellbook scribe precheck rule 4462c0 trace denied ";
+            message += FormatDiscoveryDetails(
+                L"StartSpellScribePrecheckRule4462c0",
+                manifest.start_spell_scribe_precheck_rule_4462c0_evidence_source,
+                manifest.start_spell_scribe_precheck_rule_4462c0_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.start_spell_scribe_precheck_rule_4462c0_address),
+            reinterpret_cast<void*>(&StartSpellScribePrecheckRule4462c0Hook),
+            &g_start_spell_scribe_precheck_rule_4462c0_detour,
+            reinterpret_cast<void**>(&g_original_start_spell_scribe_precheck_rule_4462c0),
+            L"StartSpellScribePrecheckRule4462c0 trace")) {
+        RemoveInlineDetour(&g_start_spell_scribe_precheck_rule_4462c0_detour);
+        g_original_start_spell_scribe_precheck_rule_4462c0 = nullptr;
+        return false;
+    }
+
+    g_start_spell_scribe_precheck_rule_4462c0_address =
+        manifest.start_spell_scribe_precheck_rule_4462c0_address;
+    std::wstring message =
+        L"hook_manager: spell usability trace installed target=StartSpellScribePrecheckRule4462c0 address=";
+    message += HexPtr(manifest.start_spell_scribe_precheck_rule_4462c0_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool InstallStartSpellScribePrecheckRule446190Trace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.start_spell_scribe_precheck_rule_446190_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.start_spell_scribe_precheck_rule_446190_address == 0) {
+        if (manifest.spell_usability_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: spellbook scribe precheck rule 446190 trace denied ";
+            message += FormatDiscoveryDetails(
+                L"StartSpellScribePrecheckRule446190",
+                manifest.start_spell_scribe_precheck_rule_446190_evidence_source,
+                manifest.start_spell_scribe_precheck_rule_446190_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.start_spell_scribe_precheck_rule_446190_address),
+            reinterpret_cast<void*>(&StartSpellScribePrecheckRule446190Hook),
+            &g_start_spell_scribe_precheck_rule_446190_detour,
+            reinterpret_cast<void**>(&g_original_start_spell_scribe_precheck_rule_446190),
+            L"StartSpellScribePrecheckRule446190 trace")) {
+        RemoveInlineDetour(&g_start_spell_scribe_precheck_rule_446190_detour);
+        g_original_start_spell_scribe_precheck_rule_446190 = nullptr;
+        return false;
+    }
+
+    g_start_spell_scribe_precheck_rule_446190_address =
+        manifest.start_spell_scribe_precheck_rule_446190_address;
+    std::wstring message =
+        L"hook_manager: spell usability trace installed target=StartSpellScribePrecheckRule446190 address=";
+    message += HexPtr(manifest.start_spell_scribe_precheck_rule_446190_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool InstallStartSpellScribePrecheckRule446200Trace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.start_spell_scribe_precheck_rule_446200_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.start_spell_scribe_precheck_rule_446200_address == 0) {
+        if (manifest.spell_usability_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: spellbook scribe precheck rule 446200 trace denied ";
+            message += FormatDiscoveryDetails(
+                L"StartSpellScribePrecheckRule446200",
+                manifest.start_spell_scribe_precheck_rule_446200_evidence_source,
+                manifest.start_spell_scribe_precheck_rule_446200_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.start_spell_scribe_precheck_rule_446200_address),
+            reinterpret_cast<void*>(&StartSpellScribePrecheckRule446200Hook),
+            &g_start_spell_scribe_precheck_rule_446200_detour,
+            reinterpret_cast<void**>(&g_original_start_spell_scribe_precheck_rule_446200),
+            L"StartSpellScribePrecheckRule446200 trace")) {
+        RemoveInlineDetour(&g_start_spell_scribe_precheck_rule_446200_detour);
+        g_original_start_spell_scribe_precheck_rule_446200 = nullptr;
+        return false;
+    }
+
+    g_start_spell_scribe_precheck_rule_446200_address =
+        manifest.start_spell_scribe_precheck_rule_446200_address;
+    std::wstring message =
+        L"hook_manager: spell usability trace installed target=StartSpellScribePrecheckRule446200 address=";
+    message += HexPtr(manifest.start_spell_scribe_precheck_rule_446200_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool InstallStartSpellScribePrecheckRule446380Trace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.spell_usability_trace_allowed ||
+        manifest.start_spell_scribe_precheck_rule_446380_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.start_spell_scribe_precheck_rule_446380_address == 0) {
+        if (manifest.spell_usability_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: spellbook scribe precheck rule 446380 trace denied ";
+            message += FormatDiscoveryDetails(
+                L"StartSpellScribePrecheckRule446380",
+                manifest.start_spell_scribe_precheck_rule_446380_evidence_source,
+                manifest.start_spell_scribe_precheck_rule_446380_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.start_spell_scribe_precheck_rule_446380_address),
+            reinterpret_cast<void*>(&StartSpellScribePrecheckRule446380Hook),
+            &g_start_spell_scribe_precheck_rule_446380_detour,
+            reinterpret_cast<void**>(&g_original_start_spell_scribe_precheck_rule_446380),
+            L"StartSpellScribePrecheckRule446380 trace")) {
+        RemoveInlineDetour(&g_start_spell_scribe_precheck_rule_446380_detour);
+        g_original_start_spell_scribe_precheck_rule_446380 = nullptr;
+        return false;
+    }
+
+    g_start_spell_scribe_precheck_rule_446380_address =
+        manifest.start_spell_scribe_precheck_rule_446380_address;
+    std::wstring message =
+        L"hook_manager: spell usability trace installed target=StartSpellScribePrecheckRule446380 address=";
+    message += HexPtr(manifest.start_spell_scribe_precheck_rule_446380_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool InstallStartSpellMemorizationPathTrace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.memorize_send_trace_allowed ||
+        manifest.start_spell_memorization_path_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.start_spell_memorization_path_address == 0) {
+        if (manifest.memorize_send_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: start spell memorization path trace denied ";
+            message += FormatDiscoveryDetails(
+                L"StartSpellMemorizationPath",
+                manifest.start_spell_memorization_path_evidence_source,
+                manifest.start_spell_memorization_path_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.start_spell_memorization_path_address),
+            reinterpret_cast<void*>(&StartSpellMemorizationPathHook),
+            &g_start_spell_memorization_path_detour,
+            reinterpret_cast<void**>(&g_original_start_spell_memorization_path),
+            L"StartSpellMemorizationPath trace")) {
+        RemoveInlineDetour(&g_start_spell_memorization_path_detour);
+        g_original_start_spell_memorization_path = nullptr;
+        return false;
+    }
+
+    g_start_spell_memorization_path_address =
+        manifest.start_spell_memorization_path_address;
+    std::wstring message =
+        L"hook_manager: start spell memorization path trace installed target=StartSpellMemorizationPath address=";
+    message += HexPtr(manifest.start_spell_memorization_path_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
 bool InstallMemorizeSendTrace(const monomyth::runtime::Manifest& manifest) noexcept {
     if (!manifest.memorize_send_trace_allowed ||
         manifest.memorize_send_packet_wrapper_state !=
@@ -891,9 +3598,89 @@ bool InstallMemorizeSendTrace(const monomyth::runtime::Manifest& manifest) noexc
     message += HexPtr(manifest.memorize_send_packet_wrapper_address);
     message += L" opcode_name=OP_MemorizeSpell";
     monomyth::logger::Log(message);
+    g_memorize_send_packet_wrapper_address = manifest.memorize_send_packet_wrapper_address;
     g_memorize_send_trace_count = 0;
     g_memorize_send_pending_correlation_id = 0;
     g_memorize_send_correlation_count = 0;
+    g_memorize_send_pending_wrapper_sends = 0;
+    g_spellbook_scribe_pending_correlation_id = 0;
+    g_spellbook_scribe_correlation_count = 0;
+    g_spellbook_scribe_pending_wrapper_sends = 0;
+    return true;
+}
+
+bool InstallPostCanStartMemmingFollowupGateTrace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.memorize_send_trace_allowed ||
+        manifest.post_can_start_memming_followup_gate_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.post_can_start_memming_followup_gate_address == 0) {
+        if (manifest.memorize_send_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: post-CanStartMemming followup trace denied ";
+            message += FormatDiscoveryDetails(
+                L"PostCanStartMemmingFollowupGate",
+                manifest.post_can_start_memming_followup_gate_evidence_source,
+                manifest.post_can_start_memming_followup_gate_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.post_can_start_memming_followup_gate_address),
+            reinterpret_cast<void*>(&PostCanStartMemmingFollowupGateHook),
+            &g_post_can_start_memming_followup_gate_detour,
+            reinterpret_cast<void**>(&g_original_post_can_start_memming_followup_gate),
+            L"PostCanStartMemmingFollowupGate trace")) {
+        RemoveInlineDetour(&g_post_can_start_memming_followup_gate_detour);
+        g_original_post_can_start_memming_followup_gate = nullptr;
+        return false;
+    }
+
+    g_post_can_start_memming_followup_gate_address =
+        manifest.post_can_start_memming_followup_gate_address;
+    std::wstring message =
+        L"hook_manager: post-CanStartMemming followup trace installed target=PostCanStartMemmingFollowupGate address=";
+    message += HexPtr(manifest.post_can_start_memming_followup_gate_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool InstallMemSpellCommitPathTrace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.memorize_send_trace_allowed ||
+        manifest.mem_spell_commit_path_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.mem_spell_commit_path_address == 0) {
+        if (manifest.memorize_send_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: MemSpell commit trace denied ";
+            message += FormatDiscoveryDetails(
+                L"MemSpellCommitPath",
+                manifest.mem_spell_commit_path_evidence_source,
+                manifest.mem_spell_commit_path_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.mem_spell_commit_path_address),
+            reinterpret_cast<void*>(&MemSpellCommitPathHook),
+            &g_mem_spell_commit_path_detour,
+            reinterpret_cast<void**>(&g_original_mem_spell_commit_path),
+            L"MemSpellCommitPath trace")) {
+        RemoveInlineDetour(&g_mem_spell_commit_path_detour);
+        g_original_mem_spell_commit_path = nullptr;
+        return false;
+    }
+
+    g_mem_spell_commit_path_address = manifest.mem_spell_commit_path_address;
+    std::wstring message =
+        L"hook_manager: MemSpell commit trace installed target=MemSpellCommitPath address=";
+    message += HexPtr(manifest.mem_spell_commit_path_address);
+    monomyth::logger::Log(message);
     return true;
 }
 
@@ -967,6 +3754,216 @@ bool RemoveCanStartMemmingTrace() noexcept {
     return false;
 }
 
+bool RemoveSpellbookDispatcherTrace() noexcept {
+    if (!g_spellbook_dispatcher_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_spellbook_dispatcher_detour)) {
+        g_original_spellbook_dispatcher = nullptr;
+        g_spellbook_dispatcher_address = 0;
+        g_spellbook_ui_active_correlation_id = 0;
+        g_spellbook_ui_correlation_count = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell usability trace removed target=SpellbookDispatcher");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveStartSpellScribePathTrace() noexcept {
+    if (!g_start_spell_scribe_path_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_start_spell_scribe_path_detour)) {
+        g_original_start_spell_scribe_path = nullptr;
+        g_start_spell_scribe_path_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell usability trace removed target=StartSpellScribePath");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveStartSpellScribePrecheckModeGetterTrace() noexcept {
+    if (!g_start_spell_scribe_precheck_mode_getter_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_start_spell_scribe_precheck_mode_getter_detour)) {
+        g_original_start_spell_scribe_precheck_mode_getter = nullptr;
+        g_start_spell_scribe_precheck_mode_getter_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell usability trace removed target=StartSpellScribePrecheckModeGetter");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveStartSpellScribePrecheckGateTrace() noexcept {
+    if (!g_start_spell_scribe_precheck_gate_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_start_spell_scribe_precheck_gate_detour)) {
+        g_original_start_spell_scribe_precheck_gate = nullptr;
+        g_start_spell_scribe_precheck_gate_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell usability trace removed target=StartSpellScribePrecheckGate");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveStartSpellScribePrecheckLookupTrace() noexcept {
+    if (!g_start_spell_scribe_precheck_lookup_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_start_spell_scribe_precheck_lookup_detour)) {
+        g_original_start_spell_scribe_precheck_lookup = nullptr;
+        g_start_spell_scribe_precheck_lookup_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell usability trace removed target=StartSpellScribePrecheckLookup");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveStartSpellScribePrecheckFastAcceptTrace() noexcept {
+    if (!g_start_spell_scribe_precheck_fast_accept_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_start_spell_scribe_precheck_fast_accept_detour)) {
+        g_original_start_spell_scribe_precheck_fast_accept = nullptr;
+        g_start_spell_scribe_precheck_fast_accept_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell usability trace removed target=StartSpellScribePrecheckFastAccept");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveStartSpellScribePrecheckClassResolverTrace() noexcept {
+    if (!g_start_spell_scribe_precheck_class_resolver_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_start_spell_scribe_precheck_class_resolver_detour)) {
+        g_original_start_spell_scribe_precheck_class_resolver = nullptr;
+        g_start_spell_scribe_precheck_class_resolver_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell usability trace removed target=StartSpellScribePrecheckClassResolver");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveStartSpellScribePrecheckAssignedMaskGetterTrace() noexcept {
+    if (!g_start_spell_scribe_precheck_assigned_mask_getter_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_start_spell_scribe_precheck_assigned_mask_getter_detour)) {
+        g_original_start_spell_scribe_precheck_assigned_mask_getter = nullptr;
+        g_start_spell_scribe_precheck_assigned_mask_getter_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell usability trace removed target=StartSpellScribePrecheckAssignedMaskGetter");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveStartSpellScribePrecheckRule4462c0Trace() noexcept {
+    if (!g_start_spell_scribe_precheck_rule_4462c0_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_start_spell_scribe_precheck_rule_4462c0_detour)) {
+        g_original_start_spell_scribe_precheck_rule_4462c0 = nullptr;
+        g_start_spell_scribe_precheck_rule_4462c0_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell usability trace removed target=StartSpellScribePrecheckRule4462c0");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveStartSpellScribePrecheckRule446190Trace() noexcept {
+    if (!g_start_spell_scribe_precheck_rule_446190_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_start_spell_scribe_precheck_rule_446190_detour)) {
+        g_original_start_spell_scribe_precheck_rule_446190 = nullptr;
+        g_start_spell_scribe_precheck_rule_446190_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell usability trace removed target=StartSpellScribePrecheckRule446190");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveStartSpellScribePrecheckRule446200Trace() noexcept {
+    if (!g_start_spell_scribe_precheck_rule_446200_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_start_spell_scribe_precheck_rule_446200_detour)) {
+        g_original_start_spell_scribe_precheck_rule_446200 = nullptr;
+        g_start_spell_scribe_precheck_rule_446200_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell usability trace removed target=StartSpellScribePrecheckRule446200");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveStartSpellScribePrecheckRule446380Trace() noexcept {
+    if (!g_start_spell_scribe_precheck_rule_446380_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_start_spell_scribe_precheck_rule_446380_detour)) {
+        g_original_start_spell_scribe_precheck_rule_446380 = nullptr;
+        g_start_spell_scribe_precheck_rule_446380_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell usability trace removed target=StartSpellScribePrecheckRule446380");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveStartSpellMemorizationPathTrace() noexcept {
+    if (!g_start_spell_memorization_path_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_start_spell_memorization_path_detour)) {
+        g_original_start_spell_memorization_path = nullptr;
+        g_start_spell_memorization_path_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: start spell memorization path trace removed target=StartSpellMemorizationPath");
+        return true;
+    }
+
+    return false;
+}
+
 bool RemoveMemorizeSendTrace() noexcept {
     if (!g_memorize_send_packet_wrapper_detour.installed) {
         return true;
@@ -974,9 +3971,45 @@ bool RemoveMemorizeSendTrace() noexcept {
 
     if (RemoveInlineDetour(&g_memorize_send_packet_wrapper_detour)) {
         g_original_memorize_send_packet_wrapper = nullptr;
+        g_memorize_send_packet_wrapper_address = 0;
         g_memorize_send_pending_correlation_id = 0;
+        g_memorize_send_pending_wrapper_sends = 0;
+        g_spellbook_scribe_pending_correlation_id = 0;
+        g_spellbook_scribe_pending_wrapper_sends = 0;
         monomyth::logger::Log(
             L"hook_manager: memorize send trace removed target=MemorizeSendPacketWrapper");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemovePostCanStartMemmingFollowupGateTrace() noexcept {
+    if (!g_post_can_start_memming_followup_gate_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_post_can_start_memming_followup_gate_detour)) {
+        g_original_post_can_start_memming_followup_gate = nullptr;
+        g_post_can_start_memming_followup_gate_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: post-CanStartMemming followup trace removed target=PostCanStartMemmingFollowupGate");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveMemSpellCommitPathTrace() noexcept {
+    if (!g_mem_spell_commit_path_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_mem_spell_commit_path_detour)) {
+        g_original_mem_spell_commit_path = nullptr;
+        g_mem_spell_commit_path_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: MemSpell commit trace removed target=MemSpellCommitPath");
         return true;
     }
 
@@ -1007,7 +4040,75 @@ bool InstallCanStartMemmingTrace(const monomyth::runtime::Manifest&) noexcept {
     return false;
 }
 
+bool InstallSpellbookDispatcherTrace(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallStartSpellScribePathTrace(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallStartSpellScribePrecheckModeGetterTrace(
+    const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallStartSpellScribePrecheckGateTrace(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallStartSpellScribePrecheckLookupTrace(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallStartSpellScribePrecheckFastAcceptTrace(
+    const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallStartSpellScribePrecheckClassResolverTrace(
+    const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallStartSpellScribePrecheckAssignedMaskGetterTrace(
+    const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallStartSpellScribePrecheckRule4462c0Trace(
+    const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallStartSpellScribePrecheckRule446190Trace(
+    const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallStartSpellScribePrecheckRule446200Trace(
+    const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallStartSpellScribePrecheckRule446380Trace(
+    const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallStartSpellMemorizationPathTrace(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
 bool InstallMemorizeSendTrace(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallPostCanStartMemmingFollowupGateTrace(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallMemSpellCommitPathTrace(const monomyth::runtime::Manifest&) noexcept {
     return false;
 }
 
@@ -1023,7 +4124,67 @@ bool RemoveCanStartMemmingTrace() noexcept {
     return true;
 }
 
+bool RemoveSpellbookDispatcherTrace() noexcept {
+    return true;
+}
+
+bool RemoveStartSpellScribePathTrace() noexcept {
+    return true;
+}
+
+bool RemoveStartSpellScribePrecheckModeGetterTrace() noexcept {
+    return true;
+}
+
+bool RemoveStartSpellScribePrecheckGateTrace() noexcept {
+    return true;
+}
+
+bool RemoveStartSpellScribePrecheckLookupTrace() noexcept {
+    return true;
+}
+
+bool RemoveStartSpellScribePrecheckFastAcceptTrace() noexcept {
+    return true;
+}
+
+bool RemoveStartSpellScribePrecheckClassResolverTrace() noexcept {
+    return true;
+}
+
+bool RemoveStartSpellScribePrecheckAssignedMaskGetterTrace() noexcept {
+    return true;
+}
+
+bool RemoveStartSpellScribePrecheckRule4462c0Trace() noexcept {
+    return true;
+}
+
+bool RemoveStartSpellScribePrecheckRule446190Trace() noexcept {
+    return true;
+}
+
+bool RemoveStartSpellScribePrecheckRule446200Trace() noexcept {
+    return true;
+}
+
+bool RemoveStartSpellScribePrecheckRule446380Trace() noexcept {
+    return true;
+}
+
+bool RemoveStartSpellMemorizationPathTrace() noexcept {
+    return true;
+}
+
 bool RemoveMemorizeSendTrace() noexcept {
+    return true;
+}
+
+bool RemovePostCanStartMemmingFollowupGateTrace() noexcept {
+    return true;
+}
+
+bool RemoveMemSpellCommitPathTrace() noexcept {
     return true;
 }
 
@@ -1062,6 +4223,78 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     }
 
     if (manifest.spell_usability_trace_allowed) {
+        if (!InstallSpellbookDispatcherTrace(manifest) &&
+            manifest.spellbook_dispatcher_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=SpellbookDispatcher");
+        }
+        if (!InstallStartSpellScribePathTrace(manifest) &&
+            manifest.start_spell_scribe_path_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePath");
+        }
+        if (!InstallStartSpellScribePrecheckModeGetterTrace(manifest) &&
+            manifest.start_spell_scribe_precheck_mode_getter_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckModeGetter");
+        }
+        if (!InstallStartSpellScribePrecheckGateTrace(manifest) &&
+            manifest.start_spell_scribe_precheck_gate_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckGate");
+        }
+        if (!InstallStartSpellScribePrecheckLookupTrace(manifest) &&
+            manifest.start_spell_scribe_precheck_lookup_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckLookup");
+        }
+        if (!InstallStartSpellScribePrecheckFastAcceptTrace(manifest) &&
+            manifest.start_spell_scribe_precheck_fast_accept_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckFastAccept");
+        }
+        if (!InstallStartSpellScribePrecheckClassResolverTrace(manifest) &&
+            manifest.start_spell_scribe_precheck_class_resolver_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckClassResolver");
+        }
+        if (!InstallStartSpellScribePrecheckAssignedMaskGetterTrace(manifest) &&
+            manifest.start_spell_scribe_precheck_assigned_mask_getter_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckAssignedMaskGetter");
+        }
+        if (!InstallStartSpellScribePrecheckRule4462c0Trace(manifest) &&
+            manifest.start_spell_scribe_precheck_rule_4462c0_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckRule4462c0");
+        }
+        if (!InstallStartSpellScribePrecheckRule446190Trace(manifest) &&
+            manifest.start_spell_scribe_precheck_rule_446190_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckRule446190");
+        }
+        if (!InstallStartSpellScribePrecheckRule446200Trace(manifest) &&
+            manifest.start_spell_scribe_precheck_rule_446200_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckRule446200");
+        }
+        if (!InstallStartSpellScribePrecheckRule446380Trace(manifest) &&
+            manifest.start_spell_scribe_precheck_rule_446380_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckRule446380");
+        }
         if (InstallCanStartMemmingTrace(manifest)) {
             spell_trace_active = true;
         } else if (
@@ -1110,6 +4343,24 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
             monomyth::logger::Log(
                 L"hook_manager: memorize send trace install failed target=MemorizeSendPacketWrapper");
         }
+        if (!InstallStartSpellMemorizationPathTrace(manifest) &&
+            manifest.start_spell_memorization_path_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: start spell memorization path trace install failed target=StartSpellMemorizationPath");
+        }
+        if (!InstallMemSpellCommitPathTrace(manifest) &&
+            manifest.mem_spell_commit_path_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: MemSpell commit trace install failed target=MemSpellCommitPath");
+        }
+        if (!InstallPostCanStartMemmingFollowupGateTrace(manifest) &&
+            manifest.post_can_start_memming_followup_gate_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: post-CanStartMemming followup trace install failed target=PostCanStartMemmingFollowupGate");
+        }
     } else if (manifest.memorize_send_trace_dev_opt_in) {
         std::wstring message =
             L"hook_manager: memorize send trace skipped reason=\"";
@@ -1119,6 +4370,7 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         message += L"\"";
         monomyth::logger::Log(message);
     }
+    LogMemorizeSendTraceStartupMarker(manifest, memorize_send_trace_active);
 
     g_initialized = true;
     if (receive_hook_active || spell_trace_active || scroll_scribe_trace_active ||
@@ -1214,12 +4466,90 @@ void Shutdown() noexcept {
             L"hook_manager: shutdown deferred because CanStartMemming trace removal failed");
         return;
     }
+    if (!RemoveSpellbookDispatcherTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because SpellbookDispatcher trace removal failed");
+        return;
+    }
+    if (!RemoveStartSpellScribePathTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because StartSpellScribePath trace removal failed");
+        return;
+    }
+    if (!RemoveStartSpellScribePrecheckModeGetterTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because StartSpellScribePrecheckModeGetter trace removal failed");
+        return;
+    }
+    if (!RemoveStartSpellScribePrecheckGateTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because StartSpellScribePrecheckGate trace removal failed");
+        return;
+    }
+    if (!RemoveStartSpellScribePrecheckLookupTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because StartSpellScribePrecheckLookup trace removal failed");
+        return;
+    }
+    if (!RemoveStartSpellScribePrecheckFastAcceptTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because StartSpellScribePrecheckFastAccept trace removal failed");
+        return;
+    }
+    if (!RemoveStartSpellScribePrecheckClassResolverTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because StartSpellScribePrecheckClassResolver trace removal failed");
+        return;
+    }
+    if (!RemoveStartSpellScribePrecheckAssignedMaskGetterTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because StartSpellScribePrecheckAssignedMaskGetter trace removal failed");
+        return;
+    }
+    if (!RemoveStartSpellScribePrecheckRule4462c0Trace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because StartSpellScribePrecheckRule4462c0 trace removal failed");
+        return;
+    }
+    if (!RemoveStartSpellScribePrecheckRule446190Trace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because StartSpellScribePrecheckRule446190 trace removal failed");
+        return;
+    }
+    if (!RemoveStartSpellScribePrecheckRule446200Trace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because StartSpellScribePrecheckRule446200 trace removal failed");
+        return;
+    }
+    if (!RemoveStartSpellScribePrecheckRule446380Trace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because StartSpellScribePrecheckRule446380 trace removal failed");
+        return;
+    }
     if (g_memorize_send_pending_correlation_id != 0) {
         LogPendingMemorizeSendGap(L"hook_shutdown");
+    }
+    if (g_spellbook_scribe_pending_correlation_id != 0) {
+        LogPendingSpellbookScribeGap(L"hook_shutdown");
     }
     if (!RemoveMemorizeSendTrace()) {
         monomyth::logger::Log(
             L"hook_manager: shutdown deferred because memorize send trace removal failed");
+        return;
+    }
+    if (!RemoveStartSpellMemorizationPathTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because start spell memorization path trace removal failed");
+        return;
+    }
+    if (!RemoveMemSpellCommitPathTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because MemSpell commit trace removal failed");
+        return;
+    }
+    if (!RemovePostCanStartMemmingFollowupGateTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because post-CanStartMemming followup trace removal failed");
         return;
     }
 

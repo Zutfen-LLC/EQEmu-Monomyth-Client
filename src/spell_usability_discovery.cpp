@@ -19,10 +19,44 @@ namespace {
 constexpr std::uint32_t kGetSpellLevelNeededRva = 0x000af700;
 constexpr std::uint32_t kIsClassUsablePredicateRva = 0x000a1f50;
 constexpr std::uint32_t kHandleRButtonUpRva = 0x00297250;
+constexpr std::uint32_t kSpellbookDispatcherRva = 0x0035e790;
+constexpr std::uint32_t kSpellbookDispatcherCallsStartSpellScribePathAtRva = 0x0035e7cb;
+constexpr std::uint32_t kSpellbookDispatcherCallsCanStartMemmingAtRva = 0x0035e7de;
 constexpr std::uint32_t kCanStartMemmingRva = 0x0035bd40;
 constexpr std::uint32_t kCanStartMemmingCallsGetSpellLevelNeededAtRva = 0x0035bea5;
-constexpr std::uint32_t kMemorizeSendPacketWrapperRva = 0x004c41f0;
+constexpr std::uint32_t kStartSpellScribePathRva = 0x0035ddf0;
+constexpr std::uint32_t kStartSpellScribePrecheckModeGetterRva = 0x003affa0;
+constexpr std::uint32_t kStartSpellScribePathCallsPrecheckModeGetterAtRva = 0x0035df47;
+constexpr std::uint32_t kStartSpellScribePrecheckGateRva = 0x0004c430;
+constexpr std::uint32_t kStartSpellScribePathCallsPrecheckGateAtRva = 0x0035df6a;
+constexpr std::uint32_t kStartSpellScribePrecheckLookupRva = 0x00049cd0;
+constexpr std::uint32_t kStartSpellScribePathCallsPrecheckLookupAtRva = 0x0035df8f;
+constexpr std::uint32_t kStartSpellScribePrecheckFastAcceptRva = 0x003affd0;
+constexpr std::uint32_t kStartSpellScribePrecheckGateCallsFastAcceptAtRva = 0x0004c43d;
+constexpr std::uint32_t kStartSpellScribePrecheckClassResolverRva = 0x003db210;
+constexpr std::uint32_t kStartSpellScribePrecheckGateCallsClassResolverAtRva = 0x0004c45c;
+constexpr std::uint32_t kStartSpellScribePrecheckAssignedMaskGetterRva = 0x003b4ce0;
+constexpr std::uint32_t
+    kStartSpellScribePrecheckGateCallsAssignedMaskGetterAtRva = 0x0004c46d;
+constexpr std::uint32_t kStartSpellScribePrecheckRule446190Rva = 0x00046190;
+constexpr std::uint32_t kStartSpellScribePrecheckGateCallsRule446190AtRva = 0x0004c4a6;
+constexpr std::uint32_t kStartSpellScribePrecheckRule446200Rva = 0x00046200;
+constexpr std::uint32_t kStartSpellScribePrecheckGateCallsRule446200AtRva = 0x0004c4b3;
+constexpr std::uint32_t kStartSpellScribePrecheckRule4462c0Rva = 0x000462c0;
+constexpr std::uint32_t kStartSpellScribePrecheckGateCallsRule4462c0AtRva = 0x0004c499;
+constexpr std::uint32_t kStartSpellScribePrecheckRule446380Rva = 0x00046380;
+constexpr std::uint32_t kStartSpellScribePrecheckGateCallsRule446380AtRva = 0x0004c4ce;
+constexpr std::uint32_t kStartSpellScribePathCallsGetSpellLevelNeededAtRva = 0x0035e084;
+constexpr std::uint32_t kStartSpellMemorizationPathRva = 0x00262290;
+constexpr std::uint32_t kSpellbookDispatcherCallsStartSpellMemorizationPathAtRva = 0x0035e7fd;
+constexpr std::uint32_t kMemSpellCommitPathRva = 0x0035e620;
+constexpr std::uint32_t kMemSpellCommitPathCallsMemorizeSendPacketWrapperAtRva = 0x0035e6fb;
+constexpr std::uint32_t kMemSpellCommitPathCallsFollowupThunkAtRva = 0x0035e705;
+constexpr std::uint32_t kMemorizeSendPacketWrapperRva = 0x004c51f0;
 constexpr std::uint32_t kStartSpellScribeLikeCallsMemorizeSendPacketWrapperAtRva = 0x0035e6fb;
+constexpr std::uint32_t kPostCanStartMemmingFollowupGateThunkRva = 0x004db151;
+constexpr std::uint32_t kPostCanStartMemmingFollowupGateBodyRva = 0x004dc0f5;
+constexpr std::uint32_t kPostCanStartMemmingFloatListThingCallsFollowupThunkAtRva = 0x0018cabd;
 constexpr wchar_t kResolverVersion[] = L"v5_memorize_send_trace_v1";
 constexpr wchar_t kPacketId[] = L"CLIENT-OP_MEMORIZE_SEND-TRACE-V1";
 constexpr char kExpectedEqgameSha256[] =
@@ -38,12 +72,108 @@ constexpr std::array<std::uint8_t, 33> kCanStartMemmingEntryBytes = {{
     0xb3, 0x01, 0x0f, 0x8f, 0x8f, 0x01, 0x00, 0x00, 0x8b, 0x0d, 0x7c,
     0xfc, 0xd1, 0x00, 0x6a, 0x01, 0xe8, 0xd0, 0x51, 0xf0, 0xff, 0x84,
 }};
+constexpr std::array<std::uint8_t, 64> kSpellbookDispatcherEntryBytes = {{
+    0x56, 0x8b, 0xf1, 0x8b, 0x0d, 0x30, 0x26, 0xdd, 0x00, 0x80, 0xb9, 0x5c,
+    0x03, 0x00, 0x00, 0x6e, 0x74, 0x09, 0xe8, 0x49, 0x15, 0x17, 0x00, 0x85,
+    0xc0, 0x74, 0x59, 0x8b, 0x8e, 0x2c, 0x02, 0x00, 0x00, 0x8b, 0x44, 0x24,
+    0x08, 0x8b, 0x15, 0x7c, 0xfc, 0xd1, 0x00, 0x83, 0xba, 0x24, 0x02, 0x00,
+    0x00, 0x02, 0x57, 0x8d, 0x3c, 0xc8, 0x8b, 0xce, 0x75, 0x0b, 0x57, 0xe8,
+    0x20, 0xf6, 0xff, 0xff,
+}};
+constexpr std::array<std::uint8_t, 83> kStartSpellScribePathEntryBytes = {{
+    0x6a, 0xff, 0x68, 0x76, 0x66, 0x99, 0x00, 0x64, 0xa1, 0x00, 0x00, 0x00,
+    0x00, 0x50, 0x64, 0x89, 0x25, 0x00, 0x00, 0x00, 0x00, 0x81, 0xec, 0x18,
+    0x02, 0x00, 0x00, 0x53, 0x55, 0x56, 0x33, 0xdb, 0x33, 0xf6, 0x8b, 0xe9,
+    0x89, 0x5c, 0x24, 0x14, 0x57, 0x89, 0x6c, 0x24, 0x20, 0x39, 0x35, 0xac,
+    0x35, 0xe6, 0x00, 0x7f, 0x7d, 0x83, 0xc8, 0xff, 0x39, 0x85, 0x34, 0x02,
+    0x00, 0x00, 0x75, 0x72, 0x39, 0x85, 0x40, 0x02, 0x00, 0x00, 0x75, 0x6a,
+    0x6a, 0x21, 0x8d, 0x44, 0x24, 0x20, 0x50, 0xa1, 0x1c, 0x26, 0xdd,
+}};
+constexpr std::array<std::uint8_t, 15> kStartSpellScribePrecheckModeGetterEntryBytes = {{
+    0x8b, 0x01, 0x8b, 0x50, 0x08, 0xff, 0xd2, 0x0f, 0xb6, 0x80, 0xd4, 0x01,
+    0x00, 0x00, 0xc3,
+}};
+constexpr std::array<std::uint8_t, 61> kStartSpellScribePrecheckGateEntryBytes = {{
+    0x55, 0x56, 0x57, 0x8b, 0x7c, 0x24, 0x10, 0x8b, 0xf1, 0x8b, 0x0f, 0x33,
+    0xed, 0xe8, 0x8e, 0x3b, 0x36, 0x00, 0x85, 0xc0, 0x74, 0x08, 0x5f, 0x5e,
+    0xb0, 0x01, 0x5d, 0xc2, 0x0c, 0x00, 0x8b, 0x46, 0x04, 0x8b, 0x48, 0x04,
+    0x8d, 0x4c, 0x31, 0x04, 0x53, 0x8d, 0x49, 0x04, 0xe8, 0xaf, 0xed, 0x38,
+    0x00, 0x8b, 0x0f, 0x8a, 0x98, 0x74, 0x33, 0x00, 0x00, 0x6a, 0x00, 0x6a,
+    0x01,
+}};
+constexpr std::array<std::uint8_t, 31> kStartSpellScribePrecheckLookupEntryBytes = {{
+    0x53, 0x8b, 0x5c, 0x24, 0x08, 0x56, 0x57, 0x8b, 0xf9, 0x33, 0xf6, 0xeb,
+    0x03, 0x8d, 0x49, 0x00, 0x8b, 0x47, 0x04, 0x8b, 0x48, 0x04, 0x8d, 0x4c,
+    0x39, 0x04, 0x8d, 0x49, 0x04, 0xe8, 0x1e,
+}};
+constexpr std::array<std::uint8_t, 15> kStartSpellScribePrecheckFastAcceptEntryBytes = {{
+    0x8b, 0x01, 0x8b, 0x50, 0x08, 0xff, 0xd2, 0x0f, 0xb6, 0x80, 0x1a, 0x01,
+    0x00, 0x00, 0xc3,
+}};
+constexpr std::array<std::uint8_t, 34> kStartSpellScribePrecheckClassResolverEntryBytes = {{
+    0x8b, 0x01, 0x85, 0xc0, 0x74, 0x15, 0x8b, 0x49, 0x04, 0x8d, 0xa4, 0x24,
+    0x00, 0x00, 0x00, 0x00, 0x39, 0x08, 0x74, 0x0a, 0x8b, 0x40, 0x0c, 0x85,
+    0xc0, 0x75, 0xf5, 0x33, 0xc0, 0xc3, 0x8b, 0x40, 0x04, 0xc3,
+}};
+constexpr std::array<std::uint8_t, 44>
+    kStartSpellScribePrecheckAssignedMaskGetterEntryBytes = {{
+        0x55, 0x8b, 0xec, 0x83, 0xec, 0x44, 0xa1, 0x80, 0x87, 0xb6, 0x00, 0x33,
+        0xc5, 0x89, 0x45, 0xfc, 0x57, 0x8b, 0xf9, 0x8b, 0x07, 0x8b, 0x50, 0x08,
+        0x89, 0x7d, 0xf0, 0xff, 0xd2, 0x80, 0xb8, 0x1a, 0x01, 0x00, 0x00, 0x00,
+        0x74, 0x19, 0x80, 0x7d, 0x0c, 0x00, 0x75, 0x13,
+    }};
+constexpr std::array<std::uint8_t, 40> kStartSpellScribePrecheckRule446190EntryBytes = {{
+    0x8b, 0x44, 0x24, 0x04, 0x53, 0x56, 0x8b, 0xf1, 0x8b, 0x4e, 0x04, 0x8b,
+    0x51, 0x04, 0x8d, 0x4c, 0x32, 0x04, 0x57, 0x8b, 0x38, 0x8b, 0x01, 0x8b,
+    0x50, 0x68, 0xff, 0xd2, 0x6a, 0x01, 0x8b, 0xcf, 0x8b, 0xd8, 0xe8, 0x69,
+    0xc6, 0x36, 0x00, 0x3b,
+}};
+constexpr std::array<std::uint8_t, 44> kStartSpellScribePrecheckRule446200EntryBytes = {{
+    0x56, 0x57, 0x8b, 0xf9, 0x8b, 0x47, 0x04, 0x8b, 0x48, 0x04, 0x8d, 0x4c,
+    0x39, 0x04, 0x8d, 0x49, 0x04, 0xe8, 0xfa, 0x4f, 0x39, 0x00, 0x8b, 0x80,
+    0x70, 0x33, 0x00, 0x00, 0x83, 0xf8, 0x0d, 0x7d, 0x04, 0x8b, 0xf0, 0xeb,
+    0x3b, 0x3d, 0x4a, 0x01, 0x00, 0x00, 0x7f, 0x21,
+}};
+constexpr std::array<std::uint8_t, 48> kStartSpellScribePrecheckRule4462c0EntryBytes = {{
+    0x56, 0x8b, 0xf1, 0x8b, 0x46, 0x04, 0x8b, 0x48, 0x04, 0x8b, 0x54, 0x31,
+    0x04, 0x8b, 0x42, 0x4c, 0x8d, 0x4c, 0x31, 0x04, 0x57, 0xff, 0xd0, 0x85,
+    0xc0, 0x0f, 0x84, 0x8c, 0x00, 0x00, 0x00, 0x8b, 0x7c, 0x24, 0x0c, 0x8b,
+    0x0f, 0x6a, 0x00, 0x6a, 0x01, 0xe8, 0x72, 0xbd, 0x36, 0x00, 0x85, 0xc0,
+}};
+constexpr std::array<std::uint8_t, 44> kStartSpellScribePrecheckRule446380EntryBytes = {{
+    0x64, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x6a, 0xff, 0x68, 0x78, 0x24, 0x97,
+    0x00, 0x50, 0x64, 0x89, 0x25, 0x00, 0x00, 0x00, 0x00, 0x53, 0x56, 0x8b,
+    0xf1, 0x8b, 0x46, 0x04, 0x8b, 0x48, 0x04, 0x8b, 0x54, 0x31, 0x04, 0x8b,
+    0x02, 0x8d, 0x4c, 0x31, 0x04, 0x57, 0x6a, 0x13,
+}};
+constexpr std::array<std::uint8_t, 62> kStartSpellMemorizationPathEntryBytes = {{
+    0x8b, 0x44, 0x24, 0x18, 0x83, 0xec, 0x14, 0x56, 0x8b, 0xf1, 0x8b, 0x4c,
+    0x24, 0x2c, 0x50, 0x51, 0x6a, 0x00, 0x8d, 0x4c, 0x24, 0x12, 0xe8, 0xf5,
+    0xa6, 0x1a, 0x00, 0x8b, 0x54, 0x24, 0x34, 0x8b, 0x4c, 0x24, 0x2c, 0x50,
+    0x8b, 0x44, 0x24, 0x34, 0x52, 0x8b, 0x54, 0x24, 0x30, 0x50, 0x51, 0x52,
+    0x8b, 0xce, 0xe8, 0x59, 0xf5, 0xff, 0xff, 0x5e, 0x83, 0xc4, 0x14, 0xc2,
+    0x18, 0x00,
+}};
+constexpr std::array<std::uint8_t, 48> kMemSpellCommitPathEntryBytes = {{
+    0x83, 0xec, 0x14, 0x56, 0x8b, 0xf1, 0x83, 0xbe, 0x40, 0x02, 0x00, 0x00,
+    0xff, 0x75, 0x07, 0x33, 0xc0, 0x5e, 0x83, 0xc4, 0x14, 0xc3, 0xa1, 0x60,
+    0x26, 0xdd, 0x00, 0x8b, 0x80, 0x54, 0x01, 0x00, 0x00, 0x8b, 0xc8, 0x2b,
+    0x0d, 0xac, 0x49, 0xf7, 0x00, 0x83, 0xf9, 0x01, 0x76, 0x0c, 0x83, 0x86,
+}};
 constexpr std::array<std::uint8_t, 52> kMemorizeSendPacketWrapperEntryBytes = {{
     0x55, 0x8b, 0xec, 0x6a, 0xff, 0x68, 0xd8, 0x91, 0x9a, 0x00, 0x64, 0xa1,
     0x00, 0x00, 0x00, 0x00, 0x50, 0x51, 0x53, 0x56, 0x57, 0xa1, 0x80, 0x87,
     0xb6, 0x00, 0x33, 0xc5, 0x50, 0x8d, 0x45, 0xf4, 0x64, 0xa3, 0x00, 0x00,
     0x00, 0x00, 0x8b, 0xf1, 0x8d, 0xbe, 0x54, 0x02, 0x00, 0x00, 0x8b, 0xcf,
     0x89, 0x7d, 0xf0, 0xe8,
+}};
+constexpr std::array<std::uint8_t, 11> kPostCanStartMemmingFollowupGateThunkBytes = {{
+    0x8b, 0xff, 0x55, 0x8b, 0xec, 0x5d, 0xe9, 0xea, 0xff, 0xff, 0xff,
+}};
+constexpr std::array<std::uint8_t, 26> kPostCanStartMemmingFollowupGateBodyBytes = {{
+    0x8b, 0xff, 0x55, 0x8b, 0xec, 0x83, 0x7d, 0x08, 0x00, 0x74, 0x2d, 0xff,
+    0x75, 0x08, 0x6a, 0x00, 0xff, 0x35, 0x98, 0x49, 0x5d, 0x01, 0xff, 0x15,
+    0x68, 0x01,
 }};
 constexpr std::array<std::uint8_t, 68> kHandleRButtonUpEntryBytesPrefix = {{
     0x6a, 0xff, 0x64, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x68, 0x81, 0xa8, 0x98,
@@ -605,6 +735,126 @@ bool CallAtRvaTargets(
     return resolved_target == expected_target;
 }
 
+bool ResolveCallTargetAtRva(
+    const ImageView& image,
+    std::uint32_t call_rva,
+    std::uintptr_t* resolved_target,
+    std::uint8_t* opcode_out) noexcept {
+    if (resolved_target == nullptr || opcode_out == nullptr ||
+        !IsRvaWithinImage(image, call_rva, 5)) {
+        return false;
+    }
+
+    const auto* code = image.base + call_rva;
+    *opcode_out = code[0];
+    if (code[0] != 0xe8) {
+        *resolved_target = 0;
+        return false;
+    }
+
+    std::int32_t relative = 0;
+    std::memcpy(&relative, code + 1, sizeof(relative));
+    const std::uintptr_t call_site =
+        reinterpret_cast<std::uintptr_t>(image.base) + call_rva;
+    *resolved_target = call_site + 5 + relative;
+    return true;
+}
+
+bool ResolveJumpTargetAtRva(
+    const ImageView& image,
+    std::uint32_t jump_rva,
+    std::uintptr_t* resolved_target,
+    std::uint8_t* opcode_out) noexcept {
+    if (resolved_target == nullptr || opcode_out == nullptr ||
+        !IsRvaWithinImage(image, jump_rva, 5)) {
+        return false;
+    }
+
+    const auto* code = image.base + jump_rva;
+    *opcode_out = code[0];
+    if (code[0] != 0xe9) {
+        *resolved_target = 0;
+        return false;
+    }
+
+    std::int32_t relative = 0;
+    std::memcpy(&relative, code + 1, sizeof(relative));
+    const std::uintptr_t jump_site =
+        reinterpret_cast<std::uintptr_t>(image.base) + jump_rva;
+    *resolved_target = jump_site + 5 + relative;
+    return true;
+}
+
+bool IsHotpatchJumpThunkShapeAtRva(
+    const ImageView& image,
+    std::uint32_t thunk_rva) noexcept {
+    if (!IsRvaWithinImage(image, thunk_rva, 11)) {
+        return false;
+    }
+
+    const auto* code = image.base + thunk_rva;
+    return code[0] == 0x8b &&
+        code[1] == 0xff &&
+        code[2] == 0x55 &&
+        code[3] == 0x8b &&
+        code[4] == 0xec &&
+        code[5] == 0x5d &&
+        code[6] == 0xe9;
+}
+
+bool ResolveHotpatchThunkTerminalTarget(
+    const ImageView& image,
+    std::uint32_t thunk_rva,
+    std::uintptr_t* first_target,
+    std::uintptr_t* terminal_target,
+    std::uint32_t* hop_count) noexcept {
+    if (first_target == nullptr || terminal_target == nullptr || hop_count == nullptr) {
+        return false;
+    }
+
+    *first_target = 0;
+    *terminal_target = 0;
+    *hop_count = 0;
+
+    if (!IsHotpatchJumpThunkShapeAtRva(image, thunk_rva)) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = reinterpret_cast<std::uintptr_t>(image.base);
+    std::uint32_t current_thunk_rva = thunk_rva;
+    for (std::uint32_t hop = 0; hop < 2; ++hop) {
+        std::uintptr_t jump_target = 0;
+        std::uint8_t jump_opcode = 0;
+        if (!ResolveJumpTargetAtRva(
+                image,
+                current_thunk_rva + 6,
+                &jump_target,
+                &jump_opcode)) {
+            return hop != 0;
+        }
+
+        if (hop == 0) {
+            *first_target = jump_target;
+        }
+        *terminal_target = jump_target;
+        *hop_count = hop + 1;
+
+        if (jump_target < module_base) {
+            return true;
+        }
+
+        const std::uint32_t jump_target_rva =
+            static_cast<std::uint32_t>(jump_target - module_base);
+        if (!IsHotpatchJumpThunkShapeAtRva(image, jump_target_rva)) {
+            return true;
+        }
+
+        current_thunk_rva = jump_target_rva;
+    }
+
+    return true;
+}
+
 void PopulateCandidateFields(
     const ImageView& image,
     const CandidateSource& candidate,
@@ -928,6 +1178,686 @@ TargetResult DiscoverCanStartMemming(const ImageView& image) {
     return target;
 }
 
+TargetResult DiscoverSpellbookDispatcher(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    TargetResult target = {L"SpellbookDispatcher"};
+
+    if (!cleanroom_fingerprint.available || !cleanroom_fingerprint.matched) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = cleanroom_fingerprint.failure_reason;
+        target.validation_evidence = cleanroom_fingerprint.evidence;
+        target.reason =
+            L"checked-in cleanroom SHA-256 fingerprint did not match the live eqgame.exe";
+        return target;
+    }
+
+    std::uintptr_t function_start = 0;
+    const bool rva_found = ResolveRvaAddress(
+        image,
+        kSpellbookDispatcherRva,
+        kSpellbookDispatcherEntryBytes.size(),
+        &function_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
+        image,
+        function_start,
+        L"fingerprint_rva",
+        L"SpellbookDispatcher");
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const bool exact_entry_bytes = rva_found && BytesMatchAtRva(
+        image,
+        kSpellbookDispatcherRva,
+        kSpellbookDispatcherEntryBytes.data(),
+        kSpellbookDispatcherEntryBytes.size());
+    const bool calls_start_spell_scribe_path =
+        CallAtRvaTargets(
+            image,
+            kSpellbookDispatcherCallsStartSpellScribePathAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) + kStartSpellScribePathRva);
+    const bool calls_can_start_memming =
+        CallAtRvaTargets(
+            image,
+            kSpellbookDispatcherCallsCanStartMemmingAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) + kCanStartMemmingRva);
+
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        exact_entry_bytes && calls_start_spell_scribe_path && calls_can_start_memming,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
+
+    std::wstring evidence = L"cleanroom_rva=";
+    evidence += Hex32(kSpellbookDispatcherRva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" exact_entry_bytes=";
+    evidence += exact_entry_bytes ? L"yes" : L"no";
+    evidence += L" scribe_callsite_rva=";
+    evidence += Hex32(kSpellbookDispatcherCallsStartSpellScribePathAtRva);
+    evidence += L" calls_start_spell_scribe_path=";
+    evidence += calls_start_spell_scribe_path ? L"yes" : L"no";
+    evidence += L" mem_gate_callsite_rva=";
+    evidence += Hex32(kSpellbookDispatcherCallsCanStartMemmingAtRva);
+    evidence += L" calls_can_start_memming=";
+    evidence += calls_can_start_memming ? L"yes" : L"no";
+    evidence += L" ";
+    evidence += cleanroom_fingerprint.evidence;
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and scribe plus mem-gate caller shape",
+        L"SpellbookDispatcher candidate did not satisfy spellbook dispatcher validation",
+        &target);
+    return target;
+}
+
+TargetResult DiscoverStartSpellScribePath(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    TargetResult target = {L"StartSpellScribePath"};
+
+    if (!cleanroom_fingerprint.available || !cleanroom_fingerprint.matched) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = cleanroom_fingerprint.failure_reason;
+        target.validation_evidence = cleanroom_fingerprint.evidence;
+        target.reason =
+            L"checked-in cleanroom SHA-256 fingerprint did not match the live eqgame.exe";
+        return target;
+    }
+
+    std::uintptr_t function_start = 0;
+    const bool rva_found = ResolveRvaAddress(
+        image,
+        kStartSpellScribePathRva,
+        kStartSpellScribePathEntryBytes.size(),
+        &function_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
+        image,
+        function_start,
+        L"fingerprint_rva",
+        L"StartSpellScribePath");
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const bool exact_entry_bytes = rva_found && BytesMatchAtRva(
+        image,
+        kStartSpellScribePathRva,
+        kStartSpellScribePathEntryBytes.data(),
+        kStartSpellScribePathEntryBytes.size());
+    const bool called_from_spellbook_dispatcher =
+        CallAtRvaTargets(
+            image,
+            kSpellbookDispatcherCallsStartSpellScribePathAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) + kStartSpellScribePathRva);
+    const bool calls_get_spell_level_needed =
+        CallAtRvaTargets(
+            image,
+            kStartSpellScribePathCallsGetSpellLevelNeededAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) + kGetSpellLevelNeededRva);
+
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        exact_entry_bytes && called_from_spellbook_dispatcher &&
+            calls_get_spell_level_needed,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
+
+    std::wstring evidence = L"cleanroom_rva=";
+    evidence += Hex32(kStartSpellScribePathRva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" exact_entry_bytes=";
+    evidence += exact_entry_bytes ? L"yes" : L"no";
+    evidence += L" dispatcher_callsite_rva=";
+    evidence += Hex32(kSpellbookDispatcherCallsStartSpellScribePathAtRva);
+    evidence += L" called_from_spellbook_dispatcher=";
+    evidence += called_from_spellbook_dispatcher ? L"yes" : L"no";
+    evidence += L" get_spell_level_needed_callsite_rva=";
+    evidence += Hex32(kStartSpellScribePathCallsGetSpellLevelNeededAtRva);
+    evidence += L" calls_get_spell_level_needed=";
+    evidence += calls_get_spell_level_needed ? L"yes" : L"no";
+    evidence += L" ";
+    evidence += cleanroom_fingerprint.evidence;
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, dispatcher caller shape, and GetSpellLevelNeeded call",
+        L"StartSpellScribePath candidate did not satisfy spellbook scribe path validation",
+        &target);
+    return target;
+}
+
+TargetResult DiscoverStartSpellScribePrecheckModeGetter(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    TargetResult target = {L"StartSpellScribePrecheckModeGetter"};
+
+    if (!cleanroom_fingerprint.available || !cleanroom_fingerprint.matched) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = cleanroom_fingerprint.failure_reason;
+        target.validation_evidence = cleanroom_fingerprint.evidence;
+        target.reason =
+            L"checked-in cleanroom SHA-256 fingerprint did not match the live eqgame.exe";
+        return target;
+    }
+
+    std::uintptr_t function_start = 0;
+    const bool rva_found = ResolveRvaAddress(
+        image,
+        kStartSpellScribePrecheckModeGetterRva,
+        kStartSpellScribePrecheckModeGetterEntryBytes.size(),
+        &function_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
+        image,
+        function_start,
+        L"fingerprint_rva",
+        L"StartSpellScribePrecheckModeGetter");
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const bool exact_entry_bytes = rva_found && BytesMatchAtRva(
+        image,
+        kStartSpellScribePrecheckModeGetterRva,
+        kStartSpellScribePrecheckModeGetterEntryBytes.data(),
+        kStartSpellScribePrecheckModeGetterEntryBytes.size());
+    const bool called_from_start_spell_scribe_path =
+        CallAtRvaTargets(
+            image,
+            kStartSpellScribePathCallsPrecheckModeGetterAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) +
+                kStartSpellScribePrecheckModeGetterRva);
+
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        exact_entry_bytes && called_from_start_spell_scribe_path,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
+
+    std::wstring evidence = L"cleanroom_rva=";
+    evidence += Hex32(kStartSpellScribePrecheckModeGetterRva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" exact_entry_bytes=";
+    evidence += exact_entry_bytes ? L"yes" : L"no";
+    evidence += L" scribe_callsite_rva=";
+    evidence += Hex32(kStartSpellScribePathCallsPrecheckModeGetterAtRva);
+    evidence += L" called_from_start_spell_scribe_path=";
+    evidence += called_from_start_spell_scribe_path ? L"yes" : L"no";
+    evidence += L" ";
+    evidence += cleanroom_fingerprint.evidence;
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and StartSpellScribePath caller shape",
+        L"StartSpellScribePrecheckModeGetter candidate did not satisfy precheck mode validation",
+        &target);
+    return target;
+}
+
+TargetResult DiscoverStartSpellScribePrecheckGate(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    TargetResult target = {L"StartSpellScribePrecheckGate"};
+
+    if (!cleanroom_fingerprint.available || !cleanroom_fingerprint.matched) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = cleanroom_fingerprint.failure_reason;
+        target.validation_evidence = cleanroom_fingerprint.evidence;
+        target.reason =
+            L"checked-in cleanroom SHA-256 fingerprint did not match the live eqgame.exe";
+        return target;
+    }
+
+    std::uintptr_t function_start = 0;
+    const bool rva_found = ResolveRvaAddress(
+        image,
+        kStartSpellScribePrecheckGateRva,
+        kStartSpellScribePrecheckGateEntryBytes.size(),
+        &function_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
+        image,
+        function_start,
+        L"fingerprint_rva",
+        L"StartSpellScribePrecheckGate");
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const bool exact_entry_bytes = rva_found && BytesMatchAtRva(
+        image,
+        kStartSpellScribePrecheckGateRva,
+        kStartSpellScribePrecheckGateEntryBytes.data(),
+        kStartSpellScribePrecheckGateEntryBytes.size());
+    const bool called_from_start_spell_scribe_path =
+        CallAtRvaTargets(
+            image,
+            kStartSpellScribePathCallsPrecheckGateAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) +
+                kStartSpellScribePrecheckGateRva);
+
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        exact_entry_bytes && called_from_start_spell_scribe_path,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
+
+    std::wstring evidence = L"cleanroom_rva=";
+    evidence += Hex32(kStartSpellScribePrecheckGateRva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" exact_entry_bytes=";
+    evidence += exact_entry_bytes ? L"yes" : L"no";
+    evidence += L" scribe_callsite_rva=";
+    evidence += Hex32(kStartSpellScribePathCallsPrecheckGateAtRva);
+    evidence += L" called_from_start_spell_scribe_path=";
+    evidence += called_from_start_spell_scribe_path ? L"yes" : L"no";
+    evidence += L" ";
+    evidence += cleanroom_fingerprint.evidence;
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and StartSpellScribePath caller shape",
+        L"StartSpellScribePrecheckGate candidate did not satisfy precheck gate validation",
+        &target);
+    return target;
+}
+
+TargetResult DiscoverStartSpellScribePrecheckLookup(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    TargetResult target = {L"StartSpellScribePrecheckLookup"};
+
+    if (!cleanroom_fingerprint.available || !cleanroom_fingerprint.matched) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = cleanroom_fingerprint.failure_reason;
+        target.validation_evidence = cleanroom_fingerprint.evidence;
+        target.reason =
+            L"checked-in cleanroom SHA-256 fingerprint did not match the live eqgame.exe";
+        return target;
+    }
+
+    std::uintptr_t function_start = 0;
+    const bool rva_found = ResolveRvaAddress(
+        image,
+        kStartSpellScribePrecheckLookupRva,
+        kStartSpellScribePrecheckLookupEntryBytes.size(),
+        &function_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
+        image,
+        function_start,
+        L"fingerprint_rva",
+        L"StartSpellScribePrecheckLookup");
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const bool exact_entry_bytes = rva_found && BytesMatchAtRva(
+        image,
+        kStartSpellScribePrecheckLookupRva,
+        kStartSpellScribePrecheckLookupEntryBytes.data(),
+        kStartSpellScribePrecheckLookupEntryBytes.size());
+    const bool called_from_start_spell_scribe_path =
+        CallAtRvaTargets(
+            image,
+            kStartSpellScribePathCallsPrecheckLookupAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) +
+                kStartSpellScribePrecheckLookupRva);
+
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        exact_entry_bytes && called_from_start_spell_scribe_path,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
+
+    std::wstring evidence = L"cleanroom_rva=";
+    evidence += Hex32(kStartSpellScribePrecheckLookupRva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" exact_entry_bytes=";
+    evidence += exact_entry_bytes ? L"yes" : L"no";
+    evidence += L" scribe_callsite_rva=";
+    evidence += Hex32(kStartSpellScribePathCallsPrecheckLookupAtRva);
+    evidence += L" called_from_start_spell_scribe_path=";
+    evidence += called_from_start_spell_scribe_path ? L"yes" : L"no";
+    evidence += L" ";
+    evidence += cleanroom_fingerprint.evidence;
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and StartSpellScribePath caller shape",
+        L"StartSpellScribePrecheckLookup candidate did not satisfy precheck lookup validation",
+        &target);
+    return target;
+}
+
+TargetResult DiscoverStartSpellScribeNestedPrecheckTarget(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint,
+    const wchar_t* target_name,
+    std::uint32_t target_rva,
+    const std::uint8_t* entry_bytes,
+    std::size_t entry_bytes_size,
+    std::uint32_t caller_callsite_rva,
+    const wchar_t* success_reason,
+    const wchar_t* failure_reason) {
+    TargetResult target = {target_name};
+
+    if (!cleanroom_fingerprint.available || !cleanroom_fingerprint.matched) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = cleanroom_fingerprint.failure_reason;
+        target.validation_evidence = cleanroom_fingerprint.evidence;
+        target.reason =
+            L"checked-in cleanroom SHA-256 fingerprint did not match the live eqgame.exe";
+        return target;
+    }
+
+    std::uintptr_t function_start = 0;
+    const bool rva_found = ResolveRvaAddress(
+        image,
+        target_rva,
+        entry_bytes_size,
+        &function_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
+        image,
+        function_start,
+        L"fingerprint_rva",
+        target_name);
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const bool exact_entry_bytes = rva_found && BytesMatchAtRva(
+        image,
+        target_rva,
+        entry_bytes,
+        entry_bytes_size);
+    const bool called_from_precheck_gate =
+        CallAtRvaTargets(
+            image,
+            caller_callsite_rva,
+            reinterpret_cast<std::uintptr_t>(image.base) + target_rva);
+
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        exact_entry_bytes && called_from_precheck_gate,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
+
+    std::wstring evidence = L"cleanroom_rva=";
+    evidence += Hex32(target_rva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" exact_entry_bytes=";
+    evidence += exact_entry_bytes ? L"yes" : L"no";
+    evidence += L" precheck_gate_callsite_rva=";
+    evidence += Hex32(caller_callsite_rva);
+    evidence += L" called_from_precheck_gate=";
+    evidence += called_from_precheck_gate ? L"yes" : L"no";
+    evidence += L" ";
+    evidence += cleanroom_fingerprint.evidence;
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        success_reason,
+        failure_reason,
+        &target);
+    return target;
+}
+
+TargetResult DiscoverStartSpellScribePrecheckFastAccept(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    return DiscoverStartSpellScribeNestedPrecheckTarget(
+        image,
+        cleanroom_fingerprint,
+        L"StartSpellScribePrecheckFastAccept",
+        kStartSpellScribePrecheckFastAcceptRva,
+        kStartSpellScribePrecheckFastAcceptEntryBytes.data(),
+        kStartSpellScribePrecheckFastAcceptEntryBytes.size(),
+        kStartSpellScribePrecheckGateCallsFastAcceptAtRva,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and StartSpellScribePrecheckGate caller shape",
+        L"StartSpellScribePrecheckFastAccept candidate did not satisfy nested precheck validation");
+}
+
+TargetResult DiscoverStartSpellScribePrecheckClassResolver(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    return DiscoverStartSpellScribeNestedPrecheckTarget(
+        image,
+        cleanroom_fingerprint,
+        L"StartSpellScribePrecheckClassResolver",
+        kStartSpellScribePrecheckClassResolverRva,
+        kStartSpellScribePrecheckClassResolverEntryBytes.data(),
+        kStartSpellScribePrecheckClassResolverEntryBytes.size(),
+        kStartSpellScribePrecheckGateCallsClassResolverAtRva,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and StartSpellScribePrecheckGate caller shape",
+        L"StartSpellScribePrecheckClassResolver candidate did not satisfy nested precheck validation");
+}
+
+TargetResult DiscoverStartSpellScribePrecheckAssignedMaskGetter(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    return DiscoverStartSpellScribeNestedPrecheckTarget(
+        image,
+        cleanroom_fingerprint,
+        L"StartSpellScribePrecheckAssignedMaskGetter",
+        kStartSpellScribePrecheckAssignedMaskGetterRva,
+        kStartSpellScribePrecheckAssignedMaskGetterEntryBytes.data(),
+        kStartSpellScribePrecheckAssignedMaskGetterEntryBytes.size(),
+        kStartSpellScribePrecheckGateCallsAssignedMaskGetterAtRva,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and StartSpellScribePrecheckGate caller shape",
+        L"StartSpellScribePrecheckAssignedMaskGetter candidate did not satisfy nested precheck validation");
+}
+
+TargetResult DiscoverStartSpellScribePrecheckRule446190(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    return DiscoverStartSpellScribeNestedPrecheckTarget(
+        image,
+        cleanroom_fingerprint,
+        L"StartSpellScribePrecheckRule446190",
+        kStartSpellScribePrecheckRule446190Rva,
+        kStartSpellScribePrecheckRule446190EntryBytes.data(),
+        kStartSpellScribePrecheckRule446190EntryBytes.size(),
+        kStartSpellScribePrecheckGateCallsRule446190AtRva,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and StartSpellScribePrecheckGate caller shape",
+        L"StartSpellScribePrecheckRule446190 candidate did not satisfy nested precheck validation");
+}
+
+TargetResult DiscoverStartSpellScribePrecheckRule446200(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    return DiscoverStartSpellScribeNestedPrecheckTarget(
+        image,
+        cleanroom_fingerprint,
+        L"StartSpellScribePrecheckRule446200",
+        kStartSpellScribePrecheckRule446200Rva,
+        kStartSpellScribePrecheckRule446200EntryBytes.data(),
+        kStartSpellScribePrecheckRule446200EntryBytes.size(),
+        kStartSpellScribePrecheckGateCallsRule446200AtRva,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and StartSpellScribePrecheckGate caller shape",
+        L"StartSpellScribePrecheckRule446200 candidate did not satisfy nested precheck validation");
+}
+
+TargetResult DiscoverStartSpellScribePrecheckRule4462c0(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    return DiscoverStartSpellScribeNestedPrecheckTarget(
+        image,
+        cleanroom_fingerprint,
+        L"StartSpellScribePrecheckRule4462c0",
+        kStartSpellScribePrecheckRule4462c0Rva,
+        kStartSpellScribePrecheckRule4462c0EntryBytes.data(),
+        kStartSpellScribePrecheckRule4462c0EntryBytes.size(),
+        kStartSpellScribePrecheckGateCallsRule4462c0AtRva,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and StartSpellScribePrecheckGate caller shape",
+        L"StartSpellScribePrecheckRule4462c0 candidate did not satisfy nested precheck validation");
+}
+
+TargetResult DiscoverStartSpellScribePrecheckRule446380(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    return DiscoverStartSpellScribeNestedPrecheckTarget(
+        image,
+        cleanroom_fingerprint,
+        L"StartSpellScribePrecheckRule446380",
+        kStartSpellScribePrecheckRule446380Rva,
+        kStartSpellScribePrecheckRule446380EntryBytes.data(),
+        kStartSpellScribePrecheckRule446380EntryBytes.size(),
+        kStartSpellScribePrecheckGateCallsRule446380AtRva,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and StartSpellScribePrecheckGate caller shape",
+        L"StartSpellScribePrecheckRule446380 candidate did not satisfy nested precheck validation");
+}
+
+TargetResult DiscoverStartSpellMemorizationPath(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    TargetResult target = {L"StartSpellMemorizationPath"};
+
+    if (!cleanroom_fingerprint.available || !cleanroom_fingerprint.matched) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = cleanroom_fingerprint.failure_reason;
+        target.validation_evidence = cleanroom_fingerprint.evidence;
+        target.reason =
+            L"checked-in cleanroom SHA-256 fingerprint did not match the live eqgame.exe";
+        return target;
+    }
+
+    std::uintptr_t function_start = 0;
+    const bool rva_found = ResolveRvaAddress(
+        image,
+        kStartSpellMemorizationPathRva,
+        kStartSpellMemorizationPathEntryBytes.size(),
+        &function_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
+        image,
+        function_start,
+        L"fingerprint_cleanroom_rva",
+        L"StartSpellMemorizationPath");
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const bool exact_entry_bytes = rva_found && BytesMatchAtRva(
+        image,
+        kStartSpellMemorizationPathRva,
+        kStartSpellMemorizationPathEntryBytes.data(),
+        kStartSpellMemorizationPathEntryBytes.size());
+    const bool spellbook_dispatch_calls_candidate =
+        candidate_executable &&
+        CallAtRvaTargets(
+            image,
+            kSpellbookDispatcherCallsStartSpellMemorizationPathAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) + kStartSpellMemorizationPathRva);
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        exact_entry_bytes && spellbook_dispatch_calls_candidate,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
+
+    std::wstring evidence = L"cleanroom_rva=";
+    evidence += Hex32(kStartSpellMemorizationPathRva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" exact_entry_bytes=";
+    evidence += exact_entry_bytes ? L"yes" : L"no";
+    evidence += L" dispatcher_callsite_rva=";
+    evidence += Hex32(kSpellbookDispatcherCallsStartSpellMemorizationPathAtRva);
+    evidence += L" spellbook_dispatch_calls_candidate=";
+    evidence += spellbook_dispatch_calls_candidate ? L"yes" : L"no";
+    evidence += L" ";
+    evidence += cleanroom_fingerprint.evidence;
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, and spellbook dispatcher caller shape",
+        L"StartSpellMemorizationPath candidate did not satisfy spellbook mem-start validation",
+        &target);
+    return target;
+}
+
 TargetResult DiscoverMemorizeSendPacketWrapper(
     const ImageView& image,
     const CleanroomFingerprintStatus& cleanroom_fingerprint) {
@@ -950,6 +1880,13 @@ TargetResult DiscoverMemorizeSendPacketWrapper(
         kMemorizeSendPacketWrapperRva,
         kMemorizeSendPacketWrapperEntryBytes.data(),
         kMemorizeSendPacketWrapperEntryBytes.size());
+    std::uintptr_t resolved_call_target = 0;
+    std::uint8_t caller_opcode = 0;
+    const bool call_rva_resolved = ResolveCallTargetAtRva(
+        image,
+        kStartSpellScribeLikeCallsMemorizeSendPacketWrapperAtRva,
+        &resolved_call_target,
+        &caller_opcode);
     const bool start_spell_scribe_like_calls_wrapper =
         candidate_executable &&
         CallAtRvaTargets(
@@ -989,8 +1926,27 @@ TargetResult DiscoverMemorizeSendPacketWrapper(
     evidence += candidate_executable ? L"yes" : L"no";
     evidence += L" exact_entry_bytes=";
     evidence += exact_entry_bytes ? L"yes" : L"no";
+    if (rva_found) {
+        evidence += L" expected_entry_bytes=\"";
+        evidence += HexBytes(
+            kMemorizeSendPacketWrapperEntryBytes.data(),
+            kMemorizeSendPacketWrapperEntryBytes.size());
+        evidence += L"\" actual_entry_bytes=\"";
+        evidence += HexBytes(
+            reinterpret_cast<const std::uint8_t*>(function_start),
+            kMemorizeSendPacketWrapperEntryBytes.size());
+        evidence += L"\"";
+    }
     evidence += L" caller_rva=";
     evidence += Hex32(kStartSpellScribeLikeCallsMemorizeSendPacketWrapperAtRva);
+    evidence += L" caller_opcode=";
+    evidence += Hex32(static_cast<std::uint32_t>(caller_opcode));
+    evidence += L" call_rva_resolved=";
+    evidence += call_rva_resolved ? L"yes" : L"no";
+    evidence += L" expected_call_target=";
+    evidence += HexPtr(reinterpret_cast<std::uintptr_t>(image.base) + kMemorizeSendPacketWrapperRva);
+    evidence += L" actual_call_target=";
+    evidence += resolved_call_target == 0 ? L"0x0" : HexPtr(resolved_call_target);
     evidence += L" start_spell_scribe_like_calls_wrapper=";
     evidence += start_spell_scribe_like_calls_wrapper ? L"yes" : L"no";
     evidence += L" ";
@@ -1002,6 +1958,228 @@ TargetResult DiscoverMemorizeSendPacketWrapper(
         evidence,
         L"validated by cleanroom RVA, exact entry bytes, and StartSpellScribe-like caller shape",
         L"MemorizeSendPacketWrapper candidate did not satisfy cleanroom RVA validation",
+        &target);
+    return target;
+}
+
+TargetResult DiscoverMemSpellCommitPath(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    TargetResult target = {L"MemSpellCommitPath"};
+
+    if (!cleanroom_fingerprint.available || !cleanroom_fingerprint.matched) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = cleanroom_fingerprint.failure_reason;
+        target.validation_evidence = cleanroom_fingerprint.evidence;
+        target.reason =
+            L"checked-in cleanroom SHA-256 fingerprint did not match the live eqgame.exe";
+        return target;
+    }
+
+    std::uintptr_t function_start = 0;
+    const bool rva_found = ResolveRvaAddress(
+        image,
+        kMemSpellCommitPathRva,
+        kMemSpellCommitPathEntryBytes.size(),
+        &function_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
+        image,
+        function_start,
+        L"fingerprint_cleanroom_rva",
+        L"MemSpellCommitPath");
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const bool exact_entry_bytes = rva_found && BytesMatchAtRva(
+        image,
+        kMemSpellCommitPathRva,
+        kMemSpellCommitPathEntryBytes.data(),
+        kMemSpellCommitPathEntryBytes.size());
+    const bool calls_memorize_send_wrapper =
+        candidate_executable &&
+        CallAtRvaTargets(
+            image,
+            kMemSpellCommitPathCallsMemorizeSendPacketWrapperAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) + kMemorizeSendPacketWrapperRva);
+    const bool calls_followup_thunk =
+        candidate_executable &&
+        CallAtRvaTargets(
+            image,
+            kMemSpellCommitPathCallsFollowupThunkAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) + kPostCanStartMemmingFollowupGateThunkRva);
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        exact_entry_bytes && calls_memorize_send_wrapper && calls_followup_thunk,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
+
+    std::wstring evidence = L"cleanroom_rva=";
+    evidence += Hex32(kMemSpellCommitPathRva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" exact_entry_bytes=";
+    evidence += exact_entry_bytes ? L"yes" : L"no";
+    evidence += L" wrapper_callsite_rva=";
+    evidence += Hex32(kMemSpellCommitPathCallsMemorizeSendPacketWrapperAtRva);
+    evidence += L" calls_memorize_send_wrapper=";
+    evidence += calls_memorize_send_wrapper ? L"yes" : L"no";
+    evidence += L" followup_callsite_rva=";
+    evidence += Hex32(kMemSpellCommitPathCallsFollowupThunkAtRva);
+    evidence += L" calls_followup_thunk=";
+    evidence += calls_followup_thunk ? L"yes" : L"no";
+    evidence += L" ";
+    evidence += cleanroom_fingerprint.evidence;
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        L"validated by fingerprint-gated cleanroom RVA, exact entry bytes, wrapper call, and followup thunk shape",
+        L"MemSpellCommitPath candidate did not satisfy spellbook commit path validation",
+        &target);
+    return target;
+}
+
+TargetResult DiscoverPostCanStartMemmingFollowupGate(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    TargetResult target = {L"PostCanStartMemmingFollowupGate"};
+
+    if (!cleanroom_fingerprint.available || !cleanroom_fingerprint.matched) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = cleanroom_fingerprint.failure_reason;
+        target.validation_evidence = cleanroom_fingerprint.evidence;
+        target.reason =
+            L"checked-in cleanroom SHA-256 fingerprint did not match the live eqgame.exe";
+        return target;
+    }
+
+    std::uintptr_t body_start = 0;
+    const bool body_rva_found = ResolveRvaAddress(
+        image,
+        kPostCanStartMemmingFollowupGateBodyRva,
+        kPostCanStartMemmingFollowupGateBodyBytes.size(),
+        &body_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
+        image,
+        body_start,
+        L"fingerprint_rva",
+        L"PostCanStartMemmingFollowupGate");
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const bool exact_body_bytes = body_rva_found && BytesMatchAtRva(
+        image,
+        kPostCanStartMemmingFollowupGateBodyRva,
+        kPostCanStartMemmingFollowupGateBodyBytes.data(),
+        kPostCanStartMemmingFollowupGateBodyBytes.size());
+    const bool exact_thunk_bytes = BytesMatchAtRva(
+        image,
+        kPostCanStartMemmingFollowupGateThunkRva,
+        kPostCanStartMemmingFollowupGateThunkBytes.data(),
+        kPostCanStartMemmingFollowupGateThunkBytes.size());
+
+    std::uintptr_t resolved_thunk_target = 0;
+    std::uintptr_t resolved_thunk_terminal_target = 0;
+    std::uint32_t thunk_hop_count = 0;
+    const bool thunk_jump_resolved = ResolveHotpatchThunkTerminalTarget(
+        image,
+        kPostCanStartMemmingFollowupGateThunkRva,
+        &resolved_thunk_target,
+        &resolved_thunk_terminal_target,
+        &thunk_hop_count);
+
+    std::uintptr_t resolved_call_target = 0;
+    std::uint8_t caller_opcode = 0;
+    const bool call_rva_resolved = ResolveCallTargetAtRva(
+        image,
+        kPostCanStartMemmingFloatListThingCallsFollowupThunkAtRva,
+        &resolved_call_target,
+        &caller_opcode);
+    const bool float_list_thing_calls_followup_thunk =
+        CallAtRvaTargets(
+            image,
+            kPostCanStartMemmingFloatListThingCallsFollowupThunkAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) + kPostCanStartMemmingFollowupGateThunkRva);
+    const bool thunk_targets_body =
+        thunk_jump_resolved &&
+        resolved_thunk_terminal_target ==
+            reinterpret_cast<std::uintptr_t>(image.base) + kPostCanStartMemmingFollowupGateBodyRva;
+
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        body_rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        exact_body_bytes && exact_thunk_bytes &&
+            float_list_thing_calls_followup_thunk && thunk_targets_body,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
+
+    std::wstring evidence = L"body_rva=";
+    evidence += Hex32(kPostCanStartMemmingFollowupGateBodyRva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" exact_body_bytes=";
+    evidence += exact_body_bytes ? L"yes" : L"no";
+    evidence += L" thunk_rva=";
+    evidence += Hex32(kPostCanStartMemmingFollowupGateThunkRva);
+    evidence += L" exact_thunk_bytes=";
+    evidence += exact_thunk_bytes ? L"yes" : L"no";
+    evidence += L" thunk_jump_resolved=";
+    evidence += thunk_jump_resolved ? L"yes" : L"no";
+    evidence += L" expected_thunk_terminal_target=";
+    evidence += HexPtr(
+        reinterpret_cast<std::uintptr_t>(image.base) + kPostCanStartMemmingFollowupGateBodyRva);
+    evidence += L" actual_thunk_target=";
+    evidence += resolved_thunk_target == 0 ? L"0x0" : HexPtr(resolved_thunk_target);
+    evidence += L" actual_thunk_terminal_target=";
+    evidence += resolved_thunk_terminal_target == 0
+        ? L"0x0"
+        : HexPtr(resolved_thunk_terminal_target);
+    evidence += L" thunk_hop_count=";
+    evidence += std::to_wstring(thunk_hop_count);
+    evidence += L" caller_rva=";
+    evidence += Hex32(kPostCanStartMemmingFloatListThingCallsFollowupThunkAtRva);
+    evidence += L" caller_opcode=";
+    evidence += Hex32(static_cast<std::uint32_t>(caller_opcode));
+    evidence += L" call_rva_resolved=";
+    evidence += call_rva_resolved ? L"yes" : L"no";
+    evidence += L" expected_call_target=";
+    evidence += HexPtr(
+        reinterpret_cast<std::uintptr_t>(image.base) + kPostCanStartMemmingFollowupGateThunkRva);
+    evidence += L" actual_call_target=";
+    evidence += resolved_call_target == 0 ? L"0x0" : HexPtr(resolved_call_target);
+    evidence += L" float_list_thing_calls_followup_thunk=";
+    evidence += float_list_thing_calls_followup_thunk ? L"yes" : L"no";
+    evidence += L" thunk_targets_body=";
+    evidence += thunk_targets_body ? L"yes" : L"no";
+    evidence += L" ";
+    evidence += cleanroom_fingerprint.evidence;
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        L"validated by fingerprint-gated body RVA, hotpatch thunk jump, and FloatListThing caller shape",
+        L"PostCanStartMemmingFollowupGate candidate did not satisfy downstream followup validation",
         &target);
     return target;
 }
@@ -1028,8 +2206,31 @@ void Initialize() noexcept {
     g_result.handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
+    g_result.spellbook_dispatcher = {L"SpellbookDispatcher"};
+    g_result.start_spell_scribe_path = {L"StartSpellScribePath"};
+    g_result.start_spell_scribe_precheck_mode_getter = {
+        L"StartSpellScribePrecheckModeGetter"};
+    g_result.start_spell_scribe_precheck_gate = {L"StartSpellScribePrecheckGate"};
+    g_result.start_spell_scribe_precheck_lookup = {L"StartSpellScribePrecheckLookup"};
+    g_result.start_spell_scribe_precheck_fast_accept = {
+        L"StartSpellScribePrecheckFastAccept"};
+    g_result.start_spell_scribe_precheck_class_resolver = {
+        L"StartSpellScribePrecheckClassResolver"};
+    g_result.start_spell_scribe_precheck_assigned_mask_getter = {
+        L"StartSpellScribePrecheckAssignedMaskGetter"};
+    g_result.start_spell_scribe_precheck_rule_4462c0 = {
+        L"StartSpellScribePrecheckRule4462c0"};
+    g_result.start_spell_scribe_precheck_rule_446190 = {
+        L"StartSpellScribePrecheckRule446190"};
+    g_result.start_spell_scribe_precheck_rule_446200 = {
+        L"StartSpellScribePrecheckRule446200"};
+    g_result.start_spell_scribe_precheck_rule_446380 = {
+        L"StartSpellScribePrecheckRule446380"};
     g_result.can_start_memming = {L"CanStartMemming"};
+    g_result.start_spell_memorization_path = {L"StartSpellMemorizationPath"};
     g_result.memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
+    g_result.mem_spell_commit_path = {L"MemSpellCommitPath"};
+    g_result.post_can_start_memming_followup_gate = {L"PostCanStartMemmingFollowupGate"};
 }
 
 Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
@@ -1039,8 +2240,31 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
     g_result.handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
+    g_result.spellbook_dispatcher = {L"SpellbookDispatcher"};
+    g_result.start_spell_scribe_path = {L"StartSpellScribePath"};
+    g_result.start_spell_scribe_precheck_mode_getter = {
+        L"StartSpellScribePrecheckModeGetter"};
+    g_result.start_spell_scribe_precheck_gate = {L"StartSpellScribePrecheckGate"};
+    g_result.start_spell_scribe_precheck_lookup = {L"StartSpellScribePrecheckLookup"};
+    g_result.start_spell_scribe_precheck_fast_accept = {
+        L"StartSpellScribePrecheckFastAccept"};
+    g_result.start_spell_scribe_precheck_class_resolver = {
+        L"StartSpellScribePrecheckClassResolver"};
+    g_result.start_spell_scribe_precheck_assigned_mask_getter = {
+        L"StartSpellScribePrecheckAssignedMaskGetter"};
+    g_result.start_spell_scribe_precheck_rule_4462c0 = {
+        L"StartSpellScribePrecheckRule4462c0"};
+    g_result.start_spell_scribe_precheck_rule_446190 = {
+        L"StartSpellScribePrecheckRule446190"};
+    g_result.start_spell_scribe_precheck_rule_446200 = {
+        L"StartSpellScribePrecheckRule446200"};
+    g_result.start_spell_scribe_precheck_rule_446380 = {
+        L"StartSpellScribePrecheckRule446380"};
     g_result.can_start_memming = {L"CanStartMemming"};
+    g_result.start_spell_memorization_path = {L"StartSpellMemorizationPath"};
     g_result.memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
+    g_result.mem_spell_commit_path = {L"MemSpellCommitPath"};
+    g_result.post_can_start_memming_followup_gate = {L"PostCanStartMemmingFollowupGate"};
 
     if (!discovery_allowed) {
         g_result.reason =
@@ -1059,11 +2283,57 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
         g_result.is_class_usable_predicate = BuildCapabilityDeniedTarget(
             L"EQ_Character::IsClassUsablePredicate",
             failure_reason);
+        g_result.spellbook_dispatcher = BuildCapabilityDeniedTarget(
+            L"SpellbookDispatcher",
+            failure_reason);
+        g_result.start_spell_scribe_path = BuildCapabilityDeniedTarget(
+            L"StartSpellScribePath",
+            failure_reason);
+        g_result.start_spell_scribe_precheck_mode_getter = BuildCapabilityDeniedTarget(
+            L"StartSpellScribePrecheckModeGetter",
+            failure_reason);
+        g_result.start_spell_scribe_precheck_gate = BuildCapabilityDeniedTarget(
+            L"StartSpellScribePrecheckGate",
+            failure_reason);
+        g_result.start_spell_scribe_precheck_lookup = BuildCapabilityDeniedTarget(
+            L"StartSpellScribePrecheckLookup",
+            failure_reason);
+        g_result.start_spell_scribe_precheck_fast_accept = BuildCapabilityDeniedTarget(
+            L"StartSpellScribePrecheckFastAccept",
+            failure_reason);
+        g_result.start_spell_scribe_precheck_class_resolver = BuildCapabilityDeniedTarget(
+            L"StartSpellScribePrecheckClassResolver",
+            failure_reason);
+        g_result.start_spell_scribe_precheck_assigned_mask_getter =
+            BuildCapabilityDeniedTarget(
+                L"StartSpellScribePrecheckAssignedMaskGetter",
+                failure_reason);
+        g_result.start_spell_scribe_precheck_rule_4462c0 = BuildCapabilityDeniedTarget(
+            L"StartSpellScribePrecheckRule4462c0",
+            failure_reason);
+        g_result.start_spell_scribe_precheck_rule_446190 = BuildCapabilityDeniedTarget(
+            L"StartSpellScribePrecheckRule446190",
+            failure_reason);
+        g_result.start_spell_scribe_precheck_rule_446200 = BuildCapabilityDeniedTarget(
+            L"StartSpellScribePrecheckRule446200",
+            failure_reason);
+        g_result.start_spell_scribe_precheck_rule_446380 = BuildCapabilityDeniedTarget(
+            L"StartSpellScribePrecheckRule446380",
+            failure_reason);
         g_result.can_start_memming = BuildCapabilityDeniedTarget(
             L"CanStartMemming",
             failure_reason);
+        g_result.start_spell_memorization_path = BuildCapabilityDeniedTarget(
+            L"StartSpellMemorizationPath",
+            failure_reason);
         g_result.memorize_send_packet_wrapper = BuildCapabilityDeniedTarget(
             L"MemorizeSendPacketWrapper",
+            failure_reason);
+        g_result.mem_spell_commit_path = BuildCapabilityDeniedTarget(
+            L"MemSpellCommitPath",
+            failure_reason);
+        g_result.post_can_start_memming_followup_gate = BuildCapabilityDeniedTarget(
+            L"PostCanStartMemmingFollowupGate",
             failure_reason);
         return g_result;
     }
@@ -1075,9 +2345,39 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
         g_result.get_spell_level_needed = BuildImageUnavailableTarget(L"GetSpellLevelNeeded");
         g_result.is_class_usable_predicate =
             BuildImageUnavailableTarget(L"EQ_Character::IsClassUsablePredicate");
+        g_result.spellbook_dispatcher =
+            BuildImageUnavailableTarget(L"SpellbookDispatcher");
+        g_result.start_spell_scribe_path =
+            BuildImageUnavailableTarget(L"StartSpellScribePath");
+        g_result.start_spell_scribe_precheck_mode_getter =
+            BuildImageUnavailableTarget(L"StartSpellScribePrecheckModeGetter");
+        g_result.start_spell_scribe_precheck_gate =
+            BuildImageUnavailableTarget(L"StartSpellScribePrecheckGate");
+        g_result.start_spell_scribe_precheck_lookup =
+            BuildImageUnavailableTarget(L"StartSpellScribePrecheckLookup");
+        g_result.start_spell_scribe_precheck_fast_accept =
+            BuildImageUnavailableTarget(L"StartSpellScribePrecheckFastAccept");
+        g_result.start_spell_scribe_precheck_class_resolver =
+            BuildImageUnavailableTarget(L"StartSpellScribePrecheckClassResolver");
+        g_result.start_spell_scribe_precheck_assigned_mask_getter =
+            BuildImageUnavailableTarget(L"StartSpellScribePrecheckAssignedMaskGetter");
+        g_result.start_spell_scribe_precheck_rule_4462c0 =
+            BuildImageUnavailableTarget(L"StartSpellScribePrecheckRule4462c0");
+        g_result.start_spell_scribe_precheck_rule_446190 =
+            BuildImageUnavailableTarget(L"StartSpellScribePrecheckRule446190");
+        g_result.start_spell_scribe_precheck_rule_446200 =
+            BuildImageUnavailableTarget(L"StartSpellScribePrecheckRule446200");
+        g_result.start_spell_scribe_precheck_rule_446380 =
+            BuildImageUnavailableTarget(L"StartSpellScribePrecheckRule446380");
         g_result.can_start_memming = BuildImageUnavailableTarget(L"CanStartMemming");
+        g_result.start_spell_memorization_path =
+            BuildImageUnavailableTarget(L"StartSpellMemorizationPath");
         g_result.memorize_send_packet_wrapper =
             BuildImageUnavailableTarget(L"MemorizeSendPacketWrapper");
+        g_result.mem_spell_commit_path =
+            BuildImageUnavailableTarget(L"MemSpellCommitPath");
+        g_result.post_can_start_memming_followup_gate =
+            BuildImageUnavailableTarget(L"PostCanStartMemmingFollowupGate");
         return g_result;
     }
 
@@ -1092,9 +2392,41 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
     g_result.get_spell_level_needed = DiscoverGetSpellLevelNeeded(image);
     g_result.is_class_usable_predicate =
         DiscoverIsClassUsablePredicate(image, cleanroom_fingerprint);
+    g_result.spellbook_dispatcher =
+        DiscoverSpellbookDispatcher(image, cleanroom_fingerprint);
+    g_result.start_spell_scribe_path =
+        DiscoverStartSpellScribePath(image, cleanroom_fingerprint);
+    g_result.start_spell_scribe_precheck_mode_getter =
+        DiscoverStartSpellScribePrecheckModeGetter(image, cleanroom_fingerprint);
+    g_result.start_spell_scribe_precheck_gate =
+        DiscoverStartSpellScribePrecheckGate(image, cleanroom_fingerprint);
+    g_result.start_spell_scribe_precheck_lookup =
+        DiscoverStartSpellScribePrecheckLookup(image, cleanroom_fingerprint);
+    g_result.start_spell_scribe_precheck_fast_accept =
+        DiscoverStartSpellScribePrecheckFastAccept(image, cleanroom_fingerprint);
+    g_result.start_spell_scribe_precheck_class_resolver =
+        DiscoverStartSpellScribePrecheckClassResolver(image, cleanroom_fingerprint);
+    g_result.start_spell_scribe_precheck_assigned_mask_getter =
+        DiscoverStartSpellScribePrecheckAssignedMaskGetter(
+            image,
+            cleanroom_fingerprint);
+    g_result.start_spell_scribe_precheck_rule_4462c0 =
+        DiscoverStartSpellScribePrecheckRule4462c0(image, cleanroom_fingerprint);
+    g_result.start_spell_scribe_precheck_rule_446190 =
+        DiscoverStartSpellScribePrecheckRule446190(image, cleanroom_fingerprint);
+    g_result.start_spell_scribe_precheck_rule_446200 =
+        DiscoverStartSpellScribePrecheckRule446200(image, cleanroom_fingerprint);
+    g_result.start_spell_scribe_precheck_rule_446380 =
+        DiscoverStartSpellScribePrecheckRule446380(image, cleanroom_fingerprint);
     g_result.can_start_memming = DiscoverCanStartMemming(image);
+    g_result.start_spell_memorization_path =
+        DiscoverStartSpellMemorizationPath(image, cleanroom_fingerprint);
     g_result.memorize_send_packet_wrapper =
         DiscoverMemorizeSendPacketWrapper(image, cleanroom_fingerprint);
+    g_result.mem_spell_commit_path =
+        DiscoverMemSpellCommitPath(image, cleanroom_fingerprint);
+    g_result.post_can_start_memming_followup_gate =
+        DiscoverPostCanStartMemmingFollowupGate(image, cleanroom_fingerprint);
     return g_result;
 }
 
@@ -1104,8 +2436,31 @@ void Shutdown() noexcept {
     g_result.handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
+    g_result.spellbook_dispatcher = {L"SpellbookDispatcher"};
+    g_result.start_spell_scribe_path = {L"StartSpellScribePath"};
+    g_result.start_spell_scribe_precheck_mode_getter = {
+        L"StartSpellScribePrecheckModeGetter"};
+    g_result.start_spell_scribe_precheck_gate = {L"StartSpellScribePrecheckGate"};
+    g_result.start_spell_scribe_precheck_lookup = {L"StartSpellScribePrecheckLookup"};
+    g_result.start_spell_scribe_precheck_fast_accept = {
+        L"StartSpellScribePrecheckFastAccept"};
+    g_result.start_spell_scribe_precheck_class_resolver = {
+        L"StartSpellScribePrecheckClassResolver"};
+    g_result.start_spell_scribe_precheck_assigned_mask_getter = {
+        L"StartSpellScribePrecheckAssignedMaskGetter"};
+    g_result.start_spell_scribe_precheck_rule_4462c0 = {
+        L"StartSpellScribePrecheckRule4462c0"};
+    g_result.start_spell_scribe_precheck_rule_446190 = {
+        L"StartSpellScribePrecheckRule446190"};
+    g_result.start_spell_scribe_precheck_rule_446200 = {
+        L"StartSpellScribePrecheckRule446200"};
+    g_result.start_spell_scribe_precheck_rule_446380 = {
+        L"StartSpellScribePrecheckRule446380"};
     g_result.can_start_memming = {L"CanStartMemming"};
+    g_result.start_spell_memorization_path = {L"StartSpellMemorizationPath"};
     g_result.memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
+    g_result.mem_spell_commit_path = {L"MemSpellCommitPath"};
+    g_result.post_can_start_memming_followup_gate = {L"PostCanStartMemmingFollowupGate"};
 }
 
 Result GetResult() noexcept {
@@ -1117,8 +2472,23 @@ void LogResult(const Result& result) noexcept {
         &result.handle_rbutton_up,
         &result.get_spell_level_needed,
         &result.is_class_usable_predicate,
+        &result.spellbook_dispatcher,
+        &result.start_spell_scribe_path,
+        &result.start_spell_scribe_precheck_mode_getter,
+        &result.start_spell_scribe_precheck_gate,
+        &result.start_spell_scribe_precheck_lookup,
+        &result.start_spell_scribe_precheck_fast_accept,
+        &result.start_spell_scribe_precheck_class_resolver,
+        &result.start_spell_scribe_precheck_assigned_mask_getter,
+        &result.start_spell_scribe_precheck_rule_4462c0,
+        &result.start_spell_scribe_precheck_rule_446190,
+        &result.start_spell_scribe_precheck_rule_446200,
+        &result.start_spell_scribe_precheck_rule_446380,
         &result.can_start_memming,
+        &result.start_spell_memorization_path,
         &result.memorize_send_packet_wrapper,
+        &result.mem_spell_commit_path,
+        &result.post_can_start_memming_followup_gate,
     };
 
     for (const TargetResult* target : targets) {
