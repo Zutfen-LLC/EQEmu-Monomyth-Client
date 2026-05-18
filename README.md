@@ -258,13 +258,13 @@ To determine whether a spellbook memorize attempt actually reaches the outbound 
 $env:MONOMYTH_ENABLE_MEMORIZE_SEND_TRACE = "1"
 ```
 
-This trace is separate from `MONOMYTH_ENABLE_PACKET_HOOKS=1` and separate from `MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1`. When enabled, it installs exactly one trace-only detour on the validated opcode-aware send wrapper at runtime `module_base + 0x004c41f0` (preferred VA `0x008c51f0`), checks only the first 2 bytes of the outgoing buffer to identify opcode `0x217c` / `OP_MemorizeSpell`, derives `payload_length` from the wrapper's total-length argument, and logs lines such as:
+This trace is separate from `MONOMYTH_ENABLE_PACKET_HOOKS=1` and separate from `MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1`. When enabled, it installs exactly one trace-only detour on the validated opcode-aware send wrapper at runtime `module_base + 0x004c41f0` (preferred VA `0x008c41f0` when the image base is `0x00400000`), safely attempts to decode only the first 2 bytes of the outgoing buffer as the opcode, derives `payload_length` from the wrapper's total-length argument when decode succeeds, and logs lines such as:
 
 ```text
-PacketObserverSend seq=1 opcode=8572 opcode_hex=0x217c opcode_name=OP_MemorizeSpell payload_length=16 source_context=0x00dd25ac memorize_send_correlation=1
+PacketObserverSend seq=1 target=MemorizeSendPacketWrapper wrapper_address=0x008c41f0 source_context=0x00dd25ac packet_pointer=0x01a2f1d0 total_length=18 decode_status=decoded opcode=8572 opcode_hex=0x217c opcode_name=OP_MemorizeSpell payload_length=16 memorize_opcode_match=true original_result=true memorize_send_correlation=1
 ```
 
-This slice does not rewrite the packet buffer, does not alter the total length, does not alter the call ordering, and still calls the original client wrapper unchanged. Existing `SpellUsabilityTrace target=CanStartMemming ... memorize_send_correlation=<n> send_observation=pending` lines can be paired with `PacketObserverSend ... memorize_send_correlation=<n>` to show that a send was attempted. If `CanStartMemming` succeeds and the next observed event is another `CanStartMemming` or shutdown with no matching send log, the DLL emits `SpellUsabilityTrace target=MemorizeSend status=not_observed ...` so the absence is grep-friendly.
+This slice does not rewrite the packet buffer, does not alter the total length, does not alter the call ordering, and still calls the original client wrapper unchanged exactly once. Existing `SpellUsabilityTrace target=CanStartMemming ... memorize_send_correlation=<n> send_observation=pending` lines can be paired with `PacketObserverSend ... memorize_send_correlation=<n>` to show that the wrapper was reached. If the packet pointer is null, too short to contain an opcode, or faults during the bounded opcode read, the log stays bounded with `decode_status=not_decoded` plus a concrete `not_decoded_reason=...` and the companion trace emits `SpellUsabilityTrace target=MemorizeSend status=not_decoded ...`. If `CanStartMemming` succeeds and the next observed event is another `CanStartMemming` or shutdown with no matching send observation, the DLL emits `SpellUsabilityTrace target=MemorizeSend status=not_observed ...` so the absence is grep-friendly.
 
 ## Scroll-scribe trace
 

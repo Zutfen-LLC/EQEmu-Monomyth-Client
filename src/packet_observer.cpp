@@ -419,9 +419,17 @@ void ObserveReceiveMetadata(
 }
 
 void ObserveSendMetadata(
+    std::uintptr_t wrapper_address,
+    std::uintptr_t source_context,
+    std::uintptr_t packet_pointer,
+    std::uint32_t total_length,
+    bool opcode_decoded,
     std::uint32_t opcode,
     std::uint32_t payload_length,
-    std::uintptr_t source_context,
+    const wchar_t* decode_status,
+    const wchar_t* not_decoded_reason,
+    bool original_result,
+    bool original_result_available,
     std::uint32_t correlation_id) noexcept {
     if (g_state.load() != State::kInitialized) {
         return;
@@ -433,15 +441,39 @@ void ObserveSendMetadata(
     }
 
     std::wstringstream message;
-    const std::wstring_view opcode_name = monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
+    const std::wstring_view opcode_name = opcode_decoded
+        ? monomyth::opcode_reference::LookupRof2OpcodeName(opcode)
+        : std::wstring_view(L"not_decoded");
     message
         << L"PacketObserverSend"
         << L" seq=" << sequence
-        << L" opcode=" << opcode
-        << L" opcode_hex=" << Hex32(opcode)
+        << L" target=MemorizeSendPacketWrapper"
+        << L" wrapper_address=" << HexPtr(wrapper_address)
+        << L" source_context=" << HexPtr(source_context)
+        << L" packet_pointer=" << HexPtr(packet_pointer)
+        << L" total_length=" << total_length
+        << L" decode_status="
+        << ((decode_status == nullptr || decode_status[0] == L'\0') ? L"unknown" : decode_status);
+    if (opcode_decoded) {
+        message << L" opcode=" << opcode
+                << L" opcode_hex=" << Hex32(opcode);
+    } else {
+        message << L" opcode=unknown opcode_hex=not_decoded";
+    }
+    message
         << L" opcode_name=" << opcode_name
-        << L" payload_length=" << payload_length
-        << L" source_context=" << HexPtr(source_context);
+        << L" payload_length=" << payload_length;
+    if (!opcode_decoded) {
+        message << L" not_decoded_reason="
+                << ((not_decoded_reason == nullptr || not_decoded_reason[0] == L'\0')
+                        ? L"unknown"
+                        : not_decoded_reason);
+    } else if (opcode_name == L"OP_MemorizeSpell") {
+        message << L" memorize_opcode_match=true";
+    }
+    if (original_result_available) {
+        message << L" original_result=" << (original_result ? L"true" : L"false");
+    }
     if (correlation_id != 0) {
         message << L" memorize_send_correlation=" << correlation_id;
     }

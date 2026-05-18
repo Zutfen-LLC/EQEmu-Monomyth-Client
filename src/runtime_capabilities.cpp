@@ -488,6 +488,9 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" scroll_scribe_trace_reason=\"";
     message += NormalizeReason(manifest.scroll_scribe_trace_reason.c_str());
     message += L"\"";
+    message += L" memorize_send_trace_reason=\"";
+    message += NormalizeReason(manifest.memorize_send_trace_reason.c_str());
+    message += L"\"";
     message += L" multiclass_spell_usability_reason=\"";
     message += NormalizeReason(manifest.multiclass_spell_usability_reason.c_str());
     message += L"\"";

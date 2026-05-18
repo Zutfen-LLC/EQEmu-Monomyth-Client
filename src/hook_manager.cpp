@@ -35,6 +35,7 @@ constexpr std::size_t kMaxStolenBytes = 16;
 constexpr std::uint64_t kSpellTraceInitialLogCount = 20;
 constexpr std::uint64_t kSpellTraceLogInterval = 100;
 constexpr std::uint32_t kMemorizeSpellOpcode = 0x217c;
+constexpr wchar_t kMemorizeSendTraceSliceId[] = L"CLIENT-MEM-SEND-TRACE-001";
 
 using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
@@ -90,6 +91,7 @@ std::uint64_t g_scroll_scribe_event_count = 0;
 std::uint32_t g_memorize_send_pending_correlation_id = 0;
 std::uint32_t g_memorize_send_correlation_count = 0;
 std::uint32_t g_scroll_scribe_active_correlation_id = 0;
+std::uintptr_t g_memorize_send_packet_wrapper_address = 0;
 bool g_scroll_scribe_active_logging = false;
 std::wstring g_handle_rbutton_up_evidence_source = L"unknown";
 std::wstring g_is_class_usable_predicate_evidence_source = L"unknown";
@@ -105,6 +107,25 @@ std::wstring Hex32(std::uint32_t value) {
     std::wstringstream stream;
     stream << L"0x" << std::hex << value;
     return stream.str();
+}
+
+bool TryReadPacketOpcode(
+    const void* packet,
+    std::uint16_t* opcode_out) noexcept {
+    if (packet == nullptr || opcode_out == nullptr) {
+        return false;
+    }
+
+#if defined(_MSC_VER)
+    __try {
+        std::memcpy(opcode_out, packet, sizeof(*opcode_out));
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    std::memcpy(opcode_out, packet, sizeof(*opcode_out));
+#endif
+    return true;
 }
 
 std::wstring FormatDiscoveryDetails(
@@ -459,6 +480,70 @@ void LogPendingMemorizeSendGap(const wchar_t* reason) {
     g_memorize_send_pending_correlation_id = 0;
 }
 
+void LogMemorizeSendDecodeFailure(
+    std::uint32_t correlation_id,
+    const wchar_t* reason) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    std::wstring message = L"SpellUsabilityTrace target=MemorizeSend status=not_decoded correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" reason=";
+    message += reason == nullptr ? L"unknown" : reason;
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogMemorizeSendOpcodeMismatch(
+    std::uint32_t correlation_id,
+    std::uint32_t opcode) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    std::wstring message = L"SpellUsabilityTrace target=MemorizeSend status=not_observed correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" reason=opcode_mismatch observed_opcode=";
+    message += std::to_wstring(opcode);
+    message += L" observed_opcode_hex=";
+    message += Hex32(opcode);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
+void LogMemorizeSendTraceStartupMarker(
+    const monomyth::runtime::Manifest& manifest,
+    bool hook_installed) {
+    const bool target_validated =
+        manifest.memorize_send_packet_wrapper_state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated &&
+        manifest.memorize_send_packet_wrapper_address != 0;
+    std::wstring message = L"MemorizeSendTraceStartup slice_id=";
+    message += kMemorizeSendTraceSliceId;
+    message += L" env_enabled=";
+    message += manifest.memorize_send_trace_dev_opt_in ? L"true" : L"false";
+    message += L" target_validated=";
+    message += target_validated ? L"true" : L"false";
+    message += L" hook_installed=";
+    message += hook_installed ? L"true" : L"false";
+    message += L" target=MemorizeSendPacketWrapper";
+    if (manifest.memorize_send_packet_wrapper_rva != 0) {
+        message += L" wrapper_rva=";
+        message += Hex32(manifest.memorize_send_packet_wrapper_rva);
+    }
+    if (manifest.memorize_send_packet_wrapper_address != 0) {
+        message += L" wrapper_address=";
+        message += HexPtr(manifest.memorize_send_packet_wrapper_address);
+    }
+    message += L" reason=\"";
+    message += manifest.memorize_send_trace_reason.empty()
+        ? L"unknown"
+        : manifest.memorize_send_trace_reason;
+    message += L"\"";
+    monomyth::logger::Log(message);
+}
+
 void LogScrollScribeTrace(
     const wchar_t* target,
     const std::wstring& suffix) {
@@ -639,29 +724,62 @@ bool MONOMYTH_FASTCALL MemorizeSendPacketWrapperHook(
     std::uint32_t mode_like,
     const void* packet,
     std::uint32_t total_length) noexcept {
-    if (packet != nullptr && total_length >= sizeof(std::uint16_t)) {
-        std::uint16_t opcode = 0;
-        std::memcpy(&opcode, packet, sizeof(opcode));
-        if (opcode == kMemorizeSpellOpcode) {
-            ++g_memorize_send_trace_count;
-            const std::uint32_t correlation_id = g_memorize_send_pending_correlation_id;
-            const std::uint32_t payload_length = total_length > sizeof(opcode)
-                ? total_length - static_cast<std::uint32_t>(sizeof(opcode))
-                : 0;
-            monomyth::packet_observer::ObserveSendMetadata(
-                opcode,
-                payload_length,
-                reinterpret_cast<std::uintptr_t>(this_context),
-                correlation_id);
-            g_memorize_send_pending_correlation_id = 0;
-        }
+    ++g_memorize_send_trace_count;
+
+    bool opcode_decoded = false;
+    std::uint16_t opcode = 0;
+    std::uint32_t payload_length = 0;
+    const wchar_t* decode_status = L"not_decoded";
+    const wchar_t* not_decoded_reason = L"unknown";
+    if (packet == nullptr) {
+        not_decoded_reason = L"null_packet";
+    } else if (total_length < sizeof(std::uint16_t)) {
+        not_decoded_reason = L"short_packet";
+    } else if (TryReadPacketOpcode(packet, &opcode)) {
+        opcode_decoded = true;
+        decode_status = L"decoded";
+        not_decoded_reason = L"";
+        payload_length = total_length > sizeof(opcode)
+            ? total_length - static_cast<std::uint32_t>(sizeof(opcode))
+            : 0;
+    } else {
+        not_decoded_reason = L"packet_read_fault";
     }
 
-    return g_original_memorize_send_packet_wrapper(
+    const bool original_result = g_original_memorize_send_packet_wrapper(
         this_context,
         mode_like,
         packet,
         total_length);
+
+    const std::uint32_t correlation_id = g_memorize_send_pending_correlation_id;
+    monomyth::packet_observer::ObserveSendMetadata(
+        g_memorize_send_packet_wrapper_address,
+        reinterpret_cast<std::uintptr_t>(this_context),
+        reinterpret_cast<std::uintptr_t>(packet),
+        total_length,
+        opcode_decoded,
+        static_cast<std::uint32_t>(opcode),
+        payload_length,
+        decode_status,
+        not_decoded_reason,
+        original_result,
+        true,
+        correlation_id);
+
+    if (correlation_id != 0) {
+        if (!opcode_decoded) {
+            LogMemorizeSendDecodeFailure(correlation_id, not_decoded_reason);
+            g_memorize_send_pending_correlation_id = 0;
+        } else if (opcode == kMemorizeSpellOpcode) {
+            g_memorize_send_pending_correlation_id = 0;
+        } else {
+            LogMemorizeSendOpcodeMismatch(correlation_id, opcode);
+            g_memorize_send_pending_correlation_id = 0;
+        }
+    }
+
+    return original_result;
 }
 
 void MONOMYTH_FASTCALL HandleRButtonUpHook(
@@ -891,6 +1009,7 @@ bool InstallMemorizeSendTrace(const monomyth::runtime::Manifest& manifest) noexc
     message += HexPtr(manifest.memorize_send_packet_wrapper_address);
     message += L" opcode_name=OP_MemorizeSpell";
     monomyth::logger::Log(message);
+    g_memorize_send_packet_wrapper_address = manifest.memorize_send_packet_wrapper_address;
     g_memorize_send_trace_count = 0;
     g_memorize_send_pending_correlation_id = 0;
     g_memorize_send_correlation_count = 0;
@@ -974,6 +1093,7 @@ bool RemoveMemorizeSendTrace() noexcept {
 
     if (RemoveInlineDetour(&g_memorize_send_packet_wrapper_detour)) {
         g_original_memorize_send_packet_wrapper = nullptr;
+        g_memorize_send_packet_wrapper_address = 0;
         g_memorize_send_pending_correlation_id = 0;
         monomyth::logger::Log(
             L"hook_manager: memorize send trace removed target=MemorizeSendPacketWrapper");
@@ -1119,6 +1239,7 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         message += L"\"";
         monomyth::logger::Log(message);
     }
+    LogMemorizeSendTraceStartupMarker(manifest, memorize_send_trace_active);
 
     g_initialized = true;
     if (receive_hook_active || spell_trace_active || scroll_scribe_trace_active ||
