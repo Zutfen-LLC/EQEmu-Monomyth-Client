@@ -152,7 +152,13 @@ jobs:
     needs:
       - lint
       - ai-adversarial-review
-    if: needs.lint.result == 'success' && (github.event_name != 'pull_request' || needs.ai-adversarial-review.result == 'success')
+    if: |
+      always() &&
+      needs.lint.result == 'success' &&
+      (
+        github.event_name != 'pull_request' ||
+        needs.ai-adversarial-review.result == 'success'
+      )
     runs-on:
       group: Windows
       labels: windows
@@ -236,13 +242,14 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Publish Latest Build
+    name: Publish Build Release
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.result == 'success'
     runs-on: ubuntu-latest
 
     permissions:
       contents: write
+      pull-requests: read
 
     steps:
       - name: Download build artifacts
@@ -257,19 +264,75 @@ jobs:
           cp release-assets/dinput8-Debug/dinput8.dll release-upload/dinput8-Debug.dll
           cp release-assets/dinput8-Release/dinput8.dll release-upload/dinput8.dll
 
-      - name: Publish rolling release
+      - name: Derive release metadata
+        id: release_meta
+        uses: actions/github-script@v8
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+        with:
+          script: |
+            const commitSha = context.sha;
+            const shortSha = commitSha.slice(0, 7);
+            const runNumber = process.env.RUN_NUMBER;
+
+            const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: commitSha,
+            });
+
+            const mergedPull =
+              pulls.find((pull) => pull.merged_at && pull.base && pull.base.ref === "main") ||
+              pulls.find((pull) => pull.merged_at) ||
+              pulls[0] ||
+              null;
+
+            const headCommitTitle = (context.payload.head_commit && context.payload.head_commit.message
+              ? context.payload.head_commit.message.split("\n")[0]
+              : shortSha);
+
+            const releaseTag = `build-${runNumber}`;
+            const releaseName = mergedPull
+              ? `Build ${runNumber}: ${mergedPull.title}`
+              : `Build ${runNumber}: ${headCommitTitle}`;
+
+            const lines = [
+              `Automated build release for \`${shortSha}\` on \`main\`.`,
+            ];
+
+            if (mergedPull) {
+              lines.push(
+                ``,
+                `Merged PR: #${mergedPull.number} - ${mergedPull.title}`,
+                `${mergedPull.html_url}`
+              );
+            } else {
+              lines.push(
+                ``,
+                `Merged commit: ${headCommitTitle}`,
+                `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/commit/${commitSha}`
+              );
+            }
+
+            lines.push(
+              ``,
+              `Assets:`,
+              `- \`dinput8.dll\``,
+              `- \`dinput8-Debug.dll\``
+            );
+
+            core.setOutput("tag_name", releaseTag);
+            core.setOutput("release_name", releaseName);
+            core.setOutput("release_body", lines.join("\n"));
+
+      - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest-build
-          name: Latest Build
-          body: |
-            Automated rolling build from `${{ github.sha }}`.
-
-            Assets:
-            - `dinput8.dll`
-            - `dinput8-Debug.dll`
-          prerelease: true
-          make_latest: false
+          tag_name: ${{ steps.release_meta.outputs.tag_name }}
+          name: ${{ steps.release_meta.outputs.release_name }}
+          body: ${{ steps.release_meta.outputs.release_body }}
+          prerelease: false
+          make_latest: true
           files: |
             release-upload/dinput8-Debug.dll
             release-upload/dinput8.dll

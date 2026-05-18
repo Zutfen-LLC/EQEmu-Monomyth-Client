@@ -105,7 +105,7 @@ Expected checks:
 
 ## CI
 
-GitHub Actions builds this project on the repository's Windows runner group for both `Debug` and `Release` using the same 32-bit CMake configuration documented above. The workflow initializes the MSVC x86 developer environment and expects `cmake` to already be installed on the runner and available on `PATH`. Each successful run uploads the built `dinput8.dll` as a workflow artifact. Pushes to `main` also update a rolling prerelease tagged `latest-build` so the newest release build is available as `dinput8.dll` and the debug build as `dinput8-Debug.dll` from the repository Releases page.
+GitHub Actions builds this project on the repository's Windows runner group for both `Debug` and `Release` using the same 32-bit CMake configuration documented above. The workflow initializes the MSVC x86 developer environment and expects `cmake` to already be installed on the runner and available on `PATH`. Each successful run uploads the built `dinput8.dll` as a workflow artifact. Pushes to `main` also publish an immutable GitHub Release that contains `dinput8.dll` and `dinput8-Debug.dll`, marks that release as the repository's latest release, and derives the release notes from the merged PR when one is associated with the pushed commit.
 
 ## Install
 
