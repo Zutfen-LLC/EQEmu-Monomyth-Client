@@ -12,19 +12,19 @@ Describe the behavior to implement.
 
 ## Supported Inputs
 
-- 
-- 
+-
+-
 
 ## Required Outputs / Effects
 
-- 
-- 
+-
+-
 
 ## Behavioral Rules
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Constraints
 
@@ -35,23 +35,23 @@ Describe the behavior to implement.
 
 ## Non-Goals
 
-- 
-- 
+-
+-
 
 ## Acceptance Tests
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Allowed Assumptions
 
-- 
+-
 
 ## Unresolved Risks
 
-- 
-- 
+-
+-
 
 ## Builder Inputs Allowed
 

@@ -12,8 +12,8 @@ Describe exactly what recon must prove or falsify.
 
 ## Scope of Inspection
 
-- 
-- 
+-
+-
 
 ## Inputs Allowed
 

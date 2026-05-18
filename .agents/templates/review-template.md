@@ -29,19 +29,19 @@ Select one:
 
 ## Quality / Integration Risks
 
-- 
-- 
+-
+-
 
 ## Invented Assumptions
 
-- 
-- 
+-
+-
 
 ## Required Fixes
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## PM Decision Recommendation
 

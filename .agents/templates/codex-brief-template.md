@@ -20,20 +20,20 @@ Describe exactly what Codex should deliver.
 
 ## Required Work
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Acceptance Criteria
 
-- 
-- 
-- 
+-
+-
+-
 
 ## Tests to Run
 
-- 
-- 
+-
+-
 
 ## Constraints
 

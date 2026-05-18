@@ -11,12 +11,12 @@ State the overall outcome in one paragraph.
 ## Scope
 
 In scope:
-- 
-- 
+-
+-
 
 Out of scope:
-- 
-- 
+-
+-
 
 ## Clean-Room Boundary
 
@@ -30,18 +30,18 @@ Define exactly what recon may see and what Codex may receive.
 ## Source Materials
 
 Allowed:
-- 
-- 
+-
+-
 
 Prohibited for builder:
-- 
-- 
+-
+-
 
 ## Success Criteria
 
-- 
-- 
-- 
+-
+-
+-
 
 ## Stop Conditions / Escalation
 
