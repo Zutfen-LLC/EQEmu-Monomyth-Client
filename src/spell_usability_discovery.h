@@ -54,10 +54,9 @@ struct Result {
     TargetResult start_spell_scribe_precheck_rule_446380 = {
         L"StartSpellScribePrecheckRule446380"};
     TargetResult can_start_memming = {L"CanStartMemming"};
+    TargetResult spellbook_memorize_send_path = {L"SpellbookMemorizeSendPath"};
     TargetResult start_spell_memorization_path = {L"StartSpellMemorizationPath"};
     TargetResult memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
-    TargetResult mem_spell_commit_path = {L"MemSpellCommitPath"};
-    TargetResult post_can_start_memming_followup_gate = {L"PostCanStartMemmingFollowupGate"};
 };
 
 void Initialize() noexcept;
