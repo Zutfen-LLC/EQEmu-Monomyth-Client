@@ -88,6 +88,12 @@ struct KnownMemorizeFollowupCallsiteMatch {
     bool bytes_match = false;
 };
 
+struct RelativeCallResolution {
+    std::uintptr_t call_site = 0;
+    std::uintptr_t target = 0;
+    bool resolved = false;
+};
+
 constexpr std::array<KnownMemorizeFollowupCallsite, 2> kKnownMemorizeFollowupCallsites = {{
     {
         0x0013e1cd,
@@ -189,6 +195,23 @@ std::wstring HexBytes(const std::uint8_t* bytes, std::size_t length) {
     return stream.str();
 }
 
+RelativeCallResolution ResolveRelativeCall(
+    const std::uint8_t* code,
+    std::size_t available,
+    std::uintptr_t instruction_address) noexcept {
+    RelativeCallResolution resolution = {};
+    resolution.call_site = instruction_address;
+    if (code == nullptr || available < 5 || code[0] != 0xe8 || instruction_address == 0) {
+        return resolution;
+    }
+
+    std::int32_t relative = 0;
+    std::memcpy(&relative, code + 1, sizeof(relative));
+    resolution.target = instruction_address + 5 + relative;
+    resolution.resolved = true;
+    return resolution;
+}
+
 KnownMemorizeFollowupCallsiteMatch MatchKnownMemorizeFollowupCallsite(
     std::uint32_t caller_return_rva,
     std::uint32_t mode_like,
@@ -212,6 +235,46 @@ KnownMemorizeFollowupCallsiteMatch MatchKnownMemorizeFollowupCallsite(
     }
 
     return {};
+}
+
+void AppendResolvedCallFields(
+    std::wstring* message,
+    const wchar_t* prefix,
+    const RelativeCallResolution& call,
+    std::uintptr_t module_base,
+    std::uintptr_t wrapper_address) {
+    if (message == nullptr || prefix == nullptr) {
+        return;
+    }
+
+    message->append(L" ");
+    message->append(prefix);
+    message->append(L"_site=");
+    message->append(HexPtr(call.call_site));
+    if (module_base != 0 && call.call_site >= module_base) {
+        message->append(L" ");
+        message->append(prefix);
+        message->append(L"_site_rva=");
+        message->append(Hex32(static_cast<std::uint32_t>(call.call_site - module_base)));
+    }
+    message->append(L" ");
+    message->append(prefix);
+    message->append(L"_target=");
+    message->append(HexPtr(call.target));
+    if (module_base != 0 && call.target >= module_base) {
+        message->append(L" ");
+        message->append(prefix);
+        message->append(L"_target_rva=");
+        message->append(Hex32(static_cast<std::uint32_t>(call.target - module_base)));
+    }
+    message->append(L" ");
+    message->append(prefix);
+    message->append(L"_role=");
+    if (wrapper_address != 0 && call.target == wrapper_address) {
+        message->append(L"wrapper_call");
+    } else {
+        message->append(L"followup_call");
+    }
 }
 
 std::uintptr_t GetHostModuleBase() noexcept {
@@ -644,6 +707,28 @@ void LogMemorizeSendIntermediateSend(
         packet != nullptr &&
         packet_prefix_length != 0 &&
         TryCopyBytes(packet, packet_prefix_length, packet_prefix.data());
+    std::array<RelativeCallResolution, 2> resolved_calls = {};
+    std::size_t resolved_call_count = 0;
+    if (caller_bytes_copied && caller_context_address != 0) {
+        for (std::size_t i = 0; i + 5 <= caller_bytes.size(); ++i) {
+            if (caller_bytes[i] != 0xe8) {
+                continue;
+            }
+
+            const RelativeCallResolution call = ResolveRelativeCall(
+                caller_bytes.data() + i,
+                caller_bytes.size() - i,
+                caller_context_address + i);
+            if (!call.resolved) {
+                continue;
+            }
+
+            resolved_calls[resolved_call_count++] = call;
+            if (resolved_call_count >= resolved_calls.size()) {
+                break;
+            }
+        }
+    }
     const KnownMemorizeFollowupCallsiteMatch caller_site = MatchKnownMemorizeFollowupCallsite(
         caller_return_rva,
         mode_like,
@@ -694,6 +779,16 @@ void LogMemorizeSendIntermediateSend(
         message += L" caller_bytes_hex=\"";
         message += HexBytes(caller_bytes.data(), caller_bytes.size());
         message += L"\"";
+    }
+    message += L" caller_resolved_call_count=";
+    message += std::to_wstring(resolved_call_count);
+    for (std::size_t i = 0; i < resolved_call_count; ++i) {
+        AppendResolvedCallFields(
+            &message,
+            i == 0 ? L"caller_call_1" : L"caller_call_2",
+            resolved_calls[i],
+            module_base,
+            g_memorize_send_packet_wrapper_address);
     }
     if (caller_site.site != nullptr) {
         message += L" caller_site_label=";
