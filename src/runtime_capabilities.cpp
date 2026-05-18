@@ -387,37 +387,21 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
         message += L" get_spell_level_needed_address=";
         message += HexPtr(manifest.get_spell_level_needed_address);
     }
-    message += L" get_usable_classes_state=";
+    message += L" is_class_usable_predicate_state=";
     message += monomyth::spell_usability_discovery::TargetStateName(
-        manifest.get_usable_classes_state);
+        manifest.is_class_usable_predicate_state);
     AppendTargetSourceAndFailure(
         &message,
-        L"get_usable_classes",
-        manifest.get_usable_classes_evidence_source,
-        manifest.get_usable_classes_failure_reason);
-    if (manifest.get_usable_classes_rva != 0) {
-        message += L" get_usable_classes_rva=";
-        message += Hex32(manifest.get_usable_classes_rva);
+        L"is_class_usable_predicate",
+        manifest.is_class_usable_predicate_evidence_source,
+        manifest.is_class_usable_predicate_failure_reason);
+    if (manifest.is_class_usable_predicate_rva != 0) {
+        message += L" is_class_usable_predicate_rva=";
+        message += Hex32(manifest.is_class_usable_predicate_rva);
     }
-    if (manifest.get_usable_classes_address != 0) {
-        message += L" get_usable_classes_address=";
-        message += HexPtr(manifest.get_usable_classes_address);
-    }
-    message += L" can_equip_state=";
-    message += monomyth::spell_usability_discovery::TargetStateName(
-        manifest.can_equip_state);
-    AppendTargetSourceAndFailure(
-        &message,
-        L"can_equip",
-        manifest.can_equip_evidence_source,
-        manifest.can_equip_failure_reason);
-    if (manifest.can_equip_rva != 0) {
-        message += L" can_equip_rva=";
-        message += Hex32(manifest.can_equip_rva);
-    }
-    if (manifest.can_equip_address != 0) {
-        message += L" can_equip_address=";
-        message += HexPtr(manifest.can_equip_address);
+    if (manifest.is_class_usable_predicate_address != 0) {
+        message += L" is_class_usable_predicate_address=";
+        message += HexPtr(manifest.is_class_usable_predicate_address);
     }
     message += L" can_start_memming_state=";
     message += monomyth::spell_usability_discovery::TargetStateName(
@@ -534,16 +518,15 @@ void ApplySpellUsabilityDiscovery(
         discovery.get_spell_level_needed.evidence_source;
     manifest->get_spell_level_needed_failure_reason =
         discovery.get_spell_level_needed.failure_reason;
-    manifest->get_usable_classes_state = discovery.get_usable_classes.state;
-    manifest->get_usable_classes_rva = discovery.get_usable_classes.candidate_rva;
-    manifest->get_usable_classes_address = discovery.get_usable_classes.candidate_address;
-    manifest->get_usable_classes_evidence_source = discovery.get_usable_classes.evidence_source;
-    manifest->get_usable_classes_failure_reason = discovery.get_usable_classes.failure_reason;
-    manifest->can_equip_state = discovery.can_equip.state;
-    manifest->can_equip_rva = discovery.can_equip.candidate_rva;
-    manifest->can_equip_address = discovery.can_equip.candidate_address;
-    manifest->can_equip_evidence_source = discovery.can_equip.evidence_source;
-    manifest->can_equip_failure_reason = discovery.can_equip.failure_reason;
+    manifest->is_class_usable_predicate_state = discovery.is_class_usable_predicate.state;
+    manifest->is_class_usable_predicate_rva =
+        discovery.is_class_usable_predicate.candidate_rva;
+    manifest->is_class_usable_predicate_address =
+        discovery.is_class_usable_predicate.candidate_address;
+    manifest->is_class_usable_predicate_evidence_source =
+        discovery.is_class_usable_predicate.evidence_source;
+    manifest->is_class_usable_predicate_failure_reason =
+        discovery.is_class_usable_predicate.failure_reason;
     manifest->can_start_memming_state = discovery.can_start_memming.state;
     manifest->can_start_memming_rva = discovery.can_start_memming.candidate_rva;
     manifest->can_start_memming_address = discovery.can_start_memming.candidate_address;
@@ -564,12 +547,9 @@ void ApplySpellUsabilityDiscovery(
         discovery.handle_rbutton_up.state ==
             monomyth::spell_usability_discovery::TargetState::kValidated &&
         discovery.handle_rbutton_up.trace_safe &&
-        discovery.get_usable_classes.state ==
+        discovery.is_class_usable_predicate.state ==
             monomyth::spell_usability_discovery::TargetState::kValidated &&
-        discovery.get_usable_classes.trace_safe &&
-        discovery.can_equip.state ==
-            monomyth::spell_usability_discovery::TargetState::kValidated &&
-        discovery.can_equip.trace_safe;
+        discovery.is_class_usable_predicate.trace_safe;
     manifest->spell_usability_trace_allowed =
         discovery.allowed &&
         discovery.trace_dev_opt_in &&
@@ -627,17 +607,13 @@ void ApplySpellUsabilityDiscovery(
             discovery.handle_rbutton_up.state,
             discovery.handle_rbutton_up.failure_reason);
         const std::wstring usable_reason = DescribeTargetFailure(
-            L"GetUsableClasses",
-            discovery.get_usable_classes.state,
-            discovery.get_usable_classes.failure_reason);
-        const std::wstring equip_reason = DescribeTargetFailure(
-            L"CanEquip",
-            discovery.can_equip.state,
-            discovery.can_equip.failure_reason);
-        if (!handle_reason.empty() || !usable_reason.empty() || !equip_reason.empty()) {
+            L"EQ_Character::IsClassUsablePredicate",
+            discovery.is_class_usable_predicate.state,
+            discovery.is_class_usable_predicate.failure_reason);
+        if (!handle_reason.empty() || !usable_reason.empty()) {
             reason += L": ";
             bool first = true;
-            for (const auto& item : {handle_reason, usable_reason, equip_reason}) {
+            for (const auto& item : {handle_reason, usable_reason}) {
                 if (item.empty()) {
                     continue;
                 }
