@@ -469,6 +469,198 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
         message += L" is_class_usable_predicate_address=";
         message += HexPtr(manifest.is_class_usable_predicate_address);
     }
+    message += L" spellbook_dispatcher_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.spellbook_dispatcher_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"spellbook_dispatcher",
+        manifest.spellbook_dispatcher_evidence_source,
+        manifest.spellbook_dispatcher_failure_reason);
+    if (manifest.spellbook_dispatcher_rva != 0) {
+        message += L" spellbook_dispatcher_rva=";
+        message += Hex32(manifest.spellbook_dispatcher_rva);
+    }
+    if (manifest.spellbook_dispatcher_address != 0) {
+        message += L" spellbook_dispatcher_address=";
+        message += HexPtr(manifest.spellbook_dispatcher_address);
+    }
+    message += L" start_spell_scribe_path_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.start_spell_scribe_path_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"start_spell_scribe_path",
+        manifest.start_spell_scribe_path_evidence_source,
+        manifest.start_spell_scribe_path_failure_reason);
+    if (manifest.start_spell_scribe_path_rva != 0) {
+        message += L" start_spell_scribe_path_rva=";
+        message += Hex32(manifest.start_spell_scribe_path_rva);
+    }
+    if (manifest.start_spell_scribe_path_address != 0) {
+        message += L" start_spell_scribe_path_address=";
+        message += HexPtr(manifest.start_spell_scribe_path_address);
+    }
+    message += L" start_spell_scribe_precheck_mode_getter_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.start_spell_scribe_precheck_mode_getter_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"start_spell_scribe_precheck_mode_getter",
+        manifest.start_spell_scribe_precheck_mode_getter_evidence_source,
+        manifest.start_spell_scribe_precheck_mode_getter_failure_reason);
+    if (manifest.start_spell_scribe_precheck_mode_getter_rva != 0) {
+        message += L" start_spell_scribe_precheck_mode_getter_rva=";
+        message += Hex32(manifest.start_spell_scribe_precheck_mode_getter_rva);
+    }
+    if (manifest.start_spell_scribe_precheck_mode_getter_address != 0) {
+        message += L" start_spell_scribe_precheck_mode_getter_address=";
+        message += HexPtr(manifest.start_spell_scribe_precheck_mode_getter_address);
+    }
+    message += L" start_spell_scribe_precheck_gate_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.start_spell_scribe_precheck_gate_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"start_spell_scribe_precheck_gate",
+        manifest.start_spell_scribe_precheck_gate_evidence_source,
+        manifest.start_spell_scribe_precheck_gate_failure_reason);
+    if (manifest.start_spell_scribe_precheck_gate_rva != 0) {
+        message += L" start_spell_scribe_precheck_gate_rva=";
+        message += Hex32(manifest.start_spell_scribe_precheck_gate_rva);
+    }
+    if (manifest.start_spell_scribe_precheck_gate_address != 0) {
+        message += L" start_spell_scribe_precheck_gate_address=";
+        message += HexPtr(manifest.start_spell_scribe_precheck_gate_address);
+    }
+    message += L" start_spell_scribe_precheck_lookup_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.start_spell_scribe_precheck_lookup_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"start_spell_scribe_precheck_lookup",
+        manifest.start_spell_scribe_precheck_lookup_evidence_source,
+        manifest.start_spell_scribe_precheck_lookup_failure_reason);
+    if (manifest.start_spell_scribe_precheck_lookup_rva != 0) {
+        message += L" start_spell_scribe_precheck_lookup_rva=";
+        message += Hex32(manifest.start_spell_scribe_precheck_lookup_rva);
+    }
+    if (manifest.start_spell_scribe_precheck_lookup_address != 0) {
+        message += L" start_spell_scribe_precheck_lookup_address=";
+        message += HexPtr(manifest.start_spell_scribe_precheck_lookup_address);
+    }
+    message += L" start_spell_scribe_precheck_fast_accept_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.start_spell_scribe_precheck_fast_accept_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"start_spell_scribe_precheck_fast_accept",
+        manifest.start_spell_scribe_precheck_fast_accept_evidence_source,
+        manifest.start_spell_scribe_precheck_fast_accept_failure_reason);
+    if (manifest.start_spell_scribe_precheck_fast_accept_rva != 0) {
+        message += L" start_spell_scribe_precheck_fast_accept_rva=";
+        message += Hex32(manifest.start_spell_scribe_precheck_fast_accept_rva);
+    }
+    if (manifest.start_spell_scribe_precheck_fast_accept_address != 0) {
+        message += L" start_spell_scribe_precheck_fast_accept_address=";
+        message += HexPtr(manifest.start_spell_scribe_precheck_fast_accept_address);
+    }
+    message += L" start_spell_scribe_precheck_class_resolver_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.start_spell_scribe_precheck_class_resolver_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"start_spell_scribe_precheck_class_resolver",
+        manifest.start_spell_scribe_precheck_class_resolver_evidence_source,
+        manifest.start_spell_scribe_precheck_class_resolver_failure_reason);
+    if (manifest.start_spell_scribe_precheck_class_resolver_rva != 0) {
+        message += L" start_spell_scribe_precheck_class_resolver_rva=";
+        message += Hex32(manifest.start_spell_scribe_precheck_class_resolver_rva);
+    }
+    if (manifest.start_spell_scribe_precheck_class_resolver_address != 0) {
+        message += L" start_spell_scribe_precheck_class_resolver_address=";
+        message += HexPtr(manifest.start_spell_scribe_precheck_class_resolver_address);
+    }
+    message += L" start_spell_scribe_precheck_assigned_mask_getter_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.start_spell_scribe_precheck_assigned_mask_getter_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"start_spell_scribe_precheck_assigned_mask_getter",
+        manifest.start_spell_scribe_precheck_assigned_mask_getter_evidence_source,
+        manifest.start_spell_scribe_precheck_assigned_mask_getter_failure_reason);
+    if (manifest.start_spell_scribe_precheck_assigned_mask_getter_rva != 0) {
+        message += L" start_spell_scribe_precheck_assigned_mask_getter_rva=";
+        message += Hex32(manifest.start_spell_scribe_precheck_assigned_mask_getter_rva);
+    }
+    if (manifest.start_spell_scribe_precheck_assigned_mask_getter_address != 0) {
+        message += L" start_spell_scribe_precheck_assigned_mask_getter_address=";
+        message += HexPtr(manifest.start_spell_scribe_precheck_assigned_mask_getter_address);
+    }
+    message += L" start_spell_scribe_precheck_rule_4462c0_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.start_spell_scribe_precheck_rule_4462c0_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"start_spell_scribe_precheck_rule_4462c0",
+        manifest.start_spell_scribe_precheck_rule_4462c0_evidence_source,
+        manifest.start_spell_scribe_precheck_rule_4462c0_failure_reason);
+    if (manifest.start_spell_scribe_precheck_rule_4462c0_rva != 0) {
+        message += L" start_spell_scribe_precheck_rule_4462c0_rva=";
+        message += Hex32(manifest.start_spell_scribe_precheck_rule_4462c0_rva);
+    }
+    if (manifest.start_spell_scribe_precheck_rule_4462c0_address != 0) {
+        message += L" start_spell_scribe_precheck_rule_4462c0_address=";
+        message += HexPtr(manifest.start_spell_scribe_precheck_rule_4462c0_address);
+    }
+    message += L" start_spell_scribe_precheck_rule_446190_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.start_spell_scribe_precheck_rule_446190_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"start_spell_scribe_precheck_rule_446190",
+        manifest.start_spell_scribe_precheck_rule_446190_evidence_source,
+        manifest.start_spell_scribe_precheck_rule_446190_failure_reason);
+    if (manifest.start_spell_scribe_precheck_rule_446190_rva != 0) {
+        message += L" start_spell_scribe_precheck_rule_446190_rva=";
+        message += Hex32(manifest.start_spell_scribe_precheck_rule_446190_rva);
+    }
+    if (manifest.start_spell_scribe_precheck_rule_446190_address != 0) {
+        message += L" start_spell_scribe_precheck_rule_446190_address=";
+        message += HexPtr(manifest.start_spell_scribe_precheck_rule_446190_address);
+    }
+    message += L" start_spell_scribe_precheck_rule_446200_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.start_spell_scribe_precheck_rule_446200_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"start_spell_scribe_precheck_rule_446200",
+        manifest.start_spell_scribe_precheck_rule_446200_evidence_source,
+        manifest.start_spell_scribe_precheck_rule_446200_failure_reason);
+    if (manifest.start_spell_scribe_precheck_rule_446200_rva != 0) {
+        message += L" start_spell_scribe_precheck_rule_446200_rva=";
+        message += Hex32(manifest.start_spell_scribe_precheck_rule_446200_rva);
+    }
+    if (manifest.start_spell_scribe_precheck_rule_446200_address != 0) {
+        message += L" start_spell_scribe_precheck_rule_446200_address=";
+        message += HexPtr(manifest.start_spell_scribe_precheck_rule_446200_address);
+    }
+    message += L" start_spell_scribe_precheck_rule_446380_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.start_spell_scribe_precheck_rule_446380_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"start_spell_scribe_precheck_rule_446380",
+        manifest.start_spell_scribe_precheck_rule_446380_evidence_source,
+        manifest.start_spell_scribe_precheck_rule_446380_failure_reason);
+    if (manifest.start_spell_scribe_precheck_rule_446380_rva != 0) {
+        message += L" start_spell_scribe_precheck_rule_446380_rva=";
+        message += Hex32(manifest.start_spell_scribe_precheck_rule_446380_rva);
+    }
+    if (manifest.start_spell_scribe_precheck_rule_446380_address != 0) {
+        message += L" start_spell_scribe_precheck_rule_446380_address=";
+        message += HexPtr(manifest.start_spell_scribe_precheck_rule_446380_address);
+    }
     message += L" can_start_memming_state=";
     message += monomyth::spell_usability_discovery::TargetStateName(
         manifest.can_start_memming_state);
@@ -672,6 +864,122 @@ void ApplySpellUsabilityDiscovery(
         discovery.is_class_usable_predicate.evidence_source;
     manifest->is_class_usable_predicate_failure_reason =
         discovery.is_class_usable_predicate.failure_reason;
+    manifest->spellbook_dispatcher_state = discovery.spellbook_dispatcher.state;
+    manifest->spellbook_dispatcher_rva = discovery.spellbook_dispatcher.candidate_rva;
+    manifest->spellbook_dispatcher_address = discovery.spellbook_dispatcher.candidate_address;
+    manifest->spellbook_dispatcher_evidence_source =
+        discovery.spellbook_dispatcher.evidence_source;
+    manifest->spellbook_dispatcher_failure_reason =
+        discovery.spellbook_dispatcher.failure_reason;
+    manifest->start_spell_scribe_path_state = discovery.start_spell_scribe_path.state;
+    manifest->start_spell_scribe_path_rva =
+        discovery.start_spell_scribe_path.candidate_rva;
+    manifest->start_spell_scribe_path_address =
+        discovery.start_spell_scribe_path.candidate_address;
+    manifest->start_spell_scribe_path_evidence_source =
+        discovery.start_spell_scribe_path.evidence_source;
+    manifest->start_spell_scribe_path_failure_reason =
+        discovery.start_spell_scribe_path.failure_reason;
+    manifest->start_spell_scribe_precheck_mode_getter_state =
+        discovery.start_spell_scribe_precheck_mode_getter.state;
+    manifest->start_spell_scribe_precheck_mode_getter_rva =
+        discovery.start_spell_scribe_precheck_mode_getter.candidate_rva;
+    manifest->start_spell_scribe_precheck_mode_getter_address =
+        discovery.start_spell_scribe_precheck_mode_getter.candidate_address;
+    manifest->start_spell_scribe_precheck_mode_getter_evidence_source =
+        discovery.start_spell_scribe_precheck_mode_getter.evidence_source;
+    manifest->start_spell_scribe_precheck_mode_getter_failure_reason =
+        discovery.start_spell_scribe_precheck_mode_getter.failure_reason;
+    manifest->start_spell_scribe_precheck_gate_state =
+        discovery.start_spell_scribe_precheck_gate.state;
+    manifest->start_spell_scribe_precheck_gate_rva =
+        discovery.start_spell_scribe_precheck_gate.candidate_rva;
+    manifest->start_spell_scribe_precheck_gate_address =
+        discovery.start_spell_scribe_precheck_gate.candidate_address;
+    manifest->start_spell_scribe_precheck_gate_evidence_source =
+        discovery.start_spell_scribe_precheck_gate.evidence_source;
+    manifest->start_spell_scribe_precheck_gate_failure_reason =
+        discovery.start_spell_scribe_precheck_gate.failure_reason;
+    manifest->start_spell_scribe_precheck_lookup_state =
+        discovery.start_spell_scribe_precheck_lookup.state;
+    manifest->start_spell_scribe_precheck_lookup_rva =
+        discovery.start_spell_scribe_precheck_lookup.candidate_rva;
+    manifest->start_spell_scribe_precheck_lookup_address =
+        discovery.start_spell_scribe_precheck_lookup.candidate_address;
+    manifest->start_spell_scribe_precheck_lookup_evidence_source =
+        discovery.start_spell_scribe_precheck_lookup.evidence_source;
+    manifest->start_spell_scribe_precheck_lookup_failure_reason =
+        discovery.start_spell_scribe_precheck_lookup.failure_reason;
+    manifest->start_spell_scribe_precheck_fast_accept_state =
+        discovery.start_spell_scribe_precheck_fast_accept.state;
+    manifest->start_spell_scribe_precheck_fast_accept_rva =
+        discovery.start_spell_scribe_precheck_fast_accept.candidate_rva;
+    manifest->start_spell_scribe_precheck_fast_accept_address =
+        discovery.start_spell_scribe_precheck_fast_accept.candidate_address;
+    manifest->start_spell_scribe_precheck_fast_accept_evidence_source =
+        discovery.start_spell_scribe_precheck_fast_accept.evidence_source;
+    manifest->start_spell_scribe_precheck_fast_accept_failure_reason =
+        discovery.start_spell_scribe_precheck_fast_accept.failure_reason;
+    manifest->start_spell_scribe_precheck_class_resolver_state =
+        discovery.start_spell_scribe_precheck_class_resolver.state;
+    manifest->start_spell_scribe_precheck_class_resolver_rva =
+        discovery.start_spell_scribe_precheck_class_resolver.candidate_rva;
+    manifest->start_spell_scribe_precheck_class_resolver_address =
+        discovery.start_spell_scribe_precheck_class_resolver.candidate_address;
+    manifest->start_spell_scribe_precheck_class_resolver_evidence_source =
+        discovery.start_spell_scribe_precheck_class_resolver.evidence_source;
+    manifest->start_spell_scribe_precheck_class_resolver_failure_reason =
+        discovery.start_spell_scribe_precheck_class_resolver.failure_reason;
+    manifest->start_spell_scribe_precheck_assigned_mask_getter_state =
+        discovery.start_spell_scribe_precheck_assigned_mask_getter.state;
+    manifest->start_spell_scribe_precheck_assigned_mask_getter_rva =
+        discovery.start_spell_scribe_precheck_assigned_mask_getter.candidate_rva;
+    manifest->start_spell_scribe_precheck_assigned_mask_getter_address =
+        discovery.start_spell_scribe_precheck_assigned_mask_getter.candidate_address;
+    manifest->start_spell_scribe_precheck_assigned_mask_getter_evidence_source =
+        discovery.start_spell_scribe_precheck_assigned_mask_getter.evidence_source;
+    manifest->start_spell_scribe_precheck_assigned_mask_getter_failure_reason =
+        discovery.start_spell_scribe_precheck_assigned_mask_getter.failure_reason;
+    manifest->start_spell_scribe_precheck_rule_4462c0_state =
+        discovery.start_spell_scribe_precheck_rule_4462c0.state;
+    manifest->start_spell_scribe_precheck_rule_4462c0_rva =
+        discovery.start_spell_scribe_precheck_rule_4462c0.candidate_rva;
+    manifest->start_spell_scribe_precheck_rule_4462c0_address =
+        discovery.start_spell_scribe_precheck_rule_4462c0.candidate_address;
+    manifest->start_spell_scribe_precheck_rule_4462c0_evidence_source =
+        discovery.start_spell_scribe_precheck_rule_4462c0.evidence_source;
+    manifest->start_spell_scribe_precheck_rule_4462c0_failure_reason =
+        discovery.start_spell_scribe_precheck_rule_4462c0.failure_reason;
+    manifest->start_spell_scribe_precheck_rule_446190_state =
+        discovery.start_spell_scribe_precheck_rule_446190.state;
+    manifest->start_spell_scribe_precheck_rule_446190_rva =
+        discovery.start_spell_scribe_precheck_rule_446190.candidate_rva;
+    manifest->start_spell_scribe_precheck_rule_446190_address =
+        discovery.start_spell_scribe_precheck_rule_446190.candidate_address;
+    manifest->start_spell_scribe_precheck_rule_446190_evidence_source =
+        discovery.start_spell_scribe_precheck_rule_446190.evidence_source;
+    manifest->start_spell_scribe_precheck_rule_446190_failure_reason =
+        discovery.start_spell_scribe_precheck_rule_446190.failure_reason;
+    manifest->start_spell_scribe_precheck_rule_446200_state =
+        discovery.start_spell_scribe_precheck_rule_446200.state;
+    manifest->start_spell_scribe_precheck_rule_446200_rva =
+        discovery.start_spell_scribe_precheck_rule_446200.candidate_rva;
+    manifest->start_spell_scribe_precheck_rule_446200_address =
+        discovery.start_spell_scribe_precheck_rule_446200.candidate_address;
+    manifest->start_spell_scribe_precheck_rule_446200_evidence_source =
+        discovery.start_spell_scribe_precheck_rule_446200.evidence_source;
+    manifest->start_spell_scribe_precheck_rule_446200_failure_reason =
+        discovery.start_spell_scribe_precheck_rule_446200.failure_reason;
+    manifest->start_spell_scribe_precheck_rule_446380_state =
+        discovery.start_spell_scribe_precheck_rule_446380.state;
+    manifest->start_spell_scribe_precheck_rule_446380_rva =
+        discovery.start_spell_scribe_precheck_rule_446380.candidate_rva;
+    manifest->start_spell_scribe_precheck_rule_446380_address =
+        discovery.start_spell_scribe_precheck_rule_446380.candidate_address;
+    manifest->start_spell_scribe_precheck_rule_446380_evidence_source =
+        discovery.start_spell_scribe_precheck_rule_446380.evidence_source;
+    manifest->start_spell_scribe_precheck_rule_446380_failure_reason =
+        discovery.start_spell_scribe_precheck_rule_446380.failure_reason;
     manifest->can_start_memming_state = discovery.can_start_memming.state;
     manifest->can_start_memming_rva = discovery.can_start_memming.candidate_rva;
     manifest->can_start_memming_address = discovery.can_start_memming.candidate_address;
@@ -727,6 +1035,21 @@ void ApplySpellUsabilityDiscovery(
         (discovery.get_spell_level_needed.state ==
              monomyth::spell_usability_discovery::TargetState::kValidated &&
          discovery.get_spell_level_needed.trace_safe) ||
+        (discovery.spellbook_dispatcher.state ==
+             monomyth::spell_usability_discovery::TargetState::kValidated &&
+         discovery.spellbook_dispatcher.trace_safe) ||
+        (discovery.start_spell_scribe_path.state ==
+             monomyth::spell_usability_discovery::TargetState::kValidated &&
+         discovery.start_spell_scribe_path.trace_safe) ||
+        (discovery.start_spell_scribe_precheck_mode_getter.state ==
+             monomyth::spell_usability_discovery::TargetState::kValidated &&
+         discovery.start_spell_scribe_precheck_mode_getter.trace_safe) ||
+        (discovery.start_spell_scribe_precheck_gate.state ==
+             monomyth::spell_usability_discovery::TargetState::kValidated &&
+         discovery.start_spell_scribe_precheck_gate.trace_safe) ||
+        (discovery.start_spell_scribe_precheck_lookup.state ==
+             monomyth::spell_usability_discovery::TargetState::kValidated &&
+         discovery.start_spell_scribe_precheck_lookup.trace_safe) ||
         (discovery.can_start_memming.state ==
              monomyth::spell_usability_discovery::TargetState::kValidated &&
          discovery.can_start_memming.trace_safe);

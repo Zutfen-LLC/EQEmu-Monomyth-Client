@@ -31,6 +31,28 @@ struct Result {
     TargetResult handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     TargetResult get_spell_level_needed = {L"GetSpellLevelNeeded"};
     TargetResult is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
+    TargetResult spellbook_dispatcher = {L"SpellbookDispatcher"};
+    TargetResult start_spell_scribe_path = {L"StartSpellScribePath"};
+    TargetResult start_spell_scribe_precheck_mode_getter = {
+        L"StartSpellScribePrecheckModeGetter"};
+    TargetResult start_spell_scribe_precheck_gate = {
+        L"StartSpellScribePrecheckGate"};
+    TargetResult start_spell_scribe_precheck_lookup = {
+        L"StartSpellScribePrecheckLookup"};
+    TargetResult start_spell_scribe_precheck_fast_accept = {
+        L"StartSpellScribePrecheckFastAccept"};
+    TargetResult start_spell_scribe_precheck_class_resolver = {
+        L"StartSpellScribePrecheckClassResolver"};
+    TargetResult start_spell_scribe_precheck_assigned_mask_getter = {
+        L"StartSpellScribePrecheckAssignedMaskGetter"};
+    TargetResult start_spell_scribe_precheck_rule_4462c0 = {
+        L"StartSpellScribePrecheckRule4462c0"};
+    TargetResult start_spell_scribe_precheck_rule_446190 = {
+        L"StartSpellScribePrecheckRule446190"};
+    TargetResult start_spell_scribe_precheck_rule_446200 = {
+        L"StartSpellScribePrecheckRule446200"};
+    TargetResult start_spell_scribe_precheck_rule_446380 = {
+        L"StartSpellScribePrecheckRule446380"};
     TargetResult can_start_memming = {L"CanStartMemming"};
     TargetResult start_spell_memorization_path = {L"StartSpellMemorizationPath"};
     TargetResult memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};

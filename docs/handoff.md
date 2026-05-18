@@ -1,8 +1,8 @@
-# Handoff: Secondary-Class Spell Scribe / Memorize Investigation
+# Handoff: Secondary-Class Spell Scribe Fixed, Memorize Commit Still Blocked
 
 ## Scope
 
-Continue the clean-room investigation into why secondary-class PAL spell scribing and memorization are not yet working in the ROF2 client hook DLL.
+This branch completed the clean-room PAL secondary-class spellbook scribe fix for the ROF2 client hook DLL. The remaining active problem is ordinary spellbook memorize commit still fast-exiting before the real send/commit path completes.
 
 Repo:
 - `/home/zutfen/code/EQEmu-Monomyth-Client`
@@ -14,77 +14,125 @@ Related local references:
 - MQ2 source: `/home/zutfen/Desktop/MQ2Emu_ROF2_Legacy_Source/`
 - Ghidra notes: `/home/zutfen/monomyth_ghidra/out/right_click_chain_update_verified_new_exe.md`
 - Repo spell UI notes: `docs/cleanroom-dll-research/eqgame-spell-ui-ghidra-notes.md`
+- Multiclass intervention map: `docs/multiclass-identity-intervention-map.md`
 
 Current branch:
 - `codex/client-memorize-send-trace-001`
 
-## What Is Already Proven
+## What Is Now Proven
 
-### 1. Server-side class-mask support is not the blocker
+### 1. Server-side class-mask support was never the blocker
 
-Prior audit already established the EQEmu server supports multiclass spell eligibility via class-mask-aware level checks. This session stayed on the client hook side.
+Earlier cross-repo audit already established the EQEmu server supports multiclass spell eligibility via class-mask-aware level selection. This branch stayed on the clean-room client side.
 
-### 2. We have a known-good normal memorize packet baseline
+### 2. PAL secondary-class spellbook scribing was blocked by an early native class-mask gate
 
-Using full packet trace on a normal MAG spell memorize, the real network opcode was confirmed as:
-- `OP_MemorizeSpell` = `0x217c`
+The spellbook click path was traced through these clean-room targets:
+- `SpellbookDispatcher`
+- `StartSpellScribePath`
+- `StartSpellScribePrecheckModeGetter`
+- `StartSpellScribePrecheckGate`
+- `StartSpellScribePrecheckLookup`
+- nested helper traces inside `0x44c430`
 
-That run proved the client can send and receive the real memorize opcode in this executable and that the packet observer path is functioning.
+The failing PAL reproduce proved:
+- `SpellbookDispatcher` was reached
+- `StartSpellScribePath` was reached
+- mode check returned `20` / `0x14`
+- `StartSpellScribePrecheckGate` returned `false`
+- the path died before `GetSpellLevelNeeded` and before any scribe packet activity
 
-### 3. A stale deployed DLL caused at least one false read
+Deeper gate tracing then proved the exact reject:
+- assigned spell mask was `0x6`
+- resolved current class was `13`
+- computed current-class bit was `0x1000`
+- native class-mask test failed
+- no later `4462c0 / 446190 / 446200 / 446380` helper had run yet
 
-One log review initially looked like the new tracing was absent because the deployed `/home/zutfen/everquest_rof2/dinput8.dll` had not been updated. The correct startup receipts for the new build are:
-- `full_packet_trace_dev_opt_in=true`
-- `full_packet_trace_allowed=true`
-- `PacketObserver state=initialized recv_log_policy=all_packets send_log_policy=all_packets`
+So the blocker was the early `test edx, eax` style native-class gate inside `0x44c430`, not a downstream spell level check and not packet send failure.
 
-If those lines are missing, the live EQ directory is still running an older DLL.
+### 3. The clean-room fix is a narrow gate override, not a broad spoof
 
-### 4. The important UX correction: scribing is not right-click in this client
+The fix lives in `StartSpellScribePrecheckGateHook` and only overrides the proven early reject when all of these are true:
+- multiclass spell usability is enabled
+- the original gate returned `false`
+- `require_known_like != 0`
+- none of the later `4462c0 / 446190 / 446200 / 446380` rule helpers ran
+- the current class bit missed the spell's native class mask
+- authoritative `server_auth_stats` mask still intersects the spell's native mask
 
-Critical clarification from the user:
-- This `eqgame.exe` does **not** use inventory right-click to scribe.
-- The active UX is clicking the spell scroll into an empty spell slot in the spell book.
+That makes the behavior change fail-closed and specific to the proven PAL secondary-class scribe reject.
 
-This invalidated the older assumption that `CInvSlot::HandleRButtonUp` was the relevant live path for the reproduce.
+### 4. The PAL scribe fix is runtime-proven
 
-### 5. Spellbook click-to-scribe is a distinct path from spellbook memorize
+On the successful PAL reproduce, the log showed:
+- `StartSpellScribePrecheckAssignedMaskGetter` returned `0x6`
+- `StartSpellScribePrecheckGate` logged:
+  - `original_result=false`
+  - `returned_result=true`
+  - `behavior_override_applied=true`
+  - `class_id=13`
+  - `class_bit=0x1000`
+  - `authoritative_mask=0x1044`
+  - `authoritative_mask_intersection=0x4`
+- `StartSpellScribePrecheckLookup` then ran
+- `StartSpellScribePath` mutated state instead of stalling
+- the client sent `OP_MemorizeSpell`
 
-For a PAL spell scroll click into an empty spellbook slot, the log showed a packet sequence like:
-- send `OP_DeleteSpell` (`0x3358`)
-- recv `OP_DeleteSpell`
-- send `OP_MemorizeSpell` (`0x217c`)
-- recv `OP_MemorizeSpell`
+This proves the early class-mask reject was the blocker and the narrow override cleared the real path.
 
-Around that scribe attempt there were **no**:
-- `CanStartMemming`
-- `StartSpellMemorizationPath`
+### 5. `GetSpellLevelNeeded` is already selecting the right secondary class downstream
 
-So spellbook click-to-scribe is not just the same path as ordinary spellbook memorize.
+Later logs show `GetSpellLevelNeeded` choosing the PAL class for the class-13 reproduce:
+- `assigned_mask=0x1044`
+- `original_level=255`
+- `selected_class=3`
+- `selected_level=42`
 
-## What We Misread And Corrected
+So downstream spell-level selection is already class-mask aware enough for this case once the earlier gate is bypassed.
 
-### Earlier false conclusion
+### 6. Ordinary spellbook memorize commit is still a separate blocker
 
-A prior run appeared to show `OP_MemorizeSpell` sends and was briefly interpreted as progress on secondary-class PAL memorization.
+The remaining live problem is not scribing. It is the memorize commit path.
 
-### Correction
+Current proven behavior:
+- `CanStartMemming` can succeed
+- `StartSpellMemorizationPath` can run
+- `MemSpellCommitPath` is reached
+- `MemSpellCommitPath` still fast-exits with `inferred_exit_reason=state_240_unset_fast_exit`
+- failing snapshots show:
+  - `state_238=0x7b`
+  - `state_240=0xffffffff`
+  - `state_244=0`
 
-The user clarified that run was only:
-- a MAG character memorizing a MAG spell
-- done specifically to identify the live opcode path
+So the next slice should start from spellbook memorize state initialization before `MemSpellCommitPath`, not from the PAL scribe gate again.
 
-So that run is only a known-good baseline. It does **not** prove secondary-class PAL memorization works.
+## Instrumentation Present On This Branch
 
-## Instrumentation Added In This Session
-
-### Existing in-flight tracing already in the repo/worktree
-
-These slices were already added during the current investigation and are still present in the dirty worktree:
+Existing important seams now on branch:
+- `GetSpellLevelNeeded`
+- `CanStartMemming` trace
 - `StartSpellMemorizationPath` trace
 - `MemSpellCommitPath` trace
 - outbound `OP_MemorizeSpell` send observation
 - dev-gated full packet trace mode
+- `SpellbookDispatcher`
+- `StartSpellScribePath`
+- `StartSpellScribePrecheckModeGetter`
+- `StartSpellScribePrecheckGate`
+- `StartSpellScribePrecheckLookup`
+- `StartSpellScribePrecheckFastAccept`
+- `StartSpellScribePrecheckAssignedMaskGetter`
+- nested precheck rule helpers:
+  - `StartSpellScribePrecheckRule4462c0`
+  - `StartSpellScribePrecheckRule446190`
+  - `StartSpellScribePrecheckRule446200`
+  - `StartSpellScribePrecheckRule446380`
+
+Important nuance:
+- the direct `StartSpellScribePrecheckClassResolver` detour does not install cleanly on this executable because the prologue is unsupported
+- class resolution is instead emulated inside `StartSpellScribePrecheckGateHook` with guarded reads
+- that emulated path is what produced the successful `class_id=13` proof and the shipped override decision
 
 Relevant env flags:
 - `MONOMYTH_ENABLE_PACKET_HOOKS=1`
@@ -93,83 +141,69 @@ Relevant env flags:
 - `MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1`
 - `MONOMYTH_ENABLE_MEMORIZE_SEND_TRACE=1`
 - `MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1`
-- `MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE=1`
 
-Note:
-- `MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE=1` is now known to be irrelevant to the active scribe reproduce because the client behavior is spellbook click-to-scribe, not right-click.
+## Files Touched For The PAL Scribe Fix
 
-### Newest slice added at the end of this session
-
-To anchor on the proven spellbook scribe packet sequence, `src/hook_manager.cpp` now correlates:
-- `OP_DeleteSpell` start
-- bounded intermediate wrapper sends
-- `OP_MemorizeSpell` follow-up
-
-New log markers to grep:
-- `SpellUsabilityTrace target=SpellbookScribeSend status=delete_send_start`
-- `SpellUsabilityTrace target=SpellbookScribeSend status=intermediate_send`
-- `SpellUsabilityTrace target=SpellbookScribeSend status=memorize_send_followup`
-- `SpellUsabilityTrace target=SpellbookScribeSend status=not_observed`
-
-The correlation logs:
-- caller return RVA
-- caller bytes
-- packet prefix
-- resolved relative-call targets
-
-This is the current best seam for identifying the real click-to-scribe caller path without relying on the invalid right-click assumption.
-
-## Current Worktree State
-
-Modified files:
+Primary code files:
 - `src/hook_manager.cpp`
-- `src/packet_observer.cpp`
 - `src/runtime_capabilities.cpp`
 - `src/runtime_capabilities.h`
 - `src/spell_usability_discovery.cpp`
 - `src/spell_usability_discovery.h`
-- `README.md`
-- `CHANGELOG.md`
+
+Docs:
+- `docs/handoff.md`
+
+## Current Worktree State
+
+Tracked modified files for this publish:
+- `docs/handoff.md`
+- `src/hook_manager.cpp`
+- `src/runtime_capabilities.cpp`
+- `src/runtime_capabilities.h`
+- `src/spell_usability_discovery.cpp`
+- `src/spell_usability_discovery.h`
+
+Untracked local items currently present but not part of this slice:
+- `.agents/`
+- `docs/multiclass-identity-intervention-map.md`
+- `docs/specs/`
+- `worktrees/`
 
 Build status:
-- `cmake --build build-cross-i686` succeeded after the latest changes
+- `cmake --build build-cross-i686` passed for the current patch
 
-Built DLL:
-- `build-cross-i686/dinput8.dll`
-
-Deployed runtime target:
-- `/home/zutfen/everquest_rof2/dinput8.dll`
+Runtime deploy status:
+- latest built `build-cross-i686/dinput8.dll` was copied to `/home/zutfen/everquest_rof2/dinput8.dll`
+- successful PAL reproduce was done with that deployed DLL
 
 ## Immediate Next Step
 
-1. Deploy the freshly built DLL:
-   - copy `build-cross-i686/dinput8.dll` to `/home/zutfen/everquest_rof2/dinput8.dll`
-2. Run one bounded reproduce:
-   - login
-   - click a PAL spell scroll into an empty spellbook slot
-   - optionally perform one separate PAL spell memorize attempt if needed
-   - logout
-3. Re-check `/home/zutfen/everquest_rof2/monomyth-client.log` for the new `SpellbookScribeSend` markers.
-4. Use the logged caller RVA / bytes / resolved calls to identify the real spellbook click-to-scribe call path in Ghidra and/or the local clean-room notes.
+1. PR and merge the PAL secondary-class spellbook scribe fix.
+2. Start a new narrow slice for the memorize commit blocker.
+3. Focus on how `StartSpellMemorizationPath` and its upstream callers are supposed to initialize `state_240` before `MemSpellCommitPath`.
+4. Keep the next trace/behavior work scoped to the memorize path instead of reopening the now-proven scribe gate.
 
 ## What The Next Session Should Answer
 
 Primary question:
-- What function actually emits the spellbook click-to-scribe `OP_DeleteSpell -> OP_MemorizeSpell` sequence for this client?
+- What writes the spellbook state consumed as `state_240`, and why is it still unset on the failing memorize path?
 
 Secondary question:
-- Once that caller path is identified, where is the PAL secondary-class eligibility being rejected before or around that packet sequence?
+- Is the bad `state_240` caused by a missed earlier branch in `StartSpellMemorizationPath`, a skipped follow-up helper, or a separate class/usability gate before commit?
+
+Tertiary question:
+- Can the memorize commit blocker be solved with another narrow authoritative-class-aware adjustment, or is it a different state-shape issue unrelated to multiclass gating?
 
 ## Constraints To Preserve
 
 - Stay clean-room. Do not import THJ or classless DLL gameplay code.
-- Keep instrumentation trace-only until the real spellbook scribe seam is proven.
+- Keep new memorize-path investigation trace-first until the exact missing state transition is proven.
 - Do not broaden into `CastSpell`, profile spoofing, or spell-record mutation without direct runtime evidence.
+- Preserve the PAL scribe fix's fail-closed behavior; do not generalize it into a wide class spoof or unconditional allow.
 - Treat missing startup capability receipts as a deployment problem first, not a logic conclusion.
 
 ## Suggested Skills For The Next Session
 
 - `handoff`
-  - to refresh this document if the investigation continues
-
-No other special skill is required unless the next session becomes PR/publish-oriented.
+  - to refresh this document again after the memorize commit slice advances
