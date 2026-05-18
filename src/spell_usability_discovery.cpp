@@ -666,6 +666,23 @@ bool ResolveJumpTargetAtRva(
     return true;
 }
 
+bool IsHotpatchJumpThunkShapeAtRva(
+    const ImageView& image,
+    std::uint32_t thunk_rva) noexcept {
+    if (!IsRvaWithinImage(image, thunk_rva, 11)) {
+        return false;
+    }
+
+    const auto* code = image.base + thunk_rva;
+    return code[0] == 0x8b &&
+        code[1] == 0xff &&
+        code[2] == 0x55 &&
+        code[3] == 0x8b &&
+        code[4] == 0xec &&
+        code[5] == 0x5d &&
+        code[6] == 0xe9;
+}
+
 bool ResolveHotpatchThunkTerminalTarget(
     const ImageView& image,
     std::uint32_t thunk_rva,
@@ -680,46 +697,42 @@ bool ResolveHotpatchThunkTerminalTarget(
     *terminal_target = 0;
     *hop_count = 0;
 
-    std::uintptr_t jump_target = 0;
-    std::uint8_t jump_opcode = 0;
-    if (!ResolveJumpTargetAtRva(image, thunk_rva + 6, &jump_target, &jump_opcode)) {
+    if (!IsHotpatchJumpThunkShapeAtRva(image, thunk_rva)) {
         return false;
     }
 
-    *first_target = jump_target;
-    *terminal_target = jump_target;
-    *hop_count = 1;
-
     const std::uintptr_t module_base = reinterpret_cast<std::uintptr_t>(image.base);
-    if (jump_target < module_base) {
-        return true;
+    std::uint32_t current_thunk_rva = thunk_rva;
+    for (std::uint32_t hop = 0; hop < 2; ++hop) {
+        std::uintptr_t jump_target = 0;
+        std::uint8_t jump_opcode = 0;
+        if (!ResolveJumpTargetAtRva(
+                image,
+                current_thunk_rva + 6,
+                &jump_target,
+                &jump_opcode)) {
+            return hop != 0;
+        }
+
+        if (hop == 0) {
+            *first_target = jump_target;
+        }
+        *terminal_target = jump_target;
+        *hop_count = hop + 1;
+
+        if (jump_target < module_base) {
+            return true;
+        }
+
+        const std::uint32_t jump_target_rva =
+            static_cast<std::uint32_t>(jump_target - module_base);
+        if (!IsHotpatchJumpThunkShapeAtRva(image, jump_target_rva)) {
+            return true;
+        }
+
+        current_thunk_rva = jump_target_rva;
     }
 
-    const std::uint32_t jump_target_rva =
-        static_cast<std::uint32_t>(jump_target - module_base);
-    if (!IsRvaWithinImage(image, jump_target_rva, 11)) {
-        return true;
-    }
-
-    if (!BytesMatchAtRva(
-            image,
-            jump_target_rva,
-            kPostCanStartMemmingFollowupGateThunkBytes.data(),
-            kPostCanStartMemmingFollowupGateThunkBytes.size())) {
-        return true;
-    }
-
-    std::uintptr_t second_target = 0;
-    if (!ResolveJumpTargetAtRva(
-            image,
-            jump_target_rva + 6,
-            &second_target,
-            &jump_opcode)) {
-        return true;
-    }
-
-    *terminal_target = second_target;
-    *hop_count = 2;
     return true;
 }
 
