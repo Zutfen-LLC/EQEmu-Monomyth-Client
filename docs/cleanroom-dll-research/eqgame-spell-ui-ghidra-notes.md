@@ -26,6 +26,15 @@ Pinned candidates:
     - `83 3d ac 35 e6 00 00 53 56 8b f1 b3 01 0f 8f 8f 01 00 00`
     - `8b 0d 7c fc d1 00 6a 01 e8 d0 51 f0 ff 84`
   - Caller evidence: calls `GetSpellLevelNeeded` at `0x0075bea5`
+- `MemorizeSendPacketWrapper`
+  - VA: `0x008c51f0`
+  - RVA: `0x004c41f0`
+  - Shape: `thiscall`, `ECX=this`, three stack args `(mode_like, packet_ptr, total_length)`
+  - Entry bytes:
+    - `55 8b ec 6a ff 68 d8 91 9a 00 64 a1 00 00 00 00`
+    - `50 51 53 56 57 a1 80 87 b6 00 33 c5 50 8d 45 f4`
+    - `64 a3 00 00 00 00 8b f1 8d be 54 02 00 00 8b cf`
+  - Caller anchor: memorize path at `0x0075e6db` stores opcode `0x217c` / `OP_MemorizeSpell` into `0x00dd00e0`, writes a 16-byte payload beside it, then calls this wrapper with total length `0x12`
 - `CInvSlot::HandleRButtonUp`
   - VA: `0x00697250`
   - RVA: `0x00297250`

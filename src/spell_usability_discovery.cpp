@@ -21,8 +21,10 @@ constexpr std::uint32_t kIsClassUsablePredicateRva = 0x000a1f50;
 constexpr std::uint32_t kHandleRButtonUpRva = 0x00297250;
 constexpr std::uint32_t kCanStartMemmingRva = 0x0035bd40;
 constexpr std::uint32_t kCanStartMemmingCallsGetSpellLevelNeededAtRva = 0x0035bea5;
-constexpr wchar_t kResolverVersion[] = L"v4_scroll_scribe_trace_v2";
-constexpr wchar_t kPacketId[] = L"CLIENT-SCROLL-SCRIBE-TRACE-V2";
+constexpr std::uint32_t kMemorizeSendPacketWrapperRva = 0x004c41f0;
+constexpr std::uint32_t kStartSpellScribeLikeCallsMemorizeSendPacketWrapperAtRva = 0x0035e6fb;
+constexpr wchar_t kResolverVersion[] = L"v5_memorize_send_trace_v1";
+constexpr wchar_t kPacketId[] = L"CLIENT-OP_MEMORIZE_SEND-TRACE-V1";
 constexpr char kExpectedEqgameSha256[] =
     "2a8702ad9f722704f01355c0750be7d6f164a8b9c9128ba0cf286ea32b405b0e";
 constexpr std::array<std::uint8_t, 37> kGetSpellLevelNeededBytes = {{
@@ -35,6 +37,13 @@ constexpr std::array<std::uint8_t, 33> kCanStartMemmingEntryBytes = {{
     0x83, 0x3d, 0xac, 0x35, 0xe6, 0x00, 0x00, 0x53, 0x56, 0x8b, 0xf1,
     0xb3, 0x01, 0x0f, 0x8f, 0x8f, 0x01, 0x00, 0x00, 0x8b, 0x0d, 0x7c,
     0xfc, 0xd1, 0x00, 0x6a, 0x01, 0xe8, 0xd0, 0x51, 0xf0, 0xff, 0x84,
+}};
+constexpr std::array<std::uint8_t, 52> kMemorizeSendPacketWrapperEntryBytes = {{
+    0x55, 0x8b, 0xec, 0x6a, 0xff, 0x68, 0xd8, 0x91, 0x9a, 0x00, 0x64, 0xa1,
+    0x00, 0x00, 0x00, 0x00, 0x50, 0x51, 0x53, 0x56, 0x57, 0xa1, 0x80, 0x87,
+    0xb6, 0x00, 0x33, 0xc5, 0x50, 0x8d, 0x45, 0xf4, 0x64, 0xa3, 0x00, 0x00,
+    0x00, 0x00, 0x8b, 0xf1, 0x8d, 0xbe, 0x54, 0x02, 0x00, 0x00, 0x8b, 0xcf,
+    0x89, 0x7d, 0xf0, 0xe8,
 }};
 constexpr std::array<std::uint8_t, 68> kHandleRButtonUpEntryBytesPrefix = {{
     0x6a, 0xff, 0x64, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x68, 0x81, 0xa8, 0x98,
@@ -919,6 +928,84 @@ TargetResult DiscoverCanStartMemming(const ImageView& image) {
     return target;
 }
 
+TargetResult DiscoverMemorizeSendPacketWrapper(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    TargetResult target = {L"MemorizeSendPacketWrapper"};
+    std::uintptr_t function_start = 0;
+    const bool rva_found = ResolveRvaAddress(
+        image,
+        kMemorizeSendPacketWrapperRva,
+        kMemorizeSendPacketWrapperEntryBytes.size(),
+        &function_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
+        image,
+        function_start,
+        L"fingerprint_cleanroom_rva",
+        L"MemorizeSendPacketWrapper");
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const bool exact_entry_bytes = rva_found && BytesMatchAtRva(
+        image,
+        kMemorizeSendPacketWrapperRva,
+        kMemorizeSendPacketWrapperEntryBytes.data(),
+        kMemorizeSendPacketWrapperEntryBytes.size());
+    const bool start_spell_scribe_like_calls_wrapper =
+        candidate_executable &&
+        CallAtRvaTargets(
+            image,
+            kStartSpellScribeLikeCallsMemorizeSendPacketWrapperAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) + kMemorizeSendPacketWrapperRva);
+
+    if (!cleanroom_fingerprint.available || !cleanroom_fingerprint.matched) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = cleanroom_fingerprint.failure_reason;
+        target.validation_evidence = cleanroom_fingerprint.evidence;
+        target.reason =
+            L"checked-in cleanroom SHA-256 fingerprint did not match the live eqgame.exe";
+        return target;
+    }
+
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        exact_entry_bytes && start_spell_scribe_like_calls_wrapper,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
+
+    std::wstring evidence = L"cleanroom_rva=";
+    evidence += Hex32(kMemorizeSendPacketWrapperRva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" exact_entry_bytes=";
+    evidence += exact_entry_bytes ? L"yes" : L"no";
+    evidence += L" caller_rva=";
+    evidence += Hex32(kStartSpellScribeLikeCallsMemorizeSendPacketWrapperAtRva);
+    evidence += L" start_spell_scribe_like_calls_wrapper=";
+    evidence += start_spell_scribe_like_calls_wrapper ? L"yes" : L"no";
+    evidence += L" ";
+    evidence += cleanroom_fingerprint.evidence;
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        L"validated by cleanroom RVA, exact entry bytes, and StartSpellScribe-like caller shape",
+        L"MemorizeSendPacketWrapper candidate did not satisfy cleanroom RVA validation",
+        &target);
+    return target;
+}
+
 TargetResult DiscoverIsClassUsablePredicate(
     const ImageView& image,
     const CleanroomFingerprintStatus& cleanroom_fingerprint) {
@@ -942,6 +1029,7 @@ void Initialize() noexcept {
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
     g_result.can_start_memming = {L"CanStartMemming"};
+    g_result.memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
 }
 
 Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
@@ -952,6 +1040,7 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
     g_result.can_start_memming = {L"CanStartMemming"};
+    g_result.memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
 
     if (!discovery_allowed) {
         g_result.reason =
@@ -973,6 +1062,9 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
         g_result.can_start_memming = BuildCapabilityDeniedTarget(
             L"CanStartMemming",
             failure_reason);
+        g_result.memorize_send_packet_wrapper = BuildCapabilityDeniedTarget(
+            L"MemorizeSendPacketWrapper",
+            failure_reason);
         return g_result;
     }
 
@@ -984,6 +1076,8 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
         g_result.is_class_usable_predicate =
             BuildImageUnavailableTarget(L"EQ_Character::IsClassUsablePredicate");
         g_result.can_start_memming = BuildImageUnavailableTarget(L"CanStartMemming");
+        g_result.memorize_send_packet_wrapper =
+            BuildImageUnavailableTarget(L"MemorizeSendPacketWrapper");
         return g_result;
     }
 
@@ -999,6 +1093,8 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
     g_result.is_class_usable_predicate =
         DiscoverIsClassUsablePredicate(image, cleanroom_fingerprint);
     g_result.can_start_memming = DiscoverCanStartMemming(image);
+    g_result.memorize_send_packet_wrapper =
+        DiscoverMemorizeSendPacketWrapper(image, cleanroom_fingerprint);
     return g_result;
 }
 
@@ -1009,6 +1105,7 @@ void Shutdown() noexcept {
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
     g_result.can_start_memming = {L"CanStartMemming"};
+    g_result.memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
 }
 
 Result GetResult() noexcept {
@@ -1021,6 +1118,7 @@ void LogResult(const Result& result) noexcept {
         &result.get_spell_level_needed,
         &result.is_class_usable_predicate,
         &result.can_start_memming,
+        &result.memorize_send_packet_wrapper,
     };
 
     for (const TargetResult* target : targets) {

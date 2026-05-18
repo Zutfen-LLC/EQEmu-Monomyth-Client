@@ -14,8 +14,8 @@
 namespace monomyth::proxy {
 namespace {
 
-constexpr wchar_t kSpellUiDiscoveryPacketId[] = L"CLIENT-SCROLL-SCRIBE-TRACE-V2";
-constexpr wchar_t kSpellUiDiscoveryResolver[] = L"v4_scroll_scribe_trace_v2";
+constexpr wchar_t kSpellUiDiscoveryPacketId[] = L"CLIENT-OP_MEMORIZE_SEND-TRACE-V1";
+constexpr wchar_t kSpellUiDiscoveryResolver[] = L"v5_memorize_send_trace_v1";
 
 INIT_ONCE g_init_once = INIT_ONCE_STATIC_INIT;
 HMODULE g_real_module = nullptr;

@@ -21,6 +21,11 @@ void ObserveReceiveMetadata(
     std::uint32_t payload_length,
     const void* payload,
     std::uintptr_t source_context) noexcept;
+void ObserveSendMetadata(
+    std::uint32_t opcode,
+    std::uint32_t payload_length,
+    std::uintptr_t source_context,
+    std::uint32_t correlation_id) noexcept;
 void Shutdown() noexcept;
 State GetState() noexcept;
 

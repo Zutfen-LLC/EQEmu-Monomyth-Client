@@ -17,6 +17,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Added
 
+- Dev-gated trace-only `OP_MemorizeSpell` send observation behind `MONOMYTH_ENABLE_MEMORIZE_SEND_TRACE=1`, using a validated cleanroom `MemorizeSendPacketWrapper` target, correlated `CanStartMemming` pending/send-absent receipts, and `PacketObserverSend` logs without packet mutation or send-order changes.
 - Cross-platform unit coverage for spell/UI discovery decision policy, including fingerprint-backed validation without runtime exports, missing-cleanroom-target denial, fingerprint mismatch denial, diagnostic-string gating, and independent target outcomes.
 - Checked-in cleanroom Ghidra notes for pinned `eqgame.exe` spell/UI locator candidates in `docs/cleanroom-dll-research/eqgame-spell-ui-ghidra-notes.md`.
 - Dev-gated scroll-scribe trace instrumentation behind `MONOMYTH_ENABLE_SCROLL_SCRIBE_TRACE=1`, with fail-closed discovery/validation for `CInvSlot::HandleRButtonUp` and `EQ_Character::IsClassUsablePredicate`, exact ROF2 SHA-256 gating plus entry-byte validation for both pinned RVAs, and correlation-friendly trace logs that do not alter client behavior. `CanEquip` remains intentionally unpinned and disabled.
@@ -39,6 +40,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 
 ### Documentation
 
+- README documentation for the trace-only `MONOMYTH_ENABLE_MEMORIZE_SEND_TRACE=1` gate, the validated `OP_MemorizeSpell` wrapper seam, correlation semantics, and expected `PacketObserverSend` log format.
 - README documentation for the new scroll-scribe trace gate, target set, correlation log format, and runtime interpretation matrix for right-click gate vs item usability gate vs spell-level gate vs spellbook gate.
 - README documentation for the multiclass spell usability opt-in, expected `GetSpellLevelNeeded` selection behavior, and intentional absence of `CanStartMemming` behavior overrides or `CastSpell` hooks in v1.
 - README now documents the read-only THJ `OP_ServerAuthStats` handler, including minimal `Stat_Struct` parsing, key-based `statClassesBitmask` extraction, malformed-packet rejection, and the no-mutation/no-UI safety boundary.
