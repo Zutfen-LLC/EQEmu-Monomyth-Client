@@ -94,6 +94,12 @@ struct RelativeCallResolution {
     bool resolved = false;
 };
 
+struct JumpThunkResolution {
+    std::uintptr_t terminal_target = 0;
+    std::uint32_t hop_count = 0;
+    bool resolved = false;
+};
+
 constexpr std::array<KnownMemorizeFollowupCallsite, 2> kKnownMemorizeFollowupCallsites = {{
     {
         0x0013e1cd,
@@ -212,6 +218,76 @@ RelativeCallResolution ResolveRelativeCall(
     return resolution;
 }
 
+bool TryResolveRelativeJumpTarget(
+    std::uintptr_t instruction_address,
+    std::uintptr_t* target_out) noexcept {
+    if (instruction_address == 0 || target_out == nullptr) {
+        return false;
+    }
+
+    std::array<std::uint8_t, 5> bytes = {};
+    if (!TryCopyBytes(
+            reinterpret_cast<const void*>(instruction_address),
+            bytes.size(),
+            bytes.data()) ||
+        bytes[0] != 0xe9) {
+        return false;
+    }
+
+    std::int32_t relative = 0;
+    std::memcpy(&relative, bytes.data() + 1, sizeof(relative));
+    *target_out = instruction_address + bytes.size() + relative;
+    return true;
+}
+
+JumpThunkResolution ResolveJumpThunkTarget(std::uintptr_t target_address) noexcept {
+    JumpThunkResolution resolution = {};
+    if (target_address == 0) {
+        return resolution;
+    }
+
+    constexpr std::size_t kThunkPrefixLength = 8;
+    constexpr std::array<std::uint8_t, kThunkPrefixLength> kHotpatchJumpThunkPrefix = {{
+        0x8b, 0xff, 0x55, 0x8b, 0xec, 0x5d, 0xe9, 0x00,
+    }};
+
+    std::uintptr_t current = target_address;
+    for (std::uint32_t hop = 0; hop < 2; ++hop) {
+        std::array<std::uint8_t, kThunkPrefixLength> bytes = {};
+        if (!TryCopyBytes(
+                reinterpret_cast<const void*>(current),
+                bytes.size(),
+                bytes.data())) {
+            return resolution;
+        }
+
+        if (std::memcmp(
+                bytes.data(),
+                kHotpatchJumpThunkPrefix.data(),
+                kHotpatchJumpThunkPrefix.size() - 1) != 0 ||
+            bytes[6] != 0xe9) {
+            if (hop > 0) {
+                resolution.terminal_target = current;
+                resolution.hop_count = hop;
+                resolution.resolved = true;
+            }
+            return resolution;
+        }
+
+        std::uintptr_t jump_target = 0;
+        if (!TryResolveRelativeJumpTarget(current + 6, &jump_target)) {
+            return resolution;
+        }
+
+        current = jump_target;
+        resolution.terminal_target = current;
+        resolution.hop_count = hop + 1;
+        resolution.resolved = true;
+    }
+
+    return resolution;
+}
+
 KnownMemorizeFollowupCallsiteMatch MatchKnownMemorizeFollowupCallsite(
     std::uint32_t caller_return_rva,
     std::uint32_t mode_like,
@@ -274,6 +350,28 @@ void AppendResolvedCallFields(
         message->append(L"wrapper_call");
     } else {
         message->append(L"followup_call");
+    }
+
+    const JumpThunkResolution thunk = ResolveJumpThunkTarget(call.target);
+    if (thunk.resolved && thunk.terminal_target != 0 && thunk.terminal_target != call.target) {
+        message->append(L" ");
+        message->append(prefix);
+        message->append(L"_terminal_target=");
+        message->append(HexPtr(thunk.terminal_target));
+        if (module_base != 0 && thunk.terminal_target >= module_base) {
+            message->append(L" ");
+            message->append(prefix);
+            message->append(L"_terminal_target_rva=");
+            message->append(
+                Hex32(static_cast<std::uint32_t>(thunk.terminal_target - module_base)));
+        }
+        message->append(L" ");
+        message->append(prefix);
+        message->append(L"_terminal_role=jump_thunk_target");
+        message->append(L" ");
+        message->append(prefix);
+        message->append(L"_terminal_hop_count=");
+        message->append(std::to_wstring(thunk.hop_count));
     }
 }
 
