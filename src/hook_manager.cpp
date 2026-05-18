@@ -41,6 +41,15 @@ constexpr std::uint32_t kMemorizeSpellOpcode = 0x217c;
 constexpr std::uint32_t kDeleteSpellOpcode = 0x3358;
 constexpr std::uint32_t kMemorizeSendCorrelationMaxWrapperSends = 8;
 constexpr std::uint32_t kSpellbookScribeCorrelationMaxWrapperSends = 8;
+constexpr std::size_t kScribeGateDescriptorTableOffset = 0x4;
+constexpr std::size_t kScribeGateRelativeOffsetField = 0x4;
+constexpr std::size_t kScribeGateLookupContextBias = 0x8;
+constexpr std::size_t kScribeGateLookupKeyOffset = 0x4;
+constexpr std::size_t kScribeGateNodeRecordOffset = 0x4;
+constexpr std::size_t kScribeGateNodeNextOffset = 0xc;
+constexpr std::size_t kScribeGateResolvedClassIdOffset = 0x3374;
+constexpr std::uint32_t kScribeGateMaxRelativeLookupOffset = 0x00100000;
+constexpr std::size_t kScribeGateMaxLookupNodes = 256;
 constexpr wchar_t kMemorizeSendTraceSliceId[] = L"CLIENT-MEM-SEND-TRACE-001";
 
 using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
@@ -398,18 +407,33 @@ void CaptureStartSpellScribePrecheckClassResolverFromGateContext(
     }
 
     std::uintptr_t descriptor_table = 0;
-    if (!TryCopyObject(reinterpret_cast<const std::uint8_t*>(this_context) + 0x4, &descriptor_table) ||
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(this_context) +
+                kScribeGateDescriptorTableOffset,
+            &descriptor_table) ||
         descriptor_table == 0) {
         return;
     }
 
     std::uint32_t relative_offset = 0;
-    if (!TryCopyObject(reinterpret_cast<const void*>(descriptor_table + 0x4), &relative_offset)) {
+    if (!TryCopyObject(
+            reinterpret_cast<const void*>(descriptor_table + kScribeGateRelativeOffsetField),
+            &relative_offset) ||
+        relative_offset == 0 ||
+        relative_offset > kScribeGateMaxRelativeLookupOffset) {
+        return;
+    }
+
+    const std::uintptr_t this_context_address =
+        reinterpret_cast<std::uintptr_t>(this_context);
+    if (this_context_address >
+        (std::numeric_limits<std::uintptr_t>::max() - relative_offset -
+         kScribeGateLookupContextBias)) {
         return;
     }
 
     const std::uintptr_t lookup_context =
-        reinterpret_cast<std::uintptr_t>(this_context) + relative_offset + 0x8;
+        this_context_address + relative_offset + kScribeGateLookupContextBias;
     snapshot.class_lookup_context = lookup_context;
     snapshot.class_lookup_context_copied = true;
 
@@ -419,13 +443,15 @@ void CaptureStartSpellScribePrecheckClassResolverFromGateContext(
     }
 
     snapshot.class_lookup_key_copied = TryCopyObject(
-        reinterpret_cast<const void*>(lookup_context + 0x4),
+        reinterpret_cast<const void*>(lookup_context + kScribeGateLookupKeyOffset),
         &snapshot.class_lookup_key);
     if (!snapshot.class_lookup_key_copied) {
         return;
     }
 
-    while (node != 0) {
+    for (std::size_t visited_nodes = 0;
+         node != 0 && visited_nodes < kScribeGateMaxLookupNodes;
+         ++visited_nodes) {
         std::uint32_t node_key = 0;
         if (!TryCopyObject(reinterpret_cast<const void*>(node), &node_key)) {
             return;
@@ -433,7 +459,9 @@ void CaptureStartSpellScribePrecheckClassResolverFromGateContext(
 
         if (node_key == snapshot.class_lookup_key) {
             std::uintptr_t class_record = 0;
-            if (!TryCopyObject(reinterpret_cast<const void*>(node + 0x4), &class_record)) {
+            if (!TryCopyObject(
+                    reinterpret_cast<const void*>(node + kScribeGateNodeRecordOffset),
+                    &class_record)) {
                 return;
             }
 
@@ -443,13 +471,16 @@ void CaptureStartSpellScribePrecheckClassResolverFromGateContext(
             snapshot.class_record = reinterpret_cast<void*>(class_record);
             if (class_record != 0) {
                 snapshot.class_id_copied = TryCopyObject(
-                    reinterpret_cast<const void*>(class_record + 0x3374),
+                    reinterpret_cast<const void*>(
+                        class_record + kScribeGateResolvedClassIdOffset),
                     &snapshot.class_id);
             }
             return;
         }
 
-        if (!TryCopyObject(reinterpret_cast<const void*>(node + 0xc), &node)) {
+        if (!TryCopyObject(
+                reinterpret_cast<const void*>(node + kScribeGateNodeNextOffset),
+                &node)) {
             return;
         }
     }
@@ -2350,6 +2381,8 @@ bool MONOMYTH_FASTCALL StartSpellScribePrecheckGateHook(
         snapshot.assigned_mask_getter_called &&
         (snapshot.assigned_mask & current_class_bit) == 0;
 
+    // This override only clears the proven early native-class reject. Later rule helpers,
+    // native-mask hits, and missing authoritative intersections still fall through unchanged.
     if (g_multiclass_spell_usability_enabled &&
         !original_result &&
         require_known_like != 0 &&
@@ -2422,7 +2455,8 @@ void* MONOMYTH_FASTCALL StartSpellScribePrecheckClassResolverHook(
     const bool class_id_copied =
         original_result != nullptr &&
         TryCopyBytes(
-            reinterpret_cast<const std::uint8_t*>(original_result) + 0x3374,
+            reinterpret_cast<const std::uint8_t*>(original_result) +
+                kScribeGateResolvedClassIdOffset,
             sizeof(class_id),
             &class_id);
     if (g_start_spell_scribe_precheck_class_mask_snapshot.active &&
