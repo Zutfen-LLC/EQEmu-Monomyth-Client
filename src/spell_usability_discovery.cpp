@@ -605,6 +605,31 @@ bool CallAtRvaTargets(
     return resolved_target == expected_target;
 }
 
+bool ResolveCallTargetAtRva(
+    const ImageView& image,
+    std::uint32_t call_rva,
+    std::uintptr_t* resolved_target,
+    std::uint8_t* opcode_out) noexcept {
+    if (resolved_target == nullptr || opcode_out == nullptr ||
+        !IsRvaWithinImage(image, call_rva, 5)) {
+        return false;
+    }
+
+    const auto* code = image.base + call_rva;
+    *opcode_out = code[0];
+    if (code[0] != 0xe8) {
+        *resolved_target = 0;
+        return false;
+    }
+
+    std::int32_t relative = 0;
+    std::memcpy(&relative, code + 1, sizeof(relative));
+    const std::uintptr_t call_site =
+        reinterpret_cast<std::uintptr_t>(image.base) + call_rva;
+    *resolved_target = call_site + 5 + relative;
+    return true;
+}
+
 void PopulateCandidateFields(
     const ImageView& image,
     const CandidateSource& candidate,
@@ -950,6 +975,13 @@ TargetResult DiscoverMemorizeSendPacketWrapper(
         kMemorizeSendPacketWrapperRva,
         kMemorizeSendPacketWrapperEntryBytes.data(),
         kMemorizeSendPacketWrapperEntryBytes.size());
+    std::uintptr_t resolved_call_target = 0;
+    std::uint8_t caller_opcode = 0;
+    const bool call_rva_resolved = ResolveCallTargetAtRva(
+        image,
+        kStartSpellScribeLikeCallsMemorizeSendPacketWrapperAtRva,
+        &resolved_call_target,
+        &caller_opcode);
     const bool start_spell_scribe_like_calls_wrapper =
         candidate_executable &&
         CallAtRvaTargets(
@@ -989,8 +1021,27 @@ TargetResult DiscoverMemorizeSendPacketWrapper(
     evidence += candidate_executable ? L"yes" : L"no";
     evidence += L" exact_entry_bytes=";
     evidence += exact_entry_bytes ? L"yes" : L"no";
+    if (rva_found) {
+        evidence += L" expected_entry_bytes=\"";
+        evidence += HexBytes(
+            kMemorizeSendPacketWrapperEntryBytes.data(),
+            kMemorizeSendPacketWrapperEntryBytes.size());
+        evidence += L"\" actual_entry_bytes=\"";
+        evidence += HexBytes(
+            reinterpret_cast<const std::uint8_t*>(function_start),
+            kMemorizeSendPacketWrapperEntryBytes.size());
+        evidence += L"\"";
+    }
     evidence += L" caller_rva=";
     evidence += Hex32(kStartSpellScribeLikeCallsMemorizeSendPacketWrapperAtRva);
+    evidence += L" caller_opcode=";
+    evidence += Hex32(static_cast<std::uint32_t>(caller_opcode));
+    evidence += L" call_rva_resolved=";
+    evidence += call_rva_resolved ? L"yes" : L"no";
+    evidence += L" expected_call_target=";
+    evidence += HexPtr(reinterpret_cast<std::uintptr_t>(image.base) + kMemorizeSendPacketWrapperRva);
+    evidence += L" actual_call_target=";
+    evidence += resolved_call_target == 0 ? L"0x0" : HexPtr(resolved_call_target);
     evidence += L" start_spell_scribe_like_calls_wrapper=";
     evidence += start_spell_scribe_like_calls_wrapper ? L"yes" : L"no";
     evidence += L" ";
