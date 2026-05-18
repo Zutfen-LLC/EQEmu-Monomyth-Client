@@ -11,6 +11,7 @@
 #include <string>
 
 #include "logger.h"
+#include "opcode_reference.h"
 #include "packet_observer.h"
 #include "server_auth_stats_observer.h"
 #include "spell_level_selection.h"
@@ -107,6 +108,16 @@ std::wstring Hex32(std::uint32_t value) {
     std::wstringstream stream;
     stream << L"0x" << std::hex << value;
     return stream.str();
+}
+
+std::uintptr_t GetCallerReturnAddress() noexcept {
+#if defined(_MSC_VER)
+    return reinterpret_cast<std::uintptr_t>(_ReturnAddress());
+#elif defined(__clang__) || defined(__GNUC__)
+    return reinterpret_cast<std::uintptr_t>(__builtin_return_address(0));
+#else
+    return 0;
+#endif
 }
 
 bool TryReadPacketOpcode(
@@ -497,7 +508,13 @@ void LogMemorizeSendDecodeFailure(
 
 void LogMemorizeSendOpcodeMismatch(
     std::uint32_t correlation_id,
-    std::uint32_t opcode) {
+    std::uint32_t opcode,
+    std::uint32_t mode_like,
+    std::uint32_t total_length,
+    const void* packet,
+    void* this_context,
+    std::uintptr_t caller_return_address,
+    bool original_result) {
     if (correlation_id == 0) {
         return;
     }
@@ -508,6 +525,20 @@ void LogMemorizeSendOpcodeMismatch(
     message += std::to_wstring(opcode);
     message += L" observed_opcode_hex=";
     message += Hex32(opcode);
+    message += L" observed_opcode_name=";
+    message += monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
+    message += L" mode_like=";
+    message += std::to_wstring(mode_like);
+    message += L" total_length=";
+    message += std::to_wstring(total_length);
+    message += L" packet_pointer=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(packet));
+    message += L" wrapper_this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" original_result=";
+    message += original_result ? L"true" : L"false";
     AppendActiveScrollCorrelation(&message);
     monomyth::logger::Log(message);
 }
@@ -724,6 +755,7 @@ bool MONOMYTH_FASTCALL MemorizeSendPacketWrapperHook(
     std::uint32_t mode_like,
     const void* packet,
     std::uint32_t total_length) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     ++g_memorize_send_trace_count;
 
     bool opcode_decoded = false;
@@ -774,7 +806,15 @@ bool MONOMYTH_FASTCALL MemorizeSendPacketWrapperHook(
         } else if (opcode == kMemorizeSpellOpcode) {
             g_memorize_send_pending_correlation_id = 0;
         } else {
-            LogMemorizeSendOpcodeMismatch(correlation_id, opcode);
+            LogMemorizeSendOpcodeMismatch(
+                correlation_id,
+                opcode,
+                mode_like,
+                total_length,
+                packet,
+                this_context,
+                caller_return_address,
+                original_result);
             g_memorize_send_pending_correlation_id = 0;
         }
     }
