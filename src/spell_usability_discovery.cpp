@@ -666,6 +666,63 @@ bool ResolveJumpTargetAtRva(
     return true;
 }
 
+bool ResolveHotpatchThunkTerminalTarget(
+    const ImageView& image,
+    std::uint32_t thunk_rva,
+    std::uintptr_t* first_target,
+    std::uintptr_t* terminal_target,
+    std::uint32_t* hop_count) noexcept {
+    if (first_target == nullptr || terminal_target == nullptr || hop_count == nullptr) {
+        return false;
+    }
+
+    *first_target = 0;
+    *terminal_target = 0;
+    *hop_count = 0;
+
+    std::uintptr_t jump_target = 0;
+    std::uint8_t jump_opcode = 0;
+    if (!ResolveJumpTargetAtRva(image, thunk_rva + 6, &jump_target, &jump_opcode)) {
+        return false;
+    }
+
+    *first_target = jump_target;
+    *terminal_target = jump_target;
+    *hop_count = 1;
+
+    const std::uintptr_t module_base = reinterpret_cast<std::uintptr_t>(image.base);
+    if (jump_target < module_base) {
+        return true;
+    }
+
+    const std::uint32_t jump_target_rva =
+        static_cast<std::uint32_t>(jump_target - module_base);
+    if (!IsRvaWithinImage(image, jump_target_rva, 11)) {
+        return true;
+    }
+
+    if (!BytesMatchAtRva(
+            image,
+            jump_target_rva,
+            kPostCanStartMemmingFollowupGateThunkBytes.data(),
+            kPostCanStartMemmingFollowupGateThunkBytes.size())) {
+        return true;
+    }
+
+    std::uintptr_t second_target = 0;
+    if (!ResolveJumpTargetAtRva(
+            image,
+            jump_target_rva + 6,
+            &second_target,
+            &jump_opcode)) {
+        return true;
+    }
+
+    *terminal_target = second_target;
+    *hop_count = 2;
+    return true;
+}
+
 void PopulateCandidateFields(
     const ImageView& image,
     const CandidateSource& candidate,
@@ -1133,12 +1190,14 @@ TargetResult DiscoverPostCanStartMemmingFollowupGate(
         kPostCanStartMemmingFollowupGateThunkBytes.size());
 
     std::uintptr_t resolved_thunk_target = 0;
-    std::uint8_t thunk_opcode = 0;
-    const bool thunk_jump_resolved = ResolveJumpTargetAtRva(
+    std::uintptr_t resolved_thunk_terminal_target = 0;
+    std::uint32_t thunk_hop_count = 0;
+    const bool thunk_jump_resolved = ResolveHotpatchThunkTerminalTarget(
         image,
-        kPostCanStartMemmingFollowupGateThunkRva + 6,
+        kPostCanStartMemmingFollowupGateThunkRva,
         &resolved_thunk_target,
-        &thunk_opcode);
+        &resolved_thunk_terminal_target,
+        &thunk_hop_count);
 
     std::uintptr_t resolved_call_target = 0;
     std::uint8_t caller_opcode = 0;
@@ -1154,7 +1213,7 @@ TargetResult DiscoverPostCanStartMemmingFollowupGate(
             reinterpret_cast<std::uintptr_t>(image.base) + kPostCanStartMemmingFollowupGateThunkRva);
     const bool thunk_targets_body =
         thunk_jump_resolved &&
-        resolved_thunk_target ==
+        resolved_thunk_terminal_target ==
             reinterpret_cast<std::uintptr_t>(image.base) + kPostCanStartMemmingFollowupGateBodyRva;
 
     const DecisionResult decision = EvaluateDecision({
@@ -1184,15 +1243,19 @@ TargetResult DiscoverPostCanStartMemmingFollowupGate(
     evidence += Hex32(kPostCanStartMemmingFollowupGateThunkRva);
     evidence += L" exact_thunk_bytes=";
     evidence += exact_thunk_bytes ? L"yes" : L"no";
-    evidence += L" thunk_opcode=";
-    evidence += Hex32(static_cast<std::uint32_t>(thunk_opcode));
     evidence += L" thunk_jump_resolved=";
     evidence += thunk_jump_resolved ? L"yes" : L"no";
-    evidence += L" expected_thunk_target=";
+    evidence += L" expected_thunk_terminal_target=";
     evidence += HexPtr(
         reinterpret_cast<std::uintptr_t>(image.base) + kPostCanStartMemmingFollowupGateBodyRva);
     evidence += L" actual_thunk_target=";
     evidence += resolved_thunk_target == 0 ? L"0x0" : HexPtr(resolved_thunk_target);
+    evidence += L" actual_thunk_terminal_target=";
+    evidence += resolved_thunk_terminal_target == 0
+        ? L"0x0"
+        : HexPtr(resolved_thunk_terminal_target);
+    evidence += L" thunk_hop_count=";
+    evidence += std::to_wstring(thunk_hop_count);
     evidence += L" caller_rva=";
     evidence += Hex32(kPostCanStartMemmingFloatListThingCallsFollowupThunkAtRva);
     evidence += L" caller_opcode=";
