@@ -439,18 +439,6 @@ std::wstring GetHostProcessPath() noexcept {
     return std::wstring(path, path + length);
 }
 
-bool IsTraceDevOptInPresent() noexcept {
-    wchar_t value[16] = {};
-    constexpr DWORD kValueCapacity = static_cast<DWORD>(sizeof(value) / sizeof(value[0]));
-    const DWORD length =
-        GetEnvironmentVariableW(L"MONOMYTH_ENABLE_SPELL_USABILITY_TRACE", value, kValueCapacity);
-    if (length == 0 || length >= kValueCapacity) {
-        return false;
-    }
-
-    return value[0] == L'1' && value[1] == L'\0';
-}
-
 bool ComputeFileSha256(
     const std::wstring& path,
     std::string* digest_hex) noexcept {
@@ -2081,7 +2069,6 @@ void Initialize() noexcept {
 Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
     g_result = {};
     g_result.allowed = discovery_allowed;
-    g_result.trace_dev_opt_in = IsTraceDevOptInPresent();
     g_result.handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};

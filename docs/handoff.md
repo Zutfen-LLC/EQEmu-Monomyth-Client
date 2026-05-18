@@ -1,8 +1,8 @@
-# Handoff: Secondary-Class Spell Scribe Fixed, Ordinary Memorize Send Path Proven
+# Handoff: Multiclass Spell Usability Runtime-Proven End-to-End
 
 ## Scope
 
-This branch completed the clean-room PAL secondary-class spellbook scribe fix for the ROF2 client hook DLL. The active memorize work no longer points to a blocked ordinary send path. The latest runtime proof shows the real ordinary spellbook memorize send/reset path is `SpellbookMemorizeSendPath` (`0x35db20`), while `MemSpellCommitPath` fast-exits in parallel and is not the truth source for the successful live send.
+This work completed the clean-room PAL secondary-class spellbook scribe fix for the ROF2 client hook DLL and closed the follow-up memorize/cast investigation. Runtime proof now shows multiclass spell usability working end-to-end: secondary-class spells can be scribed, memorized, and cast successfully on live reproduces.
 
 Repo:
 - `/home/zutfen/code/EQEmu-Monomyth-Client`
@@ -17,7 +17,7 @@ Related local references:
 - Multiclass intervention map: `docs/multiclass-identity-intervention-map.md`
 
 Current branch:
-- `codex/memspell-commit-state-240`
+- `main`
 
 ## What Is Now Proven
 
@@ -91,7 +91,16 @@ Later logs show `GetSpellLevelNeeded` choosing the PAL class for the class-13 re
 
 So downstream spell-level selection is already class-mask aware enough for this case once the earlier gate is bypassed.
 
-### 6. `StartSpellMemorizationPath` is a controller-style wrapper, not the real spellbook-window sender
+### 6. Secondary-class memorize and cast are now runtime-proven, not still open
+
+Later live gameplay proof closed the remaining question. After swapping from `MAG/PAL/MNK` to `MAG/PAL/SHD`, the client successfully:
+- scribed secondary-class SHD spells
+- memorized secondary-class SHD spells
+- cast those SHD spells successfully
+
+So there is no longer an active gameplay defect in the multiclass spell usability slice. The remaining earlier memorize investigation was a trace-model correction problem, not an unresolved player-facing failure.
+
+### 7. `StartSpellMemorizationPath` is a controller-style wrapper, not the real spellbook-window sender
 
 Ordinary memorize tracing now proves the long-standing object/signature suspicion was correct:
 - `StartSpellMemorizationPath` (`0x262290`) does run
@@ -100,7 +109,7 @@ Ordinary memorize tracing now proves the long-standing object/signature suspicio
 
 So `0x262290` is useful as an upstream wrapper/correlation seam, but it is not the final ordinary memorize sender.
 
-### 7. `SpellbookMemorizeSendPath` is the real ordinary memorize send/reset path
+### 8. `SpellbookMemorizeSendPath` is the real ordinary memorize send/reset path
 
 The latest reproduce proved the real spellbook-window path:
 - before the decisive send, `SpellbookMemorizeSendPath` saw real pending state on the spellbook window:
@@ -118,7 +127,7 @@ The latest reproduce proved the real spellbook-window path:
 
 So the real ordinary memorize send/reset path is `0x35db20`, not `MemSpellCommitPath`.
 
-### 8. Historical note: `MemSpellCommitPath` fast-exited, but it was not the blocker for successful ordinary memorize
+### 9. Historical note: `MemSpellCommitPath` fast-exited, but it was not the blocker for successful ordinary memorize
 
 Current proven behavior on the successful ordinary memorize reproduce:
 - `CanStartMemming` succeeds
@@ -152,6 +161,11 @@ Existing important seams now on branch:
   - `StartSpellScribePrecheckRule446200`
   - `StartSpellScribePrecheckRule446380`
 
+Durable guardrails to keep in mind:
+- the actual behavior hooks are still `GetSpellLevelNeeded` and `StartSpellScribePrecheckGateHook`
+- the other seams in this list are investigative traces, not proof of an active open defect
+- if a future cleanup wants a smaller runtime trace surface, these investigative seams are the right first candidates to retire
+
 Important nuance:
 - the direct `StartSpellScribePrecheckClassResolver` detour does not install cleanly on this executable because the prologue is unsupported
 - class resolution is instead emulated inside `StartSpellScribePrecheckGateHook` with guarded reads
@@ -159,13 +173,10 @@ Important nuance:
 - the old `PostCanStartMemmingFollowupGate` and `MemSpellCommitPath` traces were removed rather than left as dead or misleading code
 - the real ordinary memorize send/reset proof on this branch lives at `SpellbookMemorizeSendPath` plus `MemorizeSendObserved`
 
-Relevant env flags:
-- `MONOMYTH_ENABLE_PACKET_HOOKS=1`
-- `MONOMYTH_ENABLE_FULL_PACKET_TRACE=1`
-- `MONOMYTH_ENABLE_SPELL_USABILITY_DISCOVERY=1`
-- `MONOMYTH_ENABLE_SPELL_USABILITY_TRACE=1`
-- `MONOMYTH_ENABLE_MEMORIZE_SEND_TRACE=1`
-- `MONOMYTH_ENABLE_MULTICLASS_SPELL_USABILITY=1`
+Relevant runtime behavior:
+- no spell-usability env flags are required anymore
+- validated ROF2 multiclass spell usability is expected native behavior now
+- packet and trace opt-ins were retired after the issue was proven and closed
 
 ## Files Touched For The PAL Scribe Fix
 
@@ -181,13 +192,8 @@ Docs:
 
 ## Current Worktree State
 
-Tracked modified files for this publish:
-- `docs/handoff.md`
-- `src/hook_manager.cpp`
-- `src/runtime_capabilities.cpp`
-- `src/runtime_capabilities.h`
-- `src/spell_usability_discovery.cpp`
-- `src/spell_usability_discovery.h`
+Current checkout:
+- `main`
 
 Untracked local items currently present but not part of this slice:
 - `.agents/`
@@ -202,29 +208,24 @@ Runtime deploy status:
 - latest built `build-cross-i686/dinput8.dll` was copied to `/home/zutfen/everquest_rof2/dinput8.dll`
 - successful PAL reproduce was done with that deployed DLL
 - successful ordinary memorize reproduce was also done with the latest `MemorizeSendObserved` trace patch
+- later live gameplay also proved successful SHD secondary-class scribe, memorize, and cast behavior
 
-## Immediate Next Step
+## Status
 
-1. Treat the PAL secondary-class spellbook scribe fix as proven and complete on the client side.
-2. Stop treating `MemSpellCommitPath` as the ordinary memorize blocker by default.
-3. If further memorize work is needed, center it on `SpellbookMemorizeSendPath` (`0x35db20`) and the wrapper caller at `0x35dd4f`.
-4. Keep documentation, not dormant code, for the removed noisy ordinary-memorize seams.
+- Treat the multiclass spell usability fix as complete unless a fresh contradictory reproduce appears.
+- Do not reopen the ordinary memorize investigation without a real gameplay failure.
+- Treat the remaining trace-rich seams as optional diagnostics, not as evidence of unfinished behavior.
 
-## What The Next Session Should Answer
+## Optional Follow-Ups
 
-Primary question:
-- Is there any remaining real ordinary-memorize defect, or was the outstanding issue only a misidentified trace model?
-
-Secondary question:
-- Should `StartSpellMemorizationPath` keep its current name, or should it be relabeled/documented more explicitly to match its proven controller-wrapper role?
-
-Tertiary question:
-- Which ordinary-memorize traces are still worth keeping after `SpellbookMemorizeSendPath` and `MemorizeSendObserved` proved the real live send path?
+- If desired, reduce the investigative trace surface now that the issue is closed.
+- If desired, relabel or better document `StartSpellMemorizationPath` to reflect its controller-wrapper role more explicitly.
+- If a future gameplay regression appears, start from `SpellbookMemorizeSendPath` and `StartSpellScribePrecheckGateHook`, not from the removed `MemSpellCommitPath` theory.
 
 ## Constraints To Preserve
 
 - Stay clean-room. Do not import THJ or classless DLL gameplay code.
-- Keep ordinary memorize work trace-first unless a fresh real failure is reproduced.
+- Keep future spell usability work trace-first unless a fresh real failure is reproduced.
 - Do not broaden into `CastSpell`, profile spoofing, or spell-record mutation without direct runtime evidence.
 - Preserve the PAL scribe fix's fail-closed behavior; do not generalize it into a wide class spoof or unconditional allow.
 - Treat missing startup capability receipts as a deployment problem first, not a logic conclusion.
@@ -233,4 +234,4 @@ Tertiary question:
 ## Suggested Skills For The Next Session
 
 - `handoff`
-  - to refresh this document again after the memorize commit slice advances
+  - to refresh this document again only if a new spell usability issue appears

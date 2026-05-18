@@ -26,7 +26,6 @@ struct TargetResult {
 
 struct Result {
     bool allowed = false;
-    bool trace_dev_opt_in = false;
     std::wstring reason = L"not run";
     TargetResult handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     TargetResult get_spell_level_needed = {L"GetSpellLevelNeeded"};

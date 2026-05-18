@@ -387,7 +387,7 @@ SpellbookMemStateSnapshot CaptureSpellbookMemState(const void* this_window) noex
 void ResetStartSpellScribePrecheckClassMaskSnapshot(
     std::uint32_t correlation_id) noexcept {
     g_start_spell_scribe_precheck_class_mask_snapshot = {};
-    g_start_spell_scribe_precheck_class_mask_snapshot.active = correlation_id != 0;
+    g_start_spell_scribe_precheck_class_mask_snapshot.active = true;
     g_start_spell_scribe_precheck_class_mask_snapshot.correlation_id = correlation_id;
 }
 
@@ -2101,8 +2101,8 @@ void LogMemorizeSendTraceStartupMarker(
         manifest.memorize_send_packet_wrapper_address != 0;
     std::wstring message = L"MemorizeSendTraceStartup slice_id=";
     message += kMemorizeSendTraceSliceId;
-    message += L" env_enabled=";
-    message += manifest.memorize_send_trace_dev_opt_in ? L"true" : L"false";
+    message += L" capability_enabled=";
+    message += manifest.memorize_send_trace_allowed ? L"true" : L"false";
     message += L" target_validated=";
     message += target_validated ? L"true" : L"false";
     message += L" hook_installed=";
@@ -3237,11 +3237,13 @@ bool InstallStartSpellScribePrecheckModeGetterTrace(
 
 bool InstallStartSpellScribePrecheckGateTrace(
     const monomyth::runtime::Manifest& manifest) noexcept {
-    if (!manifest.spell_usability_trace_allowed ||
+    if (!(manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) ||
         manifest.start_spell_scribe_precheck_gate_state !=
             monomyth::spell_usability_discovery::TargetState::kValidated ||
         manifest.start_spell_scribe_precheck_gate_address == 0) {
-        if (manifest.spell_usability_trace_dev_opt_in) {
+        if (manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) {
             std::wstring message =
                 L"hook_manager: spellbook scribe precheck gate trace denied ";
             message += FormatDiscoveryDetails(
@@ -3389,11 +3391,13 @@ bool InstallStartSpellScribePrecheckClassResolverTrace(
 
 bool InstallStartSpellScribePrecheckAssignedMaskGetterTrace(
     const monomyth::runtime::Manifest& manifest) noexcept {
-    if (!manifest.spell_usability_trace_allowed ||
+    if (!(manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) ||
         manifest.start_spell_scribe_precheck_assigned_mask_getter_state !=
             monomyth::spell_usability_discovery::TargetState::kValidated ||
         manifest.start_spell_scribe_precheck_assigned_mask_getter_address == 0) {
-        if (manifest.spell_usability_trace_dev_opt_in) {
+        if (manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) {
             std::wstring message =
                 L"hook_manager: spellbook scribe precheck assigned-mask getter trace denied ";
             message += FormatDiscoveryDetails(
@@ -3428,11 +3432,13 @@ bool InstallStartSpellScribePrecheckAssignedMaskGetterTrace(
 
 bool InstallStartSpellScribePrecheckRule4462c0Trace(
     const monomyth::runtime::Manifest& manifest) noexcept {
-    if (!manifest.spell_usability_trace_allowed ||
+    if (!(manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) ||
         manifest.start_spell_scribe_precheck_rule_4462c0_state !=
             monomyth::spell_usability_discovery::TargetState::kValidated ||
         manifest.start_spell_scribe_precheck_rule_4462c0_address == 0) {
-        if (manifest.spell_usability_trace_dev_opt_in) {
+        if (manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) {
             std::wstring message =
                 L"hook_manager: spellbook scribe precheck rule 4462c0 trace denied ";
             message += FormatDiscoveryDetails(
@@ -3466,11 +3472,13 @@ bool InstallStartSpellScribePrecheckRule4462c0Trace(
 
 bool InstallStartSpellScribePrecheckRule446190Trace(
     const monomyth::runtime::Manifest& manifest) noexcept {
-    if (!manifest.spell_usability_trace_allowed ||
+    if (!(manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) ||
         manifest.start_spell_scribe_precheck_rule_446190_state !=
             monomyth::spell_usability_discovery::TargetState::kValidated ||
         manifest.start_spell_scribe_precheck_rule_446190_address == 0) {
-        if (manifest.spell_usability_trace_dev_opt_in) {
+        if (manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) {
             std::wstring message =
                 L"hook_manager: spellbook scribe precheck rule 446190 trace denied ";
             message += FormatDiscoveryDetails(
@@ -3504,11 +3512,13 @@ bool InstallStartSpellScribePrecheckRule446190Trace(
 
 bool InstallStartSpellScribePrecheckRule446200Trace(
     const monomyth::runtime::Manifest& manifest) noexcept {
-    if (!manifest.spell_usability_trace_allowed ||
+    if (!(manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) ||
         manifest.start_spell_scribe_precheck_rule_446200_state !=
             monomyth::spell_usability_discovery::TargetState::kValidated ||
         manifest.start_spell_scribe_precheck_rule_446200_address == 0) {
-        if (manifest.spell_usability_trace_dev_opt_in) {
+        if (manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) {
             std::wstring message =
                 L"hook_manager: spellbook scribe precheck rule 446200 trace denied ";
             message += FormatDiscoveryDetails(
@@ -3542,11 +3552,13 @@ bool InstallStartSpellScribePrecheckRule446200Trace(
 
 bool InstallStartSpellScribePrecheckRule446380Trace(
     const monomyth::runtime::Manifest& manifest) noexcept {
-    if (!manifest.spell_usability_trace_allowed ||
+    if (!(manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) ||
         manifest.start_spell_scribe_precheck_rule_446380_state !=
             monomyth::spell_usability_discovery::TargetState::kValidated ||
         manifest.start_spell_scribe_precheck_rule_446380_address == 0) {
-        if (manifest.spell_usability_trace_dev_opt_in) {
+        if (manifest.spell_usability_trace_allowed ||
+            manifest.multiclass_spell_usability_allowed) {
             std::wstring message =
                 L"hook_manager: spellbook scribe precheck rule 446380 trace denied ";
             message += FormatDiscoveryDetails(
@@ -4173,48 +4185,12 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         }
     }
 
-    if (manifest.spell_usability_trace_allowed) {
-        if (!InstallSpellbookDispatcherTrace(manifest) &&
-            manifest.spellbook_dispatcher_state ==
-                monomyth::spell_usability_discovery::TargetState::kValidated) {
-            monomyth::logger::Log(
-                L"hook_manager: spell usability trace install failed target=SpellbookDispatcher");
-        }
-        if (!InstallStartSpellScribePathTrace(manifest) &&
-            manifest.start_spell_scribe_path_state ==
-                monomyth::spell_usability_discovery::TargetState::kValidated) {
-            monomyth::logger::Log(
-                L"hook_manager: spell usability trace install failed target=StartSpellScribePath");
-        }
-        if (!InstallStartSpellScribePrecheckModeGetterTrace(manifest) &&
-            manifest.start_spell_scribe_precheck_mode_getter_state ==
-                monomyth::spell_usability_discovery::TargetState::kValidated) {
-            monomyth::logger::Log(
-                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckModeGetter");
-        }
+    if (manifest.spell_usability_trace_allowed || manifest.multiclass_spell_usability_allowed) {
         if (!InstallStartSpellScribePrecheckGateTrace(manifest) &&
             manifest.start_spell_scribe_precheck_gate_state ==
                 monomyth::spell_usability_discovery::TargetState::kValidated) {
             monomyth::logger::Log(
                 L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckGate");
-        }
-        if (!InstallStartSpellScribePrecheckLookupTrace(manifest) &&
-            manifest.start_spell_scribe_precheck_lookup_state ==
-                monomyth::spell_usability_discovery::TargetState::kValidated) {
-            monomyth::logger::Log(
-                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckLookup");
-        }
-        if (!InstallStartSpellScribePrecheckFastAcceptTrace(manifest) &&
-            manifest.start_spell_scribe_precheck_fast_accept_state ==
-                monomyth::spell_usability_discovery::TargetState::kValidated) {
-            monomyth::logger::Log(
-                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckFastAccept");
-        }
-        if (!InstallStartSpellScribePrecheckClassResolverTrace(manifest) &&
-            manifest.start_spell_scribe_precheck_class_resolver_state ==
-                monomyth::spell_usability_discovery::TargetState::kValidated) {
-            monomyth::logger::Log(
-                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckClassResolver");
         }
         if (!InstallStartSpellScribePrecheckAssignedMaskGetterTrace(manifest) &&
             manifest.start_spell_scribe_precheck_assigned_mask_getter_state ==
@@ -4245,6 +4221,45 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
                 monomyth::spell_usability_discovery::TargetState::kValidated) {
             monomyth::logger::Log(
                 L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckRule446380");
+        }
+    }
+
+    if (manifest.spell_usability_trace_allowed) {
+        if (!InstallSpellbookDispatcherTrace(manifest) &&
+            manifest.spellbook_dispatcher_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=SpellbookDispatcher");
+        }
+        if (!InstallStartSpellScribePathTrace(manifest) &&
+            manifest.start_spell_scribe_path_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePath");
+        }
+        if (!InstallStartSpellScribePrecheckModeGetterTrace(manifest) &&
+            manifest.start_spell_scribe_precheck_mode_getter_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckModeGetter");
+        }
+        if (!InstallStartSpellScribePrecheckLookupTrace(manifest) &&
+            manifest.start_spell_scribe_precheck_lookup_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckLookup");
+        }
+        if (!InstallStartSpellScribePrecheckFastAcceptTrace(manifest) &&
+            manifest.start_spell_scribe_precheck_fast_accept_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckFastAccept");
+        }
+        if (!InstallStartSpellScribePrecheckClassResolverTrace(manifest) &&
+            manifest.start_spell_scribe_precheck_class_resolver_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: spell usability trace install failed target=StartSpellScribePrecheckClassResolver");
         }
         if (InstallCanStartMemmingTrace(manifest)) {
             spell_trace_active = true;
