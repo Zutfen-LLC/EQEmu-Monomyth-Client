@@ -34,6 +34,7 @@ constexpr std::size_t kJmpPatchBytes = 5;
 constexpr std::size_t kMaxStolenBytes = 16;
 constexpr std::uint64_t kSpellTraceInitialLogCount = 20;
 constexpr std::uint64_t kSpellTraceLogInterval = 100;
+constexpr std::uint32_t kMemorizeSpellOpcode = 0x217c;
 
 using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
@@ -54,6 +55,11 @@ using IsClassUsablePredicateFn = int (MONOMYTH_THISCALL*)(
 using CanStartMemmingFn = bool (MONOMYTH_THISCALL*)(
     void* this_window,
     int spell_or_book_index);
+using MemorizeSendPacketWrapperFn = bool (MONOMYTH_THISCALL*)(
+    void* this_context,
+    std::uint32_t mode_like,
+    const void* packet,
+    std::uint32_t total_length);
 
 struct InlineDetour {
     std::uint8_t* target = nullptr;
@@ -70,14 +76,19 @@ InlineDetour g_handle_rbutton_up_detour = {};
 InlineDetour g_get_spell_level_needed_detour = {};
 InlineDetour g_is_class_usable_predicate_detour = {};
 InlineDetour g_can_start_memming_detour = {};
+InlineDetour g_memorize_send_packet_wrapper_detour = {};
 ReceiveDispatchFn g_original_receive_dispatch = nullptr;
 HandleRButtonUpFn g_original_handle_rbutton_up = nullptr;
 GetSpellLevelNeededFn g_original_get_spell_level_needed = nullptr;
 IsClassUsablePredicateFn g_original_is_class_usable_predicate = nullptr;
 CanStartMemmingFn g_original_can_start_memming = nullptr;
+MemorizeSendPacketWrapperFn g_original_memorize_send_packet_wrapper = nullptr;
 std::uint64_t g_get_spell_level_needed_trace_count = 0;
 std::uint64_t g_can_start_memming_trace_count = 0;
+std::uint64_t g_memorize_send_trace_count = 0;
 std::uint64_t g_scroll_scribe_event_count = 0;
+std::uint32_t g_memorize_send_pending_correlation_id = 0;
+std::uint32_t g_memorize_send_correlation_count = 0;
 std::uint32_t g_scroll_scribe_active_correlation_id = 0;
 bool g_scroll_scribe_active_logging = false;
 std::wstring g_handle_rbutton_up_evidence_source = L"unknown";
@@ -434,6 +445,20 @@ void AppendActiveScrollCorrelation(std::wstring* message) {
     message->append(std::to_wstring(g_scroll_scribe_active_correlation_id));
 }
 
+void LogPendingMemorizeSendGap(const wchar_t* reason) {
+    if (g_memorize_send_pending_correlation_id == 0) {
+        return;
+    }
+
+    std::wstring message = L"SpellUsabilityTrace target=MemorizeSend status=not_observed correlation=";
+    message += std::to_wstring(g_memorize_send_pending_correlation_id);
+    message += L" reason=";
+    message += reason == nullptr ? L"unknown" : reason;
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+    g_memorize_send_pending_correlation_id = 0;
+}
+
 void LogScrollScribeTrace(
     const wchar_t* target,
     const std::wstring& suffix) {
@@ -582,17 +607,61 @@ bool MONOMYTH_FASTCALL CanStartMemmingHook(
     const bool original_result =
         g_original_can_start_memming(this_window, spell_or_book_index);
     ++g_can_start_memming_trace_count;
+    std::uint32_t memorize_send_correlation = 0;
+    if (original_result) {
+        if (g_memorize_send_pending_correlation_id != 0) {
+            LogPendingMemorizeSendGap(L"next_can_start_memming");
+        }
+        memorize_send_correlation = ++g_memorize_send_correlation_count;
+        g_memorize_send_pending_correlation_id = memorize_send_correlation;
+    }
     if (ShouldLogSpellTrace(g_can_start_memming_trace_count)) {
         std::wstring message = L"SpellUsabilityTrace target=CanStartMemming spell_or_book_index=";
         message += std::to_wstring(spell_or_book_index);
         message += L" original_result=";
         message += original_result ? L"true" : L"false";
+        if (memorize_send_correlation != 0) {
+            message += L" memorize_send_correlation=";
+            message += std::to_wstring(memorize_send_correlation);
+            message += L" send_observation=pending";
+        }
         AppendActiveScrollCorrelation(&message);
         message += L" observed_count=";
         message += std::to_wstring(g_can_start_memming_trace_count);
         monomyth::logger::Log(message);
     }
     return original_result;
+}
+
+bool MONOMYTH_FASTCALL MemorizeSendPacketWrapperHook(
+    void* this_context,
+    void*,
+    std::uint32_t mode_like,
+    const void* packet,
+    std::uint32_t total_length) noexcept {
+    if (packet != nullptr && total_length >= sizeof(std::uint16_t)) {
+        std::uint16_t opcode = 0;
+        std::memcpy(&opcode, packet, sizeof(opcode));
+        if (opcode == kMemorizeSpellOpcode) {
+            ++g_memorize_send_trace_count;
+            const std::uint32_t correlation_id = g_memorize_send_pending_correlation_id;
+            const std::uint32_t payload_length = total_length > sizeof(opcode)
+                ? total_length - static_cast<std::uint32_t>(sizeof(opcode))
+                : 0;
+            monomyth::packet_observer::ObserveSendMetadata(
+                opcode,
+                payload_length,
+                reinterpret_cast<std::uintptr_t>(this_context),
+                correlation_id);
+            g_memorize_send_pending_correlation_id = 0;
+        }
+    }
+
+    return g_original_memorize_send_packet_wrapper(
+        this_context,
+        mode_like,
+        packet,
+        total_length);
 }
 
 void MONOMYTH_FASTCALL HandleRButtonUpHook(
@@ -790,6 +859,44 @@ bool InstallCanStartMemmingTrace(const monomyth::runtime::Manifest& manifest) no
     return true;
 }
 
+bool InstallMemorizeSendTrace(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.memorize_send_trace_allowed ||
+        manifest.memorize_send_packet_wrapper_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.memorize_send_packet_wrapper_address == 0) {
+        if (manifest.memorize_send_trace_dev_opt_in) {
+            std::wstring message = L"hook_manager: memorize send trace denied ";
+            message += FormatDiscoveryDetails(
+                L"MemorizeSendPacketWrapper",
+                manifest.memorize_send_packet_wrapper_evidence_source,
+                manifest.memorize_send_packet_wrapper_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.memorize_send_packet_wrapper_address),
+            reinterpret_cast<void*>(&MemorizeSendPacketWrapperHook),
+            &g_memorize_send_packet_wrapper_detour,
+            reinterpret_cast<void**>(&g_original_memorize_send_packet_wrapper),
+            L"MemorizeSendPacketWrapper trace")) {
+        RemoveInlineDetour(&g_memorize_send_packet_wrapper_detour);
+        g_original_memorize_send_packet_wrapper = nullptr;
+        return false;
+    }
+
+    std::wstring message =
+        L"hook_manager: memorize send trace installed target=MemorizeSendPacketWrapper address=";
+    message += HexPtr(manifest.memorize_send_packet_wrapper_address);
+    message += L" opcode_name=OP_MemorizeSpell";
+    monomyth::logger::Log(message);
+    g_memorize_send_trace_count = 0;
+    g_memorize_send_pending_correlation_id = 0;
+    g_memorize_send_correlation_count = 0;
+    return true;
+}
+
 bool RemoveReceiveDispatchHook() noexcept {
     if (!g_receive_dispatch_detour.installed) {
         return true;
@@ -860,6 +967,22 @@ bool RemoveCanStartMemmingTrace() noexcept {
     return false;
 }
 
+bool RemoveMemorizeSendTrace() noexcept {
+    if (!g_memorize_send_packet_wrapper_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_memorize_send_packet_wrapper_detour)) {
+        g_original_memorize_send_packet_wrapper = nullptr;
+        g_memorize_send_pending_correlation_id = 0;
+        monomyth::logger::Log(
+            L"hook_manager: memorize send trace removed target=MemorizeSendPacketWrapper");
+        return true;
+    }
+
+    return false;
+}
+
 #else
 
 bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest&) noexcept {
@@ -884,6 +1007,10 @@ bool InstallCanStartMemmingTrace(const monomyth::runtime::Manifest&) noexcept {
     return false;
 }
 
+bool InstallMemorizeSendTrace(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
 bool RemoveGetSpellLevelNeededTrace() noexcept {
     return true;
 }
@@ -893,6 +1020,10 @@ bool RemoveScrollScribeTraceHooks() noexcept {
 }
 
 bool RemoveCanStartMemmingTrace() noexcept {
+    return true;
+}
+
+bool RemoveMemorizeSendTrace() noexcept {
     return true;
 }
 
@@ -908,6 +1039,7 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     bool receive_hook_active = false;
     bool spell_trace_active = false;
     bool scroll_scribe_trace_active = false;
+    bool memorize_send_trace_active = false;
     bool spell_behavior_active = false;
 
     if (manifest.packet_hooks_allowed && !InstallReceiveDispatchHook(manifest)) {
@@ -969,8 +1101,28 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         monomyth::logger::Log(message);
     }
 
+    if (manifest.memorize_send_trace_allowed) {
+        if (InstallMemorizeSendTrace(manifest)) {
+            memorize_send_trace_active = true;
+        } else if (
+            manifest.memorize_send_packet_wrapper_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: memorize send trace install failed target=MemorizeSendPacketWrapper");
+        }
+    } else if (manifest.memorize_send_trace_dev_opt_in) {
+        std::wstring message =
+            L"hook_manager: memorize send trace skipped reason=\"";
+        message += manifest.memorize_send_trace_reason.empty()
+            ? L"unknown"
+            : manifest.memorize_send_trace_reason;
+        message += L"\"";
+        monomyth::logger::Log(message);
+    }
+
     g_initialized = true;
-    if (receive_hook_active || spell_trace_active || scroll_scribe_trace_active || spell_behavior_active) {
+    if (receive_hook_active || spell_trace_active || scroll_scribe_trace_active ||
+        memorize_send_trace_active || spell_behavior_active) {
         std::wstring message = L"hook_manager: initialized (";
         bool first = true;
         if (receive_hook_active) {
@@ -989,6 +1141,13 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
                 message += L", ";
             }
             message += L"scroll scribe trace";
+            first = false;
+        }
+        if (memorize_send_trace_active) {
+            if (!first) {
+                message += L", ";
+            }
+            message += L"memorize send trace";
             first = false;
         }
         if (spell_behavior_active) {
@@ -1016,6 +1175,11 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         message += manifest.scroll_scribe_trace_reason.empty()
             ? L"unknown"
             : manifest.scroll_scribe_trace_reason;
+        message += L"\"";
+        message += L" memorize_send_trace_reason=\"";
+        message += manifest.memorize_send_trace_reason.empty()
+            ? L"unknown"
+            : manifest.memorize_send_trace_reason;
         message += L"\"";
         monomyth::logger::Log(message);
     }
@@ -1048,6 +1212,14 @@ void Shutdown() noexcept {
     if (!RemoveCanStartMemmingTrace()) {
         monomyth::logger::Log(
             L"hook_manager: shutdown deferred because CanStartMemming trace removal failed");
+        return;
+    }
+    if (g_memorize_send_pending_correlation_id != 0) {
+        LogPendingMemorizeSendGap(L"hook_shutdown");
+    }
+    if (!RemoveMemorizeSendTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because memorize send trace removal failed");
         return;
     }
 

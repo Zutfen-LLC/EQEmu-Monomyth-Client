@@ -27,6 +27,8 @@ struct Manifest {
     bool spell_usability_trace_allowed = false;
     bool scroll_scribe_trace_dev_opt_in = false;
     bool scroll_scribe_trace_allowed = false;
+    bool memorize_send_trace_dev_opt_in = false;
+    bool memorize_send_trace_allowed = false;
     bool multiclass_spell_usability_dev_opt_in = false;
     bool multiclass_spell_usability_allowed = false;
     bool ui_hooks_allowed = false;
@@ -42,6 +44,8 @@ struct Manifest {
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     monomyth::spell_usability_discovery::TargetState can_start_memming_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState memorize_send_packet_wrapper_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     std::uintptr_t runtime_module_base = 0;
     std::uint32_t receive_dispatch_rva = 0;
     std::uintptr_t receive_dispatch_address = 0;
@@ -53,6 +57,8 @@ struct Manifest {
     std::uintptr_t is_class_usable_predicate_address = 0;
     std::uint32_t can_start_memming_rva = 0;
     std::uintptr_t can_start_memming_address = 0;
+    std::uint32_t memorize_send_packet_wrapper_rva = 0;
+    std::uintptr_t memorize_send_packet_wrapper_address = 0;
     std::wstring handle_rbutton_up_evidence_source = L"not_attempted";
     std::wstring handle_rbutton_up_failure_reason = L"not_attempted";
     std::wstring get_spell_level_needed_evidence_source = L"not_attempted";
@@ -61,12 +67,15 @@ struct Manifest {
     std::wstring is_class_usable_predicate_failure_reason = L"not_attempted";
     std::wstring can_start_memming_evidence_source = L"not_attempted";
     std::wstring can_start_memming_failure_reason = L"not_attempted";
+    std::wstring memorize_send_packet_wrapper_evidence_source = L"not_attempted";
+    std::wstring memorize_send_packet_wrapper_failure_reason = L"not_attempted";
     std::wstring reason = L"manifest unavailable";
     std::wstring packet_hooks_reason = L"packet hooks unavailable";
     std::wstring receive_introspection_reason = L"receive introspection unavailable";
     std::wstring spell_usability_discovery_reason = L"spell usability discovery unavailable";
     std::wstring spell_usability_trace_reason = L"spell usability trace unavailable";
     std::wstring scroll_scribe_trace_reason = L"scroll scribe trace unavailable";
+    std::wstring memorize_send_trace_reason = L"memorize send trace unavailable";
     std::wstring multiclass_spell_usability_reason =
         L"multiclass spell usability unavailable";
 };

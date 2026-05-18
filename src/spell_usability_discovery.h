@@ -32,6 +32,7 @@ struct Result {
     TargetResult get_spell_level_needed = {L"GetSpellLevelNeeded"};
     TargetResult is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
     TargetResult can_start_memming = {L"CanStartMemming"};
+    TargetResult memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
 };
 
 void Initialize() noexcept;

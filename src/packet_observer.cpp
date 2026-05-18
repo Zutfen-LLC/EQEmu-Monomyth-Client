@@ -40,6 +40,7 @@ constexpr std::array<std::uint32_t, 1> kDefaultAllowlist = {
 
 std::atomic<State> g_state = State::kUnavailable;
 std::atomic<std::uint64_t> g_observed_count = 0;
+std::atomic<std::uint64_t> g_observed_send_count = 0;
 std::atomic<bool> g_introspection_enabled = false;
 std::atomic<std::uint64_t> g_introspection_match_count = 0;
 std::atomic<std::uint64_t> g_introspection_skip_count = 0;
@@ -260,24 +261,26 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         return current;
     }
 
-    if (!manifest.packet_hooks_allowed) {
+    if (!manifest.packet_hooks_allowed && !manifest.memorize_send_trace_allowed) {
         g_state.store(State::kDisabledByCapability);
         std::wstring message =
-            L"PacketObserver state=disabled_by_capability packet_hooks_allowed=false receive_dispatch_discovery=";
-        message += monomyth::receive_dispatch_discovery::StateName(
-            manifest.receive_dispatch_discovery_state);
-        message += L" reason=\"";
-        if (manifest.packet_hooks_reason.empty()) {
-            message += L"unknown";
-        } else {
+            L"PacketObserver state=disabled_by_capability receive_packet_hooks_allowed=false memorize_send_trace_allowed=false";
+        if (!manifest.packet_hooks_reason.empty()) {
+            message += L" receive_reason=\"";
             message += manifest.packet_hooks_reason;
+            message += L"\"";
         }
-        message += L"\"";
+        if (!manifest.memorize_send_trace_reason.empty()) {
+            message += L" send_reason=\"";
+            message += manifest.memorize_send_trace_reason;
+            message += L"\"";
+        }
         monomyth::logger::Log(message);
         return g_state.load();
     }
 
     g_observed_count.store(0);
+    g_observed_send_count.store(0);
     g_introspection_match_count.store(0);
     g_introspection_skip_count.store(0);
     g_introspection_enabled.store(manifest.receive_introspection_allowed);
@@ -297,7 +300,11 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     }
 
     std::wstring message =
-        L"PacketObserver state=initialized mode=metadata_only log_policy=first_50_then_every_500";
+        L"PacketObserver state=initialized recv_log_policy=first_50_then_every_500 send_log_policy=first_50_then_every_500";
+    message += L" recv_metadata=";
+    message += manifest.packet_hooks_allowed ? L"true" : L"false";
+    message += L" memorize_send_trace=";
+    message += manifest.memorize_send_trace_allowed ? L"true" : L"false";
     if (manifest.receive_introspection_allowed) {
         message += L" recv_introspection=true recv_introspection_prefix_cap=16";
         message += L" recv_introspection_safety_ceiling=";
@@ -411,6 +418,36 @@ void ObserveReceiveMetadata(
     monomyth::logger::Log(introspection_message.str());
 }
 
+void ObserveSendMetadata(
+    std::uint32_t opcode,
+    std::uint32_t payload_length,
+    std::uintptr_t source_context,
+    std::uint32_t correlation_id) noexcept {
+    if (g_state.load() != State::kInitialized) {
+        return;
+    }
+
+    const std::uint64_t sequence = g_observed_send_count.fetch_add(1) + 1;
+    if (!ShouldLogPacket(sequence)) {
+        return;
+    }
+
+    std::wstringstream message;
+    const std::wstring_view opcode_name = monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
+    message
+        << L"PacketObserverSend"
+        << L" seq=" << sequence
+        << L" opcode=" << opcode
+        << L" opcode_hex=" << Hex32(opcode)
+        << L" opcode_name=" << opcode_name
+        << L" payload_length=" << payload_length
+        << L" source_context=" << HexPtr(source_context);
+    if (correlation_id != 0) {
+        message << L" memorize_send_correlation=" << correlation_id;
+    }
+    monomyth::logger::Log(message.str());
+}
+
 void Shutdown() noexcept {
     const State previous = g_state.exchange(State::kShutdown);
     if (previous == State::kUnavailable || previous == State::kShutdown) {
@@ -420,6 +457,7 @@ void Shutdown() noexcept {
     std::wstringstream message;
     message << L"PacketObserver state=shutdown observed_receive_count="
             << g_observed_count.load()
+            << L" observed_send_count=" << g_observed_send_count.load()
             << L" introspection_match_count=" << g_introspection_match_count.load()
             << L" introspection_skip_count=" << g_introspection_skip_count.load();
     monomyth::logger::Log(message.str());
