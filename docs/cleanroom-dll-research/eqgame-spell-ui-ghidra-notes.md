@@ -28,7 +28,7 @@ Pinned candidates:
   - Caller evidence: calls `GetSpellLevelNeeded` at `0x0075bea5`
 - `MemorizeSendPacketWrapper`
   - VA: `0x008c51f0`
-  - RVA: `0x004c41f0`
+  - RVA: `0x004c51f0`
   - Shape: `thiscall`, `ECX=this`, three stack args `(mode_like, packet_ptr, total_length)`
   - Entry bytes:
     - `55 8b ec 6a ff 68 d8 91 9a 00 64 a1 00 00 00 00`

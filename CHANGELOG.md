@@ -15,6 +15,7 @@ The format is based on Keep a Changelog, and this project currently tracks chang
 - The default receive-introspection allowlist is now narrowed to opcode `0x7dfc`; opcode `0x2958` is no longer introspected by default and remains available only through the existing local override environment variable for targeted experiments.
 - Receive introspection allowlist overrides now accept exact ROF2 opcode names from the local reference table as well as numeric opcode ids, while keeping the default allowlist at `0x7dfc` / `OP_ClientUpdate`.
 - Memorize-send discovery failure evidence now includes the live wrapper entry bytes and the pinned caller's live opcode/resolved target alongside expected values, so `unsupported_prologue` failures are directly diagnosable without weakening validation.
+- Memorize-send discovery now pins `MemorizeSendPacketWrapper` to cleanroom RVA `0x004c51f0`, aligning the checked-in cleanroom notes with the live caller-resolved target and removing the stale `0x004c41f0` typo.
 
 ### Added
 
