@@ -1039,6 +1039,14 @@ void LogMemSpellCommitPathCall(
         message += L" state_244=";
         message += std::to_wstring(state_244);
     }
+    if (state_240_copied) {
+        message += L" inferred_exit_reason=";
+        if (state_240 == 0xffffffffu) {
+            message += L"state_240_unset_fast_exit";
+        } else {
+            message += L"state_240_not_unset";
+        }
+    }
     message += L" memorize_context_status=";
     message += memorize_context_copied ? L"copied" : L"unreadable";
     if (memorize_context_copied) {
@@ -1050,6 +1058,12 @@ void LogMemSpellCommitPathCall(
     if (module_base != 0 && caller_return_address >= module_base) {
         message += L" caller_return_rva=";
         message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+        message += L" caller_site_label=";
+        if (caller_return_address - module_base == 0x36275b) {
+            message += L"MemSpellCommitCaller";
+        } else {
+            message += L"unknown";
+        }
     }
     message += L" original_result=";
     message += std::to_wstring(original_result);
