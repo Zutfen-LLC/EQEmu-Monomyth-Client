@@ -1,8 +1,8 @@
-# Handoff: Secondary-Class Spell Scribe Fixed, Memorize Commit Still Blocked
+# Handoff: Secondary-Class Spell Scribe Fixed, Ordinary Memorize Send Path Proven
 
 ## Scope
 
-This branch completed the clean-room PAL secondary-class spellbook scribe fix for the ROF2 client hook DLL. The remaining active problem is ordinary spellbook memorize commit still fast-exiting before the real send/commit path completes.
+This branch completed the clean-room PAL secondary-class spellbook scribe fix for the ROF2 client hook DLL. The active memorize work no longer points to a blocked ordinary send path. The latest runtime proof shows the real ordinary spellbook memorize send/reset path is `SpellbookMemorizeSendPath` (`0x35db20`), while `MemSpellCommitPath` fast-exits in parallel and is not the truth source for the successful live send.
 
 Repo:
 - `/home/zutfen/code/EQEmu-Monomyth-Client`
@@ -17,7 +17,7 @@ Related local references:
 - Multiclass intervention map: `docs/multiclass-identity-intervention-map.md`
 
 Current branch:
-- `codex/client-memorize-send-trace-001`
+- `codex/memspell-commit-state-240`
 
 ## What Is Now Proven
 
@@ -91,21 +91,43 @@ Later logs show `GetSpellLevelNeeded` choosing the PAL class for the class-13 re
 
 So downstream spell-level selection is already class-mask aware enough for this case once the earlier gate is bypassed.
 
-### 6. Ordinary spellbook memorize commit is still a separate blocker
+### 6. `StartSpellMemorizationPath` is a controller-style wrapper, not the real spellbook-window sender
 
-The remaining live problem is not scribing. It is the memorize commit path.
+Ordinary memorize tracing now proves the long-standing object/signature suspicion was correct:
+- `StartSpellMemorizationPath` (`0x262290`) does run
+- but its `controller_this` does not match the real spellbook window
+- the real spellbook window state does not mutate there
 
-Current proven behavior:
-- `CanStartMemming` can succeed
-- `StartSpellMemorizationPath` can run
-- `MemSpellCommitPath` is reached
-- `MemSpellCommitPath` still fast-exits with `inferred_exit_reason=state_240_unset_fast_exit`
-- failing snapshots show:
-  - `state_238=0x7b`
+So `0x262290` is useful as an upstream wrapper/correlation seam, but it is not the final ordinary memorize sender.
+
+### 7. `SpellbookMemorizeSendPath` is the real ordinary memorize send/reset path
+
+The latest reproduce proved the real spellbook-window path:
+- before the decisive send, `SpellbookMemorizeSendPath` saw real pending state on the spellbook window:
+  - `state_234=0x6`
+  - `state_238=0xd8`
+  - `state_23c=0x2`
   - `state_240=0xffffffff`
-  - `state_244=0`
+- that first call returned `21`, which behaves like a remaining-delay/countdown style result rather than a final commit result
+- the actual outbound `OP_MemorizeSpell` send was then observed from wrapper caller `0x35dd4f`
+- the new `MemorizeSendObserved` trace labeled that caller as `SpellbookMemorizeSendPathWrapperCallsite`
+- immediately after the send, `SpellbookMemorizeSendPath` ran again and reset:
+  - `state_234=0xffffffff`
+  - `state_238=0xffffffff`
+  - `state_23c=0x0`
 
-So the next slice should start from spellbook memorize state initialization before `MemSpellCommitPath`, not from the PAL scribe gate again.
+So the real ordinary memorize send/reset path is `0x35db20`, not `MemSpellCommitPath`.
+
+### 8. Historical note: `MemSpellCommitPath` fast-exited, but it was not the blocker for successful ordinary memorize
+
+Current proven behavior on the successful ordinary memorize reproduce:
+- `CanStartMemming` succeeds
+- `StartSpellMemorizationPath` runs as an upstream controller wrapper
+- `SpellbookMemorizeSendPath` sees the real pending state and later drives the real `OP_MemorizeSpell` send
+- `MemSpellCommitPath` still fast-exits with `inferred_exit_reason=state_240_unset_fast_exit`
+- despite that fast-exit, the live packet send and recv echo still happen
+
+That historical proof is preserved here for context, but the `MemSpellCommitPath` and `PostCanStartMemmingFollowupGate` traces were removed from the branch after they were proven non-authoritative and noisy.
 
 ## Instrumentation Present On This Branch
 
@@ -113,8 +135,9 @@ Existing important seams now on branch:
 - `GetSpellLevelNeeded`
 - `CanStartMemming` trace
 - `StartSpellMemorizationPath` trace
-- `MemSpellCommitPath` trace
 - outbound `OP_MemorizeSpell` send observation
+- `MemorizeSendObserved`
+- `SpellbookMemorizeSendPath`
 - dev-gated full packet trace mode
 - `SpellbookDispatcher`
 - `StartSpellScribePath`
@@ -133,6 +156,8 @@ Important nuance:
 - the direct `StartSpellScribePrecheckClassResolver` detour does not install cleanly on this executable because the prologue is unsupported
 - class resolution is instead emulated inside `StartSpellScribePrecheckGateHook` with guarded reads
 - that emulated path is what produced the successful `class_id=13` proof and the shipped override decision
+- the old `PostCanStartMemmingFollowupGate` and `MemSpellCommitPath` traces were removed rather than left as dead or misleading code
+- the real ordinary memorize send/reset proof on this branch lives at `SpellbookMemorizeSendPath` plus `MemorizeSendObserved`
 
 Relevant env flags:
 - `MONOMYTH_ENABLE_PACKET_HOOKS=1`
@@ -176,32 +201,34 @@ Build status:
 Runtime deploy status:
 - latest built `build-cross-i686/dinput8.dll` was copied to `/home/zutfen/everquest_rof2/dinput8.dll`
 - successful PAL reproduce was done with that deployed DLL
+- successful ordinary memorize reproduce was also done with the latest `MemorizeSendObserved` trace patch
 
 ## Immediate Next Step
 
-1. PR and merge the PAL secondary-class spellbook scribe fix.
-2. Start a new narrow slice for the memorize commit blocker.
-3. Focus on how `StartSpellMemorizationPath` and its upstream callers are supposed to initialize `state_240` before `MemSpellCommitPath`.
-4. Keep the next trace/behavior work scoped to the memorize path instead of reopening the now-proven scribe gate.
+1. Treat the PAL secondary-class spellbook scribe fix as proven and complete on the client side.
+2. Stop treating `MemSpellCommitPath` as the ordinary memorize blocker by default.
+3. If further memorize work is needed, center it on `SpellbookMemorizeSendPath` (`0x35db20`) and the wrapper caller at `0x35dd4f`.
+4. Keep documentation, not dormant code, for the removed noisy ordinary-memorize seams.
 
 ## What The Next Session Should Answer
 
 Primary question:
-- What writes the spellbook state consumed as `state_240`, and why is it still unset on the failing memorize path?
+- Is there any remaining real ordinary-memorize defect, or was the outstanding issue only a misidentified trace model?
 
 Secondary question:
-- Is the bad `state_240` caused by a missed earlier branch in `StartSpellMemorizationPath`, a skipped follow-up helper, or a separate class/usability gate before commit?
+- Should `StartSpellMemorizationPath` keep its current name, or should it be relabeled/documented more explicitly to match its proven controller-wrapper role?
 
 Tertiary question:
-- Can the memorize commit blocker be solved with another narrow authoritative-class-aware adjustment, or is it a different state-shape issue unrelated to multiclass gating?
+- Which ordinary-memorize traces are still worth keeping after `SpellbookMemorizeSendPath` and `MemorizeSendObserved` proved the real live send path?
 
 ## Constraints To Preserve
 
 - Stay clean-room. Do not import THJ or classless DLL gameplay code.
-- Keep new memorize-path investigation trace-first until the exact missing state transition is proven.
+- Keep ordinary memorize work trace-first unless a fresh real failure is reproduced.
 - Do not broaden into `CastSpell`, profile spoofing, or spell-record mutation without direct runtime evidence.
 - Preserve the PAL scribe fix's fail-closed behavior; do not generalize it into a wide class spoof or unconditional allow.
 - Treat missing startup capability receipts as a deployment problem first, not a logic conclusion.
+- Do not reintroduce `MemSpellCommitPath` or `PostCanStartMemmingFollowupGate` tracing without fresh contradictory evidence that the current proven send path is insufficient.
 
 ## Suggested Skills For The Next Session
 
