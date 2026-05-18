@@ -23,6 +23,9 @@ constexpr std::uint32_t kCanStartMemmingRva = 0x0035bd40;
 constexpr std::uint32_t kCanStartMemmingCallsGetSpellLevelNeededAtRva = 0x0035bea5;
 constexpr std::uint32_t kMemorizeSendPacketWrapperRva = 0x004c51f0;
 constexpr std::uint32_t kStartSpellScribeLikeCallsMemorizeSendPacketWrapperAtRva = 0x0035e6fb;
+constexpr std::uint32_t kPostCanStartMemmingFollowupGateThunkRva = 0x004db151;
+constexpr std::uint32_t kPostCanStartMemmingFollowupGateBodyRva = 0x004dc0f5;
+constexpr std::uint32_t kPostCanStartMemmingFloatListThingCallsFollowupThunkAtRva = 0x0018cabd;
 constexpr wchar_t kResolverVersion[] = L"v5_memorize_send_trace_v1";
 constexpr wchar_t kPacketId[] = L"CLIENT-OP_MEMORIZE_SEND-TRACE-V1";
 constexpr char kExpectedEqgameSha256[] =
@@ -44,6 +47,14 @@ constexpr std::array<std::uint8_t, 52> kMemorizeSendPacketWrapperEntryBytes = {{
     0xb6, 0x00, 0x33, 0xc5, 0x50, 0x8d, 0x45, 0xf4, 0x64, 0xa3, 0x00, 0x00,
     0x00, 0x00, 0x8b, 0xf1, 0x8d, 0xbe, 0x54, 0x02, 0x00, 0x00, 0x8b, 0xcf,
     0x89, 0x7d, 0xf0, 0xe8,
+}};
+constexpr std::array<std::uint8_t, 11> kPostCanStartMemmingFollowupGateThunkBytes = {{
+    0x8b, 0xff, 0x55, 0x8b, 0xec, 0x5d, 0xe9, 0xea, 0xff, 0xff, 0xff,
+}};
+constexpr std::array<std::uint8_t, 26> kPostCanStartMemmingFollowupGateBodyBytes = {{
+    0x8b, 0xff, 0x55, 0x8b, 0xec, 0x83, 0x7d, 0x08, 0x00, 0x74, 0x2d, 0xff,
+    0x75, 0x08, 0x6a, 0x00, 0xff, 0x35, 0x98, 0x49, 0x5d, 0x01, 0xff, 0x15,
+    0x68, 0x01,
 }};
 constexpr std::array<std::uint8_t, 68> kHandleRButtonUpEntryBytesPrefix = {{
     0x6a, 0xff, 0x64, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x68, 0x81, 0xa8, 0x98,
@@ -630,6 +641,31 @@ bool ResolveCallTargetAtRva(
     return true;
 }
 
+bool ResolveJumpTargetAtRva(
+    const ImageView& image,
+    std::uint32_t jump_rva,
+    std::uintptr_t* resolved_target,
+    std::uint8_t* opcode_out) noexcept {
+    if (resolved_target == nullptr || opcode_out == nullptr ||
+        !IsRvaWithinImage(image, jump_rva, 5)) {
+        return false;
+    }
+
+    const auto* code = image.base + jump_rva;
+    *opcode_out = code[0];
+    if (code[0] != 0xe9) {
+        *resolved_target = 0;
+        return false;
+    }
+
+    std::int32_t relative = 0;
+    std::memcpy(&relative, code + 1, sizeof(relative));
+    const std::uintptr_t jump_site =
+        reinterpret_cast<std::uintptr_t>(image.base) + jump_rva;
+    *resolved_target = jump_site + 5 + relative;
+    return true;
+}
+
 void PopulateCandidateFields(
     const ImageView& image,
     const CandidateSource& candidate,
@@ -1057,6 +1093,134 @@ TargetResult DiscoverMemorizeSendPacketWrapper(
     return target;
 }
 
+TargetResult DiscoverPostCanStartMemmingFollowupGate(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    TargetResult target = {L"PostCanStartMemmingFollowupGate"};
+
+    if (!cleanroom_fingerprint.available || !cleanroom_fingerprint.matched) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = cleanroom_fingerprint.failure_reason;
+        target.validation_evidence = cleanroom_fingerprint.evidence;
+        target.reason =
+            L"checked-in cleanroom SHA-256 fingerprint did not match the live eqgame.exe";
+        return target;
+    }
+
+    std::uintptr_t body_start = 0;
+    const bool body_rva_found = ResolveRvaAddress(
+        image,
+        kPostCanStartMemmingFollowupGateBodyRva,
+        kPostCanStartMemmingFollowupGateBodyBytes.size(),
+        &body_start);
+    CandidateSource candidate = BuildFingerprintCandidate(
+        image,
+        body_start,
+        L"fingerprint_rva",
+        L"PostCanStartMemmingFollowupGate");
+    const bool candidate_executable =
+        candidate.address != 0 && IsExecutableAddress(image, candidate.address);
+    const bool exact_body_bytes = body_rva_found && BytesMatchAtRva(
+        image,
+        kPostCanStartMemmingFollowupGateBodyRva,
+        kPostCanStartMemmingFollowupGateBodyBytes.data(),
+        kPostCanStartMemmingFollowupGateBodyBytes.size());
+    const bool exact_thunk_bytes = BytesMatchAtRva(
+        image,
+        kPostCanStartMemmingFollowupGateThunkRva,
+        kPostCanStartMemmingFollowupGateThunkBytes.data(),
+        kPostCanStartMemmingFollowupGateThunkBytes.size());
+
+    std::uintptr_t resolved_thunk_target = 0;
+    std::uint8_t thunk_opcode = 0;
+    const bool thunk_jump_resolved = ResolveJumpTargetAtRva(
+        image,
+        kPostCanStartMemmingFollowupGateThunkRva + 6,
+        &resolved_thunk_target,
+        &thunk_opcode);
+
+    std::uintptr_t resolved_call_target = 0;
+    std::uint8_t caller_opcode = 0;
+    const bool call_rva_resolved = ResolveCallTargetAtRva(
+        image,
+        kPostCanStartMemmingFloatListThingCallsFollowupThunkAtRva,
+        &resolved_call_target,
+        &caller_opcode);
+    const bool float_list_thing_calls_followup_thunk =
+        CallAtRvaTargets(
+            image,
+            kPostCanStartMemmingFloatListThingCallsFollowupThunkAtRva,
+            reinterpret_cast<std::uintptr_t>(image.base) + kPostCanStartMemmingFollowupGateThunkRva);
+    const bool thunk_targets_body =
+        thunk_jump_resolved &&
+        resolved_thunk_target ==
+            reinterpret_cast<std::uintptr_t>(image.base) + kPostCanStartMemmingFollowupGateBodyRva;
+
+    const DecisionResult decision = EvaluateDecision({
+        true,
+        true,
+        body_rva_found,
+        false,
+        false,
+        false,
+        candidate_executable,
+        exact_body_bytes && exact_thunk_bytes &&
+            float_list_thing_calls_followup_thunk && thunk_targets_body,
+        false,
+        false,
+        false,
+        false,
+        false,
+    });
+
+    std::wstring evidence = L"body_rva=";
+    evidence += Hex32(kPostCanStartMemmingFollowupGateBodyRva);
+    evidence += L" executable=";
+    evidence += candidate_executable ? L"yes" : L"no";
+    evidence += L" exact_body_bytes=";
+    evidence += exact_body_bytes ? L"yes" : L"no";
+    evidence += L" thunk_rva=";
+    evidence += Hex32(kPostCanStartMemmingFollowupGateThunkRva);
+    evidence += L" exact_thunk_bytes=";
+    evidence += exact_thunk_bytes ? L"yes" : L"no";
+    evidence += L" thunk_opcode=";
+    evidence += Hex32(static_cast<std::uint32_t>(thunk_opcode));
+    evidence += L" thunk_jump_resolved=";
+    evidence += thunk_jump_resolved ? L"yes" : L"no";
+    evidence += L" expected_thunk_target=";
+    evidence += HexPtr(
+        reinterpret_cast<std::uintptr_t>(image.base) + kPostCanStartMemmingFollowupGateBodyRva);
+    evidence += L" actual_thunk_target=";
+    evidence += resolved_thunk_target == 0 ? L"0x0" : HexPtr(resolved_thunk_target);
+    evidence += L" caller_rva=";
+    evidence += Hex32(kPostCanStartMemmingFloatListThingCallsFollowupThunkAtRva);
+    evidence += L" caller_opcode=";
+    evidence += Hex32(static_cast<std::uint32_t>(caller_opcode));
+    evidence += L" call_rva_resolved=";
+    evidence += call_rva_resolved ? L"yes" : L"no";
+    evidence += L" expected_call_target=";
+    evidence += HexPtr(
+        reinterpret_cast<std::uintptr_t>(image.base) + kPostCanStartMemmingFollowupGateThunkRva);
+    evidence += L" actual_call_target=";
+    evidence += resolved_call_target == 0 ? L"0x0" : HexPtr(resolved_call_target);
+    evidence += L" float_list_thing_calls_followup_thunk=";
+    evidence += float_list_thing_calls_followup_thunk ? L"yes" : L"no";
+    evidence += L" thunk_targets_body=";
+    evidence += thunk_targets_body ? L"yes" : L"no";
+    evidence += L" ";
+    evidence += cleanroom_fingerprint.evidence;
+    ApplyDecision(
+        image,
+        candidate,
+        decision,
+        evidence,
+        L"validated by fingerprint-gated body RVA, hotpatch thunk jump, and FloatListThing caller shape",
+        L"PostCanStartMemmingFollowupGate candidate did not satisfy downstream followup validation",
+        &target);
+    return target;
+}
+
 TargetResult DiscoverIsClassUsablePredicate(
     const ImageView& image,
     const CleanroomFingerprintStatus& cleanroom_fingerprint) {
@@ -1081,6 +1245,7 @@ void Initialize() noexcept {
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
     g_result.can_start_memming = {L"CanStartMemming"};
     g_result.memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
+    g_result.post_can_start_memming_followup_gate = {L"PostCanStartMemmingFollowupGate"};
 }
 
 Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
@@ -1092,6 +1257,7 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
     g_result.can_start_memming = {L"CanStartMemming"};
     g_result.memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
+    g_result.post_can_start_memming_followup_gate = {L"PostCanStartMemmingFollowupGate"};
 
     if (!discovery_allowed) {
         g_result.reason =
@@ -1116,6 +1282,9 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
         g_result.memorize_send_packet_wrapper = BuildCapabilityDeniedTarget(
             L"MemorizeSendPacketWrapper",
             failure_reason);
+        g_result.post_can_start_memming_followup_gate = BuildCapabilityDeniedTarget(
+            L"PostCanStartMemmingFollowupGate",
+            failure_reason);
         return g_result;
     }
 
@@ -1129,6 +1298,8 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
         g_result.can_start_memming = BuildImageUnavailableTarget(L"CanStartMemming");
         g_result.memorize_send_packet_wrapper =
             BuildImageUnavailableTarget(L"MemorizeSendPacketWrapper");
+        g_result.post_can_start_memming_followup_gate =
+            BuildImageUnavailableTarget(L"PostCanStartMemmingFollowupGate");
         return g_result;
     }
 
@@ -1146,6 +1317,8 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
     g_result.can_start_memming = DiscoverCanStartMemming(image);
     g_result.memorize_send_packet_wrapper =
         DiscoverMemorizeSendPacketWrapper(image, cleanroom_fingerprint);
+    g_result.post_can_start_memming_followup_gate =
+        DiscoverPostCanStartMemmingFollowupGate(image, cleanroom_fingerprint);
     return g_result;
 }
 
@@ -1157,6 +1330,7 @@ void Shutdown() noexcept {
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
     g_result.can_start_memming = {L"CanStartMemming"};
     g_result.memorize_send_packet_wrapper = {L"MemorizeSendPacketWrapper"};
+    g_result.post_can_start_memming_followup_gate = {L"PostCanStartMemmingFollowupGate"};
 }
 
 Result GetResult() noexcept {
@@ -1170,6 +1344,7 @@ void LogResult(const Result& result) noexcept {
         &result.is_class_usable_predicate,
         &result.can_start_memming,
         &result.memorize_send_packet_wrapper,
+        &result.post_can_start_memming_followup_gate,
     };
 
     for (const TargetResult* target : targets) {

@@ -65,6 +65,8 @@ using MemorizeSendPacketWrapperFn = bool (MONOMYTH_THISCALL*)(
     std::uint32_t mode_like,
     const void* packet,
     std::uint32_t total_length);
+using PostCanStartMemmingFollowupGateFn = int (__cdecl*)(
+    void* gate_argument);
 
 struct InlineDetour {
     std::uint8_t* target = nullptr;
@@ -123,12 +125,14 @@ InlineDetour g_get_spell_level_needed_detour = {};
 InlineDetour g_is_class_usable_predicate_detour = {};
 InlineDetour g_can_start_memming_detour = {};
 InlineDetour g_memorize_send_packet_wrapper_detour = {};
+InlineDetour g_post_can_start_memming_followup_gate_detour = {};
 ReceiveDispatchFn g_original_receive_dispatch = nullptr;
 HandleRButtonUpFn g_original_handle_rbutton_up = nullptr;
 GetSpellLevelNeededFn g_original_get_spell_level_needed = nullptr;
 IsClassUsablePredicateFn g_original_is_class_usable_predicate = nullptr;
 CanStartMemmingFn g_original_can_start_memming = nullptr;
 MemorizeSendPacketWrapperFn g_original_memorize_send_packet_wrapper = nullptr;
+PostCanStartMemmingFollowupGateFn g_original_post_can_start_memming_followup_gate = nullptr;
 std::uint64_t g_get_spell_level_needed_trace_count = 0;
 std::uint64_t g_can_start_memming_trace_count = 0;
 std::uint64_t g_memorize_send_trace_count = 0;
@@ -138,6 +142,7 @@ std::uint32_t g_memorize_send_correlation_count = 0;
 std::uint32_t g_memorize_send_pending_wrapper_sends = 0;
 std::uint32_t g_scroll_scribe_active_correlation_id = 0;
 std::uintptr_t g_memorize_send_packet_wrapper_address = 0;
+std::uintptr_t g_post_can_start_memming_followup_gate_address = 0;
 bool g_scroll_scribe_active_logging = false;
 std::wstring g_handle_rbutton_up_evidence_source = L"unknown";
 std::wstring g_is_class_usable_predicate_evidence_source = L"unknown";
@@ -928,6 +933,40 @@ void LogMemorizeSendBudgetExhausted(
     monomyth::logger::Log(message);
 }
 
+void LogPostCanStartMemmingFollowupGateCall(
+    std::uint32_t correlation_id,
+    void* gate_argument,
+    std::uintptr_t caller_return_address,
+    int original_result) {
+    if (correlation_id == 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"SpellUsabilityTrace target=PostCanStartMemmingFollowupGate correlation=";
+    message += std::to_wstring(correlation_id);
+    message += L" gate_address=";
+    message += HexPtr(g_post_can_start_memming_followup_gate_address);
+    if (module_base != 0 && g_post_can_start_memming_followup_gate_address >= module_base) {
+        message += L" gate_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            g_post_can_start_memming_followup_gate_address - module_base));
+    }
+    message += L" gate_argument=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(gate_argument));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    AppendActiveScrollCorrelation(&message);
+    monomyth::logger::Log(message);
+}
+
 void LogMemorizeSendTraceStartupMarker(
     const monomyth::runtime::Manifest& manifest,
     bool hook_installed) {
@@ -1222,6 +1261,21 @@ bool MONOMYTH_FASTCALL MemorizeSendPacketWrapperHook(
     return original_result;
 }
 
+int __cdecl PostCanStartMemmingFollowupGateHook(
+    void* gate_argument) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const int original_result =
+        g_original_post_can_start_memming_followup_gate(gate_argument);
+    if (g_memorize_send_pending_correlation_id != 0) {
+        LogPostCanStartMemmingFollowupGateCall(
+            g_memorize_send_pending_correlation_id,
+            gate_argument,
+            caller_return_address,
+            original_result);
+    }
+    return original_result;
+}
+
 void MONOMYTH_FASTCALL HandleRButtonUpHook(
     void* this_slot,
     void*,
@@ -1457,6 +1511,44 @@ bool InstallMemorizeSendTrace(const monomyth::runtime::Manifest& manifest) noexc
     return true;
 }
 
+bool InstallPostCanStartMemmingFollowupGateTrace(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.memorize_send_trace_allowed ||
+        manifest.post_can_start_memming_followup_gate_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.post_can_start_memming_followup_gate_address == 0) {
+        if (manifest.memorize_send_trace_dev_opt_in) {
+            std::wstring message =
+                L"hook_manager: post-CanStartMemming followup trace denied ";
+            message += FormatDiscoveryDetails(
+                L"PostCanStartMemmingFollowupGate",
+                manifest.post_can_start_memming_followup_gate_evidence_source,
+                manifest.post_can_start_memming_followup_gate_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(manifest.post_can_start_memming_followup_gate_address),
+            reinterpret_cast<void*>(&PostCanStartMemmingFollowupGateHook),
+            &g_post_can_start_memming_followup_gate_detour,
+            reinterpret_cast<void**>(&g_original_post_can_start_memming_followup_gate),
+            L"PostCanStartMemmingFollowupGate trace")) {
+        RemoveInlineDetour(&g_post_can_start_memming_followup_gate_detour);
+        g_original_post_can_start_memming_followup_gate = nullptr;
+        return false;
+    }
+
+    g_post_can_start_memming_followup_gate_address =
+        manifest.post_can_start_memming_followup_gate_address;
+    std::wstring message =
+        L"hook_manager: post-CanStartMemming followup trace installed target=PostCanStartMemmingFollowupGate address=";
+    message += HexPtr(manifest.post_can_start_memming_followup_gate_address);
+    monomyth::logger::Log(message);
+    return true;
+}
+
 bool RemoveReceiveDispatchHook() noexcept {
     if (!g_receive_dispatch_detour.installed) {
         return true;
@@ -1545,6 +1637,22 @@ bool RemoveMemorizeSendTrace() noexcept {
     return false;
 }
 
+bool RemovePostCanStartMemmingFollowupGateTrace() noexcept {
+    if (!g_post_can_start_memming_followup_gate_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_post_can_start_memming_followup_gate_detour)) {
+        g_original_post_can_start_memming_followup_gate = nullptr;
+        g_post_can_start_memming_followup_gate_address = 0;
+        monomyth::logger::Log(
+            L"hook_manager: post-CanStartMemming followup trace removed target=PostCanStartMemmingFollowupGate");
+        return true;
+    }
+
+    return false;
+}
+
 #else
 
 bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest&) noexcept {
@@ -1573,6 +1681,10 @@ bool InstallMemorizeSendTrace(const monomyth::runtime::Manifest&) noexcept {
     return false;
 }
 
+bool InstallPostCanStartMemmingFollowupGateTrace(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
 bool RemoveGetSpellLevelNeededTrace() noexcept {
     return true;
 }
@@ -1586,6 +1698,10 @@ bool RemoveCanStartMemmingTrace() noexcept {
 }
 
 bool RemoveMemorizeSendTrace() noexcept {
+    return true;
+}
+
+bool RemovePostCanStartMemmingFollowupGateTrace() noexcept {
     return true;
 }
 
@@ -1671,6 +1787,12 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
                 monomyth::spell_usability_discovery::TargetState::kValidated) {
             monomyth::logger::Log(
                 L"hook_manager: memorize send trace install failed target=MemorizeSendPacketWrapper");
+        }
+        if (!InstallPostCanStartMemmingFollowupGateTrace(manifest) &&
+            manifest.post_can_start_memming_followup_gate_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: post-CanStartMemming followup trace install failed target=PostCanStartMemmingFollowupGate");
         }
     } else if (manifest.memorize_send_trace_dev_opt_in) {
         std::wstring message =
@@ -1783,6 +1905,11 @@ void Shutdown() noexcept {
     if (!RemoveMemorizeSendTrace()) {
         monomyth::logger::Log(
             L"hook_manager: shutdown deferred because memorize send trace removal failed");
+        return;
+    }
+    if (!RemovePostCanStartMemmingFollowupGateTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because post-CanStartMemming followup trace removal failed");
         return;
     }
 

@@ -470,6 +470,22 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
         message += L" memorize_send_packet_wrapper_address=";
         message += HexPtr(manifest.memorize_send_packet_wrapper_address);
     }
+    message += L" post_can_start_memming_followup_gate_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.post_can_start_memming_followup_gate_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"post_can_start_memming_followup_gate",
+        manifest.post_can_start_memming_followup_gate_evidence_source,
+        manifest.post_can_start_memming_followup_gate_failure_reason);
+    if (manifest.post_can_start_memming_followup_gate_rva != 0) {
+        message += L" post_can_start_memming_followup_gate_rva=";
+        message += Hex32(manifest.post_can_start_memming_followup_gate_rva);
+    }
+    if (manifest.post_can_start_memming_followup_gate_address != 0) {
+        message += L" post_can_start_memming_followup_gate_address=";
+        message += HexPtr(manifest.post_can_start_memming_followup_gate_address);
+    }
     message += L" reason=\"";
     message += NormalizeReason(manifest.reason.c_str());
     message += L"\"";
@@ -596,6 +612,16 @@ void ApplySpellUsabilityDiscovery(
         discovery.memorize_send_packet_wrapper.evidence_source;
     manifest->memorize_send_packet_wrapper_failure_reason =
         discovery.memorize_send_packet_wrapper.failure_reason;
+    manifest->post_can_start_memming_followup_gate_state =
+        discovery.post_can_start_memming_followup_gate.state;
+    manifest->post_can_start_memming_followup_gate_rva =
+        discovery.post_can_start_memming_followup_gate.candidate_rva;
+    manifest->post_can_start_memming_followup_gate_address =
+        discovery.post_can_start_memming_followup_gate.candidate_address;
+    manifest->post_can_start_memming_followup_gate_evidence_source =
+        discovery.post_can_start_memming_followup_gate.evidence_source;
+    manifest->post_can_start_memming_followup_gate_failure_reason =
+        discovery.post_can_start_memming_followup_gate.failure_reason;
     manifest->scroll_scribe_trace_dev_opt_in = IsScrollScribeTraceDevOptInPresent();
     manifest->memorize_send_trace_dev_opt_in = IsMemorizeSendTraceDevOptInPresent();
     manifest->multiclass_spell_usability_dev_opt_in =
