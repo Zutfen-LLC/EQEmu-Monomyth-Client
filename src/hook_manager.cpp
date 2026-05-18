@@ -66,8 +66,7 @@ using MemorizeSendPacketWrapperFn = bool (MONOMYTH_THISCALL*)(
     const void* packet,
     std::uint32_t total_length);
 using MemSpellCommitPathFn = int (MONOMYTH_THISCALL*)(
-    void* this_window,
-    std::uint32_t entry_argument);
+    void* this_window);
 using PostCanStartMemmingFollowupGateFn = int (__cdecl*)(
     void* gate_argument);
 
@@ -976,7 +975,6 @@ void LogPostCanStartMemmingFollowupGateCall(
 void LogMemSpellCommitPathCall(
     std::uint32_t correlation_id,
     void* this_window,
-    std::uint32_t entry_argument,
     std::uintptr_t caller_return_address,
     int original_result) {
     if (correlation_id == 0) {
@@ -1023,8 +1021,6 @@ void LogMemSpellCommitPathCall(
     }
     message += L" this=";
     message += HexPtr(reinterpret_cast<std::uintptr_t>(this_window));
-    message += L" entry_argument=";
-    message += std::to_wstring(entry_argument);
     message += L" state_238_status=";
     message += state_238_copied ? L"copied" : L"unreadable";
     if (state_238_copied) {
@@ -1357,16 +1353,14 @@ bool MONOMYTH_FASTCALL MemorizeSendPacketWrapperHook(
 
 int MONOMYTH_FASTCALL MemSpellCommitPathHook(
     void* this_window,
-    void*,
-    std::uint32_t entry_argument) noexcept {
+    void*) noexcept {
     const std::uint32_t correlation_id = g_memorize_send_pending_correlation_id;
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     const int original_result =
-        g_original_mem_spell_commit_path(this_window, entry_argument);
+        g_original_mem_spell_commit_path(this_window);
     LogMemSpellCommitPathCall(
         correlation_id,
         this_window,
-        entry_argument,
         caller_return_address,
         original_result);
     return original_result;
