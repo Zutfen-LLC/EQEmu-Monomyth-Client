@@ -30,6 +30,8 @@ struct Result {
     TargetResult handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     TargetResult get_spell_level_needed = {L"GetSpellLevelNeeded"};
     TargetResult is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
+    TargetResult can_equip = {L"EQ_Character::CanEquip"};
+    TargetResult inv_slot_mgr_move_item = {L"CInvSlotMgr::MoveItem"};
     TargetResult spellbook_dispatcher = {L"SpellbookDispatcher"};
     TargetResult start_spell_scribe_path = {L"StartSpellScribePath"};
     TargetResult start_spell_scribe_precheck_mode_getter = {

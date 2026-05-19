@@ -101,6 +101,7 @@ Manifest BuildCapabilityManifest(
     manifest.scroll_scribe_trace_allowed = false;
     manifest.memorize_send_trace_allowed = false;
     manifest.multiclass_spell_usability_allowed = false;
+    manifest.multiclass_item_usability_allowed = false;
     manifest.ui_hooks_allowed = false;
     manifest.heartbeat_allowed = manifest.hooks_allowed;
     manifest.reason = NormalizeReason(fingerprint.reason.c_str());
@@ -121,6 +122,8 @@ Manifest BuildCapabilityManifest(
         L"memorize send tracing retired; re-add explicitly if needed";
     manifest.multiclass_spell_usability_reason =
         L"default ROF2 multiclass spell usability pending target validation";
+    manifest.multiclass_item_usability_reason =
+        L"default ROF2 multiclass item usability pending target validation";
     return manifest;
 }
 
@@ -156,6 +159,8 @@ Manifest BuildDisabledCapabilityManifest(
         L"memorize send tracing retired; disabled before fingerprint/discovery gates";
     manifest.multiclass_spell_usability_reason =
         L"default multiclass spell usability disabled before fingerprint/discovery gates";
+    manifest.multiclass_item_usability_reason =
+        L"default multiclass item usability disabled before fingerprint/discovery gates";
     return manifest;
 }
 
@@ -211,6 +216,11 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
         &message,
         L"multiclass_spell_usability_allowed=",
         manifest.multiclass_spell_usability_allowed);
+    message += L" ";
+    AppendBoolField(
+        &message,
+        L"multiclass_item_usability_allowed=",
+        manifest.multiclass_item_usability_allowed);
     message += L" ";
     AppendBoolField(&message, L"ui_hooks_allowed=", manifest.ui_hooks_allowed);
     message += L" ";
@@ -279,6 +289,38 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     if (manifest.is_class_usable_predicate_address != 0) {
         message += L" is_class_usable_predicate_address=";
         message += HexPtr(manifest.is_class_usable_predicate_address);
+    }
+    message += L" can_equip_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.can_equip_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"can_equip",
+        manifest.can_equip_evidence_source,
+        manifest.can_equip_failure_reason);
+    if (manifest.can_equip_rva != 0) {
+        message += L" can_equip_rva=";
+        message += Hex32(manifest.can_equip_rva);
+    }
+    if (manifest.can_equip_address != 0) {
+        message += L" can_equip_address=";
+        message += HexPtr(manifest.can_equip_address);
+    }
+    message += L" inv_slot_mgr_move_item_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.inv_slot_mgr_move_item_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"inv_slot_mgr_move_item",
+        manifest.inv_slot_mgr_move_item_evidence_source,
+        manifest.inv_slot_mgr_move_item_failure_reason);
+    if (manifest.inv_slot_mgr_move_item_rva != 0) {
+        message += L" inv_slot_mgr_move_item_rva=";
+        message += Hex32(manifest.inv_slot_mgr_move_item_rva);
+    }
+    if (manifest.inv_slot_mgr_move_item_address != 0) {
+        message += L" inv_slot_mgr_move_item_address=";
+        message += HexPtr(manifest.inv_slot_mgr_move_item_address);
     }
     message += L" spellbook_dispatcher_state=";
     message += monomyth::spell_usability_discovery::TargetStateName(
@@ -563,6 +605,9 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" multiclass_spell_usability_reason=\"";
     message += NormalizeReason(manifest.multiclass_spell_usability_reason.c_str());
     message += L"\"";
+    message += L" multiclass_item_usability_reason=\"";
+    message += NormalizeReason(manifest.multiclass_item_usability_reason.c_str());
+    message += L"\"";
     monomyth::logger::Log(message);
 }
 
@@ -636,6 +681,20 @@ void ApplySpellUsabilityDiscovery(
         discovery.is_class_usable_predicate.evidence_source;
     manifest->is_class_usable_predicate_failure_reason =
         discovery.is_class_usable_predicate.failure_reason;
+    manifest->can_equip_state = discovery.can_equip.state;
+    manifest->can_equip_rva = discovery.can_equip.candidate_rva;
+    manifest->can_equip_address = discovery.can_equip.candidate_address;
+    manifest->can_equip_evidence_source = discovery.can_equip.evidence_source;
+    manifest->can_equip_failure_reason = discovery.can_equip.failure_reason;
+    manifest->inv_slot_mgr_move_item_state = discovery.inv_slot_mgr_move_item.state;
+    manifest->inv_slot_mgr_move_item_rva =
+        discovery.inv_slot_mgr_move_item.candidate_rva;
+    manifest->inv_slot_mgr_move_item_address =
+        discovery.inv_slot_mgr_move_item.candidate_address;
+    manifest->inv_slot_mgr_move_item_evidence_source =
+        discovery.inv_slot_mgr_move_item.evidence_source;
+    manifest->inv_slot_mgr_move_item_failure_reason =
+        discovery.inv_slot_mgr_move_item.failure_reason;
     manifest->spellbook_dispatcher_state = discovery.spellbook_dispatcher.state;
     manifest->spellbook_dispatcher_rva = discovery.spellbook_dispatcher.candidate_rva;
     manifest->spellbook_dispatcher_address = discovery.spellbook_dispatcher.candidate_address;
@@ -801,6 +860,14 @@ void ApplySpellUsabilityDiscovery(
         discovery.get_spell_level_needed.state ==
             monomyth::spell_usability_discovery::TargetState::kValidated &&
         discovery.get_spell_level_needed.trace_safe;
+    manifest->multiclass_item_usability_allowed =
+        discovery.allowed &&
+        discovery.is_class_usable_predicate.state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated &&
+        discovery.is_class_usable_predicate.trace_safe &&
+        discovery.can_equip.state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated &&
+        discovery.can_equip.trace_safe;
 
     if (!discovery.allowed) {
         manifest->spell_usability_discovery_reason =
@@ -837,6 +904,31 @@ void ApplySpellUsabilityDiscovery(
     } else {
         manifest->multiclass_spell_usability_reason =
             L"multiclass spell usability gate denied for unknown reason";
+    }
+
+    if (manifest->multiclass_item_usability_allowed) {
+        manifest->multiclass_item_usability_reason =
+            L"enabled by default for validated ROF2 multiclass item usability";
+    } else if (!discovery.allowed) {
+        manifest->multiclass_item_usability_reason =
+            L"multiclass item usability requires the ROF2 discovery capability gate";
+    } else if (
+        discovery.is_class_usable_predicate.state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        !discovery.is_class_usable_predicate.trace_safe ||
+        discovery.can_equip.state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        !discovery.can_equip.trace_safe) {
+        std::wstring reason =
+            L"multiclass item usability denied because equip gates are not fully validated trace-safe";
+        reason += L" predicate_failure_reason=";
+        reason += NormalizeReason(discovery.is_class_usable_predicate.failure_reason.c_str());
+        reason += L" can_equip_failure_reason=";
+        reason += NormalizeReason(discovery.can_equip.failure_reason.c_str());
+        manifest->multiclass_item_usability_reason = reason;
+    } else {
+        manifest->multiclass_item_usability_reason =
+            L"multiclass item usability gate denied for unknown reason";
     }
 }
 

@@ -8,7 +8,7 @@
 
 namespace {
 constexpr wchar_t kBuildMarker[] =
-    L"build_marker slice_id=CLIENT-MEM-SEND-TRACE-001 build=" MONOMYTH_WIDEN(__DATE__) L" " MONOMYTH_WIDEN(__TIME__);
+    L"build_marker slice_id=CLIENT-MULTICLASS-ITEM-USABILITY-001 build=" MONOMYTH_WIDEN(__DATE__) L" " MONOMYTH_WIDEN(__TIME__);
 }  // namespace
 
 BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID reserved) {
