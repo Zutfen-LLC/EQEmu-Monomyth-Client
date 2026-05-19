@@ -2,16 +2,10 @@
 
 #include <limits>
 
+#include "multiclass_identity.h"
+
 namespace monomyth::spell_level_selection {
 namespace {
-
-constexpr unsigned int kFirstPlayableClass = 1;
-constexpr unsigned int kLastPlayableClass = 16;
-constexpr std::uint32_t kPlayableClassMask = 0x0000ffff;
-
-std::uint32_t ClassBit(unsigned int class_id) noexcept {
-    return 1u << (class_id - 1u);
-}
 
 SelectionResult Fallback(std::uint8_t original_level, const wchar_t* reason) noexcept {
     SelectionResult result = {};
@@ -42,7 +36,7 @@ SelectionResult SelectLowestValidRequiredLevel(
         return Fallback(original_level, L"empty_class_mask");
     }
 
-    if ((authoritative_class_mask & ~kPlayableClassMask) != 0) {
+    if (!monomyth::multiclass_identity::IsPlayableClassMask(authoritative_class_mask)) {
         return Fallback(original_level, L"invalid_class_mask");
     }
 
@@ -54,8 +48,10 @@ SelectionResult SelectLowestValidRequiredLevel(
     selected.level = original_level;
     selected.fallback_reason = L"no_valid_assigned_class";
 
-    for (unsigned int class_id = kFirstPlayableClass; class_id <= kLastPlayableClass; ++class_id) {
-        if ((authoritative_class_mask & ClassBit(class_id)) == 0) {
+    for (unsigned int class_id = monomyth::multiclass_identity::kFirstPlayableClassId;
+         class_id <= monomyth::multiclass_identity::kLastPlayableClassId;
+         ++class_id) {
+        if (!monomyth::multiclass_identity::HasClass(authoritative_class_mask, class_id)) {
             continue;
         }
 

@@ -1,0 +1,448 @@
+EQGAME AGENT INGEST REPORT
+report_version: 1
+report_date: 2026-05-18
+report_type: cleanroom_reverse_engineering_agent_ingest
+
+[METADATA]
+target_binary: /home/zutfen/eqgame.exe
+target_size_bytes: 8774656
+md5: 240c80800112ada825c146d7349ce85b
+sha1: 684a993cc24d32d33897c8d92bcd26c252f865e7
+sha256: 2a8702ad9f722704f01355c0750be7d6f164a8b9c9128ba0cf286ea32b405b0e
+file_type: PE32 executable for MS Windows 5.01 (GUI), Intel i386, 5 sections
+pe_timestamp_utc_text: Sat May 11 02:30:39 2013
+pdb_path: C:\p4\EverQuest\live\EverQuest\Release-Non-Avatar\testeqgame.pdb
+source_repo_server: /home/zutfen/code/EQEmu-Monomyth
+source_repo_client: /home/zutfen/code/EQEmu-Monomyth-Client
+related_human_reports:
+- /home/zutfen/eqgame_cleanroom_reverse_engineering_report_2026-05-18.txt
+- /home/zutfen/eqgame_hook_points_and_opcode_seam_map_2026-05-18.txt
+- /home/zutfen/eqgame_consolidated_cleanroom_reverse_engineering_report_2026-05-18.txt
+
+[EXECUTIVE_SUMMARY]
+summary_1: /home/zutfen/eqgame.exe exactly matches the ROF2 client fingerprint already targeted by EQEmu-Monomyth-Client.
+summary_2: A side-by-side dinput8.dll proxy/wrapper is a valid injection/bootstrap boundary for this binary because eqgame.exe imports DINPUT8.dll and DirectInput8Create.
+summary_3: The existing EQEmu-Monomyth-Client repo already implements a working dinput8 wrapper foundation for this exact binary.
+summary_4: The highest-value validated receive seam is the receive dispatcher at RVA 0x000c3250.
+summary_5: The highest-value validated outbound application send seam is MemorizeSendPacketWrapper at RVA 0x004c51f0.
+summary_6: For Monomyth compatibility work, opcode renumbering alone is insufficient; packet-body transforms and patch-specific behavior remain necessary, as proven by the server patch architecture.
+summary_7: Best immediate path is to extend the existing Monomyth client wrapper rather than start a new wrapper from scratch.
+
+[VERIFIED_BINARY_FACTS]
+image_base: 0x00400000
+entrypoint_rva: 0x004e3b4a
+entrypoint_va: 0x008e3b4a
+size_of_image: 0x012c3000
+dll_characteristics:
+- DYNAMIC_BASE
+- NX_COMPAT
+- TERMINAL_SERVICE_AWARE
+sections:
+- name=.text,  rva=0x00001000, raw_size=6022144, entropy=6.5758
+- name=.rdata, rva=0x005c0000, raw_size=944640,  entropy=5.4283
+- name=.data,  rva=0x006a7000, raw_size=858112,  entropy=4.8964
+- name=.rsrc,  rva=0x011da000, raw_size=190464,  entropy=6.6881
+- name=.reloc, rva=0x01209000, raw_size=758272,  entropy=6.2543
+has_export_table: no
+import_table_rva: 0x006a40e4
+
+[IMPORT_FACTS_RELEVANT_TO_WRAPPER]
+imports_high_value:
+- DINPUT8.dll: DirectInput8Create
+- WS2_32.dll: ordinal imports present
+- WSOCK32.dll: ordinal imports present
+- WININET.dll: HttpOpenRequestA, InternetSetOptionA, InternetQueryOptionA, HttpSendRequestA, InternetOpenA, InternetCloseHandle, InternetConnectA
+- d3dx9_30.dll
+- steam_api.dll
+- xul.dll
+- nspr4.dll
+wrapper_boundary_assessment: viable_dinput8_proxy
+
+[FINGERPRINT_MATCH_WITH_CLIENT_REPO]
+client_repo_expected_sha256: 2a8702ad9f722704f01355c0750be7d6f164a8b9c9128ba0cf286ea32b405b0e
+client_repo_expected_markers:
+- May 10 2013
+- 23:30:08
+match_result: exact_match
+
+[VERIFIED_HOOK_POINTS]
+format_note: each entry is validated against this exact eqgame.exe or directly pinned by the client repo for this exact hash
+
+hook_1:
+name: ReceiveDispatcher
+category: receive_general
+rva: 0x000c3250
+va: 0x004c3250
+repo_file_primary: /home/zutfen/code/EQEmu-Monomyth-Client/src/receive_dispatch_discovery.cpp
+repo_file_hook: /home/zutfen/code/EQEmu-Monomyth-Client/src/hook_manager.cpp
+repo_symbols:
+- ReceiveDispatchHook
+- InstallReceiveDispatchHook
+status: validated
+purpose: best general packet receive interception seam
+notes:
+- already discovery-validated and fingerprint-gated
+- exposes opcode, payload pointer, payload length, source context
+- current implementation forwards metadata to packet_observer then calls original dispatcher
+
+hook_2:
+name: MemorizeSendPacketWrapper
+category: send_application_specific
+rva: 0x004c51f0
+va: 0x008c51f0
+repo_file_primary: /home/zutfen/code/EQEmu-Monomyth-Client/src/spell_usability_discovery.cpp
+repo_file_hook: /home/zutfen/code/EQEmu-Monomyth-Client/src/hook_manager.cpp
+repo_symbols:
+- MemorizeSendPacketWrapperHook
+- InstallMemorizeSendTrace
+status: validated
+purpose: best proven outbound application packet seam currently available
+notes:
+- decodes opcode from packet buffer when possible
+- logs send metadata via packet_observer
+- especially important for OP_MemorizeSpell correlation
+
+hook_3:
+name: SpellbookMemorizeSendPath
+category: send_supporting_control
+rva: 0x0035db20
+va: unresolved_direct_va_not_separately_logged_here
+repo_file_primary: /home/zutfen/code/EQEmu-Monomyth-Client/src/spell_usability_discovery.cpp
+repo_file_hook: /home/zutfen/code/EQEmu-Monomyth-Client/src/hook_manager.cpp
+repo_symbols:
+- SpellbookMemorizeSendPathHook
+- InstallSpellbookMemorizeSendPathTrace
+status: validated
+purpose: correlate spellbook window state immediately before/after wrapper send
+validated_callsite_to_wrapper_rva: 0x0035dd4a
+
+hook_4:
+name: StartSpellMemorizationPath
+category: send_supporting_control
+rva: 0x00262290
+va: unresolved_direct_va_not_separately_logged_here
+repo_file_primary: /home/zutfen/code/EQEmu-Monomyth-Client/src/spell_usability_discovery.cpp
+repo_file_hook: /home/zutfen/code/EQEmu-Monomyth-Client/src/hook_manager.cpp
+repo_symbols:
+- StartSpellMemorizationPathHook
+- InstallStartSpellMemorizationPathTrace
+status: validated
+purpose: upstream controller correlation, not final send seam
+
+hook_5:
+name: SpellbookDispatcher
+category: ui_flow_entry
+rva: 0x0035e790
+va: unresolved_direct_va_not_separately_logged_here
+repo_file_primary: /home/zutfen/code/EQEmu-Monomyth-Client/src/spell_usability_discovery.cpp
+repo_file_hook: /home/zutfen/code/EQEmu-Monomyth-Client/src/hook_manager.cpp
+status: validated
+purpose: top-level spellbook UI branch selection and flow entry correlation
+
+hook_6:
+name: StartSpellScribePath
+category: scribe_flow_control
+rva: 0x0035ddf0
+va: 0x0075ddf0
+repo_file_primary: /home/zutfen/code/EQEmu-Monomyth-Client/src/spell_usability_discovery.cpp
+repo_file_hook: /home/zutfen/code/EQEmu-Monomyth-Client/src/hook_manager.cpp
+status: validated
+purpose: scribe-flow archaeology and pre-send decision tracking
+validated_call_to_memorize_wrapper_rva: 0x0035e6fb
+
+hook_7:
+name: GetSpellLevelNeeded
+category: multiclass_behavior
+rva: 0x000af700
+va: 0x004af700
+repo_file_primary: /home/zutfen/code/EQEmu-Monomyth-Client/src/spell_usability_discovery.cpp
+repo_file_hook: /home/zutfen/code/EQEmu-Monomyth-Client/src/hook_manager.cpp
+repo_symbols:
+- GetSpellLevelNeededHook
+- InstallGetSpellLevelNeededHook
+status: validated_exact_bytes
+purpose: proven multiclass spell usability seam
+exact_byte_validation: yes
+
+hook_8:
+name: StartSpellScribePrecheckGate
+category: multiclass_behavior
+rva: 0x0004c430
+va: unresolved_direct_va_not_separately_logged_here
+repo_file_primary: /home/zutfen/code/EQEmu-Monomyth-Client/src/spell_usability_discovery.cpp
+repo_file_hook: /home/zutfen/code/EQEmu-Monomyth-Client/src/hook_manager.cpp
+repo_symbols:
+- StartSpellScribePrecheckGateHook
+status: validated
+purpose: proven early native class-mask gate override seam
+
+[OPCODE_MAP_CANONICAL]
+format_note: values cross-checked between server patch_RoF2.conf and client opcode_reference.cpp; match means exact agreement
+
+opcode_1:
+name: OP_SendLoginInfo
+value_hex: 0x7a09
+server_patch_match: yes
+client_reference_match: yes
+role: stream_identification_world_login
+sample_eqgame_immediate_hits:
+- 0x00562177
+- 0x0056230a
+- 0x00a06c44
+
+opcode_2:
+name: OP_World_Client_CRC1
+value_hex: 0x0f13
+server_patch_match: yes
+client_reference_match: yes
+role: world_checksum_validation
+sample_eqgame_immediate_hits:
+- 0x004eeff3
+- 0x004ef057
+- 0x004ef080
+- 0x0073ce38
+
+opcode_3:
+name: OP_ZoneEntry
+value_hex: 0x5089
+server_patch_match: yes
+client_reference_match: yes
+role: stream_identification_zone
+sample_eqgame_immediate_hits:
+- 0x00539547
+- 0x005395c0
+- 0x00a06b0c
+
+opcode_4:
+name: OP_MemorizeSpell
+value_hex: 0x217c
+server_patch_match: yes
+client_reference_match: yes
+role: strongest_currently_proven_outbound_gameplay_send_seam
+sample_eqgame_immediate_hits:
+- 0x0075e6c1
+- 0x0075e733
+- 0x004c3c3a
+- 0x004c3c46
+important_live_fact: StartSpellScribe-like path pushes 0x217c before calling the send wrapper
+
+opcode_5:
+name: OP_ServerAuthStats
+value_hex: 0x1338
+server_patch_match: yes
+client_reference_match: yes
+role: authoritative_class_mask_feed_for_multiclass_logic
+sample_eqgame_immediate_hits:
+- 0x006871a2
+- 0x006871cc
+- 0x0068727d
+- 0x00703fae
+
+opcode_6:
+name: OP_CastSpell
+value_hex: 0x1287
+server_patch_match: yes
+client_reference_match: yes
+role: likely_next_high_value_outbound_spell_seam
+sample_eqgame_immediate_hits:
+- 0x0043c851
+- 0x0043c8b6
+- 0x004a7a02
+
+opcode_7:
+name: OP_DeleteSpell
+value_hex: 0x3358
+server_patch_match: yes
+client_reference_match: yes
+role: spellbook_scribe_correlation_delete_send_start
+sample_eqgame_immediate_hits:
+- 0x004c407f
+- 0x0075b8a5
+- 0x00779607
+
+opcode_8:
+name: OP_ZoneChange
+value_hex: 0x2d18
+server_patch_match: yes
+client_reference_match: yes
+role: future_zone_state_receive_target
+
+opcode_9:
+name: OP_NewZone
+value_hex: 0x1795
+server_patch_match: yes
+client_reference_match: yes
+role: future_zone_state_receive_target
+
+opcode_10:
+name: OP_FormattedMessage
+value_hex: 0x1024
+server_patch_match: yes
+client_reference_match: yes
+role: lightweight_human_visible_feedback_or_debug_target
+
+opcode_11:
+name: OP_ChannelMessage
+value_hex: 0x2b2d
+server_patch_match: yes
+client_reference_match: yes
+role: social_or_chat_related_future_target
+
+[EXISTING_WRAPPER_CAPABILITIES]
+capability_1: dinput8 side-by-side proxy loading
+capability_2: real system dinput8 export forwarding
+capability_3: fingerprint gating for this exact eqgame.exe build
+capability_4: validated receive dispatcher discovery
+capability_5: validated spell and spellbook target discovery
+capability_6: read-only receive metadata observation
+capability_7: read-only OP_ServerAuthStats parsing to capture authoritative class bitmask
+capability_8: targeted multiclass spell usability behavior via GetSpellLevelNeeded and StartSpellScribePrecheckGateHook
+capability_9: targeted memorize/scribe send correlation via MemorizeSendPacketWrapper and supporting spellbook seams
+
+[SERVER_ARCHITECTURE_CONSTRAINTS]
+constraint_1: EQEmu server compatibility is not just opcode renumbering
+constraint_2: server patch system performs patch-specific packet-body normalization via StructStrategy
+constraint_3: world/client.cpp validates OP_World_Client_CRC1/CRC2/CRC3, including eqgame/BaseData/SkillCaps checksums
+constraint_4: Larion support present in loginserver is not equivalent to full gameplay patch support in common/patches
+constraint_5: a truly distinct unsupported client family would require patch_<client>.conf plus patch-specific encode/decode transforms, not just a dinput8 wrapper
+
+[RECOMMENDED_NEXT_TARGETS]
+priority_1:
+name: extend_receive_dispatcher_seam
+why: already_validated_already_hooked_opcode_aware_high_semantic_value
+suggested_first_allowlist:
+- OP_ServerAuthStats
+- OP_NewZone
+- OP_ZoneChange
+- OP_FormattedMessage
+- OP_ChannelMessage
+- OP_CastSpell
+mode: observe_only_first
+
+priority_2:
+name: generalize_outbound_application_send_seam
+why: current best send seam is memorize-specific, not universal
+starting_point: MemorizeSendPacketWrapper plus nearby validated caller graph
+mode: identify broader application-level wrapper before considering lower network layers
+
+priority_3:
+name: add_opcode_policy_layer
+why: safer structured extension path than direct packet mutation
+shape:
+- observe_only_handlers
+- opcode_allowlist
+- bounded_prefix_introspection
+- per_opcode_semantic_decoders
+
+priority_4:
+name: only_use_raw_winsock_hooks_if_absolutely_needed
+why_not_first:
+- more brittle
+- noisier
+- lower semantic value
+- harder to align quickly with EQEmu patch maps
+
+[CANONICAL_FILE_REFERENCES]
+server_files:
+- /home/zutfen/code/EQEmu-Monomyth/common/emu_opcodes.h
+- /home/zutfen/code/EQEmu-Monomyth/common/emu_oplist.h
+- /home/zutfen/code/EQEmu-Monomyth/common/opcodemgr.cpp
+- /home/zutfen/code/EQEmu-Monomyth/common/eq_stream_ident.cpp
+- /home/zutfen/code/EQEmu-Monomyth/common/net/eqstream.cpp
+- /home/zutfen/code/EQEmu-Monomyth/common/patches/patches.cpp
+- /home/zutfen/code/EQEmu-Monomyth/common/patches/rof2.cpp
+- /home/zutfen/code/EQEmu-Monomyth/utils/patches/patch_RoF2.conf
+- /home/zutfen/code/EQEmu-Monomyth/world/client.cpp
+- /home/zutfen/code/EQEmu-Monomyth/loginserver/client_manager.cpp
+- /home/zutfen/code/EQEmu-Monomyth/loginserver/login_util/login_opcodes_larion.conf
+client_files:
+- /home/zutfen/code/EQEmu-Monomyth-Client/src/dllmain.cpp
+- /home/zutfen/code/EQEmu-Monomyth-Client/src/dinput_proxy.cpp
+- /home/zutfen/code/EQEmu-Monomyth-Client/dinput8.def
+- /home/zutfen/code/EQEmu-Monomyth-Client/src/fingerprint.cpp
+- /home/zutfen/code/EQEmu-Monomyth-Client/src/receive_dispatch_discovery.cpp
+- /home/zutfen/code/EQEmu-Monomyth-Client/src/spell_usability_discovery.cpp
+- /home/zutfen/code/EQEmu-Monomyth-Client/src/hook_manager.cpp
+- /home/zutfen/code/EQEmu-Monomyth-Client/src/opcode_reference.cpp
+- /home/zutfen/code/EQEmu-Monomyth-Client/src/packet_observer.cpp
+- /home/zutfen/code/EQEmu-Monomyth-Client/src/server_auth_stats_observer.cpp
+- /home/zutfen/code/EQEmu-Monomyth-Client/docs/handoff.md
+- /home/zutfen/code/EQEmu-Monomyth-Client/docs/cleanroom-dll-research/eqgame-spell-ui-ghidra-notes.md
+
+[AGENT_NOTES]
+agent_note_1: This report is intentionally optimized for retrieval and selective reuse by future agents.
+agent_note_2: Treat values in VERIFIED_HOOK_POINTS and OPCODE_MAP_CANONICAL as the most reusable high-confidence facts.
+agent_note_3: Prefer this file over the prose-heavy consolidated report when extracting implementation targets.
+agent_note_4: This report does not claim live runtime packet mutation was performed; analysis was static and repo-correlated.
+agent_note_5: If future work expands beyond ROF2-compatible behavior, use the server patch architecture as the model, not opcode-only rewriting.
+
+[LIVE_RUNTIME_ADDENDUM_2026_05_19]
+addendum_scope: multiclass_item_equip_live_runtime_trace_followup
+addendum_note_1: This addendum preserves the 2026-05-18 ingest baseline above and records later live-runtime evidence gathered from the same exact ROF2 client fingerprint.
+addendum_note_2: The investigation began trace-only and fail-closed. The shipped fix set remains fail-closed and introduces no packet mutation or broad class spoofing; it only clears the proved hot native class gates when the resolved item class mask overlaps the authoritative assigned classes from OP_ServerAuthStats.
+
+[LIVE_RUNTIME_SERVER_AND_ITEM_FACTS]
+server_fact_1: Testmage live server state is authoritative and correct for the reproduce: base_class=13 (Mage), class_mask=0x1014, multiclass_set=PAL+SHD+MAG.
+server_fact_2: Barbed Ringmail item data for item_id=25331 includes PAL and SHD in raw class bits but does not include MAG.
+server_fact_3: The zone server did receive move traffic during the equip attempt, but only as accepted inventory/cursor swaps; no server-side reject was observed.
+
+[LIVE_RUNTIME_PROVEN_MOVE_PATH]
+runtime_fact_1: The failing chest-drag attempt never produces a final equip destination such as to_slot=17 in the validated local move path, outgoing OP_MoveItem payload, or validated move gate.
+runtime_fact_2: The earliest chest-like local record observed on the client is type=5 slot=0 subindex=17 augindex=64.
+runtime_fact_3: ROF2 helper 0x003e4f40 (slot-populate helper reached from 0x00060130) rewrites that chest-like local record into the normalized generic record type=0 slot=33 subindex=-1 augindex=-1.
+runtime_fact_4: ROF2 helper 0x0005fd30 does not discover slot 17; on the observed path it merely serializes the already-decided output words 33, -1, -1.
+runtime_fact_5: Site-A branch selection falls into the generic slot-33 path because the resolved owner object uses fallback_pointer_144 instead of primary_pointer_9c, and the resolved fallback object carries resolved_flag_11a=0.
+runtime_fact_6: Site-B alternate-path selection fails because the compared local slot is already 25, making predicate_slot_lte_0x16=false before the generic constructor path runs.
+runtime_fact_7: The move path consistently degenerates to accepted generic sends 25->33 and 33->25 rather than any equip-slot move.
+
+[LIVE_RUNTIME_PROVEN_NEGATIVE_SEAMS]
+negative_fact_1: Trace-only hooks on CEverQuest::LMouseUp, CXWnd::HandleLButtonUp, and CInventoryWindow::WndNotification all installed successfully in live sessions but stayed cold during the actual chest-drag reproduce.
+negative_fact_2: Trace-only logging for DragDropSilentPrecheck, EquipLocalRejectMessage, and DragDropLocalRejectMessage likewise stayed absent in the latest drag-scoped sessions.
+negative_fact_3: The shared pre-slot-33 helper seam at 0x0002dec0 also installed successfully but produced no runtime trace lines during the observed chest-drag session, so that exact target/filter pair is not yet the live seam for the failing path.
+
+[LATEST_SESSION_2026_05_19_09_44]
+session_fact_1: In the chest-drag session ending at 2026-05-19 09:44 EDT, MoveItemBranchKindSiteA again showed primary_pointer_9c=0x0, fallback_pointer_144 populated, and resolved_flag_11a=0 immediately before the slot-33 fallthrough.
+session_fact_2: In the same session, MoveItemCtorSiteA logged future_gate_arg5=0x0, while MoveItemCtorSiteB logged future_gate_arg5=0x593a00.
+session_fact_3: In the same session, the new 0x0002dec0 slot21 lookup seam emitted only its startup install receipt and no corresponding runtime MulticlassItemTrace target=MoveItemSlot21Lookup lines.
+
+[CURRENT_CONCLUSION]
+conclusion_1: The Barbed Ringmail equip failure is currently proven to be client-side and earlier than the validated move-send path; the server is not rejecting the equip.
+conclusion_2: The client does preserve a chest-like local intent transiently, but rewrites it into generic slot 33 before any final local move validation or packet send occurs.
+conclusion_3: The strongest currently proved reason for the site-A generic fallthrough is the null primary_pointer_9c plus empty fallback object state that yields resolved_flag_11a=0.
+
+[CURRENT_NEXT_RUNTIME_TARGET]
+next_target_1: The best next breadcrumb is the site-B future_gate_arg5 value 0x593a00, which points back into the inventory-window region even though the higher inventory notification and left-button-up seams stayed cold.
+next_target_2: The recommended next live-runtime slice is to instrument the concrete inventory-window block around 0x593a00 rather than widening back out to broader UI entrypoints.
+
+[LIVE_RUNTIME_RESOLUTION_2026_05_19]
+resolution_scope: multiclass_item_equip_root_cause_and_fix
+resolution_fact_1: Later live-runtime tracing proved the actual failing chest attempt does carry a real local chest slot record through CInvSlot::HandleLButtonUp: slot=17, type=0, subindex=-1.
+resolution_fact_2: The decisive client-side reject is the late branch gate at RVA 0x0025c160, reached from callsite 0x0029604f. That gate returned 0 for the chest slot-17 equip attempt and 1 for the working inventory/cursor return path.
+resolution_fact_3: Static and live evidence together proved the late-lookup object is a wrapper, not raw item data. The correct path is wrapper -> vtable+8 thunk -> ITEMINFO, and the correct client item class mask field is ITEMINFO.Classes at +0x170.
+resolution_fact_4: Once the wrapper/data resolution was corrected, live logging read Barbed Ringmail's real client class mask as 0x839f, matching the known item data.
+resolution_fact_5: The remaining blocker was the helper-layer class-bit translation, not the hook seam. The client item class-mask helper had been interpreting playable class bits as 1 << class_id with a 0x0001fffe mask, which wrongly made authoritative mask 0x1014 appear non-overlapping with item mask 0x839f.
+resolution_fact_6: The fix was to align client item mask translation with the live ITEMINFO.Classes layout: playable class bits 1..16 map as 1 << (class_id - 1), with playable mask 0x0000ffff.
+resolution_fact_7: After that translation fix, the late chest-slot gate override became a true authoritative overlap check, and the reproduce succeeded: Barbed Ringmail could be chest-equipped on Testmage through the live ROF2 client.
+
+[FINAL_ROOT_CAUSE]
+root_cause_1: The final client-side blocker was not the zone server, not the move-send path, and not the late wrapper/data resolution. It was the incorrect local translation of client item class-mask bits in the cleanroom helper layer.
+root_cause_2: Because that helper misread the item mask, the proved late chest-slot override remained fail-closed even after the hot path, slot gate, wrapper getter, and ITEMINFO field had all been identified correctly.
+
+[FINAL_FIX_SHAPE]
+fix_shape_1: Keep the bounded late direct-slot override at 0x0025c160, widened from chest-only to the equipment-slot range below general inventory.
+fix_shape_2: Keep the hot late-lookup wrapper capture and per-click reset needed by that override.
+fix_shape_3: Keep the shared 0x0004c430 class-gate override for the real purple-orb auto-equip path, filtered to the proved hot caller returns 0x000fe184 and 0x000fe354.
+fix_shape_4: Remove the archaeology-only runtime trace stack from normal behavior installs; it is no longer required for the working item-usability path.
+
+[LIVE_RUNTIME_ORB_AUTOEQUIP_RESOLUTION_2026_05_19]
+orb_resolution_scope: purple_orb_autoequip_root_cause_and_fix
+orb_fact_1: Live runtime proof showed successful MAG purple-orb auto-equip uses the FUN_004fe090 path and reaches MoveItemSend with caller_return_rva=0x000fe471, sending from cursor slot 33 to real equip slots such as 13 and 17.
+orb_fact_2: Earlier EQ click and comparator seams were cold during those MAG successes. The real hot native class gate on the purple-orb path is the shared helper at RVA 0x0004c430, reached from caller returns 0x000fe184 and 0x000fe354 inside the auto-slot candidate search.
+orb_fact_3: A standalone detour on 0x0004c430 was not viable because that address was already owned by the shared spell-precheck hook. The final fix therefore integrated the purple-orb override into the existing StartSpellScribePrecheckGateHook instead of trying to stack a second detour.
+orb_fact_4: On those two proved hot auto-equip callers, the shared 0x0004c430 hook now resolves the candidate item wrapper to ITEMINFO, reads ITEMINFO.Classes, and only clears a native false result when the resolved item mask overlaps the authoritative assigned-class mask.
+orb_fact_5: That preserved the later native level, race, deity, and slot-selection logic while allowing PAL and SHD items to auto-equip through the same purple-orb path that already worked for MAG items.
+orb_fact_6: After integration of the shared-gate override and the corrected client item bit translation, live reproduces confirmed that PAL/SHD items now auto-equip through the purple orb on the MAG/PAL/SHD test character.
+
+[SHIPPING_STATE_2026_05_19]
+shipping_fact_1: The normal multiclass item-usability install path now keeps only the proved-hot behavior seams needed for shipping: EQ_Character::CanEquip, late lookup capture at 0x0002dec0, per-click reset at CInvSlot::HandleLButtonUp, the late direct-slot gate override at 0x0025c160, and the shared 0x0004c430 purple-orb class-gate override.
+shipping_fact_2: The broader archaeology-only branch, UI, and local-message traces remain available in source for future reverse-engineering, but they are no longer installed during ordinary multiclass item-usability runs.

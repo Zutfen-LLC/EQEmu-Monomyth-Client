@@ -34,6 +34,8 @@ constexpr std::uint64_t kIntrospectionLogSampleInterval = 1000;
 constexpr std::uint32_t kPayloadSafetyCeiling = 4096;
 constexpr std::size_t kPrefixByteCap = 16;
 constexpr std::uint32_t kServerAuthStatsOpcode = 0x1338;
+constexpr std::uint32_t kMoveItemOpcode = 0x32ee;
+constexpr std::uint32_t kMoveItemReceiveFocusBudget = 12;
 constexpr std::array<std::uint32_t, 1> kDefaultAllowlist = {
     0x7dfc,
 };
@@ -45,6 +47,8 @@ std::atomic<bool> g_full_packet_trace_enabled = false;
 std::atomic<bool> g_introspection_enabled = false;
 std::atomic<std::uint64_t> g_introspection_match_count = 0;
 std::atomic<std::uint64_t> g_introspection_skip_count = 0;
+std::atomic<std::uint32_t> g_move_item_receive_focus_remaining = 0;
+std::atomic<std::uint64_t> g_move_item_receive_focus_activation = 0;
 std::vector<std::uint32_t> g_introspection_allowlist;
 
 struct IntrospectionAllowlistConfig {
@@ -76,6 +80,27 @@ bool ShouldLogPacket(std::uint64_t sequence) noexcept {
 bool ShouldLogIntrospection(std::uint64_t sequence) noexcept {
     return sequence <= kFirstIntrospectionLogLimit ||
         (sequence % kIntrospectionLogSampleInterval) == 0;
+}
+
+bool TryConsumeMoveItemReceiveFocus(
+    std::uint32_t* remaining_before,
+    std::uint32_t* remaining_after,
+    std::uint64_t* activation) noexcept {
+    if (remaining_before == nullptr || remaining_after == nullptr || activation == nullptr) {
+        return false;
+    }
+
+    std::uint32_t current = g_move_item_receive_focus_remaining.load();
+    while (current != 0) {
+        if (g_move_item_receive_focus_remaining.compare_exchange_weak(current, current - 1)) {
+            *remaining_before = current;
+            *remaining_after = current - 1;
+            *activation = g_move_item_receive_focus_activation.load();
+            return true;
+        }
+    }
+
+    return false;
 }
 
 std::wstring TrimWhitespace(std::wstring_view value) {
@@ -289,6 +314,8 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     g_introspection_match_count.store(0);
     g_introspection_skip_count.store(0);
     g_introspection_enabled.store(manifest.receive_introspection_allowed);
+    g_move_item_receive_focus_remaining.store(0);
+    g_move_item_receive_focus_activation.store(0);
     const IntrospectionAllowlistConfig allowlist_config = LoadIntrospectionAllowlist();
     g_introspection_allowlist = allowlist_config.opcodes;
     g_state.store(State::kInitialized);
@@ -318,6 +345,8 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     message += manifest.memorize_send_trace_allowed ? L"true" : L"false";
     message += L" full_packet_trace=";
     message += manifest.full_packet_trace_allowed ? L"true" : L"false";
+    message += L" move_item_recv_focus_budget=";
+    message += std::to_wstring(kMoveItemReceiveFocusBudget);
     if (manifest.receive_introspection_allowed) {
         message += L" recv_introspection=true recv_introspection_prefix_cap=16";
         message += L" recv_introspection_safety_ceiling=";
@@ -361,7 +390,14 @@ void ObserveReceiveMetadata(
     }
 
     const std::uint64_t sequence = g_observed_count.fetch_add(1) + 1;
-    if (ShouldLogPacket(sequence)) {
+    std::uint32_t move_item_focus_remaining_before = 0;
+    std::uint32_t move_item_focus_remaining_after = 0;
+    std::uint64_t move_item_focus_activation = 0;
+    const bool move_item_focus = TryConsumeMoveItemReceiveFocus(
+        &move_item_focus_remaining_before,
+        &move_item_focus_remaining_after,
+        &move_item_focus_activation);
+    if (move_item_focus || ShouldLogPacket(sequence)) {
         std::wstringstream message;
         const std::wstring_view opcode_name = monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
         message
@@ -372,6 +408,13 @@ void ObserveReceiveMetadata(
             << L" opcode_name=" << opcode_name
             << L" payload_length=" << payload_length
             << L" source_context=" << HexPtr(source_context);
+        if (move_item_focus) {
+            message
+                << L" move_item_focus=true"
+                << L" move_item_focus_activation=" << move_item_focus_activation
+                << L" move_item_focus_remaining_before=" << move_item_focus_remaining_before
+                << L" move_item_focus_remaining_after=" << move_item_focus_remaining_after;
+        }
         monomyth::logger::Log(message.str());
     }
 
@@ -449,7 +492,15 @@ void ObserveSendMetadata(
     }
 
     const std::uint64_t sequence = g_observed_send_count.fetch_add(1) + 1;
-    if (!ShouldLogPacket(sequence)) {
+    bool move_item_focus_armed = false;
+    std::uint64_t move_item_focus_activation = 0;
+    if (opcode_decoded && opcode == kMoveItemOpcode &&
+        original_result_available && original_result) {
+        move_item_focus_activation = g_move_item_receive_focus_activation.fetch_add(1) + 1;
+        g_move_item_receive_focus_remaining.store(kMoveItemReceiveFocusBudget);
+        move_item_focus_armed = true;
+    }
+    if (!move_item_focus_armed && !ShouldLogPacket(sequence)) {
         return;
     }
 
@@ -490,6 +541,11 @@ void ObserveSendMetadata(
     if (correlation_id != 0) {
         message << L" memorize_send_correlation=" << correlation_id;
     }
+    if (move_item_focus_armed) {
+        message << L" move_item_focus_armed=true"
+                << L" move_item_focus_activation=" << move_item_focus_activation
+                << L" move_item_focus_budget=" << kMoveItemReceiveFocusBudget;
+    }
     monomyth::logger::Log(message.str());
 }
 
@@ -504,8 +560,11 @@ void Shutdown() noexcept {
             << g_observed_count.load()
             << L" observed_send_count=" << g_observed_send_count.load()
             << L" introspection_match_count=" << g_introspection_match_count.load()
-            << L" introspection_skip_count=" << g_introspection_skip_count.load();
+            << L" introspection_skip_count=" << g_introspection_skip_count.load()
+            << L" move_item_focus_remaining=" << g_move_item_receive_focus_remaining.load()
+            << L" move_item_focus_activation=" << g_move_item_receive_focus_activation.load();
     g_full_packet_trace_enabled.store(false);
+    g_move_item_receive_focus_remaining.store(0);
     monomyth::logger::Log(message.str());
 }
 

@@ -33,6 +33,7 @@ struct Manifest {
     bool memorize_send_trace_allowed = false;
     bool multiclass_spell_usability_dev_opt_in = false;
     bool multiclass_spell_usability_allowed = false;
+    bool multiclass_item_usability_allowed = false;
     bool ui_hooks_allowed = false;
     bool heartbeat_allowed = false;
     monomyth::receive_dispatch_discovery::State receive_dispatch_discovery_state =
@@ -43,6 +44,10 @@ struct Manifest {
     monomyth::spell_usability_discovery::TargetState handle_rbutton_up_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     monomyth::spell_usability_discovery::TargetState is_class_usable_predicate_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState can_equip_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState inv_slot_mgr_move_item_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     monomyth::spell_usability_discovery::TargetState spellbook_dispatcher_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
@@ -93,6 +98,10 @@ struct Manifest {
     std::uintptr_t get_spell_level_needed_address = 0;
     std::uint32_t is_class_usable_predicate_rva = 0;
     std::uintptr_t is_class_usable_predicate_address = 0;
+    std::uint32_t can_equip_rva = 0;
+    std::uintptr_t can_equip_address = 0;
+    std::uint32_t inv_slot_mgr_move_item_rva = 0;
+    std::uintptr_t inv_slot_mgr_move_item_address = 0;
     std::uint32_t spellbook_dispatcher_rva = 0;
     std::uintptr_t spellbook_dispatcher_address = 0;
     std::uint32_t start_spell_scribe_path_rva = 0;
@@ -131,6 +140,10 @@ struct Manifest {
     std::wstring get_spell_level_needed_failure_reason = L"not_attempted";
     std::wstring is_class_usable_predicate_evidence_source = L"not_attempted";
     std::wstring is_class_usable_predicate_failure_reason = L"not_attempted";
+    std::wstring can_equip_evidence_source = L"not_attempted";
+    std::wstring can_equip_failure_reason = L"not_attempted";
+    std::wstring inv_slot_mgr_move_item_evidence_source = L"not_attempted";
+    std::wstring inv_slot_mgr_move_item_failure_reason = L"not_attempted";
     std::wstring spellbook_dispatcher_evidence_source = L"not_attempted";
     std::wstring spellbook_dispatcher_failure_reason = L"not_attempted";
     std::wstring start_spell_scribe_path_evidence_source = L"not_attempted";
@@ -177,6 +190,8 @@ struct Manifest {
     std::wstring memorize_send_trace_reason = L"memorize send trace unavailable";
     std::wstring multiclass_spell_usability_reason =
         L"multiclass spell usability unavailable";
+    std::wstring multiclass_item_usability_reason =
+        L"multiclass item usability unavailable";
 };
 
 Manifest BuildCapabilityManifest(

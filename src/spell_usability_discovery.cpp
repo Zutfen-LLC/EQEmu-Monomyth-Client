@@ -19,6 +19,7 @@ namespace {
 constexpr std::uint32_t kGetSpellLevelNeededRva = 0x000af700;
 constexpr std::uint32_t kIsClassUsablePredicateRva = 0x000a1f50;
 constexpr std::uint32_t kHandleRButtonUpRva = 0x00297250;
+constexpr std::uint32_t kCanEquipRva = 0x000a44c0;
 constexpr std::uint32_t kSpellbookDispatcherRva = 0x0035e790;
 constexpr std::uint32_t kSpellbookDispatcherCallsStartSpellScribePathAtRva = 0x0035e7cb;
 constexpr std::uint32_t kSpellbookDispatcherCallsCanStartMemmingAtRva = 0x0035e7de;
@@ -178,6 +179,14 @@ constexpr std::array<std::uint8_t, 40> kIsClassUsablePredicateEntryBytes = {{
     0xfa, 0x0f, 0x77, 0x15, 0x8b, 0x40, 0x68, 0xba, 0x01, 0x00,
     0x00, 0x00, 0xd3, 0xe2, 0x23, 0xc2, 0xf7, 0xd8, 0x1b, 0xc0,
     0xf7, 0xd8, 0xc2, 0x04, 0x00, 0x32, 0xc0, 0xc2, 0x04, 0x00,
+}};
+constexpr std::array<std::uint8_t, 64> kCanEquipEntryBytes = {{
+    0x51, 0x56, 0x57, 0x8b, 0x7c, 0x24, 0x14, 0x89, 0x4c, 0x24, 0x08, 0x85,
+    0xff, 0x0f, 0x84, 0x5f, 0x01, 0x00, 0x00, 0x8b, 0x74, 0x24, 0x10, 0x85,
+    0xf6, 0x0f, 0x84, 0x53, 0x01, 0x00, 0x00, 0x83, 0xbe, 0xd0, 0x2d, 0x00,
+    0x00, 0x00, 0x0f, 0x84, 0x46, 0x01, 0x00, 0x00, 0x53, 0x8b, 0x5c, 0x24,
+    0x20, 0x55, 0x84, 0xdb, 0x74, 0x14, 0x8b, 0x46, 0x08, 0x8b, 0x48, 0x04,
+    0x8d, 0x4c, 0x31, 0x08,
 }};
 
 Result g_result = {};
@@ -867,6 +876,92 @@ CandidateSource BuildFingerprintCandidate(
     candidate.discovery_method =
         discovery_method == nullptr ? L"fingerprint_locator" : discovery_method;
     return candidate;
+}
+
+CandidateSource BuildRuntimeExportCandidate(
+    const ImageView& image,
+    std::uintptr_t address,
+    const wchar_t* resolved_symbol) {
+    CandidateSource candidate = {};
+    if (address == 0 || address < reinterpret_cast<std::uintptr_t>(image.base)) {
+        return candidate;
+    }
+
+    candidate.evidence_source = EvidenceSource::kRuntimeExport;
+    candidate.address = address;
+    candidate.rva = static_cast<std::uint32_t>(
+        candidate.address - reinterpret_cast<std::uintptr_t>(image.base));
+    candidate.resolved_symbol = resolved_symbol == nullptr ? L"" : resolved_symbol;
+    candidate.discovery_method = L"runtime_export";
+    return candidate;
+}
+
+TargetResult DiscoverRuntimeExportTarget(
+    const ImageView& image,
+    const wchar_t* target_name,
+    const char* export_name,
+    const wchar_t* resolved_symbol) {
+    TargetResult target = {target_name};
+    target.module_base = reinterpret_cast<std::uintptr_t>(image.base);
+    target.discovery_method = L"runtime_export";
+    target.evidence_source = EvidenceSourceName(EvidenceSource::kRuntimeExport);
+
+    const HMODULE module = GetModuleHandleW(nullptr);
+    FARPROC proc = nullptr;
+    if (module != nullptr && export_name != nullptr) {
+        proc = GetProcAddress(module, export_name);
+    }
+
+    const std::uintptr_t address = reinterpret_cast<std::uintptr_t>(proc);
+    const CandidateSource candidate =
+        BuildRuntimeExportCandidate(image, address, resolved_symbol);
+    PopulateCandidateFields(image, candidate, &target);
+
+    if (proc == nullptr || address == 0) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = L"runtime_export_missing";
+        target.reason = L"runtime export resolution failed for the target symbol";
+        target.validation_evidence = L"export_name=\"";
+        for (const char* p = export_name; p != nullptr && *p != '\0'; ++p) {
+            target.validation_evidence.push_back(static_cast<wchar_t>(*p));
+        }
+        target.validation_evidence += L"\" export_found=no";
+        return target;
+    }
+
+    if (!IsExecutableAddress(image, address)) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = L"runtime_export_non_executable";
+        target.reason = L"runtime export resolved outside executable code";
+        target.validation_evidence = L"export_found=yes executable=no";
+        return target;
+    }
+
+    const auto* code = reinterpret_cast<const std::uint8_t*>(address);
+    const bool plausible_prologue = HasPlausibleX86Prologue(code, 8);
+    target.exact_signature_validated = false;
+    target.trace_safe = plausible_prologue;
+    target.validation_evidence = L"export_found=yes executable=yes plausible_prologue=";
+    target.validation_evidence += plausible_prologue ? L"yes" : L"no";
+
+    if (!plausible_prologue) {
+        target.state = TargetState::kFailed;
+        target.validation = L"failed";
+        target.failure_reason = L"runtime_export_unsupported_prologue";
+        target.reason = L"runtime export resolved, but the entry bytes are not a supported x86 prologue";
+        target.validation_evidence += L" entry_bytes=\"";
+        target.validation_evidence += HexBytes(code, 8);
+        target.validation_evidence += L"\"";
+        return target;
+    }
+
+    target.state = TargetState::kValidated;
+    target.validation = L"passed";
+    target.failure_reason = L"none";
+    target.reason = L"validated by runtime export resolution and plausible x86 prologue";
+    return target;
 }
 
 void ApplyDecision(
@@ -2032,6 +2127,28 @@ TargetResult DiscoverIsClassUsablePredicate(
         cleanroom_fingerprint);
 }
 
+TargetResult DiscoverCanEquip(
+    const ImageView& image,
+    const CleanroomFingerprintStatus& cleanroom_fingerprint) {
+    return DiscoverPinnedCleanroomTarget(
+        image,
+        L"EQ_Character::CanEquip",
+        L"EQ_Character::CanEquip",
+        kCanEquipRva,
+        kCanEquipEntryBytes.data(),
+        kCanEquipEntryBytes.size(),
+        L"entry_bytes",
+        cleanroom_fingerprint);
+}
+
+TargetResult DiscoverInvSlotMgrMoveItem(const ImageView& image) {
+    return DiscoverRuntimeExportTarget(
+        image,
+        L"CInvSlotMgr::MoveItem",
+        "?MoveItem@CInvSlotMgr@EQClasses@@QAE_NPAVCMoveItemData@2@0HHHH@Z",
+        L"?MoveItem@CInvSlotMgr@EQClasses@@QAE_NPAVCMoveItemData@2@0HHHH@Z");
+}
+
 }  // namespace
 
 void Initialize() noexcept {
@@ -2040,6 +2157,8 @@ void Initialize() noexcept {
     g_result.handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
+    g_result.can_equip = {L"EQ_Character::CanEquip"};
+    g_result.inv_slot_mgr_move_item = {L"CInvSlotMgr::MoveItem"};
     g_result.spellbook_dispatcher = {L"SpellbookDispatcher"};
     g_result.start_spell_scribe_path = {L"StartSpellScribePath"};
     g_result.start_spell_scribe_precheck_mode_getter = {
@@ -2072,6 +2191,8 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
     g_result.handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
+    g_result.can_equip = {L"EQ_Character::CanEquip"};
+    g_result.inv_slot_mgr_move_item = {L"CInvSlotMgr::MoveItem"};
     g_result.spellbook_dispatcher = {L"SpellbookDispatcher"};
     g_result.start_spell_scribe_path = {L"StartSpellScribePath"};
     g_result.start_spell_scribe_precheck_mode_getter = {
@@ -2113,6 +2234,12 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
             failure_reason);
         g_result.is_class_usable_predicate = BuildCapabilityDeniedTarget(
             L"EQ_Character::IsClassUsablePredicate",
+            failure_reason);
+        g_result.can_equip = BuildCapabilityDeniedTarget(
+            L"EQ_Character::CanEquip",
+            failure_reason);
+        g_result.inv_slot_mgr_move_item = BuildCapabilityDeniedTarget(
+            L"CInvSlotMgr::MoveItem",
             failure_reason);
         g_result.spellbook_dispatcher = BuildCapabilityDeniedTarget(
             L"SpellbookDispatcher",
@@ -2173,6 +2300,9 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
         g_result.get_spell_level_needed = BuildImageUnavailableTarget(L"GetSpellLevelNeeded");
         g_result.is_class_usable_predicate =
             BuildImageUnavailableTarget(L"EQ_Character::IsClassUsablePredicate");
+        g_result.can_equip = BuildImageUnavailableTarget(L"EQ_Character::CanEquip");
+        g_result.inv_slot_mgr_move_item =
+            BuildImageUnavailableTarget(L"CInvSlotMgr::MoveItem");
         g_result.spellbook_dispatcher =
             BuildImageUnavailableTarget(L"SpellbookDispatcher");
         g_result.start_spell_scribe_path =
@@ -2214,10 +2344,13 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
     g_result.reason += L" packet_id=";
     g_result.reason += kPacketId;
     g_result.reason += L" known_non_export_targets=cleanroom_or_fail_closed";
+    g_result.reason += L" runtime_export_targets=CInvSlotMgr::MoveItem";
     g_result.handle_rbutton_up = DiscoverHandleRButtonUp(image, cleanroom_fingerprint);
     g_result.get_spell_level_needed = DiscoverGetSpellLevelNeeded(image);
     g_result.is_class_usable_predicate =
         DiscoverIsClassUsablePredicate(image, cleanroom_fingerprint);
+    g_result.can_equip = DiscoverCanEquip(image, cleanroom_fingerprint);
+    g_result.inv_slot_mgr_move_item = DiscoverInvSlotMgrMoveItem(image);
     g_result.spellbook_dispatcher =
         DiscoverSpellbookDispatcher(image, cleanroom_fingerprint);
     g_result.start_spell_scribe_path =
@@ -2260,6 +2393,8 @@ void Shutdown() noexcept {
     g_result.handle_rbutton_up = {L"CInvSlot::HandleRButtonUp"};
     g_result.get_spell_level_needed = {L"GetSpellLevelNeeded"};
     g_result.is_class_usable_predicate = {L"EQ_Character::IsClassUsablePredicate"};
+    g_result.can_equip = {L"EQ_Character::CanEquip"};
+    g_result.inv_slot_mgr_move_item = {L"CInvSlotMgr::MoveItem"};
     g_result.spellbook_dispatcher = {L"SpellbookDispatcher"};
     g_result.start_spell_scribe_path = {L"StartSpellScribePath"};
     g_result.start_spell_scribe_precheck_mode_getter = {
@@ -2295,6 +2430,8 @@ void LogResult(const Result& result) noexcept {
         &result.handle_rbutton_up,
         &result.get_spell_level_needed,
         &result.is_class_usable_predicate,
+        &result.can_equip,
+        &result.inv_slot_mgr_move_item,
         &result.spellbook_dispatcher,
         &result.start_spell_scribe_path,
         &result.start_spell_scribe_precheck_mode_getter,

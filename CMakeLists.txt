@@ -8,6 +8,7 @@ add_library(dinput8 SHARED
     src/logger.cpp
     src/fingerprint.cpp
     src/hook_manager.cpp
+    src/multiclass_identity.cpp
     src/opcode_reference.cpp
     src/packet_observer.cpp
     src/receive_dispatch_discovery.cpp
@@ -70,12 +71,22 @@ add_test(NAME server_auth_stats_observer_tests COMMAND server_auth_stats_observe
 
 add_executable(spell_level_selection_tests
     tests/spell_level_selection_tests.cpp
+    src/multiclass_identity.cpp
     src/spell_level_selection.cpp
 )
 target_include_directories(spell_level_selection_tests PRIVATE src)
 target_compile_features(spell_level_selection_tests PRIVATE cxx_std_20)
 
 add_test(NAME spell_level_selection_tests COMMAND spell_level_selection_tests)
+
+add_executable(multiclass_identity_tests
+    tests/multiclass_identity_tests.cpp
+    src/multiclass_identity.cpp
+)
+target_include_directories(multiclass_identity_tests PRIVATE src)
+target_compile_features(multiclass_identity_tests PRIVATE cxx_std_20)
+
+add_test(NAME multiclass_identity_tests COMMAND multiclass_identity_tests)
 
 add_executable(spell_usability_discovery_policy_tests
     tests/spell_usability_discovery_policy_tests.cpp
