@@ -7202,8 +7202,9 @@ bool MONOMYTH_FASTCALL InvSlotMgrMoveItemHook(
     return original_result;
 }
 
-int MONOMYTH_THISCALL EquipClickCanEquipCallsiteHook(
+int MONOMYTH_FASTCALL EquipClickCanEquipCallsiteHook(
     void* this_context,
+    void*,
     void* inventory_or_container_like,
     void* item_like,
     unsigned long arg3,
@@ -7276,8 +7277,9 @@ int MONOMYTH_THISCALL EquipClickCanEquipCallsiteHook(
     return 1;
 }
 
-void* MONOMYTH_THISCALL EquipClickRecordLookupCallsiteHook(
+void* MONOMYTH_FASTCALL EquipClickRecordLookupCallsiteHook(
     void* this_context,
+    void*,
     unsigned long lookup_id) noexcept {
     void* const original_result = g_original_equip_record_lookup(this_context, lookup_id);
     LogEquipRecordLookupTrace(
@@ -7289,8 +7291,9 @@ void* MONOMYTH_THISCALL EquipClickRecordLookupCallsiteHook(
     return original_result;
 }
 
-void* MONOMYTH_THISCALL EquipClickRequirementLookupCallsiteHook(
+void* MONOMYTH_FASTCALL EquipClickRequirementLookupCallsiteHook(
     void* this_context,
+    void*,
     void* record_or_table_like,
     void* descriptor_like,
     unsigned long mode_like) noexcept {
@@ -7310,8 +7313,9 @@ void* MONOMYTH_THISCALL EquipClickRequirementLookupCallsiteHook(
     return original_result;
 }
 
-void* MONOMYTH_THISCALL EquipLocalRecordLookupCallsiteHook(
+void* MONOMYTH_FASTCALL EquipLocalRecordLookupCallsiteHook(
     void* this_context,
+    void*,
     unsigned long lookup_id) noexcept {
     void* const original_result = g_original_equip_record_lookup(this_context, lookup_id);
     LogEquipRecordLookupTrace(
@@ -7323,8 +7327,9 @@ void* MONOMYTH_THISCALL EquipLocalRecordLookupCallsiteHook(
     return original_result;
 }
 
-void* MONOMYTH_THISCALL EquipLocalRequirementLookupACallsiteHook(
+void* MONOMYTH_FASTCALL EquipLocalRequirementLookupACallsiteHook(
     void* this_context,
+    void*,
     void* record_or_table_like,
     void* descriptor_like,
     unsigned long mode_like) noexcept {
@@ -7344,8 +7349,9 @@ void* MONOMYTH_THISCALL EquipLocalRequirementLookupACallsiteHook(
     return original_result;
 }
 
-void* MONOMYTH_THISCALL EquipLocalRequirementLookupBCallsiteHook(
+void* MONOMYTH_FASTCALL EquipLocalRequirementLookupBCallsiteHook(
     void* this_context,
+    void*,
     void* record_or_table_like,
     void* descriptor_like,
     unsigned long mode_like) noexcept {
@@ -7365,8 +7371,9 @@ void* MONOMYTH_THISCALL EquipLocalRequirementLookupBCallsiteHook(
     return original_result;
 }
 
-int MONOMYTH_THISCALL EquipNestedInventoryGateCallsiteHook(
+int MONOMYTH_FASTCALL EquipNestedInventoryGateCallsiteHook(
     void* this_context,
+    void*,
     unsigned long arg1,
     unsigned long arg2,
     unsigned long arg3) noexcept {
@@ -7381,8 +7388,9 @@ int MONOMYTH_THISCALL EquipNestedInventoryGateCallsiteHook(
     return original_result;
 }
 
-int MONOMYTH_THISCALL EquipNestedValidatorCallsiteHook(
+int MONOMYTH_FASTCALL EquipNestedValidatorCallsiteHook(
     void* this_context,
+    void*,
     void* arg1,
     void* arg2,
     unsigned long arg3) noexcept {
@@ -7401,8 +7409,9 @@ int MONOMYTH_THISCALL EquipNestedValidatorCallsiteHook(
     return original_result;
 }
 
-void* MONOMYTH_THISCALL EquipLocalRejectMessageCallsiteHook(
+void* MONOMYTH_FASTCALL EquipLocalRejectMessageCallsiteHook(
     void* this_context,
+    void*,
     unsigned long message_id,
     unsigned long arg2,
     unsigned long arg3,
@@ -7430,8 +7439,9 @@ void* MONOMYTH_THISCALL EquipLocalRejectMessageCallsiteHook(
     return original_result;
 }
 
-void* MONOMYTH_THISCALL DragDropLocalRejectMessageCallsiteHook(
+void* MONOMYTH_FASTCALL DragDropLocalRejectMessageCallsiteHook(
     void* this_context,
+    void*,
     unsigned long message_id,
     unsigned long arg2,
     unsigned long arg3,
@@ -7459,8 +7469,9 @@ void* MONOMYTH_THISCALL DragDropLocalRejectMessageCallsiteHook(
     return original_result;
 }
 
-std::uint8_t MONOMYTH_THISCALL DragDropSilentPrecheckCallsiteHook(
+std::uint8_t MONOMYTH_FASTCALL DragDropSilentPrecheckCallsiteHook(
     void* this_context,
+    void*,
     void* probe_like) noexcept {
     const std::uint8_t original_result =
         g_original_drag_drop_silent_precheck(this_context, probe_like);
@@ -7468,8 +7479,9 @@ std::uint8_t MONOMYTH_THISCALL DragDropSilentPrecheckCallsiteHook(
     return original_result;
 }
 
-void MONOMYTH_THISCALL MoveItemFromSlotResolveCallsiteHook(
+void MONOMYTH_FASTCALL MoveItemFromSlotResolveCallsiteHook(
     void* this_context,
+    void*,
     void* slot_like,
     void* resolved_slot_like) noexcept {
     g_original_move_item_slot_resolve(this_context, slot_like, resolved_slot_like);
@@ -7483,8 +7495,9 @@ void MONOMYTH_THISCALL MoveItemFromSlotResolveCallsiteHook(
         GetCallerReturnAddress());
 }
 
-void MONOMYTH_THISCALL MoveItemToSlotResolveCallsiteHook(
+void MONOMYTH_FASTCALL MoveItemToSlotResolveCallsiteHook(
     void* this_context,
+    void*,
     void* slot_like,
     void* resolved_slot_like) noexcept {
     g_original_move_item_slot_resolve(this_context, slot_like, resolved_slot_like);
@@ -7498,8 +7511,9 @@ void MONOMYTH_THISCALL MoveItemToSlotResolveCallsiteHook(
         GetCallerReturnAddress());
 }
 
-int MONOMYTH_THISCALL MoveItemBranchKindSiteACallsiteHook(
-    void* this_context) noexcept {
+int MONOMYTH_FASTCALL MoveItemBranchKindSiteACallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
@@ -7630,8 +7644,9 @@ int MONOMYTH_THISCALL MoveItemBranchKindSiteACallsiteHook(
     return original_result;
 }
 
-int MONOMYTH_THISCALL MoveItemBranchKindSiteBCallsiteHook(
-    void* this_context) noexcept {
+int MONOMYTH_FASTCALL MoveItemBranchKindSiteBCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
@@ -7762,8 +7777,9 @@ int MONOMYTH_THISCALL MoveItemBranchKindSiteBCallsiteHook(
     return original_result;
 }
 
-std::uint8_t MONOMYTH_THISCALL MoveItemBranchBoolSiteACallsiteHook(
-    void* this_context) noexcept {
+std::uint8_t MONOMYTH_FASTCALL MoveItemBranchBoolSiteACallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
@@ -7787,8 +7803,9 @@ std::uint8_t MONOMYTH_THISCALL MoveItemBranchBoolSiteACallsiteHook(
     return original_result;
 }
 
-std::uint8_t MONOMYTH_THISCALL MoveItemBranchBoolSiteBCallsiteHook(
-    void* this_context) noexcept {
+std::uint8_t MONOMYTH_FASTCALL MoveItemBranchBoolSiteBCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
@@ -7812,8 +7829,9 @@ std::uint8_t MONOMYTH_THISCALL MoveItemBranchBoolSiteBCallsiteHook(
     return original_result;
 }
 
-std::uint8_t MONOMYTH_THISCALL MoveItemStackLocalGateSiteBCallsiteHook(
-    void* this_context) noexcept {
+std::uint8_t MONOMYTH_FASTCALL MoveItemStackLocalGateSiteBCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> local_bytes_before = {};
     const bool local_bytes_before_copied =
@@ -7863,8 +7881,9 @@ std::uint8_t MONOMYTH_THISCALL MoveItemStackLocalGateSiteBCallsiteHook(
     return original_result;
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCorePrecheckCallsiteHook(
-    void* this_context) noexcept {
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCorePrecheckCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
