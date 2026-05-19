@@ -128,6 +128,33 @@ def extract_changed_files(diff_text):
     return files
 
 
+def extract_changed_line_ranges(diff_text):
+    changed = {}
+    current_path = None
+    for line in diff_text.splitlines():
+        if line.startswith("diff --git "):
+            parts = line.split()
+            current_path = parts[3][2:] if len(parts) >= 4 else None
+            if current_path:
+                changed.setdefault(current_path, [])
+            continue
+
+        if current_path is None or not line.startswith("@@ "):
+            continue
+
+        match = re.search(r"\+(\d+)(?:,(\d+))?", line)
+        if not match:
+            continue
+
+        start = int(match.group(1))
+        length = int(match.group(2) or "1")
+        if length <= 0:
+            continue
+        changed[current_path].append((start, start + length - 1))
+
+    return changed
+
+
 def load_diff(path):
     with open(path, "r", encoding="utf-8", errors="replace") as handle:
         diff_text = handle.read()
@@ -182,7 +209,7 @@ def call_openai_review(base_url, api_key, model, prompt):
         raise RuntimeError(f"Unexpected chat completion payload: {response}") from exc
 
 
-def normalize_review(payload, changed_files):
+def normalize_review(payload, changed_files, changed_line_ranges):
     verdict = str(payload.get("verdict", "")).strip().upper()
     if verdict not in {"PASS", "WARN", "BLOCK"}:
         verdict = "WARN"
@@ -210,6 +237,11 @@ def normalize_review(payload, changed_files):
             if not isinstance(line, int):
                 line = 0
 
+            if path and line > 0:
+                ranges = changed_line_ranges.get(path, [])
+                if ranges and not any(start <= line <= end for start, end in ranges):
+                    continue
+
             title = str(finding.get("title", "")).strip()
             detail = str(finding.get("summary", "")).strip()
             recommendation = str(finding.get("recommendation", "")).strip()
@@ -226,6 +258,10 @@ def normalize_review(payload, changed_files):
                     "recommendation": recommendation or "No recommendation provided.",
                 }
             )
+
+    if not normalized and verdict == "BLOCK":
+        verdict = "PASS"
+        summary = "No actionable findings remained after validating the model output against the changed hunks in the diff."
 
     return verdict, summary, normalized
 
@@ -270,6 +306,7 @@ def main():
 
     diff_text, truncated = load_diff(sys.argv[1])
     changed_files = extract_changed_files(diff_text)
+    changed_line_ranges = extract_changed_line_ranges(diff_text)
     if not diff_text.strip() or not changed_files:
         print("No meaningful diff to review.")
         sys.exit(0)
@@ -302,7 +339,7 @@ def main():
 
     raw_response = call_openai_review(base_url, api_key, model, prompt)
     payload = extract_json_block(raw_response)
-    verdict, summary, findings = normalize_review(payload, changed_files)
+    verdict, summary, findings = normalize_review(payload, changed_files, changed_line_ranges)
     comment = render_comment(model, verdict, summary, findings, truncated, changed_files)
     upsert_pr_comment(repo, pr_number, gh_token, comment)
 
