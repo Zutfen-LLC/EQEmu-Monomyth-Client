@@ -7907,56 +7907,63 @@ std::uint8_t InvokeInvSlotHandleLButtonCoreManagerPrecheckCallsiteHook(
     return original_result;
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreManagerPrecheckACallsiteHook(
-    void* this_context) noexcept {
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreManagerPrecheckACallsiteHook(
+    void* this_context,
+    void*) noexcept {
     return InvokeInvSlotHandleLButtonCoreManagerPrecheckCallsiteHook(
         L"InvSlotHandleLButtonCoreManagerPrecheckA",
         kInvSlotHandleLButtonCoreManagerPrecheckACallsiteRva,
         this_context);
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreManagerPrecheckBCallsiteHook(
-    void* this_context) noexcept {
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreManagerPrecheckBCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     return InvokeInvSlotHandleLButtonCoreManagerPrecheckCallsiteHook(
         L"InvSlotHandleLButtonCoreManagerPrecheckB",
         kInvSlotHandleLButtonCoreManagerPrecheckBCallsiteRva,
         this_context);
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreManagerPrecheckCCallsiteHook(
-    void* this_context) noexcept {
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreManagerPrecheckCCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     return InvokeInvSlotHandleLButtonCoreManagerPrecheckCallsiteHook(
         L"InvSlotHandleLButtonCoreManagerPrecheckC",
         kInvSlotHandleLButtonCoreManagerPrecheckCCallsiteRva,
         this_context);
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreManagerPrecheckDCallsiteHook(
-    void* this_context) noexcept {
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreManagerPrecheckDCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     return InvokeInvSlotHandleLButtonCoreManagerPrecheckCallsiteHook(
         L"InvSlotHandleLButtonCoreManagerPrecheckD",
         kInvSlotHandleLButtonCoreManagerPrecheckDCallsiteRva,
         this_context);
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreManagerPrecheckECallsiteHook(
-    void* this_context) noexcept {
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreManagerPrecheckECallsiteHook(
+    void* this_context,
+    void*) noexcept {
     return InvokeInvSlotHandleLButtonCoreManagerPrecheckCallsiteHook(
         L"InvSlotHandleLButtonCoreManagerPrecheckE",
         kInvSlotHandleLButtonCoreManagerPrecheckECallsiteRva,
         this_context);
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreManagerPrecheckFCallsiteHook(
-    void* this_context) noexcept {
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreManagerPrecheckFCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     return InvokeInvSlotHandleLButtonCoreManagerPrecheckCallsiteHook(
         L"InvSlotHandleLButtonCoreManagerPrecheckF",
         kInvSlotHandleLButtonCoreManagerPrecheckFCallsiteRva,
         this_context);
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCorePostLookupModeGateCallsiteHook(
-    void* this_context) noexcept {
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCorePostLookupModeGateCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     TryCopyBytes(this_context, context_bytes.size(), context_bytes.data());
@@ -7974,8 +7981,9 @@ std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCorePostLookupModeGateCallsit
     return original_result;
 }
 
-void MONOMYTH_THISCALL InvSlotHandleLButtonCorePostLookupUiPulseCallsiteHook(
+void MONOMYTH_FASTCALL InvSlotHandleLButtonCorePostLookupUiPulseCallsiteHook(
     void* this_context,
+    void*,
     std::uint32_t target_id,
     std::int32_t value_a,
     std::int32_t value_b,
@@ -8018,8 +8026,9 @@ void MONOMYTH_THISCALL InvSlotHandleLButtonCorePostLookupUiPulseCallsiteHook(
         context_bytes_after);
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreLateBranchGateACallsiteHook(
-    void* slot_record_like) noexcept {
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchGateACallsiteHook(
+    void* slot_record_like,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     ClientInventorySlotWire slot_record = {};
     const bool slot_record_copied = TryCopyObject(slot_record_like, &slot_record);
@@ -8045,8 +8054,9 @@ std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreLateBranchGateACallsiteHo
     return original_result;
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreLateBranchPrepCallsiteHook(
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchPrepCallsiteHook(
     void* this_context,
+    void*,
     std::int32_t slot_like,
     void* lookup_result_like) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
@@ -8086,8 +8096,9 @@ std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreLateBranchPrepCallsiteHoo
     return original_result;
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreLateBranchGateBCallsiteHook(
-    void* slot_record_like) noexcept {
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchGateBCallsiteHook(
+    void* slot_record_like,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     ClientInventorySlotWire slot_record = {};
     const bool slot_record_copied = TryCopyObject(slot_record_like, &slot_record);
@@ -8165,8 +8176,9 @@ std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreLateBranchGateBCallsiteHo
     return original_result;
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsiteHook(
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsiteHook(
     void* this_context,
+    void*,
     void* lookup_result_like,
     std::uint32_t zero_a,
     std::uint32_t zero_b) noexcept {
@@ -8209,8 +8221,9 @@ std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
     return original_result;
 }
 
-std::uint32_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreModeBitsACallsiteHook(
-    void* this_context) noexcept {
+std::uint32_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreModeBitsACallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
@@ -8230,8 +8243,9 @@ std::uint32_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreModeBitsACallsiteHook(
     return original_result;
 }
 
-std::uint32_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreModeBitsBCallsiteHook(
-    void* this_context) noexcept {
+std::uint32_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreModeBitsBCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
@@ -8251,8 +8265,9 @@ std::uint32_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreModeBitsBCallsiteHook(
     return original_result;
 }
 
-std::uint32_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreModeBitsCCallsiteHook(
-    void* this_context) noexcept {
+std::uint32_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreModeBitsCCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
@@ -8272,8 +8287,9 @@ std::uint32_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreModeBitsCCallsiteHook(
     return original_result;
 }
 
-std::uint32_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreModeBitsDCallsiteHook(
-    void* this_context) noexcept {
+std::uint32_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreModeBitsDCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
@@ -8293,8 +8309,9 @@ std::uint32_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreModeBitsDCallsiteHook(
     return original_result;
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreLocalGateCallsiteHook(
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLocalGateCallsiteHook(
     void* this_context,
+    void*,
     const void* slot_record_pointer) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     const auto slot_context = CaptureInvSlotHandleLButtonCoreSlotContext(this_context);
@@ -8322,8 +8339,9 @@ std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreLocalGateCallsiteHook(
     return original_result;
 }
 
-void* MONOMYTH_THISCALL InvSlotHandleLButtonCoreResolveObjectCallsiteHook(
+void* MONOMYTH_FASTCALL InvSlotHandleLButtonCoreResolveObjectCallsiteHook(
     void* this_context,
+    void*,
     void* output_pointer) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     const auto slot_context = CaptureInvSlotHandleLButtonCoreSlotContext(this_context);
@@ -8354,8 +8372,9 @@ void* MONOMYTH_THISCALL InvSlotHandleLButtonCoreResolveObjectCallsiteHook(
     return original_result;
 }
 
-int MONOMYTH_THISCALL InvSlotHandleLButtonCoreResolvedKindACallsiteHook(
-    void* this_context) noexcept {
+int MONOMYTH_FASTCALL InvSlotHandleLButtonCoreResolvedKindACallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
@@ -8375,8 +8394,9 @@ int MONOMYTH_THISCALL InvSlotHandleLButtonCoreResolvedKindACallsiteHook(
     return original_result;
 }
 
-int MONOMYTH_THISCALL InvSlotHandleLButtonCoreResolvedKindBCallsiteHook(
-    void* this_context) noexcept {
+int MONOMYTH_FASTCALL InvSlotHandleLButtonCoreResolvedKindBCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
@@ -8396,8 +8416,9 @@ int MONOMYTH_THISCALL InvSlotHandleLButtonCoreResolvedKindBCallsiteHook(
     return original_result;
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreResolvedFlagACallsiteHook(
-    void* this_context) noexcept {
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreResolvedFlagACallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
@@ -8417,8 +8438,9 @@ std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreResolvedFlagACallsiteHook
     return original_result;
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreResolvedFlagBCallsiteHook(
-    void* this_context) noexcept {
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreResolvedFlagBCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
@@ -8438,8 +8460,9 @@ std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreResolvedFlagBCallsiteHook
     return original_result;
 }
 
-std::uint32_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreModeBitsECallsiteHook(
-    void* this_context) noexcept {
+std::uint32_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreModeBitsECallsiteHook(
+    void* this_context,
+    void*) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes = {};
     const bool context_bytes_copied =
@@ -8483,8 +8506,9 @@ std::uint32_t WINAPI InvSlotHandleLButtonCorePostResolveGateCallsiteHook(
     return original_result;
 }
 
-void MONOMYTH_THISCALL InvSlotHandleLButtonCoreAltDispatchCallsiteHook(
+void MONOMYTH_FASTCALL InvSlotHandleLButtonCoreAltDispatchCallsiteHook(
     void* this_context,
+    void*,
     const void* slot_record_pointer,
     std::uint32_t mode_flag) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
@@ -8545,8 +8569,9 @@ void* CDECL InvSlotHandleLButtonCoreSlot17MessageCallsiteHook(
     return original_result;
 }
 
-void MONOMYTH_THISCALL InvSlotHandleLButtonCoreGlobalAction49CallsiteHook(
+void MONOMYTH_FASTCALL InvSlotHandleLButtonCoreGlobalAction49CallsiteHook(
     void* this_context,
+    void*,
     std::uint32_t action_id) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes_before = {};
@@ -8590,8 +8615,9 @@ std::uint8_t CDECL InvSlotHandleLButtonCoreItemRangeGateCallsiteHook(
     return original_result;
 }
 
-std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreLateSlot17GateCallsiteHook(
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateSlot17GateCallsiteHook(
     void* this_context,
+    void*,
     const void* slot_record_pointer) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     ClientInventorySlotWire slot_record = {};
@@ -8623,8 +8649,9 @@ std::uint8_t MONOMYTH_THISCALL InvSlotHandleLButtonCoreLateSlot17GateCallsiteHoo
     return original_result;
 }
 
-void MONOMYTH_THISCALL InvSlotHandleLButtonCoreLateSlot17ApplyCallsiteHook(
+void MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateSlot17ApplyCallsiteHook(
     void* this_context,
+    void*,
     const void* slot_record_pointer) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     ClientInventorySlotWire slot_record = {};
@@ -8651,8 +8678,9 @@ void MONOMYTH_THISCALL InvSlotHandleLButtonCoreLateSlot17ApplyCallsiteHook(
         manager_after);
 }
 
-void MONOMYTH_THISCALL EverQuestLMouseUpHook(
+void MONOMYTH_FASTCALL EverQuestLMouseUpHook(
     void* this_context,
+    void*,
     void* point_like) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     const std::uintptr_t module_base = GetHostModuleBase();
@@ -8760,8 +8788,9 @@ void MONOMYTH_THISCALL EverQuestLMouseUpHook(
         active_window_after_copied);
 }
 
-int MONOMYTH_THISCALL CXWndHandleLButtonUpHook(
+int MONOMYTH_FASTCALL CXWndHandleLButtonUpHook(
     void* this_context,
+    void*,
     void* point_like,
     std::uint32_t flags_like) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
@@ -8897,8 +8926,9 @@ int MONOMYTH_THISCALL CXWndHandleLButtonUpHook(
     return original_result;
 }
 
-int MONOMYTH_THISCALL InventoryWindowWndNotificationHook(
+int MONOMYTH_FASTCALL InventoryWindowWndNotificationHook(
     void* this_context,
+    void*,
     void* sender_window,
     std::uint32_t notification_code,
     void* payload_like) noexcept {
@@ -9149,8 +9179,9 @@ int MONOMYTH_THISCALL InventoryWindowWndNotificationHook(
     return original_result;
 }
 
-int MONOMYTH_THISCALL InvSlotWndHandleLButtonUpHook(
+int MONOMYTH_FASTCALL InvSlotWndHandleLButtonUpHook(
     void* this_context,
+    void*,
     void* point_like,
     std::uint32_t flags_like) noexcept {
     const std::uintptr_t module_base = GetHostModuleBase();
@@ -9257,8 +9288,9 @@ int MONOMYTH_THISCALL InvSlotWndHandleLButtonUpHook(
     return original_result;
 }
 
-int MONOMYTH_THISCALL InvSlotWndHandleLButtonUpAfterHeldHook(
+int MONOMYTH_FASTCALL InvSlotWndHandleLButtonUpAfterHeldHook(
     void* this_context,
+    void*,
     void* point_like,
     std::uint32_t flags_like) noexcept {
     const std::uintptr_t module_base = GetHostModuleBase();
@@ -9365,8 +9397,9 @@ int MONOMYTH_THISCALL InvSlotWndHandleLButtonUpAfterHeldHook(
     return original_result;
 }
 
-void MONOMYTH_THISCALL InvSlotHandleLButtonCoreHook(
+void MONOMYTH_FASTCALL InvSlotHandleLButtonCoreHook(
     void* this_context,
+    void*,
     void* point_like,
     std::uint32_t slot_like,
     std::uint32_t held_flag_like) noexcept {
@@ -9492,8 +9525,9 @@ void MONOMYTH_THISCALL InvSlotHandleLButtonCoreHook(
     }
 }
 
-void MONOMYTH_THISCALL MoveItemOwnerPrimarySetterHook(
+void MONOMYTH_FASTCALL MoveItemOwnerPrimarySetterHook(
     void* this_context,
+    void*,
     void* primary_object_like) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::array<std::uint8_t, 24> context_bytes_before = {};
@@ -9598,8 +9632,9 @@ void MONOMYTH_THISCALL MoveItemOwnerPrimarySetterHook(
         context_bytes_after_copied);
 }
 
-void* MONOMYTH_THISCALL MoveItemCtorSiteACallsiteHook(
+void* MONOMYTH_FASTCALL MoveItemCtorSiteACallsiteHook(
     void* this_context,
+    void*,
     void* slot_like,
     std::uint32_t arg2,
     std::int32_t arg3,
@@ -9659,8 +9694,9 @@ void* MONOMYTH_THISCALL MoveItemCtorSiteACallsiteHook(
     return original_result;
 }
 
-void* MONOMYTH_THISCALL MoveItemCtorSiteBCallsiteHook(
+void* MONOMYTH_FASTCALL MoveItemCtorSiteBCallsiteHook(
     void* this_context,
+    void*,
     void* slot_like,
     std::uint32_t arg2,
     std::int32_t arg3,
@@ -9725,8 +9761,9 @@ void* MONOMYTH_THISCALL MoveItemCtorSiteBCallsiteHook(
     return original_result;
 }
 
-void* MONOMYTH_THISCALL MoveItemSlot21LookupHook(
+void* MONOMYTH_FASTCALL MoveItemSlot21LookupHook(
     void* this_context,
+    void*,
     void* output_like,
     std::uint32_t slot_like) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
