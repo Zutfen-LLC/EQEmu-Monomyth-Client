@@ -10841,8 +10841,22 @@ bool InstallInventoryClassTitleDisplayHook(
             kInventoryClassTitleRefreshEntryBytes.data(),
             kInventoryClassTitleRefreshEntryBytes.size()) == 0;
     if (!refresh_entry_matches) {
-        monomyth::logger::Log(
-            L"hook_manager: inventory class title display hook denied target=IDW_ClassTitle1 validation=entry_bytes_mismatch");
+        std::wstring message =
+            L"hook_manager: inventory class title display hook denied target=IDW_ClassTitle1 validation=entry_bytes_mismatch";
+        message += L" address=";
+        message += HexPtr(module_base + kInventoryClassTitleRefreshTargetRva);
+        message += L" bytes_copied=";
+        message += (refresh_entry_copied ? L"true" : L"false");
+        message += L" expected=\"";
+        message += HexBytes(
+            kInventoryClassTitleRefreshEntryBytes.data(),
+            kInventoryClassTitleRefreshEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(
+            live_inventory_class_title_refresh_entry.data(),
+            live_inventory_class_title_refresh_entry.size());
+        message += L"\"";
+        monomyth::logger::Log(message);
         return false;
     }
 
@@ -10861,8 +10875,22 @@ bool InstallInventoryClassTitleDisplayHook(
             kCXWndSetWindowTextAEntryBytes.data(),
             kCXWndSetWindowTextAEntryBytes.size()) == 0;
     if (!set_text_entry_matches) {
-        monomyth::logger::Log(
-            L"hook_manager: inventory class title display hook denied target=IDW_ClassTitle1 failure_reason=set_text_entry_bytes_mismatch");
+        std::wstring message =
+            L"hook_manager: inventory class title display hook denied target=IDW_ClassTitle1 failure_reason=set_text_entry_bytes_mismatch";
+        message += L" address=";
+        message += HexPtr(module_base + kCXWndSetWindowTextATargetRva);
+        message += L" bytes_copied=";
+        message += (set_text_entry_copied ? L"true" : L"false");
+        message += L" expected=\"";
+        message += HexBytes(
+            kCXWndSetWindowTextAEntryBytes.data(),
+            kCXWndSetWindowTextAEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(
+            live_cxwnd_set_window_text_a_entry.data(),
+            live_cxwnd_set_window_text_a_entry.size());
+        message += L"\"";
+        monomyth::logger::Log(message);
         return false;
     }
 
