@@ -867,7 +867,6 @@ std::uint64_t g_is_class_usable_predicate_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
 std::uint64_t g_auto_equip_class_gate_override_count = 0;
 std::uint64_t g_who_class_name_entry_trace_count = 0;
-std::uint64_t g_who_class_name_lookup_trace_count = 0;
 thread_local const void* g_active_who_class_name_subject = nullptr;
 std::uint64_t g_ui_class_display_trace_count = 0;
 std::uint32_t g_active_equip_nested_validation_id = 0;
@@ -1109,36 +1108,44 @@ void LogWhoClassNameEntryTrace(
     monomyth::logger::Log(message);
 }
 
-void LogWhoClassNameLookupTrace(
+void LogWhoAllClassDisplayCorrelationTrace(
+    const wchar_t* surface,
+    const wchar_t* input_name,
     std::uintptr_t caller_return_address,
-    std::uint32_t string_id,
-    const void* active_subject,
-    bool caller_matches,
+    std::uint32_t input_value,
+    const monomyth::packet_observer::WhoAllClassDisplayCorrelationWindow& correlation,
+    const void* subject,
     bool override_applied,
     const wchar_t* reason,
     const char* formatted) noexcept {
-    const std::uint64_t count = ++g_who_class_name_lookup_trace_count;
-    if (!ShouldLogWhoClassNameTrace(count)) {
-        return;
-    }
-
     const std::uintptr_t module_base = GetHostModuleBase();
     const std::uint32_t caller_rva = module_base != 0 && caller_return_address >= module_base
         ? static_cast<std::uint32_t>(caller_return_address - module_base)
         : 0;
 
-    std::wstring message = L"WhoClassNameLookupTrace count=";
-    message += std::to_wstring(count);
+    std::wstring message = L"WhoAllClassDisplayTrace";
+    message += L" activation=";
+    message += std::to_wstring(correlation.activation);
+    message += L" receive_sequence=";
+    message += std::to_wstring(correlation.receive_sequence);
+    message += L" response_index=";
+    message += std::to_wstring(correlation.response_index);
+    message += L" remaining_before=";
+    message += std::to_wstring(correlation.remaining_before);
+    message += L" remaining_after=";
+    message += std::to_wstring(correlation.remaining_after);
+    message += L" surface=";
+    message += (surface == nullptr ? L"unknown" : surface);
     message += L" caller_return=";
     message += HexPtr(caller_return_address);
     message += L" caller_rva=";
     message += Hex32(caller_rva);
-    message += L" string_id=";
-    message += Hex32(string_id);
-    message += L" active_subject=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(active_subject));
-    message += L" caller_matches=";
-    message += (caller_matches ? L"true" : L"false");
+    message += L" ";
+    message += (input_name == nullptr ? L"input" : input_name);
+    message += L"=";
+    message += Hex32(input_value);
+    message += L" subject=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(subject));
     message += L" override_applied=";
     message += (override_applied ? L"true" : L"false");
     if (formatted != nullptr && formatted[0] != '\0') {
@@ -2424,6 +2431,9 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
     void*,
     unsigned int class_id) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    monomyth::packet_observer::WhoAllClassDisplayCorrelationWindow correlation = {};
+    const bool correlation_active =
+        monomyth::packet_observer::TryConsumeWhoAllClassDisplayCorrelation(&correlation);
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
 
@@ -2439,6 +2449,18 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
             semantic_style,
             L"GetClassDesc");
         if (display != nullptr) {
+            if (correlation_active) {
+                LogWhoAllClassDisplayCorrelationTrace(
+                    L"GetClassDesc",
+                    L"class_id",
+                    class_id,
+                    caller_return_address,
+                    correlation,
+                    nullptr,
+                    true,
+                    semantic_reason,
+                    display);
+            }
             LogUiClassHelperTrace(
                 L"GetClassDesc",
                 caller_return_address,
@@ -2460,6 +2482,18 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
             monomyth::multiclass_identity::ClassDisplayStyle::kFullName,
             L"GetClassDesc");
         if (display != nullptr) {
+            if (correlation_active) {
+                LogWhoAllClassDisplayCorrelationTrace(
+                    L"GetClassDesc",
+                    L"class_id",
+                    class_id,
+                    caller_return_address,
+                    correlation,
+                    nullptr,
+                    true,
+                    L"requested_class_matches_local_primary",
+                    display);
+            }
             LogUiClassHelperTrace(
                 L"GetClassDesc",
                 caller_return_address,
@@ -2477,6 +2511,23 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
     const char* result = g_original_get_class_desc == nullptr
         ? nullptr
         : g_original_get_class_desc(this_context, class_id);
+    const wchar_t* const fallback_reason =
+        local_class_copied && class_id == local_class_id
+            ? L"local_primary_match_but_override_unavailable"
+            : (local_class_copied ? L"requested_class_does_not_match_local_primary"
+                                  : L"local_primary_unavailable");
+    if (correlation_active) {
+        LogWhoAllClassDisplayCorrelationTrace(
+            L"GetClassDesc",
+            L"class_id",
+            class_id,
+            caller_return_address,
+            correlation,
+            nullptr,
+            false,
+            fallback_reason,
+            result);
+    }
     LogUiClassHelperTrace(
         L"GetClassDesc",
         caller_return_address,
@@ -2486,10 +2537,7 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
         snapshot,
         false,
         result,
-        local_class_copied && class_id == local_class_id
-            ? L"local_primary_match_but_override_unavailable"
-            : (local_class_copied ? L"requested_class_does_not_match_local_primary"
-                                  : L"local_primary_unavailable"));
+        fallback_reason);
     return result;
 }
 
@@ -2498,6 +2546,9 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
     void*,
     unsigned int class_id) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    monomyth::packet_observer::WhoAllClassDisplayCorrelationWindow correlation = {};
+    const bool correlation_active =
+        monomyth::packet_observer::TryConsumeWhoAllClassDisplayCorrelation(&correlation);
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
 
@@ -2512,6 +2563,18 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
             semantic_style,
             L"GetClassThreeLetterCode");
         if (display != nullptr) {
+            if (correlation_active) {
+                LogWhoAllClassDisplayCorrelationTrace(
+                    L"GetClassThreeLetterCode",
+                    L"class_id",
+                    class_id,
+                    caller_return_address,
+                    correlation,
+                    nullptr,
+                    true,
+                    semantic_reason,
+                    display);
+            }
             LogUiClassHelperTrace(
                 L"GetClassThreeLetterCode",
                 caller_return_address,
@@ -2533,6 +2596,18 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
             monomyth::multiclass_identity::ClassDisplayStyle::kThreeLetterCode,
             L"GetClassThreeLetterCode");
         if (display != nullptr) {
+            if (correlation_active) {
+                LogWhoAllClassDisplayCorrelationTrace(
+                    L"GetClassThreeLetterCode",
+                    L"class_id",
+                    class_id,
+                    caller_return_address,
+                    correlation,
+                    nullptr,
+                    true,
+                    L"requested_class_matches_local_primary",
+                    display);
+            }
             LogUiClassHelperTrace(
                 L"GetClassThreeLetterCode",
                 caller_return_address,
@@ -2550,6 +2625,23 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
     const char* result = g_original_get_class_three_letter_code == nullptr
         ? nullptr
         : g_original_get_class_three_letter_code(this_context, class_id);
+    const wchar_t* const fallback_reason =
+        local_class_copied && class_id == local_class_id
+            ? L"local_primary_match_but_override_unavailable"
+            : (local_class_copied ? L"requested_class_does_not_match_local_primary"
+                                  : L"local_primary_unavailable");
+    if (correlation_active) {
+        LogWhoAllClassDisplayCorrelationTrace(
+            L"GetClassThreeLetterCode",
+            L"class_id",
+            class_id,
+            caller_return_address,
+            correlation,
+            nullptr,
+            false,
+            fallback_reason,
+            result);
+    }
     LogUiClassHelperTrace(
         L"GetClassThreeLetterCode",
         caller_return_address,
@@ -2559,10 +2651,7 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
         snapshot,
         false,
         result,
-        local_class_copied && class_id == local_class_id
-            ? L"local_primary_match_but_override_unavailable"
-            : (local_class_copied ? L"requested_class_does_not_match_local_primary"
-                                  : L"local_primary_unavailable"));
+        fallback_reason);
     return result;
 }
 
@@ -2614,6 +2703,9 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
     std::uint32_t string_id,
     void* found_flag_out) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    monomyth::packet_observer::WhoAllClassDisplayCorrelationWindow correlation = {};
+    const bool correlation_active =
+        monomyth::packet_observer::TryConsumeWhoAllClassDisplayCorrelation(&correlation);
     const bool caller_matches = IsWhoClassNameLookupCaller(caller_return_address);
     if (caller_matches) {
         const char* display = BuildLocalSubjectClassDisplayAscii(
@@ -2624,49 +2716,65 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
             if (found_flag_out != nullptr) {
                 *reinterpret_cast<std::uint8_t*>(found_flag_out) = 1;
             }
-            LogWhoClassNameLookupTrace(
-                caller_return_address,
-                string_id,
-                g_active_who_class_name_subject,
-                caller_matches,
-                true,
-                L"local_subject_multiclass_display_applied",
-                display);
+            if (correlation_active) {
+                LogWhoAllClassDisplayCorrelationTrace(
+                    L"WhoClassNameClassLookup",
+                    L"string_id",
+                    string_id,
+                    caller_return_address,
+                    correlation,
+                    g_active_who_class_name_subject,
+                    true,
+                    L"local_subject_multiclass_display_applied",
+                    display);
+            }
             return display;
         }
-        LogWhoClassNameLookupTrace(
-            caller_return_address,
-            string_id,
-            g_active_who_class_name_subject,
-            caller_matches,
-            false,
-            L"caller_matched_but_override_unavailable",
-            nullptr);
+        if (correlation_active) {
+            LogWhoAllClassDisplayCorrelationTrace(
+                L"WhoClassNameClassLookup",
+                L"string_id",
+                string_id,
+                caller_return_address,
+                correlation,
+                g_active_who_class_name_subject,
+                false,
+                L"caller_matched_but_override_unavailable",
+                nullptr);
+        }
     }
 
     if (g_original_who_class_name_class_lookup == nullptr) {
-        LogWhoClassNameLookupTrace(
-            caller_return_address,
-            string_id,
-            g_active_who_class_name_subject,
-            caller_matches,
-            false,
-            L"original_lookup_unavailable",
-            nullptr);
+        if (correlation_active) {
+            LogWhoAllClassDisplayCorrelationTrace(
+                L"WhoClassNameClassLookup",
+                L"string_id",
+                string_id,
+                caller_return_address,
+                correlation,
+                g_active_who_class_name_subject,
+                false,
+                L"original_lookup_unavailable",
+                nullptr);
+        }
         return nullptr;
     }
 
     const char* result =
         g_original_who_class_name_class_lookup(this_context, string_id, found_flag_out);
-    LogWhoClassNameLookupTrace(
-        caller_return_address,
-        string_id,
-        g_active_who_class_name_subject,
-        caller_matches,
-        false,
-        caller_matches ? L"caller_matched_but_fell_back_to_original"
-                       : L"caller_did_not_match_who_class_name_branch",
-        result);
+    if (correlation_active) {
+        LogWhoAllClassDisplayCorrelationTrace(
+            L"WhoClassNameClassLookup",
+            L"string_id",
+            string_id,
+            caller_return_address,
+            correlation,
+            g_active_who_class_name_subject,
+            false,
+            caller_matches ? L"caller_matched_but_fell_back_to_original"
+                           : L"caller_did_not_match_who_class_name_branch",
+            result);
+    }
     return result;
 }
 

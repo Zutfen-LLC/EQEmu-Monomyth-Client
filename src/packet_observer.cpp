@@ -34,6 +34,7 @@ constexpr std::uint64_t kAuthStatsMissingWarningSequence = 250;
 constexpr std::uint64_t kFirstIntrospectionLogLimit = 10;
 constexpr std::uint64_t kIntrospectionLogSampleInterval = 1000;
 constexpr std::uint64_t kWhoAllResponseLogLimit = 8;
+constexpr std::uint32_t kWhoAllClassDisplayCorrelationBudget = 48;
 constexpr std::uint32_t kWhoAllResponseOpcode = 0x578c;
 constexpr std::uint32_t kWhoAllResponseHeaderSize = 64;
 constexpr std::uint32_t kWhoAllResponseEntryLogLimit = 6;
@@ -62,6 +63,10 @@ std::atomic<std::uint64_t> g_server_auth_stats_exact_match_count = 0;
 std::atomic<std::uint64_t> g_server_auth_stats_candidate_count = 0;
 std::atomic<bool> g_server_auth_stats_missing_warning_logged = false;
 std::atomic<std::uint64_t> g_who_all_response_count = 0;
+std::atomic<std::uint32_t> g_who_all_class_display_correlation_remaining = 0;
+std::atomic<std::uint64_t> g_who_all_class_display_correlation_activation = 0;
+std::atomic<std::uint64_t> g_who_all_class_display_correlation_receive_sequence = 0;
+std::atomic<std::uint64_t> g_who_all_class_display_correlation_response_index = 0;
 std::vector<std::uint32_t> g_introspection_allowlist;
 
 struct IntrospectionAllowlistConfig {
@@ -371,6 +376,26 @@ void MaybeLogMissingServerAuthStatsWarning(std::uint64_t sequence) {
     monomyth::logger::Log(message.str());
 }
 
+void ArmWhoAllClassDisplayCorrelation(
+    std::uint64_t receive_sequence,
+    std::uint64_t response_index) noexcept {
+    const std::uint64_t activation =
+        g_who_all_class_display_correlation_activation.fetch_add(1) + 1;
+    g_who_all_class_display_correlation_receive_sequence.store(receive_sequence);
+    g_who_all_class_display_correlation_response_index.store(response_index);
+    g_who_all_class_display_correlation_remaining.store(
+        kWhoAllClassDisplayCorrelationBudget);
+
+    std::wstringstream message;
+    message
+        << L"PacketObserverWhoAllCorrelationWindow"
+        << L" activation=" << activation
+        << L" receive_sequence=" << receive_sequence
+        << L" response_index=" << response_index
+        << L" budget=" << kWhoAllClassDisplayCorrelationBudget;
+    monomyth::logger::Log(message.str());
+}
+
 bool TryReadU32(
     const std::uint8_t* payload,
     std::uint32_t payload_length,
@@ -434,6 +459,7 @@ void MaybeLogWhoAllResponse(
     }
 
     const std::uint64_t response_index = g_who_all_response_count.fetch_add(1) + 1;
+    ArmWhoAllClassDisplayCorrelation(sequence, response_index);
     if (response_index > kWhoAllResponseLogLimit) {
         return;
     }
@@ -584,6 +610,10 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     g_server_auth_stats_candidate_count.store(0);
     g_server_auth_stats_missing_warning_logged.store(false);
     g_who_all_response_count.store(0);
+    g_who_all_class_display_correlation_remaining.store(0);
+    g_who_all_class_display_correlation_activation.store(0);
+    g_who_all_class_display_correlation_receive_sequence.store(0);
+    g_who_all_class_display_correlation_response_index.store(0);
     const IntrospectionAllowlistConfig allowlist_config = LoadIntrospectionAllowlist();
     g_introspection_allowlist = allowlist_config.opcodes;
     g_state.store(State::kInitialized);
@@ -828,6 +858,32 @@ void ObserveSendMetadata(
     monomyth::logger::Log(message.str());
 }
 
+bool TryConsumeWhoAllClassDisplayCorrelation(
+    WhoAllClassDisplayCorrelationWindow* window) noexcept {
+    if (window == nullptr) {
+        return false;
+    }
+
+    *window = {};
+
+    std::uint32_t current = g_who_all_class_display_correlation_remaining.load();
+    while (current != 0) {
+        if (g_who_all_class_display_correlation_remaining.compare_exchange_weak(
+                current,
+                current - 1)) {
+            window->active = true;
+            window->activation = g_who_all_class_display_correlation_activation.load();
+            window->receive_sequence = g_who_all_class_display_correlation_receive_sequence.load();
+            window->response_index = g_who_all_class_display_correlation_response_index.load();
+            window->remaining_before = current;
+            window->remaining_after = current - 1;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void Shutdown() noexcept {
     const State previous = g_state.exchange(State::kShutdown);
     if (previous == State::kUnavailable || previous == State::kShutdown) {
@@ -843,10 +899,15 @@ void Shutdown() noexcept {
             << L" server_auth_stats_exact_match_count=" << g_server_auth_stats_exact_match_count.load()
             << L" server_auth_stats_candidate_count=" << g_server_auth_stats_candidate_count.load()
             << L" who_all_response_count=" << g_who_all_response_count.load()
+            << L" who_all_class_display_correlation_remaining="
+            << g_who_all_class_display_correlation_remaining.load()
+            << L" who_all_class_display_correlation_activation="
+            << g_who_all_class_display_correlation_activation.load()
             << L" move_item_focus_remaining=" << g_move_item_receive_focus_remaining.load()
             << L" move_item_focus_activation=" << g_move_item_receive_focus_activation.load();
     g_full_packet_trace_enabled.store(false);
     g_move_item_receive_focus_remaining.store(0);
+    g_who_all_class_display_correlation_remaining.store(0);
     monomyth::logger::Log(message.str());
 }
 
