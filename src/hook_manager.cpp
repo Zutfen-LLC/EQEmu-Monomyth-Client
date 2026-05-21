@@ -915,7 +915,7 @@ void LogUiClassDisplayTrace(
     message += L" assigned_mask_status=";
     message += (snapshot.has_classes_bitmask ? L"present" : L"missing");
     message += L" assigned_mask=";
-    message += FormatAssignedMask(snapshot);
+    message += Hex32(snapshot.has_classes_bitmask ? snapshot.classes_bitmask : 0);
     if (formatted != nullptr && formatted[0] != '\0') {
         std::wstring formatted_w;
         formatted_w.reserve(std::strlen(formatted));
