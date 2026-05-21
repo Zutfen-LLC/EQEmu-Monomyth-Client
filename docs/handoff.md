@@ -68,6 +68,16 @@ Important THJ clue:
 - that branch returns abbreviated slash-joined class codes
 - the general branch can return full slash-joined class names
 
+### Working rules from THJ decomp
+
+These should actively constrain the next inventory attempts:
+- do not reopen final-control text interception ideas like `CXStr::Assign`, `CXWnd::SetWindowTextA`, or guessed direct title writes; THJ evidence points away from that layer
+- do not treat inventory window notifications as the likely fix seam; at most they are a bounded correlation trigger to help find the real producer
+- prefer recovering the clean-room equivalent of `EQ_CharSelectClassNameFunc` over deepening unrelated helper or UI callback hooks
+- treat `0x6843ff` as a proven anchor for the abbreviated branch only, not as proof that the visible inventory title uses the same caller path
+- if a trace path is not converging on a producer shaped like `EQ_CharSelectClassNameFunc` / `FUN_10024920`, assume drift and stop before building more patches on that seam
+- keep the current progression-selection writer separate from inventory until a distinct producer is pinned; the current `char_select_class_name_func` slot is still not proof of THJ parity
+
 ## What We Have Implemented
 
 ### Shared formatter layer

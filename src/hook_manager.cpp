@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cwchar>
 #include <cstring>
 #include <iomanip>
 #include <limits>
@@ -833,6 +834,13 @@ std::uint64_t g_memorize_send_trace_count = 0;
 std::uint64_t g_scroll_scribe_event_count = 0;
 std::uint64_t g_ui_class_helper_trace_count = 0;
 std::uint64_t g_inventory_class_title_trace_count = 0;
+constexpr std::size_t kUiClassHelperCallerCatalogCapacity = 64;
+std::array<std::uint32_t, kUiClassHelperCallerCatalogCapacity>
+    g_get_class_desc_seen_caller_rvas = {};
+std::size_t g_get_class_desc_seen_caller_rva_count = 0;
+std::array<std::uint32_t, kUiClassHelperCallerCatalogCapacity>
+    g_get_class_three_letter_seen_caller_rvas = {};
+std::size_t g_get_class_three_letter_seen_caller_rva_count = 0;
 std::atomic<std::uint32_t> g_inventory_class_display_correlation_remaining = 0;
 std::atomic<std::uint64_t> g_inventory_class_display_correlation_activation = 0;
 std::atomic<std::uint32_t> g_inventory_class_display_correlation_notification_code = 0;
@@ -1025,6 +1033,94 @@ bool ShouldLogWhoClassNameTrace(std::uint64_t count) noexcept {
     return count <= 20 || (count % 50) == 0;
 }
 
+bool ShouldCatalogUiClassHelperCaller(
+    const wchar_t* helper,
+    std::uint32_t caller_rva) noexcept {
+    if (helper == nullptr || caller_rva == 0) {
+        return false;
+    }
+
+    std::array<std::uint32_t, kUiClassHelperCallerCatalogCapacity>* seen = nullptr;
+    std::size_t* seen_count = nullptr;
+    if (std::wcscmp(helper, L"GetClassDesc") == 0) {
+        seen = &g_get_class_desc_seen_caller_rvas;
+        seen_count = &g_get_class_desc_seen_caller_rva_count;
+    } else if (std::wcscmp(helper, L"GetClassThreeLetterCode") == 0) {
+        seen = &g_get_class_three_letter_seen_caller_rvas;
+        seen_count = &g_get_class_three_letter_seen_caller_rva_count;
+    } else {
+        return false;
+    }
+
+    for (std::size_t i = 0; i < *seen_count; ++i) {
+        if ((*seen)[i] == caller_rva) {
+            return false;
+        }
+    }
+
+    if (*seen_count < seen->size()) {
+        (*seen)[*seen_count] = caller_rva;
+        ++(*seen_count);
+        return true;
+    }
+
+    return false;
+}
+
+void MaybeLogUiClassHelperCallerCatalogTrace(
+    const wchar_t* helper,
+    std::uintptr_t caller_return_address,
+    unsigned int requested_class_id,
+    bool local_class_copied,
+    std::uint8_t local_class_id,
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    bool override_applied,
+    const char* formatted,
+    const wchar_t* reason) noexcept {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_rva = module_base != 0 && caller_return_address >= module_base
+        ? static_cast<std::uint32_t>(caller_return_address - module_base)
+        : 0;
+    const bool local_player_relevant =
+        local_class_copied && requested_class_id == local_class_id;
+    if (!snapshot.has_classes_bitmask && !override_applied && !local_player_relevant) {
+        return;
+    }
+    if (!ShouldCatalogUiClassHelperCaller(helper, caller_rva)) {
+        return;
+    }
+
+    std::wstring message = L"UiClassHelperCallerCatalogTrace helper=";
+    message += (helper == nullptr ? L"unknown" : helper);
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" requested_class_id=";
+    message += std::to_wstring(requested_class_id);
+    message += L" local_class_copied=";
+    message += (local_class_copied ? L"true" : L"false");
+    message += L" local_class_id=";
+    message += std::to_wstring(local_class_id);
+    message += L" has_assigned_mask=";
+    message += (snapshot.has_classes_bitmask ? L"true" : L"false");
+    message += L" assigned_mask=";
+    message += Hex32(snapshot.has_classes_bitmask ? snapshot.classes_bitmask : 0);
+    message += L" override_applied=";
+    message += (override_applied ? L"true" : L"false");
+    if (formatted != nullptr && formatted[0] != '\0') {
+        message += L" formatted=\"";
+        message += WidenAsciiLossy(formatted);
+        message += L"\"";
+    }
+    if (reason != nullptr && reason[0] != L'\0') {
+        message += L" reason=\"";
+        message += reason;
+        message += L"\"";
+    }
+    monomyth::logger::Log(message);
+}
+
 bool TryResolveSemanticClassDisplayStyleForCaller(
     std::uintptr_t caller_return_address,
     monomyth::multiclass_identity::ClassDisplayStyle* style,
@@ -1071,6 +1167,17 @@ void LogUiClassHelperTrace(
     bool override_applied,
     const char* formatted,
     const wchar_t* reason) {
+    MaybeLogUiClassHelperCallerCatalogTrace(
+        helper,
+        caller_return_address,
+        requested_class_id,
+        local_class_copied,
+        local_class_id,
+        snapshot,
+        override_applied,
+        formatted,
+        reason);
+
     const std::uint64_t count = ++g_ui_class_helper_trace_count;
     if (!ShouldLogUiClassHelperTrace(count)) {
         return;
@@ -11558,6 +11665,10 @@ bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest)
     }
 
 success:
+    g_get_class_desc_seen_caller_rvas = {};
+    g_get_class_desc_seen_caller_rva_count = 0;
+    g_get_class_three_letter_seen_caller_rvas = {};
+    g_get_class_three_letter_seen_caller_rva_count = 0;
     g_inventory_class_display_correlation_remaining.store(0);
     g_inventory_class_display_correlation_activation.store(0);
     g_inventory_class_display_correlation_notification_code.store(0);
@@ -13328,6 +13439,10 @@ bool RemoveReceiveDispatchHook() noexcept {
 bool RemoveWhoClassNameDisplayHook() noexcept {
     bool ok = true;
     g_active_who_class_name_subject = nullptr;
+    g_get_class_desc_seen_caller_rvas = {};
+    g_get_class_desc_seen_caller_rva_count = 0;
+    g_get_class_three_letter_seen_caller_rvas = {};
+    g_get_class_three_letter_seen_caller_rva_count = 0;
     g_inventory_class_display_correlation_remaining.store(0);
     g_inventory_class_display_correlation_activation.store(0);
     g_inventory_class_display_correlation_notification_code.store(0);
