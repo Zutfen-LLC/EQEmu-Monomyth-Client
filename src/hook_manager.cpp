@@ -179,6 +179,7 @@ constexpr std::uint32_t kWhoClassNameClassLookupTargetRva = 0x003d0660;
 constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnARva = 0x001364ec;
 constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnBRva = 0x001365c7;
 constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnCRva = 0x00136606;
+constexpr std::uint32_t kWhoAllClassLabelLookupCallerRva = 0x000477e6;
 constexpr std::uint32_t kProgressionSelectionClassLookupCallsiteRva = 0x003212b6;
 constexpr std::uint32_t kProgressionSelectionClassLookupTargetRva = 0x00042c00;
 constexpr std::size_t kInventoryClassTitleControlOffset = 0x02cc;
@@ -2706,7 +2707,47 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
     monomyth::packet_observer::WhoAllClassDisplayCorrelationWindow correlation = {};
     const bool correlation_active =
         monomyth::packet_observer::TryConsumeWhoAllClassDisplayCorrelation(&correlation);
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_return_rva =
+        module_base != 0 && caller_return_address >= module_base
+        ? static_cast<std::uint32_t>(caller_return_address - module_base)
+        : 0;
+    const bool who_all_class_label_caller =
+        caller_return_rva == kWhoAllClassLabelLookupCallerRva;
     const bool caller_matches = IsWhoClassNameLookupCaller(caller_return_address);
+    if (who_all_class_label_caller && correlation_active) {
+        const char* display = BuildLocalPlayerClassDisplayAscii(
+            monomyth::multiclass_identity::ClassDisplayStyle::kFullName,
+            L"WhoClassNameClassLookup");
+        if (display != nullptr) {
+            if (found_flag_out != nullptr) {
+                *reinterpret_cast<std::uint8_t*>(found_flag_out) = 1;
+            }
+            LogWhoAllClassDisplayCorrelationTrace(
+                L"WhoClassNameClassLookup",
+                L"string_id",
+                caller_return_address,
+                string_id,
+                correlation,
+                nullptr,
+                true,
+                L"who_all_class_label_local_player_display_applied",
+                display);
+            return display;
+        }
+
+        LogWhoAllClassDisplayCorrelationTrace(
+            L"WhoClassNameClassLookup",
+            L"string_id",
+            caller_return_address,
+            string_id,
+            correlation,
+            nullptr,
+            false,
+            L"who_all_class_label_override_unavailable",
+            nullptr);
+    }
+
     if (caller_matches) {
         const char* display = BuildLocalSubjectClassDisplayAscii(
             g_active_who_class_name_subject,
@@ -2771,8 +2812,10 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
             correlation,
             g_active_who_class_name_subject,
             false,
-            caller_matches ? L"caller_matched_but_fell_back_to_original"
-                           : L"caller_did_not_match_who_class_name_branch",
+            who_all_class_label_caller
+                ? L"who_all_class_label_fell_back_to_original"
+                : (caller_matches ? L"caller_matched_but_fell_back_to_original"
+                                  : L"caller_did_not_match_who_class_name_branch"),
             result);
     }
     return result;
