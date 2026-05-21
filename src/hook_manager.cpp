@@ -452,8 +452,7 @@ using ProgressionSelectionClassLookupFn = const char* (CDECL*)(
 using WhoClassNameClassLookupFn = const char* (MONOMYTH_THISCALL*)(
     void* this_context,
     std::uint32_t string_id,
-    std::uint32_t arg2,
-    std::uint32_t arg3);
+    void* found_flag_out);
 
 struct InlineDetour {
     std::uint8_t* target = nullptr;
@@ -2566,7 +2565,7 @@ __declspec(naked) const char* WhoClassNameClassLookupCallsiteHook() noexcept {
         jne handled
         jmp g_original_who_class_name_class_lookup
 handled:
-        ret 0x0c
+        ret 0x08
     }
 }
 #endif
