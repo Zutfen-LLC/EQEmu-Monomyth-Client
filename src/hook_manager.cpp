@@ -1870,7 +1870,7 @@ bool DecodeSupportedInstructionLength(
         return true;
     }
 
-    if ((opcode >= 0x50 && opcode <= 0x5f) || opcode == 0x55 || opcode == 0x90) {
+    if ((opcode >= 0x40 && opcode <= 0x5f) || opcode == 0x90) {
         *length = 1;
         return true;
     }
