@@ -895,9 +895,9 @@ void LogUiClassDisplayTrace(
     std::wstring message = L"UiClassDisplayTrace count=";
     message += std::to_wstring(count);
     message += L" surface=";
-    message += surface == nullptr ? L"unknown" : surface;
+    message += (surface == nullptr ? L"unknown" : surface);
     message += L" status=";
-    message += status == nullptr ? L"unknown" : status;
+    message += (status == nullptr ? L"unknown" : status);
     message += L" style=";
     message += ClassDisplayStyleName(style);
     message += L" subject=";
@@ -905,15 +905,15 @@ void LogUiClassDisplayTrace(
     message += L" local_player=";
     message += HexPtr(reinterpret_cast<std::uintptr_t>(local_player));
     message += L" subject_matches_local=";
-    message += subject_matches_local ? L"true" : L"false";
+    message += (subject_matches_local ? L"true" : L"false");
     message += L" primary_class_status=";
-    message += primary_class_copied ? L"copied" : L"unavailable";
+    message += (primary_class_copied ? L"copied" : L"unavailable");
     if (primary_class_copied) {
         message += L" primary_class_id=";
         message += std::to_wstring(primary_class_id);
     }
     message += L" assigned_mask_status=";
-    message += snapshot.has_classes_bitmask ? L"present" : L"missing";
+    message += (snapshot.has_classes_bitmask ? L"present" : L"missing");
     message += L" assigned_mask=";
     message += FormatAssignedMask(snapshot);
     if (formatted != nullptr && formatted[0] != '\0') {
