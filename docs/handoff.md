@@ -107,7 +107,7 @@ Implemented in:
 Current UI-related hook behavior:
 - `GetClassDesc` inline detour
 - `GetClassThreeLetterCode` inline detour
-- `WhoClassName` internal class-lookup callsite patches
+- `WhoClassName` currently uses a narrowed internal class-label callsite patch, not a real producer detour
 - progression selection `ClassValueLabel` callsite patch
 - inventory title interception experiments were retired after THJ/local evidence showed they were the wrong layer
 
@@ -174,6 +174,7 @@ This change is now locally unit-tested for discovery/capability behavior in this
 The same cleanup pass also split the capability gate correctly:
 - the core local/self producer hooks no longer depend on the unproven progression-selection surrogate seam
 - the progression-selection seam is still separate and still not treated as proof of real `EQ_CharSelectClassNameFunc`
+- the `/who` path was narrowed further after live disassembly showed only `WhoClassNameClassLookupCallsiteA` is directly fed by the class-id mapping; the older B/C patches were broader string-table lookups inside the same UI function, not dedicated class producers
 
 ## Dead Ends / Ruled-Out Approaches
 
@@ -229,6 +230,12 @@ If it does not appear:
 Current suspicion:
 - our `WhoClassName` callsite patch shape may still be too low-level or semantically wrong
 - THJ detoured the producer function pointer directly, not an internal string lookup callsite
+
+Newest concrete refinement:
+- the validated `0x536310` target is a broader `/who` UI builder, not a simple string producer
+- inside that function, callsite A (`0x5364e7`) is the class-label lookup fed by the class-id mapping path
+- the clean-room hook now only targets that A callsite and no longer touches B/C
+- local/self matching for this path now allows pointer match or same-name match, because the `/who` row object may not be pointer-identical to `LocalPlayer`
 
 Evidence for this:
 - the 17:00 run installed all `WhoClassName` callsite hooks

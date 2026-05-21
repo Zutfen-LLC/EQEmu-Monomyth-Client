@@ -175,13 +175,13 @@ constexpr std::uint32_t kGetClassDescRva = 0x001153c0;
 constexpr std::uint32_t kCXStrAssignTargetRva = 0x00405d90;
 constexpr std::uint32_t kCXWndSetWindowTextATargetRva = 0x00406ec0;
 constexpr std::uint32_t kWhoClassNameClassLookupCallsiteARva = 0x001364e7;
-constexpr std::uint32_t kWhoClassNameClassLookupCallsiteBRva = 0x001365c2;
-constexpr std::uint32_t kWhoClassNameClassLookupCallsiteCRva = 0x00136601;
 constexpr std::uint32_t kWhoClassNameClassLookupTargetRva = 0x003d0660;
 constexpr std::uint32_t kProgressionSelectionClassLookupCallsiteRva = 0x003212b6;
 constexpr std::uint32_t kProgressionSelectionClassLookupTargetRva = 0x00042c00;
 constexpr std::size_t kInventoryClassTitleControlOffset = 0x02cc;
 constexpr std::size_t kCxWndTextFieldOffset = 0x00e8;
+constexpr std::size_t kEqSpawnNameOffset = 0x00a4;
+constexpr std::size_t kEqSpawnNameMaxBytes = 0x40;
 // MacroQuest eqlib's emu/ROF2 layout reads PlayerClient::GetClass() from
 // mActorClient.Class. With mActorClient at 0x0ea4 and Class at +0x13c inside
 // ActorClient, the effective in-world class field is PlayerClient + 0x0fe0.
@@ -673,8 +673,6 @@ InlineDetour g_get_class_desc_detour = {};
 InlineDetour g_get_class_three_letter_code_detour = {};
 InlineDetour g_cxstr_assign_detour = {};
 CallsitePatch g_who_class_name_class_lookup_callsite_a_patch = {};
-CallsitePatch g_who_class_name_class_lookup_callsite_b_patch = {};
-CallsitePatch g_who_class_name_class_lookup_callsite_c_patch = {};
 CallsitePatch g_progression_selection_class_lookup_callsite_patch = {};
 CallsitePatch g_equip_click_record_lookup_callsite_patch = {};
 CallsitePatch g_equip_click_can_equip_callsite_patch = {};
@@ -1120,6 +1118,35 @@ bool TryReadEqPlayerDisplayedClassId(
         class_id);
 }
 
+bool TryReadEqSpawnName(
+    const void* subject,
+    std::string* name) noexcept {
+    if (subject == nullptr || name == nullptr) {
+        return false;
+    }
+
+    name->clear();
+    name->reserve(kEqSpawnNameMaxBytes);
+    for (std::size_t i = 0; i < (kEqSpawnNameMaxBytes - 1); ++i) {
+        char ch = '\0';
+        if (!TryCopyObject(
+                reinterpret_cast<const std::uint8_t*>(subject) +
+                    kEqSpawnNameOffset + i,
+                &ch)) {
+            name->clear();
+            return false;
+        }
+
+        if (ch == '\0') {
+            return !name->empty();
+        }
+
+        name->push_back(ch);
+    }
+
+    return !name->empty();
+}
+
 bool TryReadLocalPlayerPointer(void** local_player) noexcept {
     if (local_player == nullptr) {
         return false;
@@ -1346,8 +1373,20 @@ const char* BuildLocalSubjectClassDisplayAscii(
     }
 
     void* local_player = nullptr;
-    if (!TryReadLocalPlayerPointer(&local_player) || local_player == nullptr ||
-        local_player != subject) {
+    const bool local_player_copied =
+        TryReadLocalPlayerPointer(&local_player) && local_player != nullptr;
+    bool subject_matches_local = local_player_copied && local_player == subject;
+    if (!subject_matches_local && local_player_copied) {
+        std::string subject_name;
+        std::string local_name;
+        if (TryReadEqSpawnName(subject, &subject_name) &&
+            TryReadEqSpawnName(local_player, &local_name) &&
+            subject_name == local_name) {
+            subject_matches_local = true;
+        }
+    }
+
+    if (!subject_matches_local) {
         std::uint8_t primary_class_id = 0;
         const bool primary_class_copied =
             TryReadEqPlayerDisplayedClassId(subject, &primary_class_id);
@@ -1357,12 +1396,12 @@ const char* BuildLocalSubjectClassDisplayAscii(
             style,
             subject,
             local_player,
-            local_player == subject && local_player != nullptr,
+            false,
             primary_class_copied,
             primary_class_id,
             snapshot,
             nullptr,
-            L"subject_does_not_match_local_player");
+            L"subject_does_not_match_local_player_pointer_or_name");
         return nullptr;
     }
 
@@ -10816,24 +10855,6 @@ bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest)
             goto cleanup;
         }
         installed = true;
-
-        if (!InstallCallsitePatch(
-                reinterpret_cast<void*>(module_base + kWhoClassNameClassLookupCallsiteBRva),
-                reinterpret_cast<void*>(&WhoClassNameClassLookupCallsiteHook),
-                module_base + kWhoClassNameClassLookupTargetRva,
-                &g_who_class_name_class_lookup_callsite_b_patch,
-                L"WhoClassNameClassLookupCallsiteB")) {
-            goto cleanup;
-        }
-
-        if (!InstallCallsitePatch(
-                reinterpret_cast<void*>(module_base + kWhoClassNameClassLookupCallsiteCRva),
-                reinterpret_cast<void*>(&WhoClassNameClassLookupCallsiteHook),
-                module_base + kWhoClassNameClassLookupTargetRva,
-                &g_who_class_name_class_lookup_callsite_c_patch,
-                L"WhoClassNameClassLookupCallsiteC")) {
-            goto cleanup;
-        }
     } else {
         std::wstring message = L"hook_manager: multiclass UI display hook denied ";
         message += FormatDiscoveryDetails(
@@ -10907,8 +10928,6 @@ success:
 cleanup:
     RemoveInlineDetour(&g_get_class_three_letter_code_detour);
     RemoveInlineDetour(&g_get_class_desc_detour);
-    RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_c_patch);
-    RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_b_patch);
     RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_a_patch);
     g_original_get_class_desc = nullptr;
     g_original_get_class_three_letter_code = nullptr;
@@ -12663,8 +12682,6 @@ bool RemoveWhoClassNameDisplayHook() noexcept {
     bool ok = true;
     ok &= RemoveInlineDetour(&g_get_class_three_letter_code_detour);
     ok &= RemoveInlineDetour(&g_get_class_desc_detour);
-    ok &= RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_c_patch);
-    ok &= RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_b_patch);
     ok &= RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_a_patch);
     g_original_get_class_three_letter_code = nullptr;
     g_original_get_class_desc = nullptr;
