@@ -835,12 +835,16 @@ std::uint64_t g_scroll_scribe_event_count = 0;
 std::uint64_t g_ui_class_helper_trace_count = 0;
 std::uint64_t g_inventory_class_title_trace_count = 0;
 constexpr std::size_t kUiClassHelperCallerCatalogCapacity = 64;
+constexpr std::size_t kUiClassProducerCandidateCatalogCapacity = 24;
 std::array<std::uint32_t, kUiClassHelperCallerCatalogCapacity>
     g_get_class_desc_seen_caller_rvas = {};
 std::size_t g_get_class_desc_seen_caller_rva_count = 0;
 std::array<std::uint32_t, kUiClassHelperCallerCatalogCapacity>
     g_get_class_three_letter_seen_caller_rvas = {};
 std::size_t g_get_class_three_letter_seen_caller_rva_count = 0;
+std::array<std::uint32_t, kUiClassProducerCandidateCatalogCapacity>
+    g_ui_class_producer_candidate_seen_caller_rvas = {};
+std::size_t g_ui_class_producer_candidate_seen_caller_rva_count = 0;
 std::atomic<std::uint32_t> g_inventory_class_display_correlation_remaining = 0;
 std::atomic<std::uint64_t> g_inventory_class_display_correlation_activation = 0;
 std::atomic<std::uint32_t> g_inventory_class_display_correlation_notification_code = 0;
@@ -1033,6 +1037,71 @@ bool ShouldLogWhoClassNameTrace(std::uint64_t count) noexcept {
     return count <= 20 || (count % 50) == 0;
 }
 
+const wchar_t* DescribeKnownUiClassProducerCandidate(
+    const wchar_t* helper,
+    std::uint32_t caller_rva) noexcept {
+    if (helper == nullptr || caller_rva == 0) {
+        return nullptr;
+    }
+
+    if (std::wcscmp(helper, L"GetClassThreeLetterCode") == 0) {
+        switch (caller_rva) {
+            case 0x0018e554:
+                return L"known_early_full_name_candidate_pre_auth";
+            case 0x002781a6:
+                return L"known_local_self_three_letter_surface";
+            case 0x002843ff:
+                return L"thj_abbreviated_branch_anchor";
+            case 0x00312c55:
+                return L"static_scan_ui_builder_candidate_a";
+            case 0x00324d89:
+                return L"static_scan_inventory_or_charselect_candidate_b";
+            case 0x003252b0:
+                return L"static_scan_inventory_or_charselect_candidate_c";
+            default:
+                return nullptr;
+        }
+    }
+
+    if (std::wcscmp(helper, L"GetClassDesc") == 0) {
+        switch (caller_rva) {
+            case 0x0027997b:
+                return L"static_scan_full_name_ui_candidate_a";
+            case 0x00279f23:
+                return L"static_scan_full_name_ui_candidate_b";
+            case 0x0027a2e7:
+                return L"static_scan_full_name_ui_candidate_c";
+            default:
+                return nullptr;
+        }
+    }
+
+    return nullptr;
+}
+
+bool ShouldCatalogUiClassProducerCandidate(
+    std::uint32_t caller_rva) noexcept {
+    if (caller_rva == 0) {
+        return false;
+    }
+
+    for (std::size_t i = 0; i < g_ui_class_producer_candidate_seen_caller_rva_count; ++i) {
+        if (g_ui_class_producer_candidate_seen_caller_rvas[i] == caller_rva) {
+            return false;
+        }
+    }
+
+    if (g_ui_class_producer_candidate_seen_caller_rva_count <
+        g_ui_class_producer_candidate_seen_caller_rvas.size()) {
+        g_ui_class_producer_candidate_seen_caller_rvas
+            [g_ui_class_producer_candidate_seen_caller_rva_count] = caller_rva;
+        ++g_ui_class_producer_candidate_seen_caller_rva_count;
+        return true;
+    }
+
+    return false;
+}
+
 bool ShouldCatalogUiClassHelperCaller(
     const wchar_t* helper,
     std::uint32_t caller_rva) noexcept {
@@ -1065,6 +1134,59 @@ bool ShouldCatalogUiClassHelperCaller(
     }
 
     return false;
+}
+
+void MaybeLogUiClassProducerCandidateTrace(
+    const wchar_t* helper,
+    std::uintptr_t caller_return_address,
+    unsigned int requested_class_id,
+    bool local_class_copied,
+    std::uint8_t local_class_id,
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    bool override_applied,
+    const char* formatted,
+    const wchar_t* reason) noexcept {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_rva = module_base != 0 && caller_return_address >= module_base
+        ? static_cast<std::uint32_t>(caller_return_address - module_base)
+        : 0;
+    const wchar_t* const candidate =
+        DescribeKnownUiClassProducerCandidate(helper, caller_rva);
+    if (candidate == nullptr || !ShouldCatalogUiClassProducerCandidate(caller_rva)) {
+        return;
+    }
+
+    std::wstring message = L"UiClassProducerCandidateTrace helper=";
+    message += (helper == nullptr ? L"unknown" : helper);
+    message += L" candidate=\"";
+    message += candidate;
+    message += L"\" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" requested_class_id=";
+    message += std::to_wstring(requested_class_id);
+    message += L" local_class_copied=";
+    message += (local_class_copied ? L"true" : L"false");
+    message += L" local_class_id=";
+    message += std::to_wstring(local_class_id);
+    message += L" has_assigned_mask=";
+    message += (snapshot.has_classes_bitmask ? L"true" : L"false");
+    message += L" assigned_mask=";
+    message += Hex32(snapshot.has_classes_bitmask ? snapshot.classes_bitmask : 0);
+    message += L" override_applied=";
+    message += (override_applied ? L"true" : L"false");
+    if (formatted != nullptr && formatted[0] != '\0') {
+        message += L" formatted=\"";
+        message += WidenAsciiLossy(formatted);
+        message += L"\"";
+    }
+    if (reason != nullptr && reason[0] != L'\0') {
+        message += L" reason=\"";
+        message += reason;
+        message += L"\"";
+    }
+    monomyth::logger::Log(message);
 }
 
 void MaybeLogUiClassHelperCallerCatalogTrace(
@@ -1168,6 +1290,16 @@ void LogUiClassHelperTrace(
     const char* formatted,
     const wchar_t* reason) {
     MaybeLogUiClassHelperCallerCatalogTrace(
+        helper,
+        caller_return_address,
+        requested_class_id,
+        local_class_copied,
+        local_class_id,
+        snapshot,
+        override_applied,
+        formatted,
+        reason);
+    MaybeLogUiClassProducerCandidateTrace(
         helper,
         caller_return_address,
         requested_class_id,
@@ -11669,6 +11801,8 @@ success:
     g_get_class_desc_seen_caller_rva_count = 0;
     g_get_class_three_letter_seen_caller_rvas = {};
     g_get_class_three_letter_seen_caller_rva_count = 0;
+    g_ui_class_producer_candidate_seen_caller_rvas = {};
+    g_ui_class_producer_candidate_seen_caller_rva_count = 0;
     g_inventory_class_display_correlation_remaining.store(0);
     g_inventory_class_display_correlation_activation.store(0);
     g_inventory_class_display_correlation_notification_code.store(0);
@@ -13443,6 +13577,8 @@ bool RemoveWhoClassNameDisplayHook() noexcept {
     g_get_class_desc_seen_caller_rva_count = 0;
     g_get_class_three_letter_seen_caller_rvas = {};
     g_get_class_three_letter_seen_caller_rva_count = 0;
+    g_ui_class_producer_candidate_seen_caller_rvas = {};
+    g_ui_class_producer_candidate_seen_caller_rva_count = 0;
     g_inventory_class_display_correlation_remaining.store(0);
     g_inventory_class_display_correlation_activation.store(0);
     g_inventory_class_display_correlation_notification_code.store(0);
