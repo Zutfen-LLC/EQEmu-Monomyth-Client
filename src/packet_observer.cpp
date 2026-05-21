@@ -29,9 +29,13 @@ namespace {
 
 constexpr std::uint64_t kFirstPacketLogLimit = 50;
 constexpr std::uint64_t kPacketLogSampleInterval = 500;
+constexpr std::uint64_t kAuthStatsBootstrapPacketLogLimit = 250;
+constexpr std::uint64_t kAuthStatsMissingWarningSequence = 250;
 constexpr std::uint64_t kFirstIntrospectionLogLimit = 10;
 constexpr std::uint64_t kIntrospectionLogSampleInterval = 1000;
 constexpr std::uint32_t kPayloadSafetyCeiling = 4096;
+constexpr std::uint32_t kAuthStatsCandidatePayloadCeiling = 512;
+constexpr std::uint64_t kAuthStatsCandidateLogLimit = 16;
 constexpr std::size_t kPrefixByteCap = 16;
 constexpr std::uint32_t kServerAuthStatsOpcode = 0x1338;
 constexpr std::uint32_t kMoveItemOpcode = 0x32ee;
@@ -49,6 +53,9 @@ std::atomic<std::uint64_t> g_introspection_match_count = 0;
 std::atomic<std::uint64_t> g_introspection_skip_count = 0;
 std::atomic<std::uint32_t> g_move_item_receive_focus_remaining = 0;
 std::atomic<std::uint64_t> g_move_item_receive_focus_activation = 0;
+std::atomic<std::uint64_t> g_server_auth_stats_exact_match_count = 0;
+std::atomic<std::uint64_t> g_server_auth_stats_candidate_count = 0;
+std::atomic<bool> g_server_auth_stats_missing_warning_logged = false;
 std::vector<std::uint32_t> g_introspection_allowlist;
 
 struct IntrospectionAllowlistConfig {
@@ -282,6 +289,75 @@ std::wstring FormatPrefixHex(
     return stream.str();
 }
 
+void MaybeLogServerAuthStatsCandidate(
+    std::uint64_t sequence,
+    std::uint32_t opcode,
+    std::uint32_t payload_length,
+    const void* payload) {
+    if (opcode == kServerAuthStatsOpcode || payload == nullptr || payload_length < 16 ||
+        payload_length > kAuthStatsCandidatePayloadCeiling) {
+        return;
+    }
+
+    const monomyth::server_auth_stats::ParseResult candidate =
+        monomyth::server_auth_stats::ParsePayload(payload, payload_length);
+    if (!candidate.valid ||
+        (!candidate.has_classes_bitmask && !candidate.invalid_classes_bitmask)) {
+        return;
+    }
+
+    const std::uint64_t candidate_index = g_server_auth_stats_candidate_count.fetch_add(1) + 1;
+    if (candidate_index > kAuthStatsCandidateLogLimit) {
+        return;
+    }
+
+    std::wstringstream message;
+    const std::wstring_view opcode_name = monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
+    message
+        << L"PacketObserverServerAuthStatsCandidate"
+        << L" seq=" << sequence
+        << L" candidate_index=" << candidate_index
+        << L" opcode=" << opcode
+        << L" opcode_hex=" << Hex32(opcode)
+        << L" opcode_name=" << opcode_name
+        << L" payload_length=" << payload_length
+        << L" count=" << candidate.count
+        << L" has_statClassesBitmask=" << (candidate.has_classes_bitmask ? L"true" : L"false");
+    if (candidate.has_classes_bitmask) {
+        message << L" statClassesBitmask=" << Hex32(candidate.classes_bitmask);
+    }
+    if (candidate.invalid_classes_bitmask) {
+        message << L" invalid_statClassesBitmask=true";
+    }
+    message << L" reason=\"payload_matches_server_auth_stats_shape_but_opcode_differs\"";
+    monomyth::logger::Log(message.str());
+}
+
+void MaybeLogMissingServerAuthStatsWarning(std::uint64_t sequence) {
+    if (sequence < kAuthStatsMissingWarningSequence ||
+        g_server_auth_stats_missing_warning_logged.exchange(true)) {
+        return;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    if (snapshot.has_classes_bitmask ||
+        g_server_auth_stats_exact_match_count.load() != 0) {
+        return;
+    }
+
+    std::wstringstream message;
+    message
+        << L"PacketObserverServerAuthStatsMissing"
+        << L" seq=" << sequence
+        << L" expected_opcode=" << kServerAuthStatsOpcode
+        << L" expected_opcode_hex=" << Hex32(kServerAuthStatsOpcode)
+        << L" exact_match_count=" << g_server_auth_stats_exact_match_count.load()
+        << L" candidate_count=" << g_server_auth_stats_candidate_count.load()
+        << L" reason=\"no_authoritative_server_auth_stats_observed_yet; ui_and_multiclass_fallbacks_will_remain_single_class\"";
+    monomyth::logger::Log(message.str());
+}
+
 }  // namespace
 
 State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
@@ -316,6 +392,9 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     g_introspection_enabled.store(manifest.receive_introspection_allowed);
     g_move_item_receive_focus_remaining.store(0);
     g_move_item_receive_focus_activation.store(0);
+    g_server_auth_stats_exact_match_count.store(0);
+    g_server_auth_stats_candidate_count.store(0);
+    g_server_auth_stats_missing_warning_logged.store(false);
     const IntrospectionAllowlistConfig allowlist_config = LoadIntrospectionAllowlist();
     g_introspection_allowlist = allowlist_config.opcodes;
     g_state.store(State::kInitialized);
@@ -397,7 +476,12 @@ void ObserveReceiveMetadata(
         &move_item_focus_remaining_before,
         &move_item_focus_remaining_after,
         &move_item_focus_activation);
-    if (move_item_focus || ShouldLogPacket(sequence)) {
+    const monomyth::server_auth_stats::Snapshot server_auth_snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    const bool auth_stats_bootstrap_logging =
+        !server_auth_snapshot.has_classes_bitmask &&
+        sequence <= kAuthStatsBootstrapPacketLogLimit;
+    if (move_item_focus || auth_stats_bootstrap_logging || ShouldLogPacket(sequence)) {
         std::wstringstream message;
         const std::wstring_view opcode_name = monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
         message
@@ -419,8 +503,13 @@ void ObserveReceiveMetadata(
     }
 
     if (IsServerAuthStatsOpcode(opcode)) {
+        g_server_auth_stats_exact_match_count.fetch_add(1);
         monomyth::server_auth_stats::ObserveReceivePayload(payload, payload_length);
+    } else {
+        MaybeLogServerAuthStatsCandidate(sequence, opcode, payload_length, payload);
     }
+
+    MaybeLogMissingServerAuthStatsWarning(sequence);
 
     if (!g_introspection_enabled.load() || !IsIntrospectionAllowlisted(opcode)) {
         return;
