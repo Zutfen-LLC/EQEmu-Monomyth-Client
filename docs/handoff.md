@@ -19,9 +19,9 @@ What is confirmed working:
 - The client parses the authoritative multiclass mask correctly.
 - Shared multiclass formatting works.
 - At least one live UI surface already overrides correctly through the `GetClassThreeLetterCode` producer path.
+- `/who` now visibly overrides correctly through the live class-label seam at `0x477e6`.
 
 What is still not working visibly:
-- `/who` row output still shows the single native class.
 - Inventory class title still shows the single native class.
 
 ## Important Evidence
@@ -112,6 +112,11 @@ Current UI-related hook behavior:
 - progression selection `ClassValueLabel` callsite patch
 - inventory title interception experiments were retired after THJ/local evidence showed they were the wrong layer
 
+Important `/who` update:
+- the original `0x536310` wrapper-context theory was not the visible row seam
+- the shared lookup at `0x7d0660` is still involved, but the real visible `/who` class-label caller is `0x477e6`
+- that caller now overrides correctly during the bounded post-`OP_WhoAllResponse` correlation window
+
 ## Live Binary Findings
 
 These live-client call sites have now been confirmed:
@@ -156,6 +161,17 @@ Interpretation:
 - the old “only override when requested class == local primary” rule was too narrow here
 - caller-specific semantic override was added to address this
 
+### `0x7d0660` caller at `0x477e6`
+
+Confirmed by the bounded `/who` correlation trace in the live client.
+
+Observed behavior in the `2026-05-21 18:47` run:
+- `WhoAllClassDisplayTrace ... caller_rva=0x477e6 ... string_id=0x5e6 ... override_applied=true ... formatted="Paladin/Monk/Magician"`
+
+Interpretation:
+- this is the live visible `/who` class-label seam for the current client path
+- `/who` should now be treated as solved unless later runtime evidence shows a regression
+
 ## Latest Code Direction
 
 The latest patch changes the `0x514dc0` producer hook from a naive class-id match rule to caller-based semantic rules.
@@ -177,6 +193,7 @@ The same cleanup pass also split the capability gate correctly:
 - the progression-selection seam is still separate and still not treated as proof of real `EQ_CharSelectClassNameFunc`
 - the old `/who` single-callsite patch was retired after live runs showed it never produced `UiClassDisplayTrace` output
 - the replacement hook model now tracks the active `WhoClassName` subject at wrapper entry and only overrides the shared string lookup when the caller return RVA is one of the three internal `WhoClassName` lookup branches (`0x1364ec`, `0x1365c7`, `0x136606`)
+- the final `/who` fix now additionally treats `caller_rva=0x477e6` as the live class-label seam and overrides it only during the post-`OP_WhoAllResponse` correlation window
 
 ## Dead Ends / Ruled-Out Approaches
 
@@ -191,59 +208,32 @@ The runtime now reflects that conclusion:
 - the startup path no longer attempts the `CXStr::Assign` / `CXWnd::SetWindowTextA` inventory-title hook
 - inventory title work should resume only once a real producer seam is pinned
 
-## Most Recent 17:53 Run Summary
+## Most Recent Solved `/who` Run Summary
 
 From `/home/zutfen/everquest_rof2/monomyth-client.log`:
-- `WhoClassNameClassLookupCallsiteA` was still the installed hook shape in that run
-- `GetClassDesc` and `GetClassThreeLetterCode` UI hook set installed
-- progression selection hook installed
-- only `GetClassThreeLetterCode` produced live helper traces
-- `/who` still decoded as `class_id=3`
-
-Important status note:
-- that run was after the inventory-title hook retirement
-- that run was still before the newer `WhoClassName` entry/context plus filtered-lookup detour replacement
-
-Most important lines:
-- `UiClassHelperTrace count=1 helper=GetClassThreeLetterCode caller_rva=0x18e554 ... override_applied=false ...`
-- `UiClassHelperTrace count=4 helper=GetClassThreeLetterCode caller_rva=0x2781a6 ... override_applied=true formatted="PAL/MNK/MAG"`
+- `PacketObserverWhoAllCorrelationWindow activation=1 ... budget=48`
 - `PacketObserverWhoAllResponseEntry ... class_id=3 ... name="Driton"`
+- `WhoAllClassDisplayTrace ... caller_rva=0x477e6 ... override_applied=true ... formatted="Paladin/Monk/Magician"`
+
+Interpretation:
+- the class packet still arrives natively as `class_id=3`
+- the visible `/who` class label is now rewritten at the live producer seam after the packet decode
+- `/who` is no longer the active blocker
 
 ## Best Next Steps
 
-### 1. Compile and test the latest caller-based producer override
+### 1. Treat `/who` as solved and avoid reopening it without fresh contrary evidence
 
-Expected success signal:
-- `UiClassHelperTrace` for `caller_rva=0x18e554`
-- `override_applied=true`
-- `reason="known_local_self_full_name_caller_rva"`
-- `formatted="Paladin/Monk/Magician"`
+The useful live seam is now known:
+- shared lookup target `0x7d0660`
+- visible class-label caller `0x477e6`
 
-If that appears and the UI changes:
-- inventory-adjacent full-name producer path is finally pinned
+### 2. Pivot fully to the inventory-window full-name surface
 
-If that appears and the UI still does not change:
-- a later overwrite exists after the producer return
-
-If it does not appear:
-- that surface is not using the currently detoured producer in the tested flow
-
-### 2. Re-evaluate `/who` through the real producer seam, not only internal lookup callsites
-
-Current suspicion:
-- the original `WhoClassName` callsite patch shape was too low-level or semantically wrong
-- THJ detoured the producer function pointer directly, not only an internal string lookup callsite
-
-Newest concrete refinement:
-- the validated `0x536310` target is a broader `/who` UI builder, not a simple leaf producer
-- the shared string lookup at `0x7d0660` is called from three distinct internal `WhoClassName` branches and returns with `ret 0x08`
-- the clean-room hook now detours `0x536310` itself to capture the active subject pointer, then detours `0x7d0660` and only overrides when the caller return RVA is one of those three `WhoClassName` branches
-- local/self matching for this path now allows pointer match or same-name match, because the `/who` row object may not be pointer-identical to `LocalPlayer`
-
-Evidence for this:
-- the 17:53 run installed the narrowed `WhoClassNameClassLookupCallsiteA` hook
-- but still produced no `UiClassDisplayTrace` for `WhoClassName`
-- `/who` still showed native single class
+Current strongest hypothesis:
+- the remaining inventory class title still needs a producer seam equivalent to THJ `EQ_CharSelectClassNameFunc`
+- direct UI-text interception remains disproven
+- the early `0x18e554` full-name path is still only inconclusive, not proven useful for the visible inventory title
 
 ### 3. Stop conflating progression-selection writer with real `EQ_CharSelectClassNameFunc`
 
@@ -265,4 +255,4 @@ It is not yet proven to be:
 
 ## Short Version
 
-We have proven the multiclass state, formatter, and one 3-letter producer override. The remaining problem is surface coverage and seam choice, not authoritative data. THJ’s DLL strongly suggests the real solution is producer-level detours on `EQ_WhoClassName` and `EQ_CharSelectClassNameFunc`, and the live client confirms at least one exact THJ caller discriminator at `0x6843ff`. The newest code now pivots the `0x514dc0` hook toward caller-based semantic overrides to match that model.
+We have proven the multiclass state, formatter, one 3-letter producer override, and the live `/who` class-label seam at `0x477e6`. The remaining problem is inventory-window surface coverage and seam choice, not authoritative data. THJ’s DLL still suggests the real remaining solution is a producer-level detour equivalent to `EQ_CharSelectClassNameFunc`, and the live client still confirms one exact THJ caller discriminator at `0x6843ff`.

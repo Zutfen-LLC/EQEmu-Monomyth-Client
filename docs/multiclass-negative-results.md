@@ -17,6 +17,14 @@ Status meanings:
 | Inventory / char-select-adjacent class text | Treating the current `char_select_class_name_func` discovery slot as proven THJ `EQ_CharSelectClassNameFunc` | `inconclusive` | The currently recovered seam behaves like a progression-selection writer and is useful there, but it is not proven to be THJ's real inventory/title producer seam | Do not generalize the progression-selection seam into proof for other UI surfaces | Keep it scoped to progression selection until a distinct inventory/title producer is recovered |
 | Local full-name class display | `0x514dc0` caller `0x18e554` early full-name path, before `OP_ServerAuthStats` is available | `inconclusive` | Runs around `2026-05-21 17:37`, `17:47`, and `17:53` showed `caller_rva=0x18e554` firing before assigned multiclass data arrived, so override could not apply | Early fallback here does not prove the formatter or semantic override is wrong; timing was bad | Re-test only after authoritative class-mask data is present, or find a later producer seam for the same surface |
 
+## Confirmed Useful Seams
+
+These are not negative results; they are listed here so future work has a short record of what actually solved a visible surface.
+
+| Surface | Confirmed seam | Evidence | What it means |
+| --- | --- | --- | --- |
+| `/who` row class text | Shared lookup target `0x7d0660`, visible class-label caller `0x477e6`, gated to the post-`OP_WhoAllResponse` correlation window | Live run around `2026-05-21 18:47` showed `WhoAllClassDisplayTrace ... caller_rva=0x477e6 ... override_applied=true ... formatted="Paladin/Monk/Magician"` and the user confirmed `/who` is visually correct | `/who` is solved through the real live class-label seam; do not reopen older `0x536310` callsite-patch ideas unless fresh contrary evidence appears |
+
 ## Working Rules
 
 - Before trying a new hook, check whether it is just a close cousin of an already `disproven` seam.
