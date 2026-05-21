@@ -172,7 +172,10 @@ constexpr std::uint32_t kWhoClassNameClassLookupCallsiteCRva = 0x00136601;
 constexpr std::uint32_t kWhoClassNameClassLookupTargetRva = 0x003d0660;
 constexpr std::uint32_t kProgressionSelectionClassLookupCallsiteRva = 0x003212b6;
 constexpr std::uint32_t kProgressionSelectionClassLookupTargetRva = 0x00042c00;
-constexpr std::size_t kEqPlayerDisplayedClassOffset = 0x0eb8;
+// MacroQuest eqlib's emu/ROF2 layout reads PlayerClient::GetClass() from
+// mActorClient.Class. With mActorClient at 0x0ea4 and Class at +0x13c inside
+// ActorClient, the effective in-world class field is PlayerClient + 0x0fe0.
+constexpr std::size_t kEqPlayerDisplayedClassOffset = 0x0fe0;
 constexpr wchar_t kMemorizeSendTraceSliceId[] = L"CLIENT-MEM-SEND-TRACE-001";
 
 using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
