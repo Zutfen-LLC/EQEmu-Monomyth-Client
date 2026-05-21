@@ -174,8 +174,11 @@ constexpr std::uint32_t kGetClassThreeLetterCodeRva = 0x00114dc0;
 constexpr std::uint32_t kGetClassDescRva = 0x001153c0;
 constexpr std::uint32_t kCXStrAssignTargetRva = 0x00405d90;
 constexpr std::uint32_t kCXWndSetWindowTextATargetRva = 0x00406ec0;
-constexpr std::uint32_t kWhoClassNameClassLookupCallsiteARva = 0x001364e7;
+constexpr std::uint32_t kWhoClassNameRva = 0x00136310;
 constexpr std::uint32_t kWhoClassNameClassLookupTargetRva = 0x003d0660;
+constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnARva = 0x001364ec;
+constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnBRva = 0x001365c7;
+constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnCRva = 0x00136606;
 constexpr std::uint32_t kProgressionSelectionClassLookupCallsiteRva = 0x003212b6;
 constexpr std::uint32_t kProgressionSelectionClassLookupTargetRva = 0x00042c00;
 constexpr std::size_t kInventoryClassTitleControlOffset = 0x02cc;
@@ -444,6 +447,9 @@ using GetClassDescFn = const char* (MONOMYTH_THISCALL*)(
 using GetClassThreeLetterCodeFn = const char* (MONOMYTH_THISCALL*)(
     void* this_context,
     unsigned int class_id);
+using WhoClassNameFn = void (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* subject);
 using CXWndSetWindowTextAFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     const char* text);
@@ -670,8 +676,9 @@ InlineDetour g_start_spell_memorization_path_detour = {};
 InlineDetour g_memorize_send_packet_wrapper_detour = {};
 InlineDetour g_get_class_desc_detour = {};
 InlineDetour g_get_class_three_letter_code_detour = {};
+InlineDetour g_who_class_name_detour = {};
+InlineDetour g_who_class_name_class_lookup_detour = {};
 InlineDetour g_cxstr_assign_detour = {};
-CallsitePatch g_who_class_name_class_lookup_callsite_a_patch = {};
 CallsitePatch g_progression_selection_class_lookup_callsite_patch = {};
 CallsitePatch g_equip_click_record_lookup_callsite_patch = {};
 CallsitePatch g_equip_click_can_equip_callsite_patch = {};
@@ -812,6 +819,7 @@ StartSpellMemorizationPathFn g_original_start_spell_memorization_path = nullptr;
 MemorizeSendPacketWrapperFn g_original_memorize_send_packet_wrapper = nullptr;
 GetClassDescFn g_original_get_class_desc = nullptr;
 GetClassThreeLetterCodeFn g_original_get_class_three_letter_code = nullptr;
+WhoClassNameFn g_original_who_class_name = nullptr;
 CXStrAssignFn g_original_cxstr_assign = nullptr;
 CXWndSetWindowTextAFn g_original_cxwnd_set_window_text_a = nullptr;
 ProgressionSelectionClassLookupFn g_original_progression_selection_class_lookup = nullptr;
@@ -858,6 +866,7 @@ bool g_multiclass_ui_display_enabled = false;
 std::uint64_t g_is_class_usable_predicate_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
 std::uint64_t g_auto_equip_class_gate_override_count = 0;
+thread_local const void* g_active_who_class_name_subject = nullptr;
 std::uint64_t g_ui_class_display_trace_count = 0;
 std::uint32_t g_active_equip_nested_validation_id = 0;
 std::uint32_t g_equip_nested_validation_count = 0;
@@ -2342,13 +2351,6 @@ bool RemoveCallsitePatch(CallsitePatch* patch) noexcept {
     return true;
 }
 
-const char* BuildWhoClassNameClassLookupCallsiteHook(void* subject) noexcept {
-    return BuildLocalSubjectClassDisplayAscii(
-        subject,
-        monomyth::multiclass_identity::ClassDisplayStyle::kFullName,
-        L"WhoClassName");
-}
-
 const char* MONOMYTH_FASTCALL GetClassDescHook(
     void* this_context,
     void*,
@@ -2512,6 +2514,57 @@ const char* CDECL ProgressionSelectionClassLookupCallsiteHook(
     return g_original_progression_selection_class_lookup(class_id);
 }
 
+bool IsWhoClassNameLookupCaller(std::uintptr_t caller_return_address) noexcept {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0 || caller_return_address < module_base) {
+        return false;
+    }
+
+    const std::uint32_t caller_return_rva =
+        static_cast<std::uint32_t>(caller_return_address - module_base);
+    return caller_return_rva == kWhoClassNameClassLookupCallerReturnARva ||
+           caller_return_rva == kWhoClassNameClassLookupCallerReturnBRva ||
+           caller_return_rva == kWhoClassNameClassLookupCallerReturnCRva;
+}
+
+void MONOMYTH_FASTCALL WhoClassNameHook(
+    void* this_context,
+    void*,
+    void* subject) noexcept {
+    const void* const previous_subject = g_active_who_class_name_subject;
+    g_active_who_class_name_subject = subject;
+    if (g_original_who_class_name != nullptr) {
+        g_original_who_class_name(this_context, subject);
+    }
+    g_active_who_class_name_subject = previous_subject;
+}
+
+const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
+    void* this_context,
+    void*,
+    std::uint32_t string_id,
+    void* found_flag_out) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    if (IsWhoClassNameLookupCaller(caller_return_address)) {
+        const char* display = BuildLocalSubjectClassDisplayAscii(
+            g_active_who_class_name_subject,
+            monomyth::multiclass_identity::ClassDisplayStyle::kFullName,
+            L"WhoClassName");
+        if (display != nullptr) {
+            if (found_flag_out != nullptr) {
+                *reinterpret_cast<std::uint8_t*>(found_flag_out) = 1;
+            }
+            return display;
+        }
+    }
+
+    if (g_original_who_class_name_class_lookup == nullptr) {
+        return nullptr;
+    }
+
+    return g_original_who_class_name_class_lookup(this_context, string_id, found_flag_out);
+}
+
 void* MONOMYTH_FASTCALL CXStrAssignHook(
     void* this_context,
     void*,
@@ -2552,24 +2605,6 @@ void* MONOMYTH_FASTCALL CXStrAssignHook(
 
     return original_result;
 }
-
-#if defined(_MSC_VER)
-__declspec(naked) const char* WhoClassNameClassLookupCallsiteHook() noexcept {
-    __asm {
-        push ecx
-        push ebp
-        call BuildWhoClassNameClassLookupCallsiteHook
-        add esp, 4
-        pop ecx
-        test eax, eax
-        jne handled
-        jmp g_original_who_class_name_class_lookup
-handled:
-        ret 0x08
-    }
-}
-#endif
-
 void MONOMYTH_FASTCALL ReceiveDispatchHook(
     void* this_context,
     void*,
@@ -10842,15 +10877,31 @@ bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest)
     if (manifest.who_class_name_state ==
             monomyth::spell_usability_discovery::TargetState::kValidated &&
         manifest.who_class_name_address != 0) {
-        g_original_who_class_name_class_lookup =
-            reinterpret_cast<WhoClassNameClassLookupFn>(
-                module_base + kWhoClassNameClassLookupTargetRva);
-        if (!InstallCallsitePatch(
-                reinterpret_cast<void*>(module_base + kWhoClassNameClassLookupCallsiteARva),
-                reinterpret_cast<void*>(&WhoClassNameClassLookupCallsiteHook),
-                module_base + kWhoClassNameClassLookupTargetRva,
-                &g_who_class_name_class_lookup_callsite_a_patch,
-                L"WhoClassNameClassLookupCallsiteA")) {
+        if (manifest.who_class_name_address != module_base + kWhoClassNameRva) {
+            std::wstring message =
+                L"hook_manager: WhoClassName validation address drift expected=";
+            message += HexPtr(module_base + kWhoClassNameRva);
+            message += L" actual=";
+            message += HexPtr(manifest.who_class_name_address);
+            monomyth::logger::Log(message);
+        }
+
+        if (!InstallInlineDetour(
+                reinterpret_cast<void*>(manifest.who_class_name_address),
+                reinterpret_cast<void*>(&WhoClassNameHook),
+                &g_who_class_name_detour,
+                reinterpret_cast<void**>(&g_original_who_class_name),
+                L"WhoClassName")) {
+            goto cleanup;
+        }
+        installed = true;
+
+        if (!InstallInlineDetour(
+                reinterpret_cast<void*>(module_base + kWhoClassNameClassLookupTargetRva),
+                reinterpret_cast<void*>(&WhoClassNameClassLookupHook),
+                &g_who_class_name_class_lookup_detour,
+                reinterpret_cast<void**>(&g_original_who_class_name_class_lookup),
+                L"WhoClassNameClassLookup")) {
             goto cleanup;
         }
         installed = true;
@@ -10925,11 +10976,14 @@ success:
     return true;
 
 cleanup:
+    g_active_who_class_name_subject = nullptr;
+    RemoveInlineDetour(&g_who_class_name_class_lookup_detour);
+    RemoveInlineDetour(&g_who_class_name_detour);
     RemoveInlineDetour(&g_get_class_three_letter_code_detour);
     RemoveInlineDetour(&g_get_class_desc_detour);
-    RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_a_patch);
     g_original_get_class_desc = nullptr;
     g_original_get_class_three_letter_code = nullptr;
+    g_original_who_class_name = nullptr;
     g_original_who_class_name_class_lookup = nullptr;
     return false;
 }
@@ -12679,11 +12733,14 @@ bool RemoveReceiveDispatchHook() noexcept {
 
 bool RemoveWhoClassNameDisplayHook() noexcept {
     bool ok = true;
+    g_active_who_class_name_subject = nullptr;
     ok &= RemoveInlineDetour(&g_get_class_three_letter_code_detour);
     ok &= RemoveInlineDetour(&g_get_class_desc_detour);
-    ok &= RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_a_patch);
+    ok &= RemoveInlineDetour(&g_who_class_name_class_lookup_detour);
+    ok &= RemoveInlineDetour(&g_who_class_name_detour);
     g_original_get_class_three_letter_code = nullptr;
     g_original_get_class_desc = nullptr;
+    g_original_who_class_name = nullptr;
     g_original_who_class_name_class_lookup = nullptr;
     g_multiclass_ui_display_enabled = false;
     if (ok) {

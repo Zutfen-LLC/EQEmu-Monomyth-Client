@@ -98,6 +98,7 @@ Current validated targets:
 Important caveat:
 - the current `char_select_class_name_func` discovery slot is not proven to be THJ’s real `EQ_CharSelectClassNameFunc` producer seam
 - it is still the previously recovered progression-selection writer seam
+- the current known failed seams are now tracked separately in [docs/multiclass-negative-results.md](/home/zutfen/code/EQEmu-Monomyth-Client/docs/multiclass-negative-results.md)
 
 ### Live hook layer
 
@@ -107,7 +108,7 @@ Implemented in:
 Current UI-related hook behavior:
 - `GetClassDesc` inline detour
 - `GetClassThreeLetterCode` inline detour
-- `WhoClassName` currently uses a narrowed internal class-label callsite patch, not a real producer detour
+- `WhoClassName` now uses an entry/context inline detour plus a filtered `WhoClassNameClassLookup` inline detour
 - progression selection `ClassValueLabel` callsite patch
 - inventory title interception experiments were retired after THJ/local evidence showed they were the wrong layer
 
@@ -174,7 +175,8 @@ This change is now locally unit-tested for discovery/capability behavior in this
 The same cleanup pass also split the capability gate correctly:
 - the core local/self producer hooks no longer depend on the unproven progression-selection surrogate seam
 - the progression-selection seam is still separate and still not treated as proof of real `EQ_CharSelectClassNameFunc`
-- the `/who` path was narrowed further after live disassembly showed only `WhoClassNameClassLookupCallsiteA` is directly fed by the class-id mapping; the older B/C patches were broader string-table lookups inside the same UI function, not dedicated class producers
+- the old `/who` single-callsite patch was retired after live runs showed it never produced `UiClassDisplayTrace` output
+- the replacement hook model now tracks the active `WhoClassName` subject at wrapper entry and only overrides the shared string lookup when the caller return RVA is one of the three internal `WhoClassName` lookup branches (`0x1364ec`, `0x1365c7`, `0x136606`)
 
 ## Dead Ends / Ruled-Out Approaches
 
@@ -189,17 +191,18 @@ The runtime now reflects that conclusion:
 - the startup path no longer attempts the `CXStr::Assign` / `CXWnd::SetWindowTextA` inventory-title hook
 - inventory title work should resume only once a real producer seam is pinned
 
-## Most Recent 17:00 Run Summary
+## Most Recent 17:53 Run Summary
 
 From `/home/zutfen/everquest_rof2/monomyth-client.log`:
-- `WhoClassName` callsite hooks installed
+- `WhoClassNameClassLookupCallsiteA` was still the installed hook shape in that run
 - `GetClassDesc` and `GetClassThreeLetterCode` UI hook set installed
 - progression selection hook installed
 - only `GetClassThreeLetterCode` produced live helper traces
 - `/who` still decoded as `class_id=3`
 
 Important status note:
-- that run was before the cleanup that retired the inventory-title hook attempt
+- that run was after the inventory-title hook retirement
+- that run was still before the newer `WhoClassName` entry/context plus filtered-lookup detour replacement
 
 Most important lines:
 - `UiClassHelperTrace count=1 helper=GetClassThreeLetterCode caller_rva=0x18e554 ... override_applied=false ...`
@@ -228,18 +231,18 @@ If it does not appear:
 ### 2. Re-evaluate `/who` through the real producer seam, not only internal lookup callsites
 
 Current suspicion:
-- our `WhoClassName` callsite patch shape may still be too low-level or semantically wrong
-- THJ detoured the producer function pointer directly, not an internal string lookup callsite
+- the original `WhoClassName` callsite patch shape was too low-level or semantically wrong
+- THJ detoured the producer function pointer directly, not only an internal string lookup callsite
 
 Newest concrete refinement:
-- the validated `0x536310` target is a broader `/who` UI builder, not a simple string producer
-- inside that function, callsite A (`0x5364e7`) is the class-label lookup fed by the class-id mapping path
-- the clean-room hook now only targets that A callsite and no longer touches B/C
+- the validated `0x536310` target is a broader `/who` UI builder, not a simple leaf producer
+- the shared string lookup at `0x7d0660` is called from three distinct internal `WhoClassName` branches and returns with `ret 0x08`
+- the clean-room hook now detours `0x536310` itself to capture the active subject pointer, then detours `0x7d0660` and only overrides when the caller return RVA is one of those three `WhoClassName` branches
 - local/self matching for this path now allows pointer match or same-name match, because the `/who` row object may not be pointer-identical to `LocalPlayer`
 
 Evidence for this:
-- the 17:00 run installed all `WhoClassName` callsite hooks
-- but produced no `UiClassDisplayTrace` for `WhoClassName`
+- the 17:53 run installed the narrowed `WhoClassNameClassLookupCallsiteA` hook
+- but still produced no `UiClassDisplayTrace` for `WhoClassName`
 - `/who` still showed native single class
 
 ### 3. Stop conflating progression-selection writer with real `EQ_CharSelectClassNameFunc`
