@@ -991,6 +991,42 @@ bool ShouldLogUiClassHelperTrace(std::uint64_t count) noexcept {
     return count <= 40 || (count % 100) == 0;
 }
 
+bool TryResolveSemanticClassDisplayStyleForCaller(
+    std::uintptr_t caller_return_address,
+    monomyth::multiclass_identity::ClassDisplayStyle* style,
+    const wchar_t** reason) noexcept {
+    if (style == nullptr) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0 || caller_return_address < module_base) {
+        return false;
+    }
+
+    const std::uint32_t caller_rva =
+        static_cast<std::uint32_t>(caller_return_address - module_base);
+    switch (caller_rva) {
+        case 0x0018e554:
+            *style = monomyth::multiclass_identity::ClassDisplayStyle::kFullName;
+            if (reason != nullptr) {
+                *reason = L"known_local_self_full_name_caller_rva";
+            }
+            return true;
+        case 0x002781a6:
+        case 0x002843ff:
+            *style = monomyth::multiclass_identity::ClassDisplayStyle::kThreeLetterCode;
+            if (reason != nullptr) {
+                *reason = L"known_local_self_three_letter_caller_rva";
+            }
+            return true;
+        default:
+            break;
+    }
+
+    return false;
+}
+
 void LogUiClassHelperTrace(
     const wchar_t* helper,
     std::uintptr_t caller_return_address,
@@ -2283,6 +2319,32 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
 
+    monomyth::multiclass_identity::ClassDisplayStyle semantic_style =
+        monomyth::multiclass_identity::ClassDisplayStyle::kFullName;
+    const wchar_t* semantic_reason = nullptr;
+    if (TryResolveSemanticClassDisplayStyleForCaller(
+            caller_return_address,
+            &semantic_style,
+            &semantic_reason) &&
+        semantic_style == monomyth::multiclass_identity::ClassDisplayStyle::kFullName) {
+        const char* display = BuildLocalPlayerClassDisplayAscii(
+            semantic_style,
+            L"GetClassDesc");
+        if (display != nullptr) {
+            LogUiClassHelperTrace(
+                L"GetClassDesc",
+                caller_return_address,
+                class_id,
+                true,
+                static_cast<std::uint8_t>(class_id),
+                snapshot,
+                true,
+                display,
+                semantic_reason);
+            return display;
+        }
+    }
+
     std::uint8_t local_class_id = 0;
     const bool local_class_copied = TryReadLocalPlayerDisplayedClassId(&local_class_id);
     if (local_class_copied && class_id == local_class_id) {
@@ -2330,6 +2392,31 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
+
+    monomyth::multiclass_identity::ClassDisplayStyle semantic_style =
+        monomyth::multiclass_identity::ClassDisplayStyle::kThreeLetterCode;
+    const wchar_t* semantic_reason = nullptr;
+    if (TryResolveSemanticClassDisplayStyleForCaller(
+            caller_return_address,
+            &semantic_style,
+            &semantic_reason)) {
+        const char* display = BuildLocalPlayerClassDisplayAscii(
+            semantic_style,
+            L"GetClassThreeLetterCode");
+        if (display != nullptr) {
+            LogUiClassHelperTrace(
+                L"GetClassThreeLetterCode",
+                caller_return_address,
+                class_id,
+                true,
+                static_cast<std::uint8_t>(class_id),
+                snapshot,
+                true,
+                display,
+                semantic_reason);
+            return display;
+        }
+    }
 
     std::uint8_t local_class_id = 0;
     const bool local_class_copied = TryReadLocalPlayerDisplayedClassId(&local_class_id);
