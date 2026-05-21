@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <atomic>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -43,6 +44,7 @@ constexpr std::uint32_t kDeleteSpellOpcode = 0x3358;
 constexpr std::uint32_t kMoveItemOpcode = 0x32ee;
 constexpr std::uint32_t kMemorizeSendCorrelationMaxWrapperSends = 8;
 constexpr std::uint32_t kSpellbookScribeCorrelationMaxWrapperSends = 8;
+constexpr std::uint32_t kInventoryClassDisplayCorrelationBudget = 48;
 constexpr std::size_t kScribeGateDescriptorTableOffset = 0x4;
 constexpr std::size_t kScribeGateRelativeOffsetField = 0x4;
 constexpr std::size_t kScribeGateLookupContextBias = 0x8;
@@ -831,6 +833,14 @@ std::uint64_t g_memorize_send_trace_count = 0;
 std::uint64_t g_scroll_scribe_event_count = 0;
 std::uint64_t g_ui_class_helper_trace_count = 0;
 std::uint64_t g_inventory_class_title_trace_count = 0;
+std::atomic<std::uint32_t> g_inventory_class_display_correlation_remaining = 0;
+std::atomic<std::uint64_t> g_inventory_class_display_correlation_activation = 0;
+std::atomic<std::uint32_t> g_inventory_class_display_correlation_notification_code = 0;
+std::atomic<std::uintptr_t>
+    g_inventory_class_display_correlation_notification_caller_return = 0;
+std::atomic<std::uint32_t> g_inventory_class_display_correlation_notification_caller_rva = 0;
+std::atomic<std::uintptr_t> g_inventory_class_display_correlation_sender_window = 0;
+std::atomic<std::uintptr_t> g_inventory_class_display_correlation_payload_like = 0;
 std::uint32_t g_memorize_send_pending_correlation_id = 0;
 std::uint32_t g_memorize_send_correlation_count = 0;
 std::uint32_t g_memorize_send_pending_wrapper_sends = 0;
@@ -873,6 +883,18 @@ std::uint64_t g_ui_class_display_trace_count = 0;
 std::uint32_t g_active_equip_nested_validation_id = 0;
 std::uint32_t g_equip_nested_validation_count = 0;
 std::uintptr_t g_invslot_handle_lbutton_core_last_late_lookup_item_pointer = 0;
+
+struct InventoryClassDisplayCorrelationWindow {
+    bool active = false;
+    std::uint64_t activation = 0;
+    std::uint32_t notification_code = 0;
+    std::uintptr_t notification_caller_return = 0;
+    std::uint32_t notification_caller_rva = 0;
+    std::uintptr_t sender_window = 0;
+    std::uintptr_t payload_like = 0;
+    std::uint32_t remaining_before = 0;
+    std::uint32_t remaining_after = 0;
+};
 
 std::uintptr_t GetHostModuleBase() noexcept;
 
@@ -1135,6 +1157,137 @@ void LogWhoAllClassDisplayCorrelationTrace(
     message += std::to_wstring(correlation.remaining_before);
     message += L" remaining_after=";
     message += std::to_wstring(correlation.remaining_after);
+    message += L" surface=";
+    message += (surface == nullptr ? L"unknown" : surface);
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" ";
+    message += (input_name == nullptr ? L"input" : input_name);
+    message += L"=";
+    message += Hex32(input_value);
+    message += L" subject=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(subject));
+    message += L" override_applied=";
+    message += (override_applied ? L"true" : L"false");
+    if (formatted != nullptr && formatted[0] != '\0') {
+        message += L" formatted=\"";
+        message += WidenAsciiLossy(formatted);
+        message += L"\"";
+    }
+    if (reason != nullptr && reason[0] != L'\0') {
+        message += L" reason=\"";
+        message += reason;
+        message += L"\"";
+    }
+    monomyth::logger::Log(message);
+}
+
+void ArmInventoryClassDisplayCorrelation(
+    std::uintptr_t caller_return_address,
+    void* sender_window,
+    std::uint32_t notification_code,
+    void* payload_like) noexcept {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_rva = module_base != 0 && caller_return_address >= module_base
+        ? static_cast<std::uint32_t>(caller_return_address - module_base)
+        : 0;
+    const std::uint64_t activation =
+        g_inventory_class_display_correlation_activation.fetch_add(1) + 1;
+    g_inventory_class_display_correlation_notification_code.store(notification_code);
+    g_inventory_class_display_correlation_notification_caller_return.store(
+        caller_return_address);
+    g_inventory_class_display_correlation_notification_caller_rva.store(caller_rva);
+    g_inventory_class_display_correlation_sender_window.store(
+        reinterpret_cast<std::uintptr_t>(sender_window));
+    g_inventory_class_display_correlation_payload_like.store(
+        reinterpret_cast<std::uintptr_t>(payload_like));
+    g_inventory_class_display_correlation_remaining.store(
+        kInventoryClassDisplayCorrelationBudget);
+
+    std::wstring message = L"InventoryClassDisplayCorrelationWindow";
+    message += L" activation=";
+    message += std::to_wstring(activation);
+    message += L" notification_code=";
+    message += Hex32(notification_code);
+    message += L" notification_caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" notification_caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" sender_window=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(sender_window));
+    message += L" payload_like=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(payload_like));
+    message += L" budget=";
+    message += std::to_wstring(kInventoryClassDisplayCorrelationBudget);
+    monomyth::logger::Log(message);
+}
+
+bool TryConsumeInventoryClassDisplayCorrelation(
+    InventoryClassDisplayCorrelationWindow* window) noexcept {
+    if (window == nullptr) {
+        return false;
+    }
+
+    *window = {};
+
+    std::uint32_t current = g_inventory_class_display_correlation_remaining.load();
+    while (current != 0) {
+        if (g_inventory_class_display_correlation_remaining.compare_exchange_weak(
+                current,
+                current - 1)) {
+            window->active = true;
+            window->activation = g_inventory_class_display_correlation_activation.load();
+            window->notification_code =
+                g_inventory_class_display_correlation_notification_code.load();
+            window->notification_caller_return =
+                g_inventory_class_display_correlation_notification_caller_return.load();
+            window->notification_caller_rva =
+                g_inventory_class_display_correlation_notification_caller_rva.load();
+            window->sender_window = g_inventory_class_display_correlation_sender_window.load();
+            window->payload_like = g_inventory_class_display_correlation_payload_like.load();
+            window->remaining_before = current;
+            window->remaining_after = current - 1;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void LogInventoryClassDisplayCorrelationTrace(
+    const wchar_t* surface,
+    const wchar_t* input_name,
+    std::uintptr_t caller_return_address,
+    std::uint32_t input_value,
+    const InventoryClassDisplayCorrelationWindow& correlation,
+    const void* subject,
+    bool override_applied,
+    const wchar_t* reason,
+    const char* formatted) noexcept {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_rva = module_base != 0 && caller_return_address >= module_base
+        ? static_cast<std::uint32_t>(caller_return_address - module_base)
+        : 0;
+
+    std::wstring message = L"InventoryClassDisplayTrace";
+    message += L" activation=";
+    message += std::to_wstring(correlation.activation);
+    message += L" remaining_before=";
+    message += std::to_wstring(correlation.remaining_before);
+    message += L" remaining_after=";
+    message += std::to_wstring(correlation.remaining_after);
+    message += L" notification_code=";
+    message += Hex32(correlation.notification_code);
+    message += L" notification_caller_return=";
+    message += HexPtr(correlation.notification_caller_return);
+    message += L" notification_caller_rva=";
+    message += Hex32(correlation.notification_caller_rva);
+    message += L" sender_window=";
+    message += HexPtr(correlation.sender_window);
+    message += L" payload_like=";
+    message += HexPtr(correlation.payload_like);
     message += L" surface=";
     message += (surface == nullptr ? L"unknown" : surface);
     message += L" caller_return=";
@@ -2435,6 +2588,9 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
     monomyth::packet_observer::WhoAllClassDisplayCorrelationWindow correlation = {};
     const bool correlation_active =
         monomyth::packet_observer::TryConsumeWhoAllClassDisplayCorrelation(&correlation);
+    InventoryClassDisplayCorrelationWindow inventory_correlation = {};
+    const bool inventory_correlation_active =
+        TryConsumeInventoryClassDisplayCorrelation(&inventory_correlation);
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
 
@@ -2457,6 +2613,18 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
                     caller_return_address,
                     class_id,
                     correlation,
+                    nullptr,
+                    true,
+                    semantic_reason,
+                    display);
+            }
+            if (inventory_correlation_active) {
+                LogInventoryClassDisplayCorrelationTrace(
+                    L"GetClassDesc",
+                    L"class_id",
+                    caller_return_address,
+                    class_id,
+                    inventory_correlation,
                     nullptr,
                     true,
                     semantic_reason,
@@ -2490,6 +2658,18 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
                     caller_return_address,
                     class_id,
                     correlation,
+                    nullptr,
+                    true,
+                    L"requested_class_matches_local_primary",
+                    display);
+            }
+            if (inventory_correlation_active) {
+                LogInventoryClassDisplayCorrelationTrace(
+                    L"GetClassDesc",
+                    L"class_id",
+                    caller_return_address,
+                    class_id,
+                    inventory_correlation,
                     nullptr,
                     true,
                     L"requested_class_matches_local_primary",
@@ -2529,6 +2709,18 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
             fallback_reason,
             result);
     }
+    if (inventory_correlation_active) {
+        LogInventoryClassDisplayCorrelationTrace(
+            L"GetClassDesc",
+            L"class_id",
+            caller_return_address,
+            class_id,
+            inventory_correlation,
+            nullptr,
+            false,
+            fallback_reason,
+            result);
+    }
     LogUiClassHelperTrace(
         L"GetClassDesc",
         caller_return_address,
@@ -2550,6 +2742,9 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
     monomyth::packet_observer::WhoAllClassDisplayCorrelationWindow correlation = {};
     const bool correlation_active =
         monomyth::packet_observer::TryConsumeWhoAllClassDisplayCorrelation(&correlation);
+    InventoryClassDisplayCorrelationWindow inventory_correlation = {};
+    const bool inventory_correlation_active =
+        TryConsumeInventoryClassDisplayCorrelation(&inventory_correlation);
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
 
@@ -2571,6 +2766,18 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
                     caller_return_address,
                     class_id,
                     correlation,
+                    nullptr,
+                    true,
+                    semantic_reason,
+                    display);
+            }
+            if (inventory_correlation_active) {
+                LogInventoryClassDisplayCorrelationTrace(
+                    L"GetClassThreeLetterCode",
+                    L"class_id",
+                    caller_return_address,
+                    class_id,
+                    inventory_correlation,
                     nullptr,
                     true,
                     semantic_reason,
@@ -2609,6 +2816,18 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
                     L"requested_class_matches_local_primary",
                     display);
             }
+            if (inventory_correlation_active) {
+                LogInventoryClassDisplayCorrelationTrace(
+                    L"GetClassThreeLetterCode",
+                    L"class_id",
+                    caller_return_address,
+                    class_id,
+                    inventory_correlation,
+                    nullptr,
+                    true,
+                    L"requested_class_matches_local_primary",
+                    display);
+            }
             LogUiClassHelperTrace(
                 L"GetClassThreeLetterCode",
                 caller_return_address,
@@ -2638,6 +2857,18 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
             caller_return_address,
             class_id,
             correlation,
+            nullptr,
+            false,
+            fallback_reason,
+            result);
+    }
+    if (inventory_correlation_active) {
+        LogInventoryClassDisplayCorrelationTrace(
+            L"GetClassThreeLetterCode",
+            L"class_id",
+            caller_return_address,
+            class_id,
+            inventory_correlation,
             nullptr,
             false,
             fallback_reason,
@@ -2707,6 +2938,9 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
     monomyth::packet_observer::WhoAllClassDisplayCorrelationWindow correlation = {};
     const bool correlation_active =
         monomyth::packet_observer::TryConsumeWhoAllClassDisplayCorrelation(&correlation);
+    InventoryClassDisplayCorrelationWindow inventory_correlation = {};
+    const bool inventory_correlation_active =
+        TryConsumeInventoryClassDisplayCorrelation(&inventory_correlation);
     const std::uintptr_t module_base = GetHostModuleBase();
     const std::uint32_t caller_return_rva =
         module_base != 0 && caller_return_address >= module_base
@@ -2733,6 +2967,18 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
                 true,
                 L"who_all_class_label_local_player_display_applied",
                 display);
+            if (inventory_correlation_active) {
+                LogInventoryClassDisplayCorrelationTrace(
+                    L"WhoClassNameClassLookup",
+                    L"string_id",
+                    caller_return_address,
+                    string_id,
+                    inventory_correlation,
+                    nullptr,
+                    true,
+                    L"who_all_class_label_local_player_display_applied",
+                    display);
+            }
             return display;
         }
 
@@ -2746,6 +2992,18 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
             false,
             L"who_all_class_label_override_unavailable",
             nullptr);
+        if (inventory_correlation_active) {
+            LogInventoryClassDisplayCorrelationTrace(
+                L"WhoClassNameClassLookup",
+                L"string_id",
+                caller_return_address,
+                string_id,
+                inventory_correlation,
+                nullptr,
+                false,
+                L"who_all_class_label_override_unavailable",
+                nullptr);
+        }
     }
 
     if (caller_matches) {
@@ -2769,6 +3027,18 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
                     L"local_subject_multiclass_display_applied",
                     display);
             }
+            if (inventory_correlation_active) {
+                LogInventoryClassDisplayCorrelationTrace(
+                    L"WhoClassNameClassLookup",
+                    L"string_id",
+                    caller_return_address,
+                    string_id,
+                    inventory_correlation,
+                    g_active_who_class_name_subject,
+                    true,
+                    L"local_subject_multiclass_display_applied",
+                    display);
+            }
             return display;
         }
         if (correlation_active) {
@@ -2778,6 +3048,18 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
                 caller_return_address,
                 string_id,
                 correlation,
+                g_active_who_class_name_subject,
+                false,
+                L"caller_matched_but_override_unavailable",
+                nullptr);
+        }
+        if (inventory_correlation_active) {
+            LogInventoryClassDisplayCorrelationTrace(
+                L"WhoClassNameClassLookup",
+                L"string_id",
+                caller_return_address,
+                string_id,
+                inventory_correlation,
                 g_active_who_class_name_subject,
                 false,
                 L"caller_matched_but_override_unavailable",
@@ -2798,6 +3080,18 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
                 L"original_lookup_unavailable",
                 nullptr);
         }
+        if (inventory_correlation_active) {
+            LogInventoryClassDisplayCorrelationTrace(
+                L"WhoClassNameClassLookup",
+                L"string_id",
+                caller_return_address,
+                string_id,
+                inventory_correlation,
+                g_active_who_class_name_subject,
+                false,
+                L"original_lookup_unavailable",
+                nullptr);
+        }
         return nullptr;
     }
 
@@ -2810,6 +3104,21 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
             caller_return_address,
             string_id,
             correlation,
+            g_active_who_class_name_subject,
+            false,
+            who_all_class_label_caller
+                ? L"who_all_class_label_fell_back_to_original"
+                : (caller_matches ? L"caller_matched_but_fell_back_to_original"
+                                  : L"caller_did_not_match_who_class_name_branch"),
+            result);
+    }
+    if (inventory_correlation_active) {
+        LogInventoryClassDisplayCorrelationTrace(
+            L"WhoClassNameClassLookup",
+            L"string_id",
+            caller_return_address,
+            string_id,
+            inventory_correlation,
             g_active_who_class_name_subject,
             false,
             who_all_class_label_caller
@@ -10005,6 +10314,13 @@ int MONOMYTH_FASTCALL InventoryWindowWndNotificationHook(
     void* payload_like) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     const std::uintptr_t module_base = GetHostModuleBase();
+    if (g_multiclass_ui_display_enabled) {
+        ArmInventoryClassDisplayCorrelation(
+            caller_return_address,
+            sender_window,
+            notification_code,
+            payload_like);
+    }
 
     std::uintptr_t drag_context_before = 0;
     const bool drag_context_before_copied =
@@ -11242,6 +11558,13 @@ bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest)
     }
 
 success:
+    g_inventory_class_display_correlation_remaining.store(0);
+    g_inventory_class_display_correlation_activation.store(0);
+    g_inventory_class_display_correlation_notification_code.store(0);
+    g_inventory_class_display_correlation_notification_caller_return.store(0);
+    g_inventory_class_display_correlation_notification_caller_rva.store(0);
+    g_inventory_class_display_correlation_sender_window.store(0);
+    g_inventory_class_display_correlation_payload_like.store(0);
     monomyth::logger::Log(
         L"hook_manager: multiclass UI display hook installed target=WhoClassName/GetClassDesc/GetClassThreeLetterCode local_self_only=true");
     return true;
@@ -13005,6 +13328,13 @@ bool RemoveReceiveDispatchHook() noexcept {
 bool RemoveWhoClassNameDisplayHook() noexcept {
     bool ok = true;
     g_active_who_class_name_subject = nullptr;
+    g_inventory_class_display_correlation_remaining.store(0);
+    g_inventory_class_display_correlation_activation.store(0);
+    g_inventory_class_display_correlation_notification_code.store(0);
+    g_inventory_class_display_correlation_notification_caller_return.store(0);
+    g_inventory_class_display_correlation_notification_caller_rva.store(0);
+    g_inventory_class_display_correlation_sender_window.store(0);
+    g_inventory_class_display_correlation_payload_like.store(0);
     ok &= RemoveInlineDetour(&g_get_class_three_letter_code_detour);
     ok &= RemoveInlineDetour(&g_get_class_desc_detour);
     ok &= RemoveInlineDetour(&g_who_class_name_class_lookup_detour);
