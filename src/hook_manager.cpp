@@ -165,6 +165,14 @@ constexpr std::uint32_t kEquipMessageResolverTargetRva = 0x003d0660;
 constexpr std::uint32_t kDragContextGlobalRva = 0x009d261c;
 constexpr std::uint32_t kDragFlagsGlobalRva = 0x009d2660;
 constexpr std::uint32_t kActiveWindowGlobalRva = 0x009d25ac;
+constexpr std::uint32_t kLocalPlayerGlobalRva = 0x009d2630;
+constexpr std::uint32_t kWhoClassNameClassLookupCallsiteARva = 0x001364e7;
+constexpr std::uint32_t kWhoClassNameClassLookupCallsiteBRva = 0x001365c2;
+constexpr std::uint32_t kWhoClassNameClassLookupCallsiteCRva = 0x00136601;
+constexpr std::uint32_t kWhoClassNameClassLookupTargetRva = 0x003d0660;
+constexpr std::uint32_t kProgressionSelectionClassLookupCallsiteRva = 0x003212b6;
+constexpr std::uint32_t kProgressionSelectionClassLookupTargetRva = 0x00042c00;
+constexpr std::size_t kEqPlayerDisplayedClassOffset = 0x0eb8;
 constexpr wchar_t kMemorizeSendTraceSliceId[] = L"CLIENT-MEM-SEND-TRACE-001";
 
 using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
@@ -414,6 +422,13 @@ using MemorizeSendPacketWrapperFn = bool (MONOMYTH_THISCALL*)(
     std::uint32_t mode_like,
     const void* packet,
     std::uint32_t total_length);
+using GetClassThreeLetterCodeFn = const char* (CDECL*)(
+    unsigned int class_id);
+using WhoClassNameClassLookupFn = const char* (MONOMYTH_THISCALL*)(
+    void* this_context,
+    std::uint32_t string_id,
+    std::uint32_t arg2,
+    std::uint32_t arg3);
 
 struct InlineDetour {
     std::uint8_t* target = nullptr;
@@ -629,6 +644,10 @@ InlineDetour g_can_start_memming_detour = {};
 InlineDetour g_spellbook_memorize_send_path_detour = {};
 InlineDetour g_start_spell_memorization_path_detour = {};
 InlineDetour g_memorize_send_packet_wrapper_detour = {};
+CallsitePatch g_who_class_name_class_lookup_callsite_a_patch = {};
+CallsitePatch g_who_class_name_class_lookup_callsite_b_patch = {};
+CallsitePatch g_who_class_name_class_lookup_callsite_c_patch = {};
+CallsitePatch g_progression_selection_class_lookup_callsite_patch = {};
 CallsitePatch g_equip_click_record_lookup_callsite_patch = {};
 CallsitePatch g_equip_click_can_equip_callsite_patch = {};
 CallsitePatch g_equip_click_requirement_lookup_callsite_patch = {};
@@ -766,6 +785,8 @@ CanStartMemmingFn g_original_can_start_memming = nullptr;
 SpellbookMemorizeSendPathFn g_original_spellbook_memorize_send_path = nullptr;
 StartSpellMemorizationPathFn g_original_start_spell_memorization_path = nullptr;
 MemorizeSendPacketWrapperFn g_original_memorize_send_packet_wrapper = nullptr;
+GetClassThreeLetterCodeFn g_original_get_class_three_letter_code = nullptr;
+WhoClassNameClassLookupFn g_original_who_class_name_class_lookup = nullptr;
 std::uint64_t g_get_spell_level_needed_trace_count = 0;
 std::uint64_t g_can_start_memming_trace_count = 0;
 std::uint64_t g_memorize_send_trace_count = 0;
@@ -802,6 +823,7 @@ std::wstring g_handle_rbutton_up_evidence_source = L"unknown";
 std::wstring g_is_class_usable_predicate_evidence_source = L"unknown";
 bool g_multiclass_spell_usability_enabled = false;
 bool g_multiclass_item_usability_enabled = false;
+bool g_multiclass_ui_display_enabled = false;
 std::uint64_t g_is_class_usable_predicate_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
 std::uint64_t g_auto_equip_class_gate_override_count = 0;
@@ -872,6 +894,86 @@ bool TryCopyObject(const void* source, T* destination) noexcept {
         source,
         sizeof(T),
         reinterpret_cast<std::uint8_t*>(destination));
+}
+
+bool TryReadEqPlayerDisplayedClassId(
+    const void* subject,
+    std::uint8_t* class_id) noexcept {
+    if (subject == nullptr || class_id == nullptr) {
+        return false;
+    }
+
+    return TryCopyObject(
+        reinterpret_cast<const std::uint8_t*>(subject) + kEqPlayerDisplayedClassOffset,
+        class_id);
+}
+
+bool TryReadLocalPlayerPointer(void** local_player) noexcept {
+    if (local_player == nullptr) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return false;
+    }
+
+    return TryCopyObject(
+        reinterpret_cast<const void*>(module_base + kLocalPlayerGlobalRva),
+        local_player);
+}
+
+bool TryReadLocalPlayerDisplayedClassId(std::uint8_t* class_id) noexcept {
+    void* local_player = nullptr;
+    if (!TryReadLocalPlayerPointer(&local_player) || local_player == nullptr) {
+        return false;
+    }
+
+    return TryReadEqPlayerDisplayedClassId(local_player, class_id);
+}
+
+const char* BuildLocalPlayerClassDisplayAscii(
+    monomyth::multiclass_identity::ClassDisplayStyle style) noexcept {
+    if (!g_multiclass_ui_display_enabled) {
+        return nullptr;
+    }
+
+    std::uint8_t primary_class_id = 0;
+    if (!TryReadLocalPlayerDisplayedClassId(&primary_class_id) ||
+        !monomyth::multiclass_identity::IsPlayableClassId(primary_class_id)) {
+        return nullptr;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    const std::string formatted = monomyth::multiclass_identity::FormatClassDisplayAscii(
+        primary_class_id,
+        snapshot.has_classes_bitmask,
+        snapshot.classes_bitmask,
+        style);
+    if (formatted.empty()) {
+        return nullptr;
+    }
+
+    static thread_local std::string buffer;
+    buffer = formatted;
+    return buffer.c_str();
+}
+
+const char* BuildLocalSubjectClassDisplayAscii(
+    const void* subject,
+    monomyth::multiclass_identity::ClassDisplayStyle style) noexcept {
+    if (subject == nullptr || !g_multiclass_ui_display_enabled) {
+        return nullptr;
+    }
+
+    void* local_player = nullptr;
+    if (!TryReadLocalPlayerPointer(&local_player) || local_player == nullptr ||
+        local_player != subject) {
+        return nullptr;
+    }
+
+    return BuildLocalPlayerClassDisplayAscii(style);
 }
 
 bool TryResolveClientItemDataFromWrapper(
@@ -1808,6 +1910,44 @@ bool RemoveCallsitePatch(CallsitePatch* patch) noexcept {
     *patch = {};
     return true;
 }
+
+const char* BuildWhoClassNameClassLookupCallsiteHook(void* subject) noexcept {
+    return BuildLocalSubjectClassDisplayAscii(
+        subject,
+        monomyth::multiclass_identity::ClassDisplayStyle::kFullName);
+}
+
+const char* CDECL ProgressionSelectionClassLookupCallsiteHook(
+    unsigned int class_id) noexcept {
+    const char* display = BuildLocalPlayerClassDisplayAscii(
+        monomyth::multiclass_identity::ClassDisplayStyle::kThreeLetterCode);
+    if (display != nullptr) {
+        return display;
+    }
+
+    if (g_original_get_class_three_letter_code == nullptr) {
+        return nullptr;
+    }
+
+    return g_original_get_class_three_letter_code(class_id);
+}
+
+#if defined(_MSC_VER)
+__declspec(naked) const char* WhoClassNameClassLookupCallsiteHook() noexcept {
+    __asm {
+        push ecx
+        push ebp
+        call BuildWhoClassNameClassLookupCallsiteHook
+        add esp, 4
+        pop ecx
+        test eax, eax
+        jne handled
+        jmp g_original_who_class_name_class_lookup
+handled:
+        ret 0x0c
+    }
+}
+#endif
 
 void MONOMYTH_FASTCALL ReceiveDispatchHook(
     void* this_context,
@@ -10065,6 +10205,123 @@ bool MONOMYTH_FASTCALL MoveItemValidationGateHook(
     return original_result;
 }
 
+bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.multiclass_ui_display_allowed ||
+        manifest.who_class_name_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.who_class_name_address == 0) {
+        if (manifest.multiclass_ui_display_allowed) {
+            std::wstring message = L"hook_manager: multiclass UI display who hook denied ";
+            message += FormatDiscoveryDetails(
+                L"WhoClassName",
+                manifest.who_class_name_evidence_source,
+                manifest.who_class_name_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: multiclass UI display who hook denied because module base was unavailable");
+        return false;
+    }
+
+#if !defined(_MSC_VER)
+    monomyth::logger::Log(
+        L"hook_manager: multiclass UI display who hook requires MSVC x86 inline assembly; hook disabled");
+    return false;
+#else
+    g_original_who_class_name_class_lookup =
+        reinterpret_cast<WhoClassNameClassLookupFn>(
+            module_base + kWhoClassNameClassLookupTargetRva);
+
+    bool installed = false;
+    if (!InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kWhoClassNameClassLookupCallsiteARva),
+            reinterpret_cast<void*>(&WhoClassNameClassLookupCallsiteHook),
+            module_base + kWhoClassNameClassLookupTargetRva,
+            &g_who_class_name_class_lookup_callsite_a_patch,
+            L"WhoClassNameClassLookupCallsiteA")) {
+        goto cleanup;
+    }
+    installed = true;
+    if (!InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kWhoClassNameClassLookupCallsiteBRva),
+            reinterpret_cast<void*>(&WhoClassNameClassLookupCallsiteHook),
+            module_base + kWhoClassNameClassLookupTargetRva,
+            &g_who_class_name_class_lookup_callsite_b_patch,
+            L"WhoClassNameClassLookupCallsiteB")) {
+        goto cleanup;
+    }
+    if (!InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kWhoClassNameClassLookupCallsiteCRva),
+            reinterpret_cast<void*>(&WhoClassNameClassLookupCallsiteHook),
+            module_base + kWhoClassNameClassLookupTargetRva,
+            &g_who_class_name_class_lookup_callsite_c_patch,
+            L"WhoClassNameClassLookupCallsiteC")) {
+        goto cleanup;
+    }
+
+    monomyth::logger::Log(
+        L"hook_manager: multiclass UI display hook installed target=WhoClassName local_self_only=true");
+    return true;
+
+cleanup:
+    if (installed) {
+        RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_c_patch);
+        RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_b_patch);
+        RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_a_patch);
+    }
+    g_original_who_class_name_class_lookup = nullptr;
+    return false;
+#endif
+}
+
+bool InstallProgressionSelectionClassDisplayHook(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.multiclass_ui_display_allowed ||
+        manifest.char_select_class_name_func_state !=
+            monomyth::spell_usability_discovery::TargetState::kValidated ||
+        manifest.char_select_class_name_func_address == 0) {
+        if (manifest.multiclass_ui_display_allowed) {
+            std::wstring message =
+                L"hook_manager: progression selection class display hook denied ";
+            message += FormatDiscoveryDetails(
+                L"CharSelectClassNameFunc",
+                manifest.char_select_class_name_func_evidence_source,
+                manifest.char_select_class_name_func_failure_reason);
+            monomyth::logger::Log(message);
+        }
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: progression selection class display hook denied because module base was unavailable");
+        return false;
+    }
+
+    g_original_get_class_three_letter_code =
+        reinterpret_cast<GetClassThreeLetterCodeFn>(
+            module_base + kProgressionSelectionClassLookupTargetRva);
+    if (!InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kProgressionSelectionClassLookupCallsiteRva),
+            reinterpret_cast<void*>(&ProgressionSelectionClassLookupCallsiteHook),
+            module_base + kProgressionSelectionClassLookupTargetRva,
+            &g_progression_selection_class_lookup_callsite_patch,
+            L"ProgressionSelectionClassLookupCallsite")) {
+        g_original_get_class_three_letter_code = nullptr;
+        return false;
+    }
+
+    monomyth::logger::Log(
+        L"hook_manager: progression selection class display hook installed target=ClassValueLabel local_self_style=three_letter");
+    return true;
+}
+
 bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest& manifest) noexcept {
     if (!manifest.receive_dispatch_validated || manifest.receive_dispatch_address == 0) {
         monomyth::logger::Log(
@@ -11755,6 +12012,31 @@ bool RemoveReceiveDispatchHook() noexcept {
     return false;
 }
 
+bool RemoveWhoClassNameDisplayHook() noexcept {
+    bool ok = true;
+    ok &= RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_c_patch);
+    ok &= RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_b_patch);
+    ok &= RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_a_patch);
+    g_original_who_class_name_class_lookup = nullptr;
+    g_multiclass_ui_display_enabled = false;
+    if (ok) {
+        monomyth::logger::Log(
+            L"hook_manager: multiclass UI display hook removed target=WhoClassName");
+    }
+    return ok;
+}
+
+bool RemoveProgressionSelectionClassDisplayHook() noexcept {
+    const bool ok =
+        RemoveCallsitePatch(&g_progression_selection_class_lookup_callsite_patch);
+    g_original_get_class_three_letter_code = nullptr;
+    if (ok) {
+        monomyth::logger::Log(
+            L"hook_manager: progression selection class display hook removed target=ClassValueLabel");
+    }
+    return ok;
+}
+
 bool RemoveGetSpellLevelNeededTrace() noexcept {
     if (!g_get_spell_level_needed_detour.installed) {
         return true;
@@ -12221,7 +12503,24 @@ bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest&) noexcept {
     return false;
 }
 
+bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool InstallProgressionSelectionClassDisplayHook(
+    const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
 bool RemoveReceiveDispatchHook() noexcept {
+    return true;
+}
+
+bool RemoveWhoClassNameDisplayHook() noexcept {
+    return true;
+}
+
+bool RemoveProgressionSelectionClassDisplayHook() noexcept {
     return true;
 }
 
@@ -12410,6 +12709,10 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     bool item_behavior_active = false;
     bool move_item_trace_active = false;
     bool move_item_send_trace_active = false;
+    bool ui_display_active = false;
+    bool progression_selection_display_active = false;
+
+    g_multiclass_ui_display_enabled = manifest.multiclass_ui_display_allowed;
 
     if (manifest.packet_hooks_allowed && !InstallReceiveDispatchHook(manifest)) {
         monomyth::packet_observer::DisableBecauseHookUnavailable(
@@ -12601,6 +12904,21 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         message += L"\"";
         monomyth::logger::Log(message);
     }
+
+    if (manifest.multiclass_ui_display_allowed) {
+        if (InstallWhoClassNameDisplayHook(manifest)) {
+            ui_display_active = true;
+        } else {
+            monomyth::logger::Log(
+                L"hook_manager: multiclass UI display install failed target=WhoClassName local/self path");
+        }
+        if (InstallProgressionSelectionClassDisplayHook(manifest)) {
+            progression_selection_display_active = true;
+        } else {
+            monomyth::logger::Log(
+                L"hook_manager: progression selection class display install failed target=ClassValueLabel");
+        }
+    }
     LogMemorizeSendTraceStartupMarker(
         manifest,
         memorize_send_trace_active || move_item_send_trace_active);
@@ -12608,7 +12926,8 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     g_initialized = true;
     if (receive_hook_active || spell_trace_active || scroll_scribe_trace_active ||
         memorize_send_trace_active || spell_behavior_active || item_behavior_active ||
-        move_item_trace_active || move_item_send_trace_active) {
+        move_item_trace_active || move_item_send_trace_active || ui_display_active ||
+        progression_selection_display_active) {
         std::wstring message = L"hook_manager: initialized (";
         bool first = true;
         if (receive_hook_active) {
@@ -12664,6 +12983,20 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
             message += L"move item send trace";
             first = false;
         }
+        if (ui_display_active) {
+            if (!first) {
+                message += L", ";
+            }
+            message += L"multiclass UI display";
+            first = false;
+        }
+        if (progression_selection_display_active) {
+            if (!first) {
+                message += L", ";
+            }
+            message += L"progression selection class display";
+            first = false;
+        }
         message += L" active)";
         monomyth::logger::Log(message);
     } else {
@@ -12683,6 +13016,11 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         message += manifest.multiclass_item_usability_reason.empty()
             ? L"unknown"
             : manifest.multiclass_item_usability_reason;
+        message += L"\"";
+        message += L" multiclass_ui_display_reason=\"";
+        message += manifest.multiclass_ui_display_reason.empty()
+            ? L"unknown"
+            : manifest.multiclass_ui_display_reason;
         message += L"\"";
         message += L" scroll_scribe_trace_reason=\"";
         message += manifest.scroll_scribe_trace_reason.empty()
@@ -12710,6 +13048,16 @@ void Shutdown() noexcept {
 
     if (!RemoveReceiveDispatchHook()) {
         monomyth::logger::Log(L"hook_manager: shutdown deferred because receive hook removal failed");
+        return;
+    }
+    if (!RemoveWhoClassNameDisplayHook()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because multiclass UI display hook removal failed");
+        return;
+    }
+    if (!RemoveProgressionSelectionClassDisplayHook()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because progression selection class display hook removal failed");
         return;
     }
     if (!RemoveGetSpellLevelNeededTrace()) {

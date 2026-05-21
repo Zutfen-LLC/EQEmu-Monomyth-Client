@@ -5,6 +5,7 @@ project(MonomythClientDll LANGUAGES CXX)
 add_library(dinput8 SHARED
     src/dllmain.cpp
     src/dinput_proxy.cpp
+    src/class_display_discovery.cpp
     src/logger.cpp
     src/fingerprint.cpp
     src/hook_manager.cpp
@@ -87,6 +88,26 @@ target_include_directories(multiclass_identity_tests PRIVATE src)
 target_compile_features(multiclass_identity_tests PRIVATE cxx_std_20)
 
 add_test(NAME multiclass_identity_tests COMMAND multiclass_identity_tests)
+
+add_executable(class_display_discovery_tests
+    tests/class_display_discovery_tests.cpp
+    src/class_display_discovery.cpp
+    src/spell_usability_discovery_policy.cpp
+)
+target_include_directories(class_display_discovery_tests PRIVATE src)
+target_compile_features(class_display_discovery_tests PRIVATE cxx_std_20)
+
+add_test(NAME class_display_discovery_tests COMMAND class_display_discovery_tests)
+
+add_executable(runtime_capabilities_tests
+    tests/runtime_capabilities_tests.cpp
+    src/runtime_capabilities.cpp
+    src/spell_usability_discovery_policy.cpp
+)
+target_include_directories(runtime_capabilities_tests PRIVATE src)
+target_compile_features(runtime_capabilities_tests PRIVATE cxx_std_20)
+
+add_test(NAME runtime_capabilities_tests COMMAND runtime_capabilities_tests)
 
 add_executable(spell_usability_discovery_policy_tests
     tests/spell_usability_discovery_policy_tests.cpp

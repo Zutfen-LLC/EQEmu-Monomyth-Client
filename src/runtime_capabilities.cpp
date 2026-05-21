@@ -1,7 +1,5 @@
 #include "runtime_capabilities.h"
 
-#include <windows.h>
-
 #include <sstream>
 #include <string>
 
@@ -57,12 +55,17 @@ void AppendTargetSourceAndFailure(
 std::wstring DescribeTargetFailure(
     const wchar_t* target,
     monomyth::spell_usability_discovery::TargetState state,
+    bool hook_safe,
     const std::wstring& failure_reason) {
-    if (state == monomyth::spell_usability_discovery::TargetState::kValidated) {
+    if (state == monomyth::spell_usability_discovery::TargetState::kValidated && hook_safe) {
         return L"";
     }
 
     std::wstring message = target == nullptr ? L"target" : target;
+    if (state == monomyth::spell_usability_discovery::TargetState::kValidated && !hook_safe) {
+        message += L" failure_reason=hook_unsafe";
+        return message;
+    }
     message += L" failure_reason=";
     message += NormalizeReason(failure_reason.c_str());
     return message;
@@ -97,11 +100,15 @@ Manifest BuildCapabilityManifest(
     manifest.spell_usability_discovery_allowed =
         manifest.hooks_allowed &&
         manifest.fingerprint_matched;
+    manifest.class_display_discovery_allowed =
+        manifest.hooks_allowed &&
+        manifest.fingerprint_matched;
     manifest.spell_usability_trace_allowed = false;
     manifest.scroll_scribe_trace_allowed = false;
     manifest.memorize_send_trace_allowed = false;
     manifest.multiclass_spell_usability_allowed = false;
     manifest.multiclass_item_usability_allowed = false;
+    manifest.multiclass_ui_display_allowed = false;
     manifest.ui_hooks_allowed = false;
     manifest.heartbeat_allowed = manifest.hooks_allowed;
     manifest.reason = NormalizeReason(fingerprint.reason.c_str());
@@ -114,6 +121,9 @@ Manifest BuildCapabilityManifest(
     manifest.spell_usability_discovery_reason = manifest.spell_usability_discovery_allowed
         ? L"validated ROF2 spell usability discovery pending target resolution"
         : L"spell usability discovery requires validated ROF2 fingerprint and hook allowance";
+    manifest.class_display_discovery_reason = manifest.class_display_discovery_allowed
+        ? L"validated ROF2 class display discovery pending target resolution"
+        : L"class display discovery requires validated ROF2 fingerprint and hook allowance";
     manifest.spell_usability_trace_reason =
         L"spell usability tracing retired; re-add explicitly if needed";
     manifest.scroll_scribe_trace_reason =
@@ -124,6 +134,8 @@ Manifest BuildCapabilityManifest(
         L"default ROF2 multiclass spell usability pending target validation";
     manifest.multiclass_item_usability_reason =
         L"default ROF2 multiclass item usability pending target validation";
+    manifest.multiclass_ui_display_reason =
+        L"default ROF2 multiclass UI display pending target validation";
     return manifest;
 }
 
@@ -151,6 +163,8 @@ Manifest BuildDisabledCapabilityManifest(
         L"receive introspection retired; disabled before fingerprint/discovery gates";
     manifest.spell_usability_discovery_reason =
         L"spell usability discovery disabled before fingerprint/discovery gates";
+    manifest.class_display_discovery_reason =
+        L"class display discovery disabled before fingerprint/discovery gates";
     manifest.spell_usability_trace_reason =
         L"spell usability tracing retired; disabled before fingerprint/discovery gates";
     manifest.scroll_scribe_trace_reason =
@@ -161,6 +175,8 @@ Manifest BuildDisabledCapabilityManifest(
         L"default multiclass spell usability disabled before fingerprint/discovery gates";
     manifest.multiclass_item_usability_reason =
         L"default multiclass item usability disabled before fingerprint/discovery gates";
+    manifest.multiclass_ui_display_reason =
+        L"default multiclass UI display disabled before fingerprint/discovery gates";
     return manifest;
 }
 
@@ -199,6 +215,11 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" ";
     AppendBoolField(
         &message,
+        L"class_display_discovery_allowed=",
+        manifest.class_display_discovery_allowed);
+    message += L" ";
+    AppendBoolField(
+        &message,
         L"spell_usability_trace_allowed=",
         manifest.spell_usability_trace_allowed);
     message += L" ";
@@ -221,6 +242,11 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
         &message,
         L"multiclass_item_usability_allowed=",
         manifest.multiclass_item_usability_allowed);
+    message += L" ";
+    AppendBoolField(
+        &message,
+        L"multiclass_ui_display_allowed=",
+        manifest.multiclass_ui_display_allowed);
     message += L" ";
     AppendBoolField(&message, L"ui_hooks_allowed=", manifest.ui_hooks_allowed);
     message += L" ";
@@ -578,6 +604,70 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
         message += L" memorize_send_packet_wrapper_address=";
         message += HexPtr(manifest.memorize_send_packet_wrapper_address);
     }
+    message += L" who_class_name_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.who_class_name_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"who_class_name",
+        manifest.who_class_name_evidence_source,
+        manifest.who_class_name_failure_reason);
+    if (manifest.who_class_name_rva != 0) {
+        message += L" who_class_name_rva=";
+        message += Hex32(manifest.who_class_name_rva);
+    }
+    if (manifest.who_class_name_address != 0) {
+        message += L" who_class_name_address=";
+        message += HexPtr(manifest.who_class_name_address);
+    }
+    message += L" get_class_desc_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.get_class_desc_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"get_class_desc",
+        manifest.get_class_desc_evidence_source,
+        manifest.get_class_desc_failure_reason);
+    if (manifest.get_class_desc_rva != 0) {
+        message += L" get_class_desc_rva=";
+        message += Hex32(manifest.get_class_desc_rva);
+    }
+    if (manifest.get_class_desc_address != 0) {
+        message += L" get_class_desc_address=";
+        message += HexPtr(manifest.get_class_desc_address);
+    }
+    message += L" get_class_three_letter_code_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.get_class_three_letter_code_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"get_class_three_letter_code",
+        manifest.get_class_three_letter_code_evidence_source,
+        manifest.get_class_three_letter_code_failure_reason);
+    if (manifest.get_class_three_letter_code_rva != 0) {
+        message += L" get_class_three_letter_code_rva=";
+        message += Hex32(manifest.get_class_three_letter_code_rva);
+    }
+    if (manifest.get_class_three_letter_code_address != 0) {
+        message += L" get_class_three_letter_code_address=";
+        message += HexPtr(manifest.get_class_three_letter_code_address);
+    }
+    message += L" char_select_class_name_func_state=";
+    message += monomyth::spell_usability_discovery::TargetStateName(
+        manifest.char_select_class_name_func_state);
+    AppendTargetSourceAndFailure(
+        &message,
+        L"char_select_class_name_func",
+        manifest.char_select_class_name_func_evidence_source,
+        manifest.char_select_class_name_func_failure_reason);
+    if (manifest.char_select_class_name_func_rva != 0) {
+        message += L" char_select_class_name_func_rva=";
+        message += Hex32(manifest.char_select_class_name_func_rva);
+    }
+    if (manifest.char_select_class_name_func_address != 0) {
+        message += L" char_select_class_name_func_address=";
+        message += HexPtr(manifest.char_select_class_name_func_address);
+    }
     message += L" reason=\"";
     message += NormalizeReason(manifest.reason.c_str());
     message += L"\"";
@@ -593,6 +683,9 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L" spell_usability_discovery_reason=\"";
     message += NormalizeReason(manifest.spell_usability_discovery_reason.c_str());
     message += L"\"";
+    message += L" class_display_discovery_reason=\"";
+    message += NormalizeReason(manifest.class_display_discovery_reason.c_str());
+    message += L"\"";
     message += L" spell_usability_trace_reason=\"";
     message += NormalizeReason(manifest.spell_usability_trace_reason.c_str());
     message += L"\"";
@@ -607,6 +700,9 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L"\"";
     message += L" multiclass_item_usability_reason=\"";
     message += NormalizeReason(manifest.multiclass_item_usability_reason.c_str());
+    message += L"\"";
+    message += L" multiclass_ui_display_reason=\"";
+    message += NormalizeReason(manifest.multiclass_ui_display_reason.c_str());
     message += L"\"";
     monomyth::logger::Log(message);
 }
@@ -930,6 +1026,120 @@ void ApplySpellUsabilityDiscovery(
         manifest->multiclass_item_usability_reason =
             L"multiclass item usability gate denied for unknown reason";
     }
+}
+
+void ApplyClassDisplayDiscovery(
+    Manifest* manifest,
+    const monomyth::class_display_discovery::Result& discovery) noexcept {
+    if (manifest == nullptr) {
+        return;
+    }
+
+    manifest->class_display_discovery_allowed = discovery.allowed;
+    manifest->who_class_name_state = discovery.who_class_name.state;
+    manifest->who_class_name_rva = discovery.who_class_name.candidate_rva;
+    manifest->who_class_name_address = discovery.who_class_name.candidate_address;
+    manifest->who_class_name_evidence_source = discovery.who_class_name.evidence_source;
+    manifest->who_class_name_failure_reason = discovery.who_class_name.failure_reason;
+    manifest->get_class_desc_state = discovery.get_class_desc.state;
+    manifest->get_class_desc_rva = discovery.get_class_desc.candidate_rva;
+    manifest->get_class_desc_address = discovery.get_class_desc.candidate_address;
+    manifest->get_class_desc_evidence_source = discovery.get_class_desc.evidence_source;
+    manifest->get_class_desc_failure_reason = discovery.get_class_desc.failure_reason;
+    manifest->get_class_three_letter_code_state = discovery.get_class_three_letter_code.state;
+    manifest->get_class_three_letter_code_rva =
+        discovery.get_class_three_letter_code.candidate_rva;
+    manifest->get_class_three_letter_code_address =
+        discovery.get_class_three_letter_code.candidate_address;
+    manifest->get_class_three_letter_code_evidence_source =
+        discovery.get_class_three_letter_code.evidence_source;
+    manifest->get_class_three_letter_code_failure_reason =
+        discovery.get_class_three_letter_code.failure_reason;
+    manifest->char_select_class_name_func_state =
+        discovery.char_select_class_name_func.state;
+    manifest->char_select_class_name_func_rva =
+        discovery.char_select_class_name_func.candidate_rva;
+    manifest->char_select_class_name_func_address =
+        discovery.char_select_class_name_func.candidate_address;
+    manifest->char_select_class_name_func_evidence_source =
+        discovery.char_select_class_name_func.evidence_source;
+    manifest->char_select_class_name_func_failure_reason =
+        discovery.char_select_class_name_func.failure_reason;
+
+    manifest->multiclass_ui_display_allowed =
+        discovery.allowed &&
+        discovery.who_class_name.state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated &&
+        discovery.who_class_name.hook_safe &&
+        discovery.get_class_desc.state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated &&
+        discovery.get_class_desc.hook_safe &&
+        discovery.get_class_three_letter_code.state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated &&
+        discovery.get_class_three_letter_code.hook_safe &&
+        discovery.char_select_class_name_func.state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated &&
+        discovery.char_select_class_name_func.hook_safe;
+    manifest->ui_hooks_allowed = manifest->multiclass_ui_display_allowed;
+
+    if (!discovery.allowed) {
+        manifest->class_display_discovery_reason =
+            L"capability guard denied class display discovery";
+    } else {
+        manifest->class_display_discovery_reason = NormalizeReason(discovery.reason.c_str());
+    }
+
+    if (manifest->multiclass_ui_display_allowed) {
+        manifest->multiclass_ui_display_reason =
+            L"enabled by default for validated ROF2 local/self multiclass UI display";
+        return;
+    }
+
+    if (!discovery.allowed) {
+        manifest->multiclass_ui_display_reason =
+            L"multiclass UI display requires the ROF2 class display discovery capability gate";
+        return;
+    }
+
+    const std::wstring who_failure = DescribeTargetFailure(
+        L"WhoClassName",
+        discovery.who_class_name.state,
+        discovery.who_class_name.hook_safe,
+        discovery.who_class_name.failure_reason);
+    const std::wstring desc_failure = DescribeTargetFailure(
+        L"GetClassDesc",
+        discovery.get_class_desc.state,
+        discovery.get_class_desc.hook_safe,
+        discovery.get_class_desc.failure_reason);
+    const std::wstring code_failure = DescribeTargetFailure(
+        L"GetClassThreeLetterCode",
+        discovery.get_class_three_letter_code.state,
+        discovery.get_class_three_letter_code.hook_safe,
+        discovery.get_class_three_letter_code.failure_reason);
+    const std::wstring char_select_failure = DescribeTargetFailure(
+        L"CharSelectClassNameFunc",
+        discovery.char_select_class_name_func.state,
+        discovery.char_select_class_name_func.hook_safe,
+        discovery.char_select_class_name_func.failure_reason);
+    std::wstring reason =
+        L"multiclass UI display denied because one or more formatter hooks are not fully validated hook-safe";
+    if (!who_failure.empty()) {
+        reason += L" ";
+        reason += who_failure;
+    }
+    if (!desc_failure.empty()) {
+        reason += L" ";
+        reason += desc_failure;
+    }
+    if (!code_failure.empty()) {
+        reason += L" ";
+        reason += code_failure;
+    }
+    if (!char_select_failure.empty()) {
+        reason += L" ";
+        reason += char_select_failure;
+    }
+    manifest->multiclass_ui_display_reason = reason;
 }
 
 }  // namespace monomyth::runtime

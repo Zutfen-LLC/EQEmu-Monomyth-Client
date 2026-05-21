@@ -1,6 +1,112 @@
 #include "multiclass_identity.h"
 
+#include <string>
+
 namespace monomyth::multiclass_identity {
+namespace {
+
+constexpr std::array<std::wstring_view, kPlayableClassCount + 1> kFullClassNames = {{
+    L"",
+    L"Warrior",
+    L"Cleric",
+    L"Paladin",
+    L"Ranger",
+    L"Shadow Knight",
+    L"Druid",
+    L"Monk",
+    L"Bard",
+    L"Rogue",
+    L"Shaman",
+    L"Necromancer",
+    L"Wizard",
+    L"Magician",
+    L"Enchanter",
+    L"Beastlord",
+    L"Berserker",
+}};
+
+constexpr std::array<std::wstring_view, kPlayableClassCount + 1> kThreeLetterClassCodes = {{
+    L"",
+    L"WAR",
+    L"CLR",
+    L"PAL",
+    L"RNG",
+    L"SHD",
+    L"DRU",
+    L"MNK",
+    L"BRD",
+    L"ROG",
+    L"SHM",
+    L"NEC",
+    L"WIZ",
+    L"MAG",
+    L"ENC",
+    L"BST",
+    L"BER",
+}};
+
+constexpr std::array<std::string_view, kPlayableClassCount + 1> kFullClassNamesAscii = {{
+    "",
+    "Warrior",
+    "Cleric",
+    "Paladin",
+    "Ranger",
+    "Shadow Knight",
+    "Druid",
+    "Monk",
+    "Bard",
+    "Rogue",
+    "Shaman",
+    "Necromancer",
+    "Wizard",
+    "Magician",
+    "Enchanter",
+    "Beastlord",
+    "Berserker",
+}};
+
+constexpr std::array<std::string_view, kPlayableClassCount + 1> kThreeLetterClassCodesAscii = {{
+    "",
+    "WAR",
+    "CLR",
+    "PAL",
+    "RNG",
+    "SHD",
+    "DRU",
+    "MNK",
+    "BRD",
+    "ROG",
+    "SHM",
+    "NEC",
+    "WIZ",
+    "MAG",
+    "ENC",
+    "BST",
+    "BER",
+}};
+
+void AppendClassIfMissing(
+    OrderedClassIds* ordered_ids,
+    unsigned int class_id) noexcept {
+    if (ordered_ids == nullptr || !IsPlayableClassId(class_id)) {
+        return;
+    }
+
+    for (std::size_t i = 0; i < ordered_ids->count; ++i) {
+        if (ordered_ids->class_ids[i] == class_id) {
+            return;
+        }
+    }
+
+    if (ordered_ids->count >= ordered_ids->class_ids.size()) {
+        return;
+    }
+
+    ordered_ids->class_ids[ordered_ids->count] = class_id;
+    ++ordered_ids->count;
+}
+
+}  // namespace
 
 bool IsPlayableClassId(unsigned int class_id) noexcept {
     return class_id >= kFirstPlayableClassId && class_id <= kLastPlayableClassId;
@@ -67,6 +173,114 @@ bool HasAnyAuthoritativeClientItemClass(
     }
 
     return false;
+}
+
+const wchar_t* ClassDisplayToken(
+    unsigned int class_id,
+    ClassDisplayStyle style) noexcept {
+    if (!IsPlayableClassId(class_id)) {
+        return nullptr;
+    }
+
+    const auto& tokens =
+        style == ClassDisplayStyle::kThreeLetterCode ? kThreeLetterClassCodes : kFullClassNames;
+    return tokens[class_id].data();
+}
+
+const char* ClassDisplayTokenAscii(
+    unsigned int class_id,
+    ClassDisplayStyle style) noexcept {
+    if (!IsPlayableClassId(class_id)) {
+        return nullptr;
+    }
+
+    const auto& tokens = style == ClassDisplayStyle::kThreeLetterCode
+        ? kThreeLetterClassCodesAscii
+        : kFullClassNamesAscii;
+    return tokens[class_id].data();
+}
+
+OrderedClassIds BuildOrderedClassIdList(
+    unsigned int primary_class_id,
+    bool has_class_mask,
+    std::uint32_t class_mask) noexcept {
+    OrderedClassIds ordered_ids = {};
+    if (!has_class_mask || class_mask == 0 || !IsPlayableClassMask(class_mask)) {
+        return ordered_ids;
+    }
+
+    AppendClassIfMissing(&ordered_ids, primary_class_id);
+
+    for (unsigned int class_id = kFirstPlayableClassId;
+         class_id <= kLastPlayableClassId;
+         ++class_id) {
+        if (HasClass(class_mask, class_id)) {
+            AppendClassIfMissing(&ordered_ids, class_id);
+        }
+    }
+
+    return ordered_ids;
+}
+
+bool CanFormatClassDisplay(
+    unsigned int primary_class_id,
+    bool has_class_mask,
+    std::uint32_t class_mask) noexcept {
+    return BuildOrderedClassIdList(primary_class_id, has_class_mask, class_mask).count != 0;
+}
+
+std::wstring FormatClassDisplay(
+    unsigned int primary_class_id,
+    bool has_class_mask,
+    std::uint32_t class_mask,
+    ClassDisplayStyle style) {
+    const OrderedClassIds ordered_ids =
+        BuildOrderedClassIdList(primary_class_id, has_class_mask, class_mask);
+    if (ordered_ids.count == 0) {
+        return L"";
+    }
+
+    std::wstring formatted;
+    for (std::size_t i = 0; i < ordered_ids.count; ++i) {
+        const wchar_t* token = ClassDisplayToken(ordered_ids.class_ids[i], style);
+        if (token == nullptr || token[0] == L'\0') {
+            continue;
+        }
+
+        if (!formatted.empty()) {
+            formatted += L"/";
+        }
+        formatted += token;
+    }
+
+    return formatted;
+}
+
+std::string FormatClassDisplayAscii(
+    unsigned int primary_class_id,
+    bool has_class_mask,
+    std::uint32_t class_mask,
+    ClassDisplayStyle style) {
+    const OrderedClassIds ordered_ids =
+        BuildOrderedClassIdList(primary_class_id, has_class_mask, class_mask);
+    if (ordered_ids.count == 0) {
+        return "";
+    }
+
+    std::string formatted;
+    for (std::size_t i = 0; i < ordered_ids.count; ++i) {
+        const char* token = ClassDisplayTokenAscii(ordered_ids.class_ids[i], style);
+        if (token == nullptr || token[0] == '\0') {
+            continue;
+        }
+
+        if (!formatted.empty()) {
+            formatted += "/";
+        }
+        formatted += token;
+    }
+
+    return formatted;
 }
 
 }  // namespace monomyth::multiclass_identity

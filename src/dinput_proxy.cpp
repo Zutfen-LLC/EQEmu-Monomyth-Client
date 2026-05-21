@@ -4,6 +4,7 @@
 
 #include <string>
 
+#include "class_display_discovery.h"
 #include "hook_manager.h"
 #include "logger.h"
 #include "packet_observer.h"
@@ -53,9 +54,18 @@ void PublishCapabilitiesWithDiscovery() noexcept {
             g_capabilities.spell_usability_discovery_allowed,
             g_capabilities.fingerprint_matched);
     monomyth::runtime::ApplySpellUsabilityDiscovery(&g_capabilities, spell_discovery);
+    monomyth::class_display_discovery::Initialize();
+    const monomyth::class_display_discovery::Result class_display_discovery =
+        monomyth::class_display_discovery::Run(
+            g_capabilities.class_display_discovery_allowed,
+            g_capabilities.fingerprint_matched);
+    monomyth::runtime::ApplyClassDisplayDiscovery(
+        &g_capabilities,
+        class_display_discovery);
     monomyth::runtime::LogCapabilityManifest(g_capabilities);
     monomyth::receive_dispatch_discovery::LogResult(discovery);
     monomyth::spell_usability_discovery::LogResult(spell_discovery);
+    monomyth::class_display_discovery::LogResult(class_display_discovery);
 }
 
 std::wstring BuildSystemDinputPath() noexcept {
@@ -173,6 +183,7 @@ void Shutdown() noexcept {
     monomyth::packet_observer::Shutdown();
     monomyth::receive_dispatch_discovery::Shutdown();
     monomyth::spell_usability_discovery::Shutdown();
+    monomyth::class_display_discovery::Shutdown();
 
     if (g_real_module != nullptr) {
         FreeLibrary(g_real_module);
