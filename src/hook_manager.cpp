@@ -169,9 +169,6 @@ constexpr std::uint32_t kActiveWindowGlobalRva = 0x009d25ac;
 // authoritative local character object when we need the live PC profile.
 constexpr std::uint32_t kLocalCharDataGlobalRva = 0x009d261c;
 constexpr std::uint32_t kLocalPlayerGlobalRva = 0x009d2630;
-// MQ2 legacy ROF2 pins EQ_Character::GetCharInfo2 here, which returns the
-// current profile object for the local character.
-constexpr std::uint32_t kEqCharacterGetCharInfo2Rva = 0x003db210;
 constexpr std::uint32_t kGetClassThreeLetterCodeRva = 0x00114dc0;
 constexpr std::uint32_t kGetClassDescRva = 0x001153c0;
 constexpr std::uint32_t kWhoClassNameClassLookupCallsiteARva = 0x001364e7;
@@ -439,8 +436,6 @@ using GetClassDescFn = const char* (MONOMYTH_THISCALL*)(
 using GetClassThreeLetterCodeFn = const char* (MONOMYTH_THISCALL*)(
     void* this_context,
     unsigned int class_id);
-using EqCharacterGetCharInfo2Fn = void* (MONOMYTH_THISCALL*)(
-    void* this_context);
 using ProgressionSelectionClassLookupFn = const char* (CDECL*)(
     unsigned int class_id);
 using WhoClassNameClassLookupFn = const char* (MONOMYTH_THISCALL*)(
@@ -1114,35 +1109,38 @@ bool TryReadLocalProfileClassId(std::uint8_t* class_id) noexcept {
         return false;
     }
 
-    const std::uintptr_t module_base = GetHostModuleBase();
-    if (module_base == 0) {
-        return false;
-    }
+    // MQ2 legacy ROF2 reads GetCharInfo2() as:
+    //   ((PCHARINFO)pCharData)->pCI2->pCharInfo2
+    constexpr std::size_t kCharInfoCi2Offset = 0x31f0;
+    constexpr std::size_t kCi2InfoCharInfo2Offset = 0x0004;
+    constexpr std::size_t kPcProfileClassOffset = 0x3374;
 
-    const auto get_char_info2 = reinterpret_cast<EqCharacterGetCharInfo2Fn>(
-        module_base + kEqCharacterGetCharInfo2Rva);
-    if (get_char_info2 == nullptr) {
+    void* ci2 = nullptr;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(local_char_data) + kCharInfoCi2Offset,
+            &ci2) ||
+        ci2 == nullptr) {
         return false;
     }
 
     void* profile = nullptr;
-#if defined(_MSC_VER)
-    __try {
-        profile = get_char_info2(local_char_data);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-#else
-    profile = get_char_info2(local_char_data);
-#endif
-    if (profile == nullptr) {
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(ci2) + kCi2InfoCharInfo2Offset,
+            &profile) ||
+        profile == nullptr) {
         return false;
     }
 
-    constexpr std::size_t kPcProfileClassOffset = 0x3374;
-    return TryCopyObject(
-        reinterpret_cast<const std::uint8_t*>(profile) + kPcProfileClassOffset,
-        class_id);
+    std::uint32_t profile_class_id = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(profile) + kPcProfileClassOffset,
+            &profile_class_id) ||
+        !monomyth::multiclass_identity::IsPlayableClassId(profile_class_id)) {
+        return false;
+    }
+
+    *class_id = static_cast<std::uint8_t>(profile_class_id);
+    return true;
 }
 
 bool TryReadLocalPlayerDisplayedClassId(std::uint8_t* class_id) noexcept {
