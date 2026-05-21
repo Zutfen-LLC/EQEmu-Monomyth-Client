@@ -10706,6 +10706,56 @@ bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest)
         return false;
     }
 
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: multiclass UI display hook denied because module base was unavailable");
+        return false;
+    }
+
+    bool installed = false;
+    if (manifest.who_class_name_state ==
+            monomyth::spell_usability_discovery::TargetState::kValidated &&
+        manifest.who_class_name_address != 0) {
+        g_original_who_class_name_class_lookup =
+            reinterpret_cast<WhoClassNameClassLookupFn>(
+                module_base + kWhoClassNameClassLookupTargetRva);
+        if (!InstallCallsitePatch(
+                reinterpret_cast<void*>(module_base + kWhoClassNameClassLookupCallsiteARva),
+                reinterpret_cast<void*>(&WhoClassNameClassLookupCallsiteHook),
+                module_base + kWhoClassNameClassLookupTargetRva,
+                &g_who_class_name_class_lookup_callsite_a_patch,
+                L"WhoClassNameClassLookupCallsiteA")) {
+            goto cleanup;
+        }
+        installed = true;
+
+        if (!InstallCallsitePatch(
+                reinterpret_cast<void*>(module_base + kWhoClassNameClassLookupCallsiteBRva),
+                reinterpret_cast<void*>(&WhoClassNameClassLookupCallsiteHook),
+                module_base + kWhoClassNameClassLookupTargetRva,
+                &g_who_class_name_class_lookup_callsite_b_patch,
+                L"WhoClassNameClassLookupCallsiteB")) {
+            goto cleanup;
+        }
+
+        if (!InstallCallsitePatch(
+                reinterpret_cast<void*>(module_base + kWhoClassNameClassLookupCallsiteCRva),
+                reinterpret_cast<void*>(&WhoClassNameClassLookupCallsiteHook),
+                module_base + kWhoClassNameClassLookupTargetRva,
+                &g_who_class_name_class_lookup_callsite_c_patch,
+                L"WhoClassNameClassLookupCallsiteC")) {
+            goto cleanup;
+        }
+    } else {
+        std::wstring message = L"hook_manager: multiclass UI display hook denied ";
+        message += FormatDiscoveryDetails(
+            L"WhoClassName",
+            manifest.who_class_name_evidence_source,
+            manifest.who_class_name_failure_reason);
+        monomyth::logger::Log(message);
+    }
+
     if (manifest.get_class_desc_state != monomyth::spell_usability_discovery::TargetState::kValidated ||
         manifest.get_class_desc_address == 0) {
         std::wstring message = L"hook_manager: multiclass UI display hook denied ";
@@ -10713,8 +10763,12 @@ bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest)
             L"GetClassDesc",
             manifest.get_class_desc_evidence_source,
             manifest.get_class_desc_failure_reason);
+        if (!installed) {
+            monomyth::logger::Log(message);
+            return false;
+        }
         monomyth::logger::Log(message);
-        return false;
+        goto success;
     }
 
     if (manifest.get_class_three_letter_code_state !=
@@ -10725,18 +10779,24 @@ bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest)
             L"GetClassThreeLetterCode",
             manifest.get_class_three_letter_code_evidence_source,
             manifest.get_class_three_letter_code_failure_reason);
+        if (!installed) {
+            monomyth::logger::Log(message);
+            return false;
+        }
         monomyth::logger::Log(message);
-        return false;
+        goto success;
     }
 
-    bool installed = false;
     if (!InstallInlineDetour(
             reinterpret_cast<void*>(manifest.get_class_desc_address),
             reinterpret_cast<void*>(&GetClassDescHook),
             &g_get_class_desc_detour,
             reinterpret_cast<void**>(&g_original_get_class_desc),
             L"GetClassDesc")) {
-        goto cleanup;
+        if (!installed) {
+            goto cleanup;
+        }
+        goto success;
     }
     installed = true;
 
@@ -10746,20 +10806,26 @@ bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest)
             &g_get_class_three_letter_code_detour,
             reinterpret_cast<void**>(&g_original_get_class_three_letter_code),
             L"GetClassThreeLetterCode")) {
-        goto cleanup;
+        if (!installed) {
+            goto cleanup;
+        }
+        goto success;
     }
 
+success:
     monomyth::logger::Log(
-        L"hook_manager: multiclass UI display hook installed target=GetClassDesc/GetClassThreeLetterCode local_self_only=true");
+        L"hook_manager: multiclass UI display hook installed target=WhoClassName/GetClassDesc/GetClassThreeLetterCode local_self_only=true");
     return true;
 
 cleanup:
-    if (installed) {
-        RemoveInlineDetour(&g_get_class_three_letter_code_detour);
-        RemoveInlineDetour(&g_get_class_desc_detour);
-    }
+    RemoveInlineDetour(&g_get_class_three_letter_code_detour);
+    RemoveInlineDetour(&g_get_class_desc_detour);
+    RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_c_patch);
+    RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_b_patch);
+    RemoveCallsitePatch(&g_who_class_name_class_lookup_callsite_a_patch);
     g_original_get_class_desc = nullptr;
     g_original_get_class_three_letter_code = nullptr;
+    g_original_who_class_name_class_lookup = nullptr;
     return false;
 }
 
@@ -12610,7 +12676,7 @@ bool RemoveWhoClassNameDisplayHook() noexcept {
     g_multiclass_ui_display_enabled = false;
     if (ok) {
         monomyth::logger::Log(
-            L"hook_manager: multiclass UI display hook removed target=GetClassDesc/GetClassThreeLetterCode");
+            L"hook_manager: multiclass UI display hook removed target=WhoClassName/GetClassDesc/GetClassThreeLetterCode");
     }
     return ok;
 }
@@ -13521,7 +13587,7 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
             ui_display_active = true;
         } else {
             monomyth::logger::Log(
-                L"hook_manager: multiclass UI display install failed target=GetClassDesc/GetClassThreeLetterCode local/self path");
+                L"hook_manager: multiclass UI display install failed target=WhoClassName/GetClassDesc/GetClassThreeLetterCode local/self path");
         }
         if (InstallProgressionSelectionClassDisplayHook(manifest)) {
             progression_selection_display_active = true;
