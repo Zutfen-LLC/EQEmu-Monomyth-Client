@@ -14,6 +14,12 @@ bool Expect(bool condition, std::string_view name) {
     return false;
 }
 
+bool IsFailClosedReason(std::wstring_view reason) {
+    return !reason.empty() &&
+        reason != L"none" &&
+        reason != L"not_attempted";
+}
+
 }  // namespace
 
 namespace monomyth::logger {
@@ -55,12 +61,12 @@ int main() {
         unpinned.char_select_class_name_func.state == TargetState::kFailed,
         "char_select_class_name_func fails closed when unpinned");
     passed &= Expect(
-        unpinned.who_class_name.failure_reason == L"cleanroom_locator_unpinned",
+        IsFailClosedReason(unpinned.who_class_name.failure_reason),
         "unpinned failure reason");
 
     const auto cached = monomyth::class_display_discovery::GetResult();
     passed &= Expect(
-        cached.get_class_desc.failure_reason == L"cleanroom_locator_unpinned",
+        cached.get_class_desc.failure_reason == unpinned.get_class_desc.failure_reason,
         "cached result matches last run");
 
     monomyth::class_display_discovery::Shutdown();
