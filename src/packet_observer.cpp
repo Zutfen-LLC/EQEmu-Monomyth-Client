@@ -33,6 +33,11 @@ constexpr std::uint64_t kAuthStatsBootstrapPacketLogLimit = 250;
 constexpr std::uint64_t kAuthStatsMissingWarningSequence = 250;
 constexpr std::uint64_t kFirstIntrospectionLogLimit = 10;
 constexpr std::uint64_t kIntrospectionLogSampleInterval = 1000;
+constexpr std::uint64_t kWhoAllResponseLogLimit = 8;
+constexpr std::uint32_t kWhoAllResponseOpcode = 0x578c;
+constexpr std::uint32_t kWhoAllResponseHeaderSize = 64;
+constexpr std::uint32_t kWhoAllResponseEntryLogLimit = 6;
+constexpr std::uint32_t kWhoAllResponseFixedBlockBytes = 28;
 constexpr std::uint32_t kPayloadSafetyCeiling = 4096;
 constexpr std::uint32_t kAuthStatsCandidatePayloadCeiling = 512;
 constexpr std::uint64_t kAuthStatsCandidateLogLimit = 16;
@@ -56,6 +61,7 @@ std::atomic<std::uint64_t> g_move_item_receive_focus_activation = 0;
 std::atomic<std::uint64_t> g_server_auth_stats_exact_match_count = 0;
 std::atomic<std::uint64_t> g_server_auth_stats_candidate_count = 0;
 std::atomic<bool> g_server_auth_stats_missing_warning_logged = false;
+std::atomic<std::uint64_t> g_who_all_response_count = 0;
 std::vector<std::uint32_t> g_introspection_allowlist;
 
 struct IntrospectionAllowlistConfig {
@@ -198,6 +204,13 @@ bool IsServerAuthStatsOpcode(std::uint32_t opcode) noexcept {
     return opcode == kServerAuthStatsOpcode &&
         monomyth::opcode_reference::TryLookupRof2OpcodeValue(L"OP_ServerAuthStats", &resolved) &&
         resolved == kServerAuthStatsOpcode;
+}
+
+bool IsWhoAllResponseOpcode(std::uint32_t opcode) noexcept {
+    std::uint32_t resolved = 0;
+    return opcode == kWhoAllResponseOpcode &&
+        monomyth::opcode_reference::TryLookupRof2OpcodeValue(L"OP_WhoAllResponse", &resolved) &&
+        resolved == kWhoAllResponseOpcode;
 }
 
 std::wstring BuildAllowlistSummary() {
@@ -358,6 +371,181 @@ void MaybeLogMissingServerAuthStatsWarning(std::uint64_t sequence) {
     monomyth::logger::Log(message.str());
 }
 
+bool TryReadU32(
+    const std::uint8_t* payload,
+    std::uint32_t payload_length,
+    std::uint32_t offset,
+    std::uint32_t* value_out) noexcept {
+    if (payload == nullptr || value_out == nullptr ||
+        offset > payload_length || (payload_length - offset) < sizeof(std::uint32_t)) {
+        return false;
+    }
+
+    std::uint32_t value = 0;
+    std::memcpy(&value, payload + offset, sizeof(value));
+    *value_out = value;
+    return true;
+}
+
+bool TryReadCString(
+    const std::uint8_t* payload,
+    std::uint32_t payload_length,
+    std::uint32_t offset,
+    std::string* value_out,
+    std::uint32_t* next_offset_out) noexcept {
+    if (payload == nullptr || value_out == nullptr || next_offset_out == nullptr ||
+        offset >= payload_length) {
+        return false;
+    }
+
+    std::uint32_t cursor = offset;
+    while (cursor < payload_length && payload[cursor] != 0) {
+        ++cursor;
+    }
+    if (cursor >= payload_length) {
+        return false;
+    }
+
+    value_out->assign(
+        reinterpret_cast<const char*>(payload + offset),
+        reinterpret_cast<const char*>(payload + cursor));
+    *next_offset_out = cursor + 1;
+    return true;
+}
+
+std::wstring WidenAsciiLossy(std::string_view text) {
+    std::wstring widened;
+    widened.reserve(text.size());
+    for (const unsigned char ch : text) {
+        widened.push_back(static_cast<wchar_t>(ch));
+    }
+    return widened;
+}
+
+void MaybeLogWhoAllResponse(
+    std::uint64_t sequence,
+    std::uint32_t opcode,
+    std::uint32_t payload_length,
+    const void* payload) {
+    if (!IsWhoAllResponseOpcode(opcode) || payload == nullptr ||
+        payload_length < kWhoAllResponseHeaderSize ||
+        payload_length > kPayloadSafetyCeiling) {
+        return;
+    }
+
+    const std::uint64_t response_index = g_who_all_response_count.fetch_add(1) + 1;
+    if (response_index > kWhoAllResponseLogLimit) {
+        return;
+    }
+
+    const auto* bytes = static_cast<const std::uint8_t*>(payload);
+    std::uint32_t player_count = 0;
+    std::uint32_t players_in_zone_string = 0;
+    if (!TryReadU32(bytes, payload_length, 60, &player_count) ||
+        !TryReadU32(bytes, payload_length, 40, &players_in_zone_string)) {
+        monomyth::logger::Log(
+            L"PacketObserverWhoAllResponse parse_status=header_read_failed");
+        return;
+    }
+
+    std::wstringstream header_message;
+    header_message
+        << L"PacketObserverWhoAllResponse"
+        << L" seq=" << sequence
+        << L" response_index=" << response_index
+        << L" payload_length=" << payload_length
+        << L" player_count=" << player_count
+        << L" players_in_zone_string=" << players_in_zone_string;
+    monomyth::logger::Log(header_message.str());
+
+    std::uint32_t cursor = kWhoAllResponseHeaderSize;
+    const std::uint32_t entry_log_limit =
+        (player_count < kWhoAllResponseEntryLogLimit) ? player_count : kWhoAllResponseEntryLogLimit;
+    for (std::uint32_t entry_index = 0;
+         entry_index < player_count && entry_index < entry_log_limit;
+         ++entry_index) {
+        std::uint32_t format_string = 0;
+        std::uint32_t pid_string = 0;
+        std::uint32_t rank_string = 0;
+        std::uint32_t zone_string = 0;
+        std::uint32_t zone = 0;
+        std::uint32_t class_id = 0;
+        std::uint32_t level = 0;
+        std::uint32_t race = 0;
+        std::uint32_t unknown100 = 0;
+        std::string name;
+        std::string guild;
+        std::string account;
+
+        if (!TryReadU32(bytes, payload_length, cursor, &format_string) ||
+            !TryReadU32(bytes, payload_length, cursor + 4, &pid_string)) {
+            monomyth::logger::Log(
+                L"PacketObserverWhoAllResponseEntry parse_status=entry_prefix_read_failed");
+            break;
+        }
+        cursor += 12;
+
+        if (!TryReadCString(bytes, payload_length, cursor, &name, &cursor) ||
+            !TryReadU32(bytes, payload_length, cursor, &rank_string)) {
+            monomyth::logger::Log(
+                L"PacketObserverWhoAllResponseEntry parse_status=name_or_rank_read_failed");
+            break;
+        }
+        cursor += 4;
+
+        if (!TryReadCString(bytes, payload_length, cursor, &guild, &cursor)) {
+            monomyth::logger::Log(
+                L"PacketObserverWhoAllResponseEntry parse_status=guild_read_failed");
+            break;
+        }
+
+        if (cursor > payload_length || (payload_length - cursor) < kWhoAllResponseFixedBlockBytes) {
+            monomyth::logger::Log(
+                L"PacketObserverWhoAllResponseEntry parse_status=fixed_block_truncated");
+            break;
+        }
+
+        if (!TryReadU32(bytes, payload_length, cursor + 8, &zone_string) ||
+            !TryReadU32(bytes, payload_length, cursor + 12, &zone) ||
+            !TryReadU32(bytes, payload_length, cursor + 16, &class_id) ||
+            !TryReadU32(bytes, payload_length, cursor + 20, &level) ||
+            !TryReadU32(bytes, payload_length, cursor + 24, &race)) {
+            monomyth::logger::Log(
+                L"PacketObserverWhoAllResponseEntry parse_status=fixed_fields_read_failed");
+            break;
+        }
+        cursor += kWhoAllResponseFixedBlockBytes;
+
+        if (!TryReadCString(bytes, payload_length, cursor, &account, &cursor) ||
+            !TryReadU32(bytes, payload_length, cursor, &unknown100)) {
+            monomyth::logger::Log(
+                L"PacketObserverWhoAllResponseEntry parse_status=account_or_tail_read_failed");
+            break;
+        }
+        cursor += 4;
+
+        std::wstringstream entry_message;
+        entry_message
+            << L"PacketObserverWhoAllResponseEntry"
+            << L" seq=" << sequence
+            << L" response_index=" << response_index
+            << L" entry_index=" << entry_index
+            << L" format_string=" << format_string
+            << L" pid_string=" << pid_string
+            << L" rank_string=" << rank_string
+            << L" zone_string=" << zone_string
+            << L" zone=" << zone
+            << L" class_id=" << class_id
+            << L" level=" << level
+            << L" race=" << race
+            << L" unknown100=" << unknown100
+            << L" name=\"" << WidenAsciiLossy(name) << L"\""
+            << L" guild=\"" << WidenAsciiLossy(guild) << L"\""
+            << L" account=\"" << WidenAsciiLossy(account) << L"\"";
+        monomyth::logger::Log(entry_message.str());
+    }
+}
+
 }  // namespace
 
 State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
@@ -395,6 +583,7 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     g_server_auth_stats_exact_match_count.store(0);
     g_server_auth_stats_candidate_count.store(0);
     g_server_auth_stats_missing_warning_logged.store(false);
+    g_who_all_response_count.store(0);
     const IntrospectionAllowlistConfig allowlist_config = LoadIntrospectionAllowlist();
     g_introspection_allowlist = allowlist_config.opcodes;
     g_state.store(State::kInitialized);
@@ -508,6 +697,7 @@ void ObserveReceiveMetadata(
     } else {
         MaybeLogServerAuthStatsCandidate(sequence, opcode, payload_length, payload);
     }
+    MaybeLogWhoAllResponse(sequence, opcode, payload_length, payload);
 
     MaybeLogMissingServerAuthStatsWarning(sequence);
 
@@ -650,6 +840,9 @@ void Shutdown() noexcept {
             << L" observed_send_count=" << g_observed_send_count.load()
             << L" introspection_match_count=" << g_introspection_match_count.load()
             << L" introspection_skip_count=" << g_introspection_skip_count.load()
+            << L" server_auth_stats_exact_match_count=" << g_server_auth_stats_exact_match_count.load()
+            << L" server_auth_stats_candidate_count=" << g_server_auth_stats_candidate_count.load()
+            << L" who_all_response_count=" << g_who_all_response_count.load()
             << L" move_item_focus_remaining=" << g_move_item_receive_focus_remaining.load()
             << L" move_item_focus_activation=" << g_move_item_receive_focus_activation.load();
     g_full_packet_trace_enabled.store(false);

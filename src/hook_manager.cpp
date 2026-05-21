@@ -165,18 +165,22 @@ constexpr std::uint32_t kEquipMessageResolverTargetRva = 0x003d0660;
 constexpr std::uint32_t kDragContextGlobalRva = 0x009d261c;
 constexpr std::uint32_t kDragFlagsGlobalRva = 0x009d2660;
 constexpr std::uint32_t kActiveWindowGlobalRva = 0x009d25ac;
+constexpr std::uint32_t kInventoryWindowGlobalRva = 0x0091ec8c;
 // MQ2 legacy ROF2 exposes pinstCharData at this same RVA; use it as the
 // authoritative local character object when we need the live PC profile.
 constexpr std::uint32_t kLocalCharDataGlobalRva = 0x009d261c;
 constexpr std::uint32_t kLocalPlayerGlobalRva = 0x009d2630;
 constexpr std::uint32_t kGetClassThreeLetterCodeRva = 0x00114dc0;
 constexpr std::uint32_t kGetClassDescRva = 0x001153c0;
+constexpr std::uint32_t kInventoryClassTitleRefreshTargetRva = 0x001a3360;
+constexpr std::uint32_t kCXWndSetWindowTextATargetRva = 0x00405ec0;
 constexpr std::uint32_t kWhoClassNameClassLookupCallsiteARva = 0x001364e7;
 constexpr std::uint32_t kWhoClassNameClassLookupCallsiteBRva = 0x001365c2;
 constexpr std::uint32_t kWhoClassNameClassLookupCallsiteCRva = 0x00136601;
 constexpr std::uint32_t kWhoClassNameClassLookupTargetRva = 0x003d0660;
 constexpr std::uint32_t kProgressionSelectionClassLookupCallsiteRva = 0x003212b6;
 constexpr std::uint32_t kProgressionSelectionClassLookupTargetRva = 0x00042c00;
+constexpr std::size_t kInventoryClassTitleControlOffset = 0x02cc;
 // MacroQuest eqlib's emu/ROF2 layout reads PlayerClient::GetClass() from
 // mActorClient.Class. With mActorClient at 0x0ea4 and Class at +0x13c inside
 // ActorClient, the effective in-world class field is PlayerClient + 0x0fe0.
@@ -269,6 +273,9 @@ using InventoryWindowWndNotificationFn = int (MONOMYTH_THISCALL*)(
     void* sender_window,
     std::uint32_t notification_code,
     void* payload_like);
+using InventoryClassTitleRefreshFn = void* (MONOMYTH_THISCALL*)(
+    void* this_context,
+    unsigned int stat_index);
 using InvSlotWndHandleLButtonUpFn = int (MONOMYTH_THISCALL*)(
     void* this_context,
     void* point_like,
@@ -436,6 +443,9 @@ using GetClassDescFn = const char* (MONOMYTH_THISCALL*)(
 using GetClassThreeLetterCodeFn = const char* (MONOMYTH_THISCALL*)(
     void* this_context,
     unsigned int class_id);
+using CXWndSetWindowTextAFn = void (MONOMYTH_THISCALL*)(
+    void* this_context,
+    const char* text);
 using ProgressionSelectionClassLookupFn = const char* (CDECL*)(
     unsigned int class_id);
 using WhoClassNameClassLookupFn = const char* (MONOMYTH_THISCALL*)(
@@ -660,6 +670,7 @@ InlineDetour g_start_spell_memorization_path_detour = {};
 InlineDetour g_memorize_send_packet_wrapper_detour = {};
 InlineDetour g_get_class_desc_detour = {};
 InlineDetour g_get_class_three_letter_code_detour = {};
+InlineDetour g_inventory_class_title_refresh_detour = {};
 CallsitePatch g_who_class_name_class_lookup_callsite_a_patch = {};
 CallsitePatch g_who_class_name_class_lookup_callsite_b_patch = {};
 CallsitePatch g_who_class_name_class_lookup_callsite_c_patch = {};
@@ -803,6 +814,8 @@ StartSpellMemorizationPathFn g_original_start_spell_memorization_path = nullptr;
 MemorizeSendPacketWrapperFn g_original_memorize_send_packet_wrapper = nullptr;
 GetClassDescFn g_original_get_class_desc = nullptr;
 GetClassThreeLetterCodeFn g_original_get_class_three_letter_code = nullptr;
+InventoryClassTitleRefreshFn g_original_inventory_class_title_refresh = nullptr;
+CXWndSetWindowTextAFn g_original_cxwnd_set_window_text_a = nullptr;
 ProgressionSelectionClassLookupFn g_original_progression_selection_class_lookup = nullptr;
 WhoClassNameClassLookupFn g_original_who_class_name_class_lookup = nullptr;
 std::uint64_t g_get_spell_level_needed_trace_count = 0;
@@ -810,6 +823,7 @@ std::uint64_t g_can_start_memming_trace_count = 0;
 std::uint64_t g_memorize_send_trace_count = 0;
 std::uint64_t g_scroll_scribe_event_count = 0;
 std::uint64_t g_ui_class_helper_trace_count = 0;
+std::uint64_t g_inventory_class_title_trace_count = 0;
 std::uint32_t g_memorize_send_pending_correlation_id = 0;
 std::uint32_t g_memorize_send_correlation_count = 0;
 std::uint32_t g_memorize_send_pending_wrapper_sends = 0;
@@ -1099,6 +1113,21 @@ bool TryReadLocalCharDataPointer(void** local_char_data) noexcept {
         local_char_data);
 }
 
+bool TryReadInventoryWindowPointer(void** inventory_window) noexcept {
+    if (inventory_window == nullptr) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return false;
+    }
+
+    return TryCopyObject(
+        reinterpret_cast<const void*>(module_base + kInventoryWindowGlobalRva),
+        inventory_window);
+}
+
 bool TryReadLocalProfileClassId(std::uint8_t* class_id) noexcept {
     if (class_id == nullptr) {
         return false;
@@ -1157,6 +1186,62 @@ bool TryReadLocalPlayerDisplayedClassId(std::uint8_t* class_id) noexcept {
     }
 
     return TryReadLocalProfileClassId(class_id);
+}
+
+const char* BuildLocalPlayerClassDisplayAscii(
+    monomyth::multiclass_identity::ClassDisplayStyle style,
+    const wchar_t* surface) noexcept;
+
+bool ApplyInventoryClassTitleOverride(
+    void* inventory_window,
+    unsigned int stat_index) noexcept {
+    if (!g_multiclass_ui_display_enabled || inventory_window == nullptr ||
+        g_original_cxwnd_set_window_text_a == nullptr) {
+        return false;
+    }
+
+    void* live_inventory_window = nullptr;
+    if (!TryReadInventoryWindowPointer(&live_inventory_window) ||
+        live_inventory_window == nullptr ||
+        live_inventory_window != inventory_window) {
+        return false;
+    }
+
+    void* class_title_control = nullptr;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(inventory_window) +
+                kInventoryClassTitleControlOffset,
+            &class_title_control) ||
+        class_title_control == nullptr) {
+        return false;
+    }
+
+    const char* display = BuildLocalPlayerClassDisplayAscii(
+        monomyth::multiclass_identity::ClassDisplayStyle::kFullName,
+        L"InventoryClassTitle1");
+    if (display == nullptr || display[0] == '\0') {
+        return false;
+    }
+
+    g_original_cxwnd_set_window_text_a(class_title_control, display);
+
+    const std::uint64_t count = ++g_inventory_class_title_trace_count;
+    if (count <= 20 || (count % 100) == 0) {
+        std::wstring message = L"InventoryClassTitleTrace count=";
+        message += std::to_wstring(count);
+        message += L" stat_index=";
+        message += std::to_wstring(stat_index);
+        message += L" window=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(inventory_window));
+        message += L" control=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(class_title_control));
+        message += L" formatted=\"";
+        message += WidenAsciiLossy(display);
+        message += L"\"";
+        monomyth::logger::Log(message);
+    }
+
+    return true;
 }
 
 const char* BuildLocalPlayerClassDisplayAscii(
@@ -2336,6 +2421,18 @@ const char* CDECL ProgressionSelectionClassLookupCallsiteHook(
     }
 
     return g_original_progression_selection_class_lookup(class_id);
+}
+
+void* MONOMYTH_FASTCALL InventoryClassTitleRefreshHook(
+    void* this_context,
+    void*,
+    unsigned int stat_index) noexcept {
+    void* const original_result =
+        g_original_inventory_class_title_refresh == nullptr
+            ? nullptr
+            : g_original_inventory_class_title_refresh(this_context, stat_index);
+    ApplyInventoryClassTitleOverride(this_context, stat_index);
+    return original_result;
 }
 
 #if defined(_MSC_VER)
@@ -10716,6 +10813,77 @@ bool InstallProgressionSelectionClassDisplayHook(
     return true;
 }
 
+bool InstallInventoryClassTitleDisplayHook(
+    const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.multiclass_ui_display_allowed) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: inventory class title display hook denied because module base was unavailable");
+        return false;
+    }
+
+    constexpr std::array<std::uint8_t, 8> kInventoryClassTitleRefreshEntryBytes = {
+        0x53, 0x56, 0x57, 0x8b, 0x7c, 0x24, 0x10, 0x8b};
+    std::array<std::uint8_t, kInventoryClassTitleRefreshEntryBytes.size()>
+        live_inventory_class_title_refresh_entry = {};
+    const bool refresh_entry_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kInventoryClassTitleRefreshTargetRva),
+        live_inventory_class_title_refresh_entry.size(),
+        live_inventory_class_title_refresh_entry.data());
+    const bool refresh_entry_matches =
+        refresh_entry_copied &&
+        std::memcmp(
+            live_inventory_class_title_refresh_entry.data(),
+            kInventoryClassTitleRefreshEntryBytes.data(),
+            kInventoryClassTitleRefreshEntryBytes.size()) == 0;
+    if (!refresh_entry_matches) {
+        monomyth::logger::Log(
+            L"hook_manager: inventory class title display hook denied target=IDW_ClassTitle1 validation=entry_bytes_mismatch");
+        return false;
+    }
+
+    constexpr std::array<std::uint8_t, 8> kCXWndSetWindowTextAEntryBytes = {
+        0x55, 0x8b, 0xec, 0x6a, 0xff, 0x68, 0x48, 0xd7};
+    std::array<std::uint8_t, kCXWndSetWindowTextAEntryBytes.size()>
+        live_cxwnd_set_window_text_a_entry = {};
+    const bool set_text_entry_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kCXWndSetWindowTextATargetRva),
+        live_cxwnd_set_window_text_a_entry.size(),
+        live_cxwnd_set_window_text_a_entry.data());
+    const bool set_text_entry_matches =
+        set_text_entry_copied &&
+        std::memcmp(
+            live_cxwnd_set_window_text_a_entry.data(),
+            kCXWndSetWindowTextAEntryBytes.data(),
+            kCXWndSetWindowTextAEntryBytes.size()) == 0;
+    if (!set_text_entry_matches) {
+        monomyth::logger::Log(
+            L"hook_manager: inventory class title display hook denied target=IDW_ClassTitle1 failure_reason=set_text_entry_bytes_mismatch");
+        return false;
+    }
+
+    g_original_cxwnd_set_window_text_a = reinterpret_cast<CXWndSetWindowTextAFn>(
+        module_base + kCXWndSetWindowTextATargetRva);
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(module_base + kInventoryClassTitleRefreshTargetRva),
+            reinterpret_cast<void*>(&InventoryClassTitleRefreshHook),
+            &g_inventory_class_title_refresh_detour,
+            reinterpret_cast<void**>(&g_original_inventory_class_title_refresh),
+            L"InventoryClassTitleRefresh")) {
+        g_original_cxwnd_set_window_text_a = nullptr;
+        g_original_inventory_class_title_refresh = nullptr;
+        return false;
+    }
+
+    monomyth::logger::Log(
+        L"hook_manager: inventory class title display hook installed target=IDW_ClassTitle1 local_self_style=full_name");
+    return true;
+}
+
 bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest& manifest) noexcept {
     if (!manifest.receive_dispatch_validated || manifest.receive_dispatch_address == 0) {
         monomyth::logger::Log(
@@ -12435,6 +12603,18 @@ bool RemoveProgressionSelectionClassDisplayHook() noexcept {
     return ok;
 }
 
+bool RemoveInventoryClassTitleDisplayHook() noexcept {
+    const bool ok = RemoveInlineDetour(&g_inventory_class_title_refresh_detour);
+    g_original_inventory_class_title_refresh = nullptr;
+    g_original_cxwnd_set_window_text_a = nullptr;
+    g_inventory_class_title_trace_count = 0;
+    if (ok) {
+        monomyth::logger::Log(
+            L"hook_manager: inventory class title display hook removed target=IDW_ClassTitle1");
+    }
+    return ok;
+}
+
 bool RemoveGetSpellLevelNeededTrace() noexcept {
     if (!g_get_spell_level_needed_detour.installed) {
         return true;
@@ -12910,6 +13090,11 @@ bool InstallProgressionSelectionClassDisplayHook(
     return false;
 }
 
+bool InstallInventoryClassTitleDisplayHook(
+    const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
 bool RemoveReceiveDispatchHook() noexcept {
     return true;
 }
@@ -12919,6 +13104,10 @@ bool RemoveWhoClassNameDisplayHook() noexcept {
 }
 
 bool RemoveProgressionSelectionClassDisplayHook() noexcept {
+    return true;
+}
+
+bool RemoveInventoryClassTitleDisplayHook() noexcept {
     return true;
 }
 
@@ -13109,6 +13298,7 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     bool move_item_send_trace_active = false;
     bool ui_display_active = false;
     bool progression_selection_display_active = false;
+    bool inventory_class_title_display_active = false;
 
     g_multiclass_ui_display_enabled = manifest.multiclass_ui_display_allowed;
 
@@ -13316,6 +13506,12 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
             monomyth::logger::Log(
                 L"hook_manager: progression selection class display install failed target=ClassValueLabel");
         }
+        if (InstallInventoryClassTitleDisplayHook(manifest)) {
+            inventory_class_title_display_active = true;
+        } else {
+            monomyth::logger::Log(
+                L"hook_manager: inventory class title display install failed target=IDW_ClassTitle1");
+        }
     }
     LogMemorizeSendTraceStartupMarker(
         manifest,
@@ -13325,7 +13521,7 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     if (receive_hook_active || spell_trace_active || scroll_scribe_trace_active ||
         memorize_send_trace_active || spell_behavior_active || item_behavior_active ||
         move_item_trace_active || move_item_send_trace_active || ui_display_active ||
-        progression_selection_display_active) {
+        progression_selection_display_active || inventory_class_title_display_active) {
         std::wstring message = L"hook_manager: initialized (";
         bool first = true;
         if (receive_hook_active) {
@@ -13395,6 +13591,13 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
             message += L"progression selection class display";
             first = false;
         }
+        if (inventory_class_title_display_active) {
+            if (!first) {
+                message += L", ";
+            }
+            message += L"inventory class title display";
+            first = false;
+        }
         message += L" active)";
         monomyth::logger::Log(message);
     } else {
@@ -13456,6 +13659,11 @@ void Shutdown() noexcept {
     if (!RemoveProgressionSelectionClassDisplayHook()) {
         monomyth::logger::Log(
             L"hook_manager: shutdown deferred because progression selection class display hook removal failed");
+        return;
+    }
+    if (!RemoveInventoryClassTitleDisplayHook()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because inventory class title display hook removal failed");
         return;
     }
     if (!RemoveGetSpellLevelNeededTrace()) {
