@@ -1,237 +1,258 @@
-# Handoff: Multiclass Spell Usability Runtime-Proven End-to-End
+# Multiclass UI Display Handoff
 
-## Scope
+Updated: 2026-05-21
 
-This work completed the clean-room PAL secondary-class spellbook scribe fix for the ROF2 client hook DLL and closed the follow-up memorize/cast investigation. Runtime proof now shows multiclass spell usability working end-to-end: secondary-class spells can be scribed, memorized, and cast successfully on live reproduces.
+## Goal
 
-Repo:
-- `/home/zutfen/code/EQEmu-Monomyth-Client`
+Show all assigned classes for the local player anywhere class text is displayed in the ROF2 client, starting with local/self surfaces only.
 
-Runtime log under test:
-- `/home/zutfen/everquest_rof2/monomyth-client.log`
+Authoritative source:
+- `OP_ServerAuthStats`
+- `statClassesBitmask`
+- current confirmed test mask: `0x1044`
+- current confirmed assigned classes for test character: `Paladin / Monk / Magician`
 
-Related local references:
-- MQ2 source: `/home/zutfen/Desktop/MQ2Emu_ROF2_Legacy_Source/`
-- Ghidra notes: `/home/zutfen/monomyth_ghidra/out/right_click_chain_update_verified_new_exe.md`
-- Repo spell UI notes: `docs/cleanroom-dll-research/eqgame-spell-ui-ghidra-notes.md`
-- Multiclass intervention map: `docs/multiclass-identity-intervention-map.md`
+## Current Status
 
-Current branch:
-- `main`
+What is confirmed working:
+- The server is sending `OP_ServerAuthStats`, and the client is receiving it.
+- The client parses the authoritative multiclass mask correctly.
+- Shared multiclass formatting works.
+- At least one live UI surface already overrides correctly through the `GetClassThreeLetterCode` producer path.
+- `/who` now visibly overrides correctly through the live class-label seam at `0x477e6`.
 
-## What Is Now Proven
+What is still not working visibly:
+- Inventory class title still shows the single native class.
 
-### 1. Server-side class-mask support was never the blocker
+## Important Evidence
 
-Earlier cross-repo audit already established the EQEmu server supports multiclass spell eligibility via class-mask-aware level selection. This branch stayed on the clean-room client side.
+### Server send is correct
 
-### 2. PAL secondary-class spellbook scribing was blocked by an early native class-mask gate
+Live server logs confirm the send path is working:
+- `ServerAuthStatsSend char_name="Driton" ... class_mask=0x1044 ... wire_opcode=0x1338 ... client_version=RoF2`
 
-The spellbook click path was traced through these clean-room targets:
-- `SpellbookDispatcher`
-- `StartSpellScribePath`
-- `StartSpellScribePrecheckModeGetter`
-- `StartSpellScribePrecheckGate`
-- `StartSpellScribePrecheckLookup`
-- nested helper traces inside `0x44c430`
+This rules out stale zone binaries and server opcode mapping as the current blocker.
 
-The failing PAL reproduce proved:
-- `SpellbookDispatcher` was reached
-- `StartSpellScribePath` was reached
-- mode check returned `20` / `0x14`
-- `StartSpellScribePrecheckGate` returned `false`
-- the path died before `GetSpellLevelNeeded` and before any scribe packet activity
+### Client receive is correct
 
-Deeper gate tracing then proved the exact reject:
-- assigned spell mask was `0x6`
-- resolved current class was `13`
-- computed current-class bit was `0x1000`
-- native class-mask test failed
-- no later `4462c0 / 446190 / 446200 / 446380` helper had run yet
+The client log confirms receipt and decoding of who data and multiclass state.
 
-So the blocker was the early `test edx, eax` style native-class gate inside `0x44c430`, not a downstream spell level check and not packet send failure.
+Relevant 17:00 run lines:
+- `hook_manager: WhoClassNameClassLookupCallsiteA callsite hook installed address=0x5364e7 ...`
+- `hook_manager: multiclass UI display hook installed target=WhoClassName/GetClassDesc/GetClassThreeLetterCode local_self_only=true`
+- `UiClassHelperTrace ... helper=GetClassThreeLetterCode caller_rva=0x2781a6 ... override_applied=true formatted="PAL/MNK/MAG"`
+- `PacketObserverWhoAllResponseEntry ... class_id=3 ... name="Driton"`
 
-### 3. The clean-room fix is a narrow gate override, not a broad spoof
+Interpretation:
+- multiclass state is present
+- helper detour is live
+- one 3-letter-code surface is proven
+- `/who` still arrives as a normal single-class packet row and must be rewritten in a later producer/UI step
 
-The fix lives in `StartSpellScribePrecheckGateHook` and only overrides the proven early reject when all of these are true:
-- multiclass spell usability is enabled
-- the original gate returned `false`
-- `require_known_like != 0`
-- none of the later `4462c0 / 446190 / 446200 / 446380` rule helpers ran
-- the current class bit missed the spell's native class mask
-- authoritative `server_auth_stats` mask still intersects the spell's native mask
+### THJ DLL findings changed the strategy
 
-That makes the behavior change fail-closed and specific to the proven PAL secondary-class scribe reject.
+See [thj-decompile-results.md](/home/zutfen/code/EQEmu-Monomyth-Client/docs/thj-decompile-results.md).
 
-### 4. The PAL scribe fix is runtime-proven
+Main conclusion:
+- THJ does not appear to solve this by writing final UI controls directly.
+- THJ centrally detours producer functions instead:
+  - `/who` through `EQ_WhoClassName`
+  - inventory / char-select-adjacent surfaces through `EQ_CharSelectClassNameFunc`
 
-On the successful PAL reproduce, the log showed:
-- `StartSpellScribePrecheckAssignedMaskGetter` returned `0x6`
-- `StartSpellScribePrecheckGate` logged:
-  - `original_result=false`
-  - `returned_result=true`
-  - `behavior_override_applied=true`
-  - `class_id=13`
-  - `class_bit=0x1000`
-  - `authoritative_mask=0x1044`
-  - `authoritative_mask_intersection=0x4`
-- `StartSpellScribePrecheckLookup` then ran
-- `StartSpellScribePath` mutated state instead of stalling
-- the client sent `OP_MemorizeSpell`
+Recovered THJ replacements:
+- `/who`: `FUN_10025510`
+- char-select / inventory-adjacent: `FUN_10024920`
 
-This proves the early class-mask reject was the blocker and the narrow override cleared the real path.
+Important THJ clue:
+- `FUN_10024920` has a special caller discriminator for client return RVA `0x6843ff`
+- that branch returns abbreviated slash-joined class codes
+- the general branch can return full slash-joined class names
 
-### 5. `GetSpellLevelNeeded` is already selecting the right secondary class downstream
+## What We Have Implemented
 
-Later logs show `GetSpellLevelNeeded` choosing the PAL class for the class-13 reproduce:
-- `assigned_mask=0x1044`
-- `original_level=255`
-- `selected_class=3`
-- `selected_level=42`
+### Shared formatter layer
 
-So downstream spell-level selection is already class-mask aware enough for this case once the earlier gate is bypassed.
+Implemented in:
+- [src/multiclass_identity.h](/home/zutfen/code/EQEmu-Monomyth-Client/src/multiclass_identity.h)
+- [src/multiclass_identity.cpp](/home/zutfen/code/EQEmu-Monomyth-Client/src/multiclass_identity.cpp)
 
-### 6. Secondary-class memorize and cast are now runtime-proven, not still open
+Includes:
+- primary-first ordering
+- duplicate suppression
+- full-name formatting
+- 3-letter formatting
+- ASCII output helpers
 
-Later live gameplay proof closed the remaining question. After swapping from `MAG/PAL/MNK` to `MAG/PAL/SHD`, the client successfully:
-- scribed secondary-class SHD spells
-- memorized secondary-class SHD spells
-- cast those SHD spells successfully
+### Discovery / capability layer
 
-So there is no longer an active gameplay defect in the multiclass spell usability slice. The remaining earlier memorize investigation was a trace-model correction problem, not an unresolved player-facing failure.
+Implemented in:
+- [src/class_display_discovery.cpp](/home/zutfen/code/EQEmu-Monomyth-Client/src/class_display_discovery.cpp)
+- [src/runtime_capabilities.cpp](/home/zutfen/code/EQEmu-Monomyth-Client/src/runtime_capabilities.cpp)
 
-### 7. `StartSpellMemorizationPath` is a controller-style wrapper, not the real spellbook-window sender
+Current validated targets:
+- `WhoClassName`
+- `GetClassDesc`
+- `GetClassThreeLetterCode`
+- progression-selection class-value writer seam currently still stored in the `char_select_class_name_func` slot in code/logging
 
-Ordinary memorize tracing now proves the long-standing object/signature suspicion was correct:
-- `StartSpellMemorizationPath` (`0x262290`) does run
-- but its `controller_this` does not match the real spellbook window
-- the real spellbook window state does not mutate there
+Important caveat:
+- the current `char_select_class_name_func` discovery slot is not proven to be THJ’s real `EQ_CharSelectClassNameFunc` producer seam
+- it is still the previously recovered progression-selection writer seam
+- the current known failed seams are now tracked separately in [docs/multiclass-negative-results.md](/home/zutfen/code/EQEmu-Monomyth-Client/docs/multiclass-negative-results.md)
 
-So `0x262290` is useful as an upstream wrapper/correlation seam, but it is not the final ordinary memorize sender.
+### Live hook layer
 
-### 8. `SpellbookMemorizeSendPath` is the real ordinary memorize send/reset path
+Implemented in:
+- [src/hook_manager.cpp](/home/zutfen/code/EQEmu-Monomyth-Client/src/hook_manager.cpp)
 
-The latest reproduce proved the real spellbook-window path:
-- before the decisive send, `SpellbookMemorizeSendPath` saw real pending state on the spellbook window:
-  - `state_234=0x6`
-  - `state_238=0xd8`
-  - `state_23c=0x2`
-  - `state_240=0xffffffff`
-- that first call returned `21`, which behaves like a remaining-delay/countdown style result rather than a final commit result
-- the actual outbound `OP_MemorizeSpell` send was then observed from wrapper caller `0x35dd4f`
-- the new `MemorizeSendObserved` trace labeled that caller as `SpellbookMemorizeSendPathWrapperCallsite`
-- immediately after the send, `SpellbookMemorizeSendPath` ran again and reset:
-  - `state_234=0xffffffff`
-  - `state_238=0xffffffff`
-  - `state_23c=0x0`
+Current UI-related hook behavior:
+- `GetClassDesc` inline detour
+- `GetClassThreeLetterCode` inline detour
+- `WhoClassName` now uses an entry/context inline detour plus a filtered `WhoClassNameClassLookup` inline detour
+- progression selection `ClassValueLabel` callsite patch
+- inventory title interception experiments were retired after THJ/local evidence showed they were the wrong layer
 
-So the real ordinary memorize send/reset path is `0x35db20`, not `MemSpellCommitPath`.
+Important `/who` update:
+- the original `0x536310` wrapper-context theory was not the visible row seam
+- the shared lookup at `0x7d0660` is still involved, but the real visible `/who` class-label caller is `0x477e6`
+- that caller now overrides correctly during the bounded post-`OP_WhoAllResponse` correlation window
 
-### 9. Historical note: `MemSpellCommitPath` fast-exited, but it was not the blocker for successful ordinary memorize
+## Live Binary Findings
 
-Current proven behavior on the successful ordinary memorize reproduce:
-- `CanStartMemming` succeeds
-- `StartSpellMemorizationPath` runs as an upstream controller wrapper
-- `SpellbookMemorizeSendPath` sees the real pending state and later drives the real `OP_MemorizeSpell` send
-- `MemSpellCommitPath` still fast-exits with `inferred_exit_reason=state_240_unset_fast_exit`
-- despite that fast-exit, the live packet send and recv echo still happen
+These live-client call sites have now been confirmed:
 
-That historical proof is preserved here for context, but the `MemSpellCommitPath` and `PostCanStartMemmingFollowupGate` traces were removed from the branch after they were proven non-authoritative and noisy.
+### `0x514dc0` caller at `0x2781a6`
 
-## Instrumentation Present On This Branch
+Confirmed by both logs and disassembly.
 
-Existing important seams now on branch:
-- `GetSpellLevelNeeded`
-- `CanStartMemming` trace
-- `StartSpellMemorizationPath` trace
-- outbound `OP_MemorizeSpell` send observation
-- `MemorizeSendObserved`
-- `SpellbookMemorizeSendPath`
-- dev-gated full packet trace mode
-- `SpellbookDispatcher`
-- `StartSpellScribePath`
-- `StartSpellScribePrecheckModeGetter`
-- `StartSpellScribePrecheckGate`
-- `StartSpellScribePrecheckLookup`
-- `StartSpellScribePrecheckFastAccept`
-- `StartSpellScribePrecheckAssignedMaskGetter`
-- nested precheck rule helpers:
-  - `StartSpellScribePrecheckRule4462c0`
-  - `StartSpellScribePrecheckRule446190`
-  - `StartSpellScribePrecheckRule446200`
-  - `StartSpellScribePrecheckRule446380`
+Behavior:
+- currently reaches our `GetClassThreeLetterCode` hook
+- successfully overrides to `PAL/MNK/MAG`
 
-Durable guardrails to keep in mind:
-- the actual behavior hooks are still `GetSpellLevelNeeded` and `StartSpellScribePrecheckGateHook`
-- the other seams in this list are investigative traces, not proof of an active open defect
-- if a future cleanup wants a smaller runtime trace surface, these investigative seams are the right first candidates to retire
+This is the one proven working display surface so far.
 
-Important nuance:
-- the direct `StartSpellScribePrecheckClassResolver` detour does not install cleanly on this executable because the prologue is unsupported
-- class resolution is instead emulated inside `StartSpellScribePrecheckGateHook` with guarded reads
-- that emulated path is what produced the successful `class_id=13` proof and the shipped override decision
-- the old `PostCanStartMemmingFollowupGate` and `MemSpellCommitPath` traces were removed rather than left as dead or misleading code
-- the real ordinary memorize send/reset proof on this branch lives at `SpellbookMemorizeSendPath` plus `MemorizeSendObserved`
+### `0x514dc0` caller at `0x6843ff`
 
-Relevant runtime behavior:
-- no spell-usability env flags are required anymore
-- validated ROF2 multiclass spell usability is expected native behavior now
-- packet and trace opt-ins were retired after the issue was proven and closed
+Confirmed in the live `eqgame.exe` disassembly.
 
-## Files Touched For The PAL Scribe Fix
+This exactly matches the THJ `EQ_CharSelectClassNameFunc` caller discriminator.
 
-Primary code files:
-- `src/hook_manager.cpp`
-- `src/runtime_capabilities.cpp`
-- `src/runtime_capabilities.h`
-- `src/spell_usability_discovery.cpp`
-- `src/spell_usability_discovery.h`
+Disassembly pattern:
+- `call 0x514dc0`
+- return address `0x6843ff`
 
-Docs:
-- `docs/handoff.md`
+Interpretation:
+- Hermes’ THJ result is real and maps to this client
+- this is a concrete candidate for the abbreviated branch of the inventory / char-select-adjacent producer path
 
-## Current Worktree State
+### `0x514dc0` caller at `0x18e554`
 
-Current checkout:
-- `main`
+Confirmed in the live `eqgame.exe` disassembly and in logs:
+- `UiClassHelperTrace ... caller_rva=0x18e554 ...`
 
-Untracked local items currently present but not part of this slice:
-- `.agents/`
-- `docs/multiclass-identity-intervention-map.md`
-- `docs/specs/`
-- `worktrees/`
+Observed behavior in logs before the latest patch:
+- `requested_class_id=1` or `3`
+- `local_class_id=2`
+- `has_assigned_mask=false`
+- `override_applied=false`
 
-Build status:
-- `cmake --build build-cross-i686` passed for the current patch
+Interpretation:
+- this is a real full-name-ish local/self UI surface
+- the old “only override when requested class == local primary” rule was too narrow here
+- caller-specific semantic override was added to address this
 
-Runtime deploy status:
-- latest built `build-cross-i686/dinput8.dll` was copied to `/home/zutfen/everquest_rof2/dinput8.dll`
-- successful PAL reproduce was done with that deployed DLL
-- successful ordinary memorize reproduce was also done with the latest `MemorizeSendObserved` trace patch
-- later live gameplay also proved successful SHD secondary-class scribe, memorize, and cast behavior
+### `0x7d0660` caller at `0x477e6`
 
-## Status
+Confirmed by the bounded `/who` correlation trace in the live client.
 
-- Treat the multiclass spell usability fix as complete unless a fresh contradictory reproduce appears.
-- Do not reopen the ordinary memorize investigation without a real gameplay failure.
-- Treat the remaining trace-rich seams as optional diagnostics, not as evidence of unfinished behavior.
+Observed behavior in the `2026-05-21 18:47` run:
+- `WhoAllClassDisplayTrace ... caller_rva=0x477e6 ... string_id=0x5e6 ... override_applied=true ... formatted="Paladin/Monk/Magician"`
 
-## Optional Follow-Ups
+Interpretation:
+- this is the live visible `/who` class-label seam for the current client path
+- `/who` should now be treated as solved unless later runtime evidence shows a regression
 
-- If desired, reduce the investigative trace surface now that the issue is closed.
-- If desired, relabel or better document `StartSpellMemorizationPath` to reflect its controller-wrapper role more explicitly.
-- If a future gameplay regression appears, start from `SpellbookMemorizeSendPath` and `StartSpellScribePrecheckGateHook`, not from the removed `MemSpellCommitPath` theory.
+## Latest Code Direction
 
-## Constraints To Preserve
+The latest patch changes the `0x514dc0` producer hook from a naive class-id match rule to caller-based semantic rules.
 
-- Stay clean-room. Do not import THJ or classless DLL gameplay code.
-- Keep future spell usability work trace-first unless a fresh real failure is reproduced.
-- Do not broaden into `CastSpell`, profile spoofing, or spell-record mutation without direct runtime evidence.
-- Preserve the PAL scribe fix's fail-closed behavior; do not generalize it into a wide class spoof or unconditional allow.
-- Treat missing startup capability receipts as a deployment problem first, not a logic conclusion.
-- Do not reintroduce `MemSpellCommitPath` or `PostCanStartMemmingFollowupGate` tracing without fresh contradictory evidence that the current proven send path is insufficient.
+Current caller-specific override mapping in [src/hook_manager.cpp](/home/zutfen/code/EQEmu-Monomyth-Client/src/hook_manager.cpp):
+- caller `0x002843ff` -> force `three_letter`
+- caller `0x002781a6` -> force `three_letter`
+- caller `0x0018e554` -> force `full_name`
 
-## Suggested Skills For The Next Session
+Intent:
+- treat `0x514dc0` as a semantic producer seam, like THJ did
+- stop relying only on `requested_class_id == local_primary_class`
+- allow the full-name local/self surface at `0x18e554` to override even when the transient caller-side class id is not stable
 
-- `handoff`
-  - to refresh this document again only if a new spell usability issue appears
+This change is now locally unit-tested for discovery/capability behavior in this Linux environment, but the actual `dinput8` target still is not compile-verified here because this host lacks Windows headers/tooling.
+
+The same cleanup pass also split the capability gate correctly:
+- the core local/self producer hooks no longer depend on the unproven progression-selection surrogate seam
+- the progression-selection seam is still separate and still not treated as proof of real `EQ_CharSelectClassNameFunc`
+- the old `/who` single-callsite patch was retired after live runs showed it never produced `UiClassDisplayTrace` output
+- the replacement hook model now tracks the active `WhoClassName` subject at wrapper entry and only overrides the shared string lookup when the caller return RVA is one of the three internal `WhoClassName` lookup branches (`0x1364ec`, `0x1365c7`, `0x136606`)
+- the final `/who` fix now additionally treats `caller_rva=0x477e6` as the live class-label seam and overrides it only during the post-`OP_WhoAllResponse` correlation window
+
+## Dead Ends / Ruled-Out Approaches
+
+These have been tried and did not produce the visible inventory class title:
+- guessed inventory refresh function
+- `CXWnd::SetWindowTextA`
+- `CXStr` assign helper at `0x405d90`
+
+The strongest current read is that these were the wrong layer, not that multiclass formatting was wrong.
+
+The runtime now reflects that conclusion:
+- the startup path no longer attempts the `CXStr::Assign` / `CXWnd::SetWindowTextA` inventory-title hook
+- inventory title work should resume only once a real producer seam is pinned
+
+## Most Recent Solved `/who` Run Summary
+
+From `/home/zutfen/everquest_rof2/monomyth-client.log`:
+- `PacketObserverWhoAllCorrelationWindow activation=1 ... budget=48`
+- `PacketObserverWhoAllResponseEntry ... class_id=3 ... name="Driton"`
+- `WhoAllClassDisplayTrace ... caller_rva=0x477e6 ... override_applied=true ... formatted="Paladin/Monk/Magician"`
+
+Interpretation:
+- the class packet still arrives natively as `class_id=3`
+- the visible `/who` class label is now rewritten at the live producer seam after the packet decode
+- `/who` is no longer the active blocker
+
+## Best Next Steps
+
+### 1. Treat `/who` as solved and avoid reopening it without fresh contrary evidence
+
+The useful live seam is now known:
+- shared lookup target `0x7d0660`
+- visible class-label caller `0x477e6`
+
+### 2. Pivot fully to the inventory-window full-name surface
+
+Current strongest hypothesis:
+- the remaining inventory class title still needs a producer seam equivalent to THJ `EQ_CharSelectClassNameFunc`
+- direct UI-text interception remains disproven
+- the early `0x18e554` full-name path is still only inconclusive, not proven useful for the visible inventory title
+
+### 3. Stop conflating progression-selection writer with real `EQ_CharSelectClassNameFunc`
+
+The current discovery slot for `char_select_class_name_func` should be treated cautiously.
+
+It is currently useful as:
+- a separate verified selected-entry class-value writer seam
+
+It is not yet proven to be:
+- the same producer seam THJ called `EQ_CharSelectClassNameFunc`
+
+## Key Files
+
+- [src/hook_manager.cpp](/home/zutfen/code/EQEmu-Monomyth-Client/src/hook_manager.cpp)
+- [src/class_display_discovery.cpp](/home/zutfen/code/EQEmu-Monomyth-Client/src/class_display_discovery.cpp)
+- [src/runtime_capabilities.cpp](/home/zutfen/code/EQEmu-Monomyth-Client/src/runtime_capabilities.cpp)
+- [src/multiclass_identity.cpp](/home/zutfen/code/EQEmu-Monomyth-Client/src/multiclass_identity.cpp)
+- [docs/thj-decompile-results.md](/home/zutfen/code/EQEmu-Monomyth-Client/docs/thj-decompile-results.md)
+
+## Short Version
+
+We have proven the multiclass state, formatter, one 3-letter producer override, and the live `/who` class-label seam at `0x477e6`. The remaining problem is inventory-window surface coverage and seam choice, not authoritative data. THJ’s DLL still suggests the real remaining solution is a producer-level detour equivalent to `EQ_CharSelectClassNameFunc`, and the live client still confirms one exact THJ caller discriminator at `0x6843ff`.

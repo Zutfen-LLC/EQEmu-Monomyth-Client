@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 
+#include "class_display_discovery.h"
 #include "fingerprint.h"
 #include "receive_dispatch_discovery.h"
 #include "spell_usability_discovery.h"
@@ -25,6 +26,7 @@ struct Manifest {
     bool receive_introspection_allowed = false;
     bool spell_usability_discovery_dev_opt_in = false;
     bool spell_usability_discovery_allowed = false;
+    bool class_display_discovery_allowed = false;
     bool spell_usability_trace_dev_opt_in = false;
     bool spell_usability_trace_allowed = false;
     bool scroll_scribe_trace_dev_opt_in = false;
@@ -34,6 +36,7 @@ struct Manifest {
     bool multiclass_spell_usability_dev_opt_in = false;
     bool multiclass_spell_usability_allowed = false;
     bool multiclass_item_usability_allowed = false;
+    bool multiclass_ui_display_allowed = false;
     bool ui_hooks_allowed = false;
     bool heartbeat_allowed = false;
     monomyth::receive_dispatch_discovery::State receive_dispatch_discovery_state =
@@ -89,6 +92,14 @@ struct Manifest {
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     monomyth::spell_usability_discovery::TargetState memorize_send_packet_wrapper_state =
         monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState who_class_name_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState get_class_desc_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState get_class_three_letter_code_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
+    monomyth::spell_usability_discovery::TargetState char_select_class_name_func_state =
+        monomyth::spell_usability_discovery::TargetState::kNotAttempted;
     std::uintptr_t runtime_module_base = 0;
     std::uint32_t receive_dispatch_rva = 0;
     std::uintptr_t receive_dispatch_address = 0;
@@ -134,6 +145,14 @@ struct Manifest {
     std::uintptr_t start_spell_memorization_path_address = 0;
     std::uint32_t memorize_send_packet_wrapper_rva = 0;
     std::uintptr_t memorize_send_packet_wrapper_address = 0;
+    std::uint32_t who_class_name_rva = 0;
+    std::uintptr_t who_class_name_address = 0;
+    std::uint32_t get_class_desc_rva = 0;
+    std::uintptr_t get_class_desc_address = 0;
+    std::uint32_t get_class_three_letter_code_rva = 0;
+    std::uintptr_t get_class_three_letter_code_address = 0;
+    std::uint32_t char_select_class_name_func_rva = 0;
+    std::uintptr_t char_select_class_name_func_address = 0;
     std::wstring handle_rbutton_up_evidence_source = L"not_attempted";
     std::wstring handle_rbutton_up_failure_reason = L"not_attempted";
     std::wstring get_spell_level_needed_evidence_source = L"not_attempted";
@@ -180,11 +199,20 @@ struct Manifest {
     std::wstring start_spell_memorization_path_failure_reason = L"not_attempted";
     std::wstring memorize_send_packet_wrapper_evidence_source = L"not_attempted";
     std::wstring memorize_send_packet_wrapper_failure_reason = L"not_attempted";
+    std::wstring who_class_name_evidence_source = L"not_attempted";
+    std::wstring who_class_name_failure_reason = L"not_attempted";
+    std::wstring get_class_desc_evidence_source = L"not_attempted";
+    std::wstring get_class_desc_failure_reason = L"not_attempted";
+    std::wstring get_class_three_letter_code_evidence_source = L"not_attempted";
+    std::wstring get_class_three_letter_code_failure_reason = L"not_attempted";
+    std::wstring char_select_class_name_func_evidence_source = L"not_attempted";
+    std::wstring char_select_class_name_func_failure_reason = L"not_attempted";
     std::wstring reason = L"manifest unavailable";
     std::wstring packet_hooks_reason = L"packet hooks unavailable";
     std::wstring full_packet_trace_reason = L"full packet trace unavailable";
     std::wstring receive_introspection_reason = L"receive introspection unavailable";
     std::wstring spell_usability_discovery_reason = L"spell usability discovery unavailable";
+    std::wstring class_display_discovery_reason = L"class display discovery unavailable";
     std::wstring spell_usability_trace_reason = L"spell usability trace unavailable";
     std::wstring scroll_scribe_trace_reason = L"scroll scribe trace unavailable";
     std::wstring memorize_send_trace_reason = L"memorize send trace unavailable";
@@ -192,6 +220,8 @@ struct Manifest {
         L"multiclass spell usability unavailable";
     std::wstring multiclass_item_usability_reason =
         L"multiclass item usability unavailable";
+    std::wstring multiclass_ui_display_reason =
+        L"multiclass UI display unavailable";
 };
 
 Manifest BuildCapabilityManifest(
@@ -214,5 +244,9 @@ void ApplyReceiveDispatchDiscovery(
 void ApplySpellUsabilityDiscovery(
     Manifest* manifest,
     const monomyth::spell_usability_discovery::Result& discovery) noexcept;
+
+void ApplyClassDisplayDiscovery(
+    Manifest* manifest,
+    const monomyth::class_display_discovery::Result& discovery) noexcept;
 
 }  // namespace monomyth::runtime

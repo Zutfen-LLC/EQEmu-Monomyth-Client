@@ -6,6 +6,15 @@
 
 namespace monomyth::packet_observer {
 
+struct WhoAllClassDisplayCorrelationWindow {
+    bool active = false;
+    std::uint64_t activation = 0;
+    std::uint64_t receive_sequence = 0;
+    std::uint64_t response_index = 0;
+    std::uint32_t remaining_before = 0;
+    std::uint32_t remaining_after = 0;
+};
+
 enum class State {
     kUnavailable,
     kDisabledByCapability,
@@ -34,6 +43,8 @@ void ObserveSendMetadata(
     bool original_result,
     bool original_result_available,
     std::uint32_t correlation_id) noexcept;
+bool TryConsumeWhoAllClassDisplayCorrelation(
+    WhoAllClassDisplayCorrelationWindow* window) noexcept;
 void Shutdown() noexcept;
 State GetState() noexcept;
 
