@@ -172,6 +172,7 @@ constexpr std::uint32_t kLocalCharDataGlobalRva = 0x009d261c;
 constexpr std::uint32_t kLocalPlayerGlobalRva = 0x009d2630;
 constexpr std::uint32_t kGetClassThreeLetterCodeRva = 0x00114dc0;
 constexpr std::uint32_t kGetClassDescRva = 0x001153c0;
+constexpr std::uint32_t kCXStrAssignTargetRva = 0x00405d90;
 constexpr std::uint32_t kCXWndSetWindowTextATargetRva = 0x00406ec0;
 constexpr std::uint32_t kWhoClassNameClassLookupCallsiteARva = 0x001364e7;
 constexpr std::uint32_t kWhoClassNameClassLookupCallsiteBRva = 0x001365c2;
@@ -180,6 +181,7 @@ constexpr std::uint32_t kWhoClassNameClassLookupTargetRva = 0x003d0660;
 constexpr std::uint32_t kProgressionSelectionClassLookupCallsiteRva = 0x003212b6;
 constexpr std::uint32_t kProgressionSelectionClassLookupTargetRva = 0x00042c00;
 constexpr std::size_t kInventoryClassTitleControlOffset = 0x02cc;
+constexpr std::size_t kCxWndTextFieldOffset = 0x00e8;
 // MacroQuest eqlib's emu/ROF2 layout reads PlayerClient::GetClass() from
 // mActorClient.Class. With mActorClient at 0x0ea4 and Class at +0x13c inside
 // ActorClient, the effective in-world class field is PlayerClient + 0x0fe0.
@@ -276,6 +278,9 @@ using InvSlotWndHandleLButtonUpFn = int (MONOMYTH_THISCALL*)(
     void* this_context,
     void* point_like,
     std::uint32_t flags_like);
+using CXStrAssignFn = void* (MONOMYTH_THISCALL*)(
+    void* dst_cxstr_field,
+    void* src_cxstr_temp);
 using InvSlotHandleLButtonCoreFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     void* point_like,
@@ -666,7 +671,7 @@ InlineDetour g_start_spell_memorization_path_detour = {};
 InlineDetour g_memorize_send_packet_wrapper_detour = {};
 InlineDetour g_get_class_desc_detour = {};
 InlineDetour g_get_class_three_letter_code_detour = {};
-InlineDetour g_cxwnd_set_window_text_a_detour = {};
+InlineDetour g_cxstr_assign_detour = {};
 CallsitePatch g_who_class_name_class_lookup_callsite_a_patch = {};
 CallsitePatch g_who_class_name_class_lookup_callsite_b_patch = {};
 CallsitePatch g_who_class_name_class_lookup_callsite_c_patch = {};
@@ -810,6 +815,7 @@ StartSpellMemorizationPathFn g_original_start_spell_memorization_path = nullptr;
 MemorizeSendPacketWrapperFn g_original_memorize_send_packet_wrapper = nullptr;
 GetClassDescFn g_original_get_class_desc = nullptr;
 GetClassThreeLetterCodeFn g_original_get_class_three_letter_code = nullptr;
+CXStrAssignFn g_original_cxstr_assign = nullptr;
 CXWndSetWindowTextAFn g_original_cxwnd_set_window_text_a = nullptr;
 ProgressionSelectionClassLookupFn g_original_progression_selection_class_lookup = nullptr;
 WhoClassNameClassLookupFn g_original_who_class_name_class_lookup = nullptr;
@@ -2381,21 +2387,27 @@ const char* CDECL ProgressionSelectionClassLookupCallsiteHook(
     return g_original_progression_selection_class_lookup(class_id);
 }
 
-void MONOMYTH_FASTCALL CXWndSetWindowTextAHook(
+void* MONOMYTH_FASTCALL CXStrAssignHook(
     void* this_context,
     void*,
-    const char* text) noexcept {
-    const char* effective_text = text;
+    void* src_cxstr_temp) noexcept {
+    void* const original_result =
+        g_original_cxstr_assign == nullptr
+            ? nullptr
+            : g_original_cxstr_assign(this_context, src_cxstr_temp);
+
     void* class_title_control = nullptr;
     if (g_multiclass_ui_display_enabled &&
+        g_original_cxwnd_set_window_text_a != nullptr &&
         TryReadInventoryClassTitleControlPointer(&class_title_control) &&
         class_title_control != nullptr &&
-        class_title_control == this_context) {
+        reinterpret_cast<const std::uint8_t*>(class_title_control) + kCxWndTextFieldOffset ==
+            this_context) {
         const char* display = BuildLocalPlayerClassDisplayAscii(
             monomyth::multiclass_identity::ClassDisplayStyle::kFullName,
             L"InventoryClassTitle1");
         if (display != nullptr && display[0] != '\0') {
-            effective_text = display;
+            g_original_cxwnd_set_window_text_a(class_title_control, display);
 
             const std::uint64_t count = ++g_inventory_class_title_trace_count;
             if (count <= 20 || (count % 100) == 0) {
@@ -2403,19 +2415,17 @@ void MONOMYTH_FASTCALL CXWndSetWindowTextAHook(
                 message += std::to_wstring(count);
                 message += L" control=";
                 message += HexPtr(reinterpret_cast<std::uintptr_t>(class_title_control));
-                message += L" incoming=\"";
-                message += WidenAsciiLossy(text == nullptr ? "" : text);
-                message += L"\" formatted=\"";
-                message += WidenAsciiLossy(effective_text);
+                message += L" text_field=";
+                message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+                message += L" formatted=\"";
+                message += WidenAsciiLossy(display);
                 message += L"\"";
                 monomyth::logger::Log(message);
             }
         }
     }
 
-    if (g_original_cxwnd_set_window_text_a != nullptr) {
-        g_original_cxwnd_set_window_text_a(this_context, effective_text);
-    }
+    return original_result;
 }
 
 #if defined(_MSC_VER)
@@ -10809,6 +10819,40 @@ bool InstallInventoryClassTitleDisplayHook(
         return false;
     }
 
+    constexpr std::array<std::uint8_t, 9> kCXStrAssignEntryBytes = {
+        0x55, 0x8b, 0xec, 0x51, 0x56, 0x57, 0x8b, 0x7d, 0x08};
+    std::array<std::uint8_t, kCXStrAssignEntryBytes.size()>
+        live_cxstr_assign_entry = {};
+    const bool cxstr_assign_entry_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kCXStrAssignTargetRva),
+        live_cxstr_assign_entry.size(),
+        live_cxstr_assign_entry.data());
+    const bool cxstr_assign_entry_matches =
+        cxstr_assign_entry_copied &&
+        std::memcmp(
+            live_cxstr_assign_entry.data(),
+            kCXStrAssignEntryBytes.data(),
+            kCXStrAssignEntryBytes.size()) == 0;
+    if (!cxstr_assign_entry_matches) {
+        std::wstring message =
+            L"hook_manager: inventory class title display hook denied target=IDW_ClassTitle1 failure_reason=cxstr_assign_entry_bytes_mismatch";
+        message += L" address=";
+        message += HexPtr(module_base + kCXStrAssignTargetRva);
+        message += L" bytes_copied=";
+        message += (cxstr_assign_entry_copied ? L"true" : L"false");
+        message += L" expected=\"";
+        message += HexBytes(
+            kCXStrAssignEntryBytes.data(),
+            kCXStrAssignEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(
+            live_cxstr_assign_entry.data(),
+            live_cxstr_assign_entry.size());
+        message += L"\"";
+        monomyth::logger::Log(message);
+        return false;
+    }
+
     constexpr std::array<std::uint8_t, 8> kCXWndSetWindowTextAEntryBytes = {
         0x55, 0x8b, 0xec, 0x6a, 0xff, 0x68, 0x48, 0xd7};
     std::array<std::uint8_t, kCXWndSetWindowTextAEntryBytes.size()>
@@ -10843,14 +10887,17 @@ bool InstallInventoryClassTitleDisplayHook(
         return false;
     }
 
+    g_original_cxstr_assign = reinterpret_cast<CXStrAssignFn>(
+        module_base + kCXStrAssignTargetRva);
     g_original_cxwnd_set_window_text_a = reinterpret_cast<CXWndSetWindowTextAFn>(
         module_base + kCXWndSetWindowTextATargetRva);
     if (!InstallInlineDetour(
-            reinterpret_cast<void*>(module_base + kCXWndSetWindowTextATargetRva),
-            reinterpret_cast<void*>(&CXWndSetWindowTextAHook),
-            &g_cxwnd_set_window_text_a_detour,
-            reinterpret_cast<void**>(&g_original_cxwnd_set_window_text_a),
-            L"CXWnd::SetWindowTextA inventory class title")) {
+            reinterpret_cast<void*>(module_base + kCXStrAssignTargetRva),
+            reinterpret_cast<void*>(&CXStrAssignHook),
+            &g_cxstr_assign_detour,
+            reinterpret_cast<void**>(&g_original_cxstr_assign),
+            L"CXStr::Assign inventory class title")) {
+        g_original_cxstr_assign = nullptr;
         g_original_cxwnd_set_window_text_a = nullptr;
         return false;
     }
@@ -12580,7 +12627,8 @@ bool RemoveProgressionSelectionClassDisplayHook() noexcept {
 }
 
 bool RemoveInventoryClassTitleDisplayHook() noexcept {
-    const bool ok = RemoveInlineDetour(&g_cxwnd_set_window_text_a_detour);
+    const bool ok = RemoveInlineDetour(&g_cxstr_assign_detour);
+    g_original_cxstr_assign = nullptr;
     g_original_cxwnd_set_window_text_a = nullptr;
     g_inventory_class_title_trace_count = 0;
     if (ok) {
