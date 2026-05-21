@@ -2453,8 +2453,8 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
                 LogWhoAllClassDisplayCorrelationTrace(
                     L"GetClassDesc",
                     L"class_id",
-                    class_id,
                     caller_return_address,
+                    class_id,
                     correlation,
                     nullptr,
                     true,
@@ -2486,8 +2486,8 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
                 LogWhoAllClassDisplayCorrelationTrace(
                     L"GetClassDesc",
                     L"class_id",
-                    class_id,
                     caller_return_address,
+                    class_id,
                     correlation,
                     nullptr,
                     true,
@@ -2520,8 +2520,8 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
         LogWhoAllClassDisplayCorrelationTrace(
             L"GetClassDesc",
             L"class_id",
-            class_id,
             caller_return_address,
+            class_id,
             correlation,
             nullptr,
             false,
@@ -2567,8 +2567,8 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
                 LogWhoAllClassDisplayCorrelationTrace(
                     L"GetClassThreeLetterCode",
                     L"class_id",
-                    class_id,
                     caller_return_address,
+                    class_id,
                     correlation,
                     nullptr,
                     true,
@@ -2600,8 +2600,8 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
                 LogWhoAllClassDisplayCorrelationTrace(
                     L"GetClassThreeLetterCode",
                     L"class_id",
-                    class_id,
                     caller_return_address,
+                    class_id,
                     correlation,
                     nullptr,
                     true,
@@ -2634,8 +2634,8 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
         LogWhoAllClassDisplayCorrelationTrace(
             L"GetClassThreeLetterCode",
             L"class_id",
-            class_id,
             caller_return_address,
+            class_id,
             correlation,
             nullptr,
             false,
@@ -2720,8 +2720,8 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
                 LogWhoAllClassDisplayCorrelationTrace(
                     L"WhoClassNameClassLookup",
                     L"string_id",
-                    string_id,
                     caller_return_address,
+                    string_id,
                     correlation,
                     g_active_who_class_name_subject,
                     true,
@@ -2734,8 +2734,8 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
             LogWhoAllClassDisplayCorrelationTrace(
                 L"WhoClassNameClassLookup",
                 L"string_id",
-                string_id,
                 caller_return_address,
+                string_id,
                 correlation,
                 g_active_who_class_name_subject,
                 false,
@@ -2749,8 +2749,8 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
             LogWhoAllClassDisplayCorrelationTrace(
                 L"WhoClassNameClassLookup",
                 L"string_id",
-                string_id,
                 caller_return_address,
+                string_id,
                 correlation,
                 g_active_who_class_name_subject,
                 false,
@@ -2766,8 +2766,8 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
         LogWhoAllClassDisplayCorrelationTrace(
             L"WhoClassNameClassLookup",
             L"string_id",
-            string_id,
             caller_return_address,
+            string_id,
             correlation,
             g_active_who_class_name_subject,
             false,
