@@ -827,6 +827,7 @@ bool g_multiclass_ui_display_enabled = false;
 std::uint64_t g_is_class_usable_predicate_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
 std::uint64_t g_auto_equip_class_gate_override_count = 0;
+std::uint64_t g_ui_class_display_trace_count = 0;
 std::uint32_t g_active_equip_nested_validation_id = 0;
 std::uint32_t g_equip_nested_validation_count = 0;
 std::uintptr_t g_invslot_handle_lbutton_core_last_late_lookup_item_pointer = 0;
@@ -856,6 +857,81 @@ std::wstring Hex32(std::uint32_t value) {
     std::wstringstream stream;
     stream << L"0x" << std::hex << value;
     return stream.str();
+}
+
+bool ShouldLogUiClassDisplayTrace(std::uint64_t count) noexcept {
+    return count <= 20 || (count % 50) == 0;
+}
+
+const wchar_t* ClassDisplayStyleName(
+    monomyth::multiclass_identity::ClassDisplayStyle style) noexcept {
+    switch (style) {
+        case monomyth::multiclass_identity::ClassDisplayStyle::kFullName:
+            return L"full_name";
+        case monomyth::multiclass_identity::ClassDisplayStyle::kThreeLetterCode:
+            return L"three_letter_code";
+    }
+
+    return L"unknown";
+}
+
+void LogUiClassDisplayTrace(
+    const wchar_t* surface,
+    const wchar_t* status,
+    monomyth::multiclass_identity::ClassDisplayStyle style,
+    const void* subject,
+    const void* local_player,
+    bool subject_matches_local,
+    bool primary_class_copied,
+    std::uint8_t primary_class_id,
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    const char* formatted,
+    const wchar_t* reason) {
+    const std::uint64_t count = ++g_ui_class_display_trace_count;
+    if (!ShouldLogUiClassDisplayTrace(count)) {
+        return;
+    }
+
+    std::wstring message = L"UiClassDisplayTrace count=";
+    message += std::to_wstring(count);
+    message += L" surface=";
+    message += surface == nullptr ? L"unknown" : surface;
+    message += L" status=";
+    message += status == nullptr ? L"unknown" : status;
+    message += L" style=";
+    message += ClassDisplayStyleName(style);
+    message += L" subject=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(subject));
+    message += L" local_player=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(local_player));
+    message += L" subject_matches_local=";
+    message += subject_matches_local ? L"true" : L"false";
+    message += L" primary_class_status=";
+    message += primary_class_copied ? L"copied" : L"unavailable";
+    if (primary_class_copied) {
+        message += L" primary_class_id=";
+        message += std::to_wstring(primary_class_id);
+    }
+    message += L" assigned_mask_status=";
+    message += snapshot.has_classes_bitmask ? L"present" : L"missing";
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    if (formatted != nullptr && formatted[0] != '\0') {
+        std::wstring formatted_w;
+        formatted_w.reserve(std::strlen(formatted));
+        for (const char* it = formatted; *it != '\0'; ++it) {
+            formatted_w.push_back(static_cast<unsigned char>(*it));
+        }
+        message += L" formatted=\"";
+        message += formatted_w;
+        message += L"\"";
+    }
+    if (reason != nullptr && reason[0] != L'\0') {
+        message += L" reason=\"";
+        message += reason;
+        message += L"\"";
+    }
+    monomyth::logger::Log(message);
 }
 
 std::uintptr_t GetCallerReturnAddress() noexcept {
@@ -933,47 +1009,128 @@ bool TryReadLocalPlayerDisplayedClassId(std::uint8_t* class_id) noexcept {
 }
 
 const char* BuildLocalPlayerClassDisplayAscii(
-    monomyth::multiclass_identity::ClassDisplayStyle style) noexcept {
+    monomyth::multiclass_identity::ClassDisplayStyle style,
+    const wchar_t* surface) noexcept {
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
     if (!g_multiclass_ui_display_enabled) {
+        LogUiClassDisplayTrace(
+            surface,
+            L"fallback",
+            style,
+            nullptr,
+            nullptr,
+            false,
+            false,
+            0,
+            snapshot,
+            nullptr,
+            L"multiclass_ui_display_disabled");
         return nullptr;
     }
 
     std::uint8_t primary_class_id = 0;
     if (!TryReadLocalPlayerDisplayedClassId(&primary_class_id) ||
         !monomyth::multiclass_identity::IsPlayableClassId(primary_class_id)) {
+        LogUiClassDisplayTrace(
+            surface,
+            L"fallback",
+            style,
+            nullptr,
+            nullptr,
+            false,
+            false,
+            primary_class_id,
+            snapshot,
+            nullptr,
+            L"local_player_displayed_class_unavailable_or_invalid");
         return nullptr;
     }
 
-    const monomyth::server_auth_stats::Snapshot snapshot =
-        monomyth::server_auth_stats::GetSnapshot();
     const std::string formatted = monomyth::multiclass_identity::FormatClassDisplayAscii(
         primary_class_id,
         snapshot.has_classes_bitmask,
         snapshot.classes_bitmask,
         style);
     if (formatted.empty()) {
+        LogUiClassDisplayTrace(
+            surface,
+            L"fallback",
+            style,
+            nullptr,
+            nullptr,
+            false,
+            true,
+            primary_class_id,
+            snapshot,
+            nullptr,
+            L"formatter_returned_empty");
         return nullptr;
     }
 
     static thread_local std::string buffer;
     buffer = formatted;
+    LogUiClassDisplayTrace(
+        surface,
+        L"override",
+        style,
+        nullptr,
+        nullptr,
+        false,
+        true,
+        primary_class_id,
+        snapshot,
+        buffer.c_str(),
+        L"local_player_multiclass_display_applied");
     return buffer.c_str();
 }
 
 const char* BuildLocalSubjectClassDisplayAscii(
     const void* subject,
-    monomyth::multiclass_identity::ClassDisplayStyle style) noexcept {
+    monomyth::multiclass_identity::ClassDisplayStyle style,
+    const wchar_t* surface) noexcept {
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
     if (subject == nullptr || !g_multiclass_ui_display_enabled) {
+        LogUiClassDisplayTrace(
+            surface,
+            L"fallback",
+            style,
+            subject,
+            nullptr,
+            false,
+            false,
+            0,
+            snapshot,
+            nullptr,
+            subject == nullptr
+                ? L"subject_null"
+                : L"multiclass_ui_display_disabled");
         return nullptr;
     }
 
     void* local_player = nullptr;
     if (!TryReadLocalPlayerPointer(&local_player) || local_player == nullptr ||
         local_player != subject) {
+        std::uint8_t primary_class_id = 0;
+        const bool primary_class_copied =
+            TryReadEqPlayerDisplayedClassId(subject, &primary_class_id);
+        LogUiClassDisplayTrace(
+            surface,
+            L"fallback",
+            style,
+            subject,
+            local_player,
+            local_player == subject && local_player != nullptr,
+            primary_class_copied,
+            primary_class_id,
+            snapshot,
+            nullptr,
+            L"subject_does_not_match_local_player");
         return nullptr;
     }
 
-    return BuildLocalPlayerClassDisplayAscii(style);
+    return BuildLocalPlayerClassDisplayAscii(style, surface);
 }
 
 bool TryResolveClientItemDataFromWrapper(
@@ -1914,13 +2071,15 @@ bool RemoveCallsitePatch(CallsitePatch* patch) noexcept {
 const char* BuildWhoClassNameClassLookupCallsiteHook(void* subject) noexcept {
     return BuildLocalSubjectClassDisplayAscii(
         subject,
-        monomyth::multiclass_identity::ClassDisplayStyle::kFullName);
+        monomyth::multiclass_identity::ClassDisplayStyle::kFullName,
+        L"WhoClassName");
 }
 
 const char* CDECL ProgressionSelectionClassLookupCallsiteHook(
     unsigned int class_id) noexcept {
     const char* display = BuildLocalPlayerClassDisplayAscii(
-        monomyth::multiclass_identity::ClassDisplayStyle::kThreeLetterCode);
+        monomyth::multiclass_identity::ClassDisplayStyle::kThreeLetterCode,
+        L"ProgressionSelection");
     if (display != nullptr) {
         return display;
     }
