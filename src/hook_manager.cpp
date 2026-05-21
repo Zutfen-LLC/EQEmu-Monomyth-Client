@@ -960,6 +960,15 @@ std::uintptr_t GetCallerReturnAddress() noexcept {
 #endif
 }
 
+std::wstring WidenAsciiLossy(std::string_view value) {
+    std::wstring widened;
+    widened.reserve(value.size());
+    for (const unsigned char ch : value) {
+        widened.push_back(static_cast<wchar_t>(ch));
+    }
+    return widened;
+}
+
 bool ShouldLogUiClassHelperTrace(std::uint64_t count) noexcept {
     return count <= 40 || (count % 100) == 0;
 }
@@ -1006,7 +1015,7 @@ void LogUiClassHelperTrace(
     message += (override_applied ? L"true" : L"false");
     if (formatted != nullptr && formatted[0] != '\0') {
         message += L" formatted=\"";
-        message += monomyth::multiclass_identity::NarrowToWideAsciiLossy(formatted);
+        message += WidenAsciiLossy(formatted);
         message += L"\"";
     }
     if (reason != nullptr && reason[0] != L'\0') {
@@ -2148,8 +2157,9 @@ const char* BuildWhoClassNameClassLookupCallsiteHook(void* subject) noexcept {
         L"WhoClassName");
 }
 
-const char* MONOMYTH_THISCALL GetClassDescHook(
+const char* MONOMYTH_FASTCALL GetClassDescHook(
     void* this_context,
+    void*,
     unsigned int class_id) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     const monomyth::server_auth_stats::Snapshot snapshot =
@@ -2195,8 +2205,9 @@ const char* MONOMYTH_THISCALL GetClassDescHook(
     return result;
 }
 
-const char* MONOMYTH_THISCALL GetClassThreeLetterCodeHook(
+const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
     void* this_context,
+    void*,
     unsigned int class_id) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     const monomyth::server_auth_stats::Snapshot snapshot =
