@@ -308,14 +308,14 @@ TargetResult DiscoverPinnedGetClassThreeLetterCode(const ImageView& image) noexc
 TargetResult DiscoverPinnedCharSelectClassNameFunc(const ImageView& image) noexcept {
     return DiscoverPinnedEntryBytesTarget(
         image,
-        L"CharSelectClassNameFunc",
+        L"ProgressionSelectionClassValueWriter",
         kCharSelectClassNameFuncRva,
         kCharSelectClassNameFuncEntryBytes.data(),
         kCharSelectClassNameFuncEntryBytes.size(),
-        L"CharSelectClassNameFunc cleanroom RVA did not resolve inside the loaded image",
-        L"CharSelectClassNameFunc cleanroom RVA resolved to a non-executable region",
-        L"CharSelectClassNameFunc cleanroom RVA resolved, but the entry bytes did not match",
-        L"CharSelectClassNameFunc validated by exact cleanroom RVA and entry-byte match on the strongest recovered selected-entry class-value writer seam");
+        L"ProgressionSelectionClassValueWriter cleanroom RVA did not resolve inside the loaded image",
+        L"ProgressionSelectionClassValueWriter cleanroom RVA resolved to a non-executable region",
+        L"ProgressionSelectionClassValueWriter cleanroom RVA resolved, but the entry bytes did not match",
+        L"ProgressionSelectionClassValueWriter validated by exact cleanroom RVA and entry-byte match on the strongest recovered selected-entry class-value writer seam");
 }
 
 void LogTarget(const TargetResult& target) {
@@ -346,7 +346,9 @@ void InitializeResult() noexcept {
     ResetTarget(&g_result.who_class_name, L"WhoClassName");
     ResetTarget(&g_result.get_class_desc, L"GetClassDesc");
     ResetTarget(&g_result.get_class_three_letter_code, L"GetClassThreeLetterCode");
-    ResetTarget(&g_result.char_select_class_name_func, L"CharSelectClassNameFunc");
+    ResetTarget(
+        &g_result.char_select_class_name_func,
+        L"ProgressionSelectionClassValueWriter");
 }
 
 }  // namespace
@@ -384,7 +386,7 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
         MarkUnavailable(
             &g_result.char_select_class_name_func,
             L"cleanroom_locator_unpinned",
-            L"CharSelectClassNameFunc target is not pinned for the current ROF2 binary");
+            L"ProgressionSelectionClassValueWriter target is not pinned for the current ROF2 binary");
         return g_result;
 #else
         g_result.reason = L"class display discovery could not build a view of the loaded image";
@@ -403,7 +405,7 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
         MarkUnavailable(
             &g_result.char_select_class_name_func,
             L"image_view_unavailable",
-            L"CharSelectClassNameFunc target could not be evaluated because the host PE image was unavailable");
+            L"ProgressionSelectionClassValueWriter target could not be evaluated because the host PE image was unavailable");
         return g_result;
 #endif
     }

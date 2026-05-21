@@ -96,7 +96,7 @@ int main() {
     validated_discovery.get_class_three_letter_code =
         ValidatedTarget(L"GetClassThreeLetterCode");
     validated_discovery.char_select_class_name_func =
-        ValidatedTarget(L"CharSelectClassNameFunc");
+        ValidatedTarget(L"ProgressionSelectionClassValueWriter");
     monomyth::runtime::ApplyClassDisplayDiscovery(
         &validated_manifest,
         validated_discovery);
@@ -110,6 +110,21 @@ int main() {
         validated_manifest.multiclass_ui_display_reason ==
             L"enabled by default for validated ROF2 local/self multiclass UI display",
         "validated class display reason");
+
+    monomyth::runtime::Manifest producer_only_manifest = {};
+    monomyth::class_display_discovery::Result producer_only_discovery =
+        validated_discovery;
+    producer_only_discovery.char_select_class_name_func.state =
+        monomyth::spell_usability_discovery::TargetState::kFailed;
+    producer_only_discovery.char_select_class_name_func.hook_safe = false;
+    producer_only_discovery.char_select_class_name_func.failure_reason =
+        L"cleanroom_locator_unpinned";
+    monomyth::runtime::ApplyClassDisplayDiscovery(
+        &producer_only_manifest,
+        producer_only_discovery);
+    passed &= Expect(
+        producer_only_manifest.multiclass_ui_display_allowed,
+        "core ui display stays enabled when only the progression selection surrogate is missing");
 
     monomyth::runtime::Manifest partial_manifest = {};
     monomyth::class_display_discovery::Result partial_discovery = validated_discovery;

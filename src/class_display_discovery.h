@@ -30,7 +30,7 @@ struct Result {
     TargetResult who_class_name = {L"WhoClassName"};
     TargetResult get_class_desc = {L"GetClassDesc"};
     TargetResult get_class_three_letter_code = {L"GetClassThreeLetterCode"};
-    TargetResult char_select_class_name_func = {L"CharSelectClassNameFunc"};
+    TargetResult char_select_class_name_func = {L"ProgressionSelectionClassValueWriter"};
 };
 
 void Initialize() noexcept;

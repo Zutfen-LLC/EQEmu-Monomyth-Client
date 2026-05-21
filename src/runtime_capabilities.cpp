@@ -1076,10 +1076,7 @@ void ApplyClassDisplayDiscovery(
         discovery.get_class_desc.hook_safe &&
         discovery.get_class_three_letter_code.state ==
             monomyth::spell_usability_discovery::TargetState::kValidated &&
-        discovery.get_class_three_letter_code.hook_safe &&
-        discovery.char_select_class_name_func.state ==
-            monomyth::spell_usability_discovery::TargetState::kValidated &&
-        discovery.char_select_class_name_func.hook_safe;
+        discovery.get_class_three_letter_code.hook_safe;
     manifest->ui_hooks_allowed = manifest->multiclass_ui_display_allowed;
 
     if (!discovery.allowed) {
@@ -1116,11 +1113,6 @@ void ApplyClassDisplayDiscovery(
         discovery.get_class_three_letter_code.state,
         discovery.get_class_three_letter_code.hook_safe,
         discovery.get_class_three_letter_code.failure_reason);
-    const std::wstring char_select_failure = DescribeTargetFailure(
-        L"CharSelectClassNameFunc",
-        discovery.char_select_class_name_func.state,
-        discovery.char_select_class_name_func.hook_safe,
-        discovery.char_select_class_name_func.failure_reason);
     std::wstring reason =
         L"multiclass UI display denied because one or more formatter hooks are not fully validated hook-safe";
     if (!who_failure.empty()) {
@@ -1134,10 +1126,6 @@ void ApplyClassDisplayDiscovery(
     if (!code_failure.empty()) {
         reason += L" ";
         reason += code_failure;
-    }
-    if (!char_select_failure.empty()) {
-        reason += L" ";
-        reason += char_select_failure;
     }
     manifest->multiclass_ui_display_reason = reason;
 }

@@ -10926,7 +10926,7 @@ bool InstallProgressionSelectionClassDisplayHook(
             std::wstring message =
                 L"hook_manager: progression selection class display hook denied ";
             message += FormatDiscoveryDetails(
-                L"CharSelectClassNameFunc",
+                L"ProgressionSelectionClassValueWriter",
                 manifest.char_select_class_name_func_evidence_source,
                 manifest.char_select_class_name_func_failure_reason);
             monomyth::logger::Log(message);
@@ -10964,100 +10964,9 @@ bool InstallInventoryClassTitleDisplayHook(
     if (!manifest.multiclass_ui_display_allowed) {
         return false;
     }
-
-    const std::uintptr_t module_base = GetHostModuleBase();
-    if (module_base == 0) {
-        monomyth::logger::Log(
-            L"hook_manager: inventory class title display hook denied because module base was unavailable");
-        return false;
-    }
-
-    constexpr std::array<std::uint8_t, 9> kCXStrAssignEntryBytes = {
-        0x55, 0x8b, 0xec, 0x51, 0x56, 0x57, 0x8b, 0x7d, 0x08};
-    std::array<std::uint8_t, kCXStrAssignEntryBytes.size()>
-        live_cxstr_assign_entry = {};
-    const bool cxstr_assign_entry_copied = TryCopyBytes(
-        reinterpret_cast<const void*>(module_base + kCXStrAssignTargetRva),
-        live_cxstr_assign_entry.size(),
-        live_cxstr_assign_entry.data());
-    const bool cxstr_assign_entry_matches =
-        cxstr_assign_entry_copied &&
-        std::memcmp(
-            live_cxstr_assign_entry.data(),
-            kCXStrAssignEntryBytes.data(),
-            kCXStrAssignEntryBytes.size()) == 0;
-    if (!cxstr_assign_entry_matches) {
-        std::wstring message =
-            L"hook_manager: inventory class title display hook denied target=IDW_ClassTitle1 failure_reason=cxstr_assign_entry_bytes_mismatch";
-        message += L" address=";
-        message += HexPtr(module_base + kCXStrAssignTargetRva);
-        message += L" bytes_copied=";
-        message += (cxstr_assign_entry_copied ? L"true" : L"false");
-        message += L" expected=\"";
-        message += HexBytes(
-            kCXStrAssignEntryBytes.data(),
-            kCXStrAssignEntryBytes.size());
-        message += L"\" live=\"";
-        message += HexBytes(
-            live_cxstr_assign_entry.data(),
-            live_cxstr_assign_entry.size());
-        message += L"\"";
-        monomyth::logger::Log(message);
-        return false;
-    }
-
-    constexpr std::array<std::uint8_t, 8> kCXWndSetWindowTextAEntryBytes = {
-        0x55, 0x8b, 0xec, 0x6a, 0xff, 0x68, 0x48, 0xd7};
-    std::array<std::uint8_t, kCXWndSetWindowTextAEntryBytes.size()>
-        live_cxwnd_set_window_text_a_entry = {};
-    const bool set_text_entry_copied = TryCopyBytes(
-        reinterpret_cast<const void*>(module_base + kCXWndSetWindowTextATargetRva),
-        live_cxwnd_set_window_text_a_entry.size(),
-        live_cxwnd_set_window_text_a_entry.data());
-    const bool set_text_entry_matches =
-        set_text_entry_copied &&
-        std::memcmp(
-            live_cxwnd_set_window_text_a_entry.data(),
-            kCXWndSetWindowTextAEntryBytes.data(),
-            kCXWndSetWindowTextAEntryBytes.size()) == 0;
-    if (!set_text_entry_matches) {
-        std::wstring message =
-            L"hook_manager: inventory class title display hook denied target=IDW_ClassTitle1 failure_reason=set_text_entry_bytes_mismatch";
-        message += L" address=";
-        message += HexPtr(module_base + kCXWndSetWindowTextATargetRva);
-        message += L" bytes_copied=";
-        message += (set_text_entry_copied ? L"true" : L"false");
-        message += L" expected=\"";
-        message += HexBytes(
-            kCXWndSetWindowTextAEntryBytes.data(),
-            kCXWndSetWindowTextAEntryBytes.size());
-        message += L"\" live=\"";
-        message += HexBytes(
-            live_cxwnd_set_window_text_a_entry.data(),
-            live_cxwnd_set_window_text_a_entry.size());
-        message += L"\"";
-        monomyth::logger::Log(message);
-        return false;
-    }
-
-    g_original_cxstr_assign = reinterpret_cast<CXStrAssignFn>(
-        module_base + kCXStrAssignTargetRva);
-    g_original_cxwnd_set_window_text_a = reinterpret_cast<CXWndSetWindowTextAFn>(
-        module_base + kCXWndSetWindowTextATargetRva);
-    if (!InstallInlineDetour(
-            reinterpret_cast<void*>(module_base + kCXStrAssignTargetRva),
-            reinterpret_cast<void*>(&CXStrAssignHook),
-            &g_cxstr_assign_detour,
-            reinterpret_cast<void**>(&g_original_cxstr_assign),
-            L"CXStr::Assign inventory class title")) {
-        g_original_cxstr_assign = nullptr;
-        g_original_cxwnd_set_window_text_a = nullptr;
-        return false;
-    }
-
     monomyth::logger::Log(
-        L"hook_manager: inventory class title display hook installed target=IDW_ClassTitle1 local_self_style=full_name");
-    return true;
+        L"hook_manager: inventory class title display hook retired reason=\"CXStr::Assign and CXWnd::SetWindowTextA were ruled out as the wrong layer; wait for a real EQ_CharSelectClassNameFunc producer seam\"");
+    return false;
 }
 
 bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest& manifest) noexcept {
@@ -13682,12 +13591,7 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
             monomyth::logger::Log(
                 L"hook_manager: progression selection class display install failed target=ClassValueLabel");
         }
-        if (InstallInventoryClassTitleDisplayHook(manifest)) {
-            inventory_class_title_display_active = true;
-        } else {
-            monomyth::logger::Log(
-                L"hook_manager: inventory class title display install failed target=IDW_ClassTitle1");
-        }
+        InstallInventoryClassTitleDisplayHook(manifest);
     }
     LogMemorizeSendTraceStartupMarker(
         manifest,

@@ -93,7 +93,7 @@ Current validated targets:
 - `WhoClassName`
 - `GetClassDesc`
 - `GetClassThreeLetterCode`
-- progression-selection writer seam currently stored in the `char_select_class_name_func` slot
+- progression-selection class-value writer seam currently still stored in the `char_select_class_name_func` slot in code/logging
 
 Important caveat:
 - the current `char_select_class_name_func` discovery slot is not proven to be THJ’s real `EQ_CharSelectClassNameFunc` producer seam
@@ -109,7 +109,7 @@ Current UI-related hook behavior:
 - `GetClassThreeLetterCode` inline detour
 - `WhoClassName` internal class-lookup callsite patches
 - progression selection `ClassValueLabel` callsite patch
-- several inventory experiments, currently not producing visible change
+- inventory title interception experiments were retired after THJ/local evidence showed they were the wrong layer
 
 ## Live Binary Findings
 
@@ -169,7 +169,11 @@ Intent:
 - stop relying only on `requested_class_id == local_primary_class`
 - allow the full-name local/self surface at `0x18e554` to override even when the transient caller-side class id is not stable
 
-This change was source-updated but not compile-verified in this Linux environment.
+This change is now locally unit-tested for discovery/capability behavior in this Linux environment, but the actual `dinput8` target still is not compile-verified here because this host lacks Windows headers/tooling.
+
+The same cleanup pass also split the capability gate correctly:
+- the core local/self producer hooks no longer depend on the unproven progression-selection surrogate seam
+- the progression-selection seam is still separate and still not treated as proof of real `EQ_CharSelectClassNameFunc`
 
 ## Dead Ends / Ruled-Out Approaches
 
@@ -180,15 +184,21 @@ These have been tried and did not produce the visible inventory class title:
 
 The strongest current read is that these were the wrong layer, not that multiclass formatting was wrong.
 
+The runtime now reflects that conclusion:
+- the startup path no longer attempts the `CXStr::Assign` / `CXWnd::SetWindowTextA` inventory-title hook
+- inventory title work should resume only once a real producer seam is pinned
+
 ## Most Recent 17:00 Run Summary
 
 From `/home/zutfen/everquest_rof2/monomyth-client.log`:
 - `WhoClassName` callsite hooks installed
 - `GetClassDesc` and `GetClassThreeLetterCode` UI hook set installed
 - progression selection hook installed
-- inventory class title hook installed
 - only `GetClassThreeLetterCode` produced live helper traces
 - `/who` still decoded as `class_id=3`
+
+Important status note:
+- that run was before the cleanup that retired the inventory-title hook attempt
 
 Most important lines:
 - `UiClassHelperTrace count=1 helper=GetClassThreeLetterCode caller_rva=0x18e554 ... override_applied=false ...`
