@@ -82,7 +82,7 @@ constexpr std::uint32_t kMoveItemStackLocalGateSiteBCallsiteRva = 0x00296111;
 constexpr std::uint32_t kMoveItemStackLocalGateTargetRva = 0x000322b0;
 constexpr std::uint32_t kEverQuestLMouseUpTargetRva = 0x000c1760;
 constexpr std::uint32_t kCXWndHandleLButtonUpTargetRva = 0x000c1e91;
-constexpr std::uint32_t kInventoryWindowWndNotificationTargetRva = 0x001939e0;
+constexpr std::uint32_t kInventoryWindowWndNotificationTargetRva = 0x00293490;
 constexpr std::uint32_t kItemDisplayRefreshWorkerTargetRva = 0x002ae100;
 constexpr std::uint32_t kItemDisplayClassRowBuilderTargetRva = 0x002a9540;
 constexpr std::uint32_t kInvSlotWndHandleLButtonUpTargetRva = 0x0029a5d0;
@@ -12141,124 +12141,9 @@ bool InstallInventoryClassTitleDisplayHook(
     if (!manifest.multiclass_ui_display_allowed) {
         return false;
     }
-    const std::uintptr_t module_base = GetHostModuleBase();
-    if (module_base == 0) {
-        monomyth::logger::Log(
-            L"hook_manager: item display class text trace denied because module base was unavailable");
-        return false;
-    }
-
-    constexpr std::array<std::uint8_t, 16> kItemDisplayRefreshWorkerEntryBytes = {
-        0x64, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x6a, 0xff,
-        0x68, 0xa6, 0xbf, 0x98, 0x00, 0x50, 0xb8, 0x70};
-    constexpr std::array<std::uint8_t, 16> kItemDisplayClassRowBuilderEntryBytes = {
-        0x6a, 0xff, 0x68, 0x74, 0xbf, 0x98, 0x00, 0x64,
-        0xa1, 0x00, 0x00, 0x00, 0x00, 0x50, 0x64, 0x89};
-    std::array<std::uint8_t, kItemDisplayRefreshWorkerEntryBytes.size()>
-        live_item_display_refresh_worker_entry = {};
-    const bool item_display_refresh_worker_entry_copied = TryCopyBytes(
-        reinterpret_cast<const void*>(module_base + kItemDisplayRefreshWorkerTargetRva),
-        live_item_display_refresh_worker_entry.size(),
-        live_item_display_refresh_worker_entry.data());
-    const bool item_display_refresh_worker_entry_matches =
-        item_display_refresh_worker_entry_copied &&
-        std::memcmp(
-            live_item_display_refresh_worker_entry.data(),
-            kItemDisplayRefreshWorkerEntryBytes.data(),
-            kItemDisplayRefreshWorkerEntryBytes.size()) == 0;
-    std::array<std::uint8_t, kItemDisplayClassRowBuilderEntryBytes.size()>
-        live_item_display_class_row_builder_entry = {};
-    const bool item_display_class_row_builder_entry_copied = TryCopyBytes(
-        reinterpret_cast<const void*>(module_base + kItemDisplayClassRowBuilderTargetRva),
-        live_item_display_class_row_builder_entry.size(),
-        live_item_display_class_row_builder_entry.data());
-    const bool item_display_class_row_builder_entry_matches =
-        item_display_class_row_builder_entry_copied &&
-        std::memcmp(
-            live_item_display_class_row_builder_entry.data(),
-            kItemDisplayClassRowBuilderEntryBytes.data(),
-            kItemDisplayClassRowBuilderEntryBytes.size()) == 0;
-    if (!item_display_class_row_builder_entry_matches) {
-        std::wstring message =
-            L"hook_manager: item display class text trace denied target=ItemDisplayClassRowBuilder validation=entry_bytes_mismatch expected=\"";
-        message += HexBytes(
-            kItemDisplayClassRowBuilderEntryBytes.data(),
-            kItemDisplayClassRowBuilderEntryBytes.size());
-        message += L"\" live=\"";
-        message += HexBytes(
-            live_item_display_class_row_builder_entry.data(),
-            live_item_display_class_row_builder_entry.size());
-        message += L"\" address=";
-        message += HexPtr(module_base + kItemDisplayClassRowBuilderTargetRva);
-        message += L" target_rva=";
-        message += Hex32(kItemDisplayClassRowBuilderTargetRva);
-        monomyth::logger::Log(message);
-        return false;
-    }
-
-    if (!InstallInlineDetour(
-            reinterpret_cast<void*>(module_base + kItemDisplayClassRowBuilderTargetRva),
-            reinterpret_cast<void*>(&ItemDisplayClassRowBuilderHook),
-            &g_item_display_refresh_worker_detour,
-            reinterpret_cast<void**>(&g_original_item_display_class_row_builder),
-            L"ItemDisplayClassRowBuilder trace")) {
-        RemoveInlineDetour(&g_item_display_refresh_worker_detour);
-        g_original_item_display_class_row_builder = nullptr;
-        return false;
-    }
-
-    g_item_display_class_display_correlation_remaining.store(0);
-    g_item_display_class_display_correlation_activation.store(0);
-    g_item_display_class_display_correlation_refresh_caller_return.store(0);
-    g_item_display_class_display_correlation_refresh_caller_rva.store(0);
-    g_item_display_class_display_correlation_window_this.store(0);
-    g_item_display_class_display_correlation_arg1_like.store(0);
-    g_item_display_class_display_correlation_arg2_like.store(0);
-    g_item_display_refresh_worker_entry_trace_count = 0;
-
-    if (item_display_refresh_worker_entry_matches) {
-        if (!InstallInlineDetour(
-                reinterpret_cast<void*>(module_base + kItemDisplayRefreshWorkerTargetRva),
-                reinterpret_cast<void*>(&ItemDisplayRefreshWorkerHook),
-                &g_item_display_refresh_worker_trace_detour,
-                reinterpret_cast<void**>(&g_original_item_display_refresh_worker_trace),
-                L"ItemDisplayRefreshWorker trace")) {
-            RemoveInlineDetour(&g_item_display_refresh_worker_trace_detour);
-            g_original_item_display_refresh_worker_trace = nullptr;
-        } else {
-            std::wstring refresh_message =
-                L"hook_manager: item display refresh worker trace installed target=ItemDisplayRefreshWorker address=";
-            refresh_message += HexPtr(module_base + kItemDisplayRefreshWorkerTargetRva);
-            refresh_message += L" target_rva=";
-            refresh_message += Hex32(kItemDisplayRefreshWorkerTargetRva);
-            monomyth::logger::Log(refresh_message);
-        }
-    } else {
-        std::wstring refresh_message =
-            L"hook_manager: item display refresh worker trace denied target=ItemDisplayRefreshWorker validation=entry_bytes_mismatch expected=\"";
-        refresh_message += HexBytes(
-            kItemDisplayRefreshWorkerEntryBytes.data(),
-            kItemDisplayRefreshWorkerEntryBytes.size());
-        refresh_message += L"\" live=\"";
-        refresh_message += HexBytes(
-            live_item_display_refresh_worker_entry.data(),
-            live_item_display_refresh_worker_entry.size());
-        refresh_message += L"\" address=";
-        refresh_message += HexPtr(module_base + kItemDisplayRefreshWorkerTargetRva);
-        refresh_message += L" target_rva=";
-        refresh_message += Hex32(kItemDisplayRefreshWorkerTargetRva);
-        monomyth::logger::Log(refresh_message);
-    }
-
-    std::wstring message =
-        L"hook_manager: item display class text trace installed target=ItemDisplayClassRowBuilder address=";
-    message += HexPtr(module_base + kItemDisplayClassRowBuilderTargetRva);
-    message += L" target_rva=";
-    message += Hex32(kItemDisplayClassRowBuilderTargetRva);
-    message += L" shared_lookup_target_rva=";
-    message += Hex32(kWhoClassNameClassLookupTargetRva);
-    monomyth::logger::Log(message);
-    return true;
+    monomyth::logger::Log(
+        L"hook_manager: item display class text trace retired while inventory summary surface is the active multiclass blocker");
+    return false;
 }
 
 bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest& manifest) noexcept {
@@ -12851,7 +12736,7 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
     }
 
     constexpr std::array<std::uint8_t, 8> kInventoryWindowWndNotificationEntryBytes = {
-        0x64, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x6a, 0xff};
+        0x6a, 0xff, 0x68, 0xa8, 0xa3, 0x98, 0x00, 0x64};
     std::array<std::uint8_t, kInventoryWindowWndNotificationEntryBytes.size()>
         live_inventory_wnd_notification_entry = {};
     const bool inventory_wnd_notification_entry_copied = TryCopyBytes(
@@ -12865,8 +12750,22 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             kInventoryWindowWndNotificationEntryBytes.data(),
             kInventoryWindowWndNotificationEntryBytes.size()) == 0;
     if (!inventory_wnd_notification_entry_matches) {
-        monomyth::logger::Log(
-            L"hook_manager: inventory window wnd notification trace denied target=0x5939e0 validation=entry_bytes_mismatch");
+        std::wstring inventory_wnd_notification_message =
+            L"hook_manager: inventory window wnd notification trace denied target=InventoryWindowWndNotification validation=entry_bytes_mismatch expected=\"";
+        inventory_wnd_notification_message += HexBytes(
+            kInventoryWindowWndNotificationEntryBytes.data(),
+            kInventoryWindowWndNotificationEntryBytes.size());
+        inventory_wnd_notification_message += L"\" live=\"";
+        inventory_wnd_notification_message += HexBytes(
+            live_inventory_wnd_notification_entry.data(),
+            live_inventory_wnd_notification_entry.size());
+        inventory_wnd_notification_message += L"\" address=";
+        inventory_wnd_notification_message +=
+            HexPtr(module_base + kInventoryWindowWndNotificationTargetRva);
+        inventory_wnd_notification_message += L" target_rva=";
+        inventory_wnd_notification_message +=
+            Hex32(kInventoryWindowWndNotificationTargetRva);
+        monomyth::logger::Log(inventory_wnd_notification_message);
     } else if (!InstallInlineDetour(
                    reinterpret_cast<void*>(
                        module_base + kInventoryWindowWndNotificationTargetRva),
