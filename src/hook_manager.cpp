@@ -2022,6 +2022,49 @@ const char* BuildLocalPlayerClassDisplayAscii(
     monomyth::multiclass_identity::ClassDisplayStyle style,
     const wchar_t* surface) noexcept;
 
+bool TryResolvePreferredAuthoritativePrimaryClassId(
+    unsigned int requested_class_id,
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    std::uint8_t* primary_class_id) noexcept {
+    if (primary_class_id == nullptr) {
+        return false;
+    }
+
+    if (snapshot.has_classes_bitmask &&
+        snapshot.classes_bitmask != 0 &&
+        monomyth::multiclass_identity::IsPlayableClassMask(snapshot.classes_bitmask)) {
+        if (monomyth::multiclass_identity::IsPlayableClassId(requested_class_id) &&
+            monomyth::multiclass_identity::HasClass(
+                snapshot.classes_bitmask,
+                requested_class_id)) {
+            *primary_class_id = static_cast<std::uint8_t>(requested_class_id);
+            return true;
+        }
+
+        std::uint8_t local_class_id = 0;
+        if (TryReadLocalPlayerDisplayedClassId(&local_class_id) &&
+            monomyth::multiclass_identity::HasClass(
+                snapshot.classes_bitmask,
+                local_class_id)) {
+            *primary_class_id = local_class_id;
+            return true;
+        }
+
+        for (unsigned int class_id = monomyth::multiclass_identity::kFirstPlayableClassId;
+             class_id <= monomyth::multiclass_identity::kLastPlayableClassId;
+             ++class_id) {
+            if (monomyth::multiclass_identity::HasClass(
+                    snapshot.classes_bitmask,
+                    class_id)) {
+                *primary_class_id = static_cast<std::uint8_t>(class_id);
+                return true;
+            }
+        }
+    }
+
+    return TryReadLocalPlayerDisplayedClassId(primary_class_id);
+}
+
 const char* BuildLocalPlayerClassDisplayAscii(
     monomyth::multiclass_identity::ClassDisplayStyle style,
     const wchar_t* surface) noexcept {
@@ -2096,6 +2139,87 @@ const char* BuildLocalPlayerClassDisplayAscii(
         snapshot,
         buffer.c_str(),
         L"local_player_multiclass_display_applied");
+    return buffer.c_str();
+}
+
+const char* BuildPreferredLocalPlayerClassDisplayAscii(
+    unsigned int requested_class_id,
+    monomyth::multiclass_identity::ClassDisplayStyle style,
+    const wchar_t* surface) noexcept {
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    if (!g_multiclass_ui_display_enabled) {
+        LogUiClassDisplayTrace(
+            surface,
+            L"fallback",
+            style,
+            nullptr,
+            nullptr,
+            false,
+            false,
+            0,
+            snapshot,
+            nullptr,
+            L"multiclass_ui_display_disabled");
+        return nullptr;
+    }
+
+    std::uint8_t primary_class_id = 0;
+    if (!TryResolvePreferredAuthoritativePrimaryClassId(
+            requested_class_id,
+            snapshot,
+            &primary_class_id) ||
+        !monomyth::multiclass_identity::IsPlayableClassId(primary_class_id)) {
+        LogUiClassDisplayTrace(
+            surface,
+            L"fallback",
+            style,
+            nullptr,
+            nullptr,
+            false,
+            false,
+            primary_class_id,
+            snapshot,
+            nullptr,
+            L"preferred_primary_class_unavailable_or_invalid");
+        return nullptr;
+    }
+
+    const std::string formatted = monomyth::multiclass_identity::FormatClassDisplayAscii(
+        primary_class_id,
+        snapshot.has_classes_bitmask,
+        snapshot.classes_bitmask,
+        style);
+    if (formatted.empty()) {
+        LogUiClassDisplayTrace(
+            surface,
+            L"fallback",
+            style,
+            nullptr,
+            nullptr,
+            false,
+            true,
+            primary_class_id,
+            snapshot,
+            nullptr,
+            L"formatter_returned_empty");
+        return nullptr;
+    }
+
+    static thread_local std::string buffer;
+    buffer = formatted;
+    LogUiClassDisplayTrace(
+        surface,
+        L"override",
+        style,
+        nullptr,
+        nullptr,
+        false,
+        true,
+        primary_class_id,
+        snapshot,
+        buffer.c_str(),
+        L"preferred_primary_multiclass_display_applied");
     return buffer.c_str();
 }
 
@@ -3115,7 +3239,8 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
             caller_return_address,
             &semantic_style,
             &semantic_reason)) {
-        const char* display = BuildLocalPlayerClassDisplayAscii(
+        const char* display = BuildPreferredLocalPlayerClassDisplayAscii(
+            class_id,
             semantic_style,
             L"GetClassDesc");
         if (display != nullptr) {
@@ -3268,7 +3393,8 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
             caller_return_address,
             &semantic_style,
             &semantic_reason)) {
-        const char* display = BuildLocalPlayerClassDisplayAscii(
+        const char* display = BuildPreferredLocalPlayerClassDisplayAscii(
+            class_id,
             semantic_style,
             L"GetClassThreeLetterCode");
         if (display != nullptr) {
