@@ -85,6 +85,7 @@ constexpr std::uint32_t kCXWndHandleLButtonUpTargetRva = 0x000c1e91;
 constexpr std::uint32_t kInventoryWindowWndNotificationTargetRva = 0x00293490;
 constexpr std::uint32_t kInventorySummaryRefreshCandidateARva = 0x00290100;
 constexpr std::uint32_t kInventorySummaryRefreshCandidateBRva = 0x002905f0;
+constexpr std::uint32_t kInventorySummaryRefreshCandidateCRva = 0x00312b00;
 constexpr std::uint32_t kItemDisplayRefreshWorkerTargetRva = 0x002ae100;
 constexpr std::uint32_t kItemDisplayClassRowBuilderTargetRva = 0x002a9540;
 constexpr std::uint32_t kInvSlotWndHandleLButtonUpTargetRva = 0x0029a5d0;
@@ -475,6 +476,8 @@ using InventorySummaryRefreshCandidateAFn = void (MONOMYTH_THISCALL*)(
     void* this_context);
 using InventorySummaryRefreshCandidateBFn = void (MONOMYTH_THISCALL*)(
     void* this_context);
+using InventorySummaryRefreshCandidateCFn = void (MONOMYTH_THISCALL*)(
+    void* this_context);
 using WhoClassNameFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     void* subject);
@@ -684,6 +687,7 @@ InlineDetour g_cxwnd_handle_lbutton_up_detour = {};
 InlineDetour g_inventory_window_wnd_notification_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_a_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_b_detour = {};
+InlineDetour g_inventory_summary_refresh_candidate_c_detour = {};
 InlineDetour g_item_display_refresh_worker_trace_detour = {};
 InlineDetour g_item_display_refresh_worker_detour = {};
 InlineDetour g_invslot_wnd_handle_lbutton_up_detour = {};
@@ -857,6 +861,7 @@ GetDeityDescFn g_original_get_deity_desc = nullptr;
 GetClassThreeLetterCodeFn g_original_get_class_three_letter_code = nullptr;
 InventorySummaryRefreshCandidateAFn g_original_inventory_summary_refresh_candidate_a = nullptr;
 InventorySummaryRefreshCandidateBFn g_original_inventory_summary_refresh_candidate_b = nullptr;
+InventorySummaryRefreshCandidateCFn g_original_inventory_summary_refresh_candidate_c = nullptr;
 WhoClassNameFn g_original_who_class_name = nullptr;
 CXStrAssignFn g_original_cxstr_assign = nullptr;
 CXWndSetWindowTextAFn g_original_cxwnd_set_window_text_a = nullptr;
@@ -11157,6 +11162,23 @@ void MONOMYTH_FASTCALL InventorySummaryRefreshCandidateBHook(
     }
 }
 
+void MONOMYTH_FASTCALL InventorySummaryRefreshCandidateCHook(
+    void* this_context,
+    void*) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    if (g_multiclass_ui_display_enabled) {
+        ArmInventoryClassDisplayCorrelationFromCandidate(
+            L"InventorySummaryRefreshCandidateC",
+            kInventorySummaryRefreshCandidateCRva,
+            caller_return_address,
+            this_context,
+            nullptr);
+    }
+    if (g_original_inventory_summary_refresh_candidate_c != nullptr) {
+        g_original_inventory_summary_refresh_candidate_c(this_context);
+    }
+}
+
 void MONOMYTH_FASTCALL ItemDisplayClassRowBuilderHook(
     void* this_context,
     void*,
@@ -12702,6 +12724,53 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             monomyth::logger::Log(candidate_message);
         }
 
+        constexpr std::array<std::uint8_t, 8> kInventorySummaryRefreshCandidateCEntryBytes = {
+            0x8b, 0x8e, 0x44, 0x02, 0x00, 0x00, 0x8b, 0x01};
+        std::array<std::uint8_t, kInventorySummaryRefreshCandidateCEntryBytes.size()>
+            live_inventory_summary_candidate_c_entry = {};
+        const bool inventory_summary_candidate_c_entry_copied = TryCopyBytes(
+            reinterpret_cast<const void*>(module_base + kInventorySummaryRefreshCandidateCRva),
+            live_inventory_summary_candidate_c_entry.size(),
+            live_inventory_summary_candidate_c_entry.data());
+        const bool inventory_summary_candidate_c_entry_matches =
+            inventory_summary_candidate_c_entry_copied &&
+            std::memcmp(
+                live_inventory_summary_candidate_c_entry.data(),
+                kInventorySummaryRefreshCandidateCEntryBytes.data(),
+                kInventorySummaryRefreshCandidateCEntryBytes.size()) == 0;
+        if (!inventory_summary_candidate_c_entry_matches) {
+            std::wstring candidate_message =
+                L"hook_manager: inventory summary candidate trace denied target=InventorySummaryRefreshCandidateC validation=entry_bytes_mismatch expected=\"";
+            candidate_message += HexBytes(
+                kInventorySummaryRefreshCandidateCEntryBytes.data(),
+                kInventorySummaryRefreshCandidateCEntryBytes.size());
+            candidate_message += L"\" live=\"";
+            candidate_message += HexBytes(
+                live_inventory_summary_candidate_c_entry.data(),
+                live_inventory_summary_candidate_c_entry.size());
+            candidate_message += L"\" address=";
+            candidate_message += HexPtr(module_base + kInventorySummaryRefreshCandidateCRva);
+            candidate_message += L" target_rva=";
+            candidate_message += Hex32(kInventorySummaryRefreshCandidateCRva);
+            monomyth::logger::Log(candidate_message);
+        } else if (!InstallInlineDetour(
+                       reinterpret_cast<void*>(
+                           module_base + kInventorySummaryRefreshCandidateCRva),
+                       reinterpret_cast<void*>(&InventorySummaryRefreshCandidateCHook),
+                       &g_inventory_summary_refresh_candidate_c_detour,
+                       reinterpret_cast<void**>(&g_original_inventory_summary_refresh_candidate_c),
+                       L"InventorySummaryRefreshCandidateC trace")) {
+            RemoveInlineDetour(&g_inventory_summary_refresh_candidate_c_detour);
+            g_original_inventory_summary_refresh_candidate_c = nullptr;
+        } else {
+            std::wstring candidate_message =
+                L"hook_manager: inventory summary candidate trace installed target=InventorySummaryRefreshCandidateC address=";
+            candidate_message += HexPtr(module_base + kInventorySummaryRefreshCandidateCRva);
+            candidate_message += L" target_rva=";
+            candidate_message += Hex32(kInventorySummaryRefreshCandidateCRva);
+            monomyth::logger::Log(candidate_message);
+        }
+
         return true;
     }
 
@@ -14238,6 +14307,9 @@ bool RemoveCanEquipHook() noexcept {
     }
     if (g_inventory_summary_refresh_candidate_b_detour.installed) {
         RemoveInlineDetour(&g_inventory_summary_refresh_candidate_b_detour);
+    }
+    if (g_inventory_summary_refresh_candidate_c_detour.installed) {
+        RemoveInlineDetour(&g_inventory_summary_refresh_candidate_c_detour);
     }
     if (g_inventory_window_wnd_notification_detour.installed) {
         RemoveInlineDetour(&g_inventory_window_wnd_notification_detour);
