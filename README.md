@@ -35,6 +35,8 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
   - The local developer explicitly sets `MONOMYTH_ENABLE_PACKET_HOOKS=1`.
 - When enabled, installs exactly one receive dispatcher hook at the validated candidate and routes metadata to `PacketObserver`.
 - When that receive hook observes THJ `OP_ServerAuthStats` (`0x1338`), parses the server-authored stat payload read-only, extracts only `statClassesBitmask`, stores the latest valid bitmask in internal DLL state, and logs concise diagnostics.
+- When packet hooks are active, installs a byte-validated multiclass guild-trainer override on the proved ROF2 active-guildmaster class-lookup callsite at RVA `0x001374a1`; it only rewrites that local trainer-class match result when the latest authoritative `statClassesBitmask` contains the clicked trainer's playable class.
+- When that trainer gate opens and the client sends `OP_GMTraining`, the DLL can also apply a fail-closed training-session-only local class override for the clicked trainer class and restore the original local class on `OP_GMEndTraining`. This keeps the stock train window aligned with the server's trainer-scoped skill packet without broad class spoofing outside the active guildmaster session.
 - A second explicit developer opt-in can enable bounded receive payload-prefix introspection for an allowlisted opcode set only.
 - Leaves `ui_hooks_allowed=false`.
 
@@ -55,6 +57,8 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
 - UI hook capability remains intentionally disabled.
 - Receive dispatcher discovery validates only static ROF2 executable-image structure and records success or failure in the internal runtime capability manifest.
 - The receive hook is receive-only and non-mutating. It observes opcode/message id, payload length, and source/context pointer value, with one read-only `OP_ServerAuthStats` parser for server-authored class-bitmask capture.
+- The guild-trainer behavior hook is fail-closed and trainer-scoped: it runs only at the native active-guildmaster class-match callsite, only for playable trainer classes, only after exact-byte validation of the pinned ROF2 seam, and only when the authoritative assigned-class mask still contains that trainer class.
+- The train-window class override is also fail-closed and session-scoped: it activates only after a successful `OP_GMTraining` send for a previously validated assigned-class trainer, writes only the local displayed/profile class fields needed by the stock train window, and restores the original values on `OP_GMEndTraining` or hook shutdown.
 - Known ROF2 opcode ids are enriched with a reference-only `opcode_name` field derived from the local EQEmu RoF2 opcode config plus custom THJ RoF2 opcode mappings; unknown ids log `opcode_name=unknown`.
 - THJ `OP_ServerAuthStats` is recognized as ROF2 opcode `0x1338`, imported from `C:\Code\THJ-Server-Original\utils\patches\patch_RoF2.conf`. The receive observer has a read-only handler for this opcode that parses the minimal `Stat_Struct` wire layout and stores only `statClassesBitmask`; it does not write client memory, mutate packet bytes, update UI, or decode unrelated stat keys.
 - Without the second opt-in, the hook does **not** perform generic payload-prefix introspection. The only payload decode outside that generic introspection mode is the read-only `OP_ServerAuthStats` handler.
@@ -138,6 +142,7 @@ Startup logs include:
 - When `MONOMYTH_ENABLE_FULL_PACKET_TRACE=1` is also present and packet observation is active, `PacketObserverRecv` and `PacketObserverSend` switch from sampled logging to `*_log_policy=all_packets` for that run
 - When passive spell usability tracing is enabled, rate-limited lines begin with `SpellUsabilityTrace` and return the original function result unchanged
 - When the dev hook observes `OP_ServerAuthStats`, handler lines beginning with `ServerAuthStats` log whether the packet parsed, the entry count, whether `statClassesBitmask` was present, and the bitmask in hex with recognized class names when available
+- When the trainer seam installs, `hook_manager` logs one `guild trainer hook installed` line with the validated validator/gate RVAs and later emits `MulticlassTrainerHook` only when an assigned-class trainer override is actually applied
 - When both dev opt-ins are enabled, separate rate-limited allowlisted prefix lines begin with `PacketObserverRecvIntrospection` and skip diagnostics begin with `PacketObserverRecvIntrospectionSkip`
 - Receive metadata and introspection log lines include `opcode_name=<name>` for known ROF2 ids and `opcode_name=unknown` otherwise
 - When memorize-send tracing is enabled, rate-limited lines begin with `PacketObserverSend`
