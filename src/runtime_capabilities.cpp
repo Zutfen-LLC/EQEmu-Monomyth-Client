@@ -1099,7 +1099,7 @@ void ApplyClassDisplayDiscovery(
     }
 
     const std::wstring who_failure = DescribeTargetFailure(
-        L"WhoClassName",
+        L"LeftClickedOnPlayerSurrogate",
         discovery.who_class_name.state,
         discovery.who_class_name.hook_safe,
         discovery.who_class_name.failure_reason);

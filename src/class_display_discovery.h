@@ -27,7 +27,7 @@ struct TargetResult {
 struct Result {
     bool allowed = false;
     std::wstring reason = L"not run";
-    TargetResult who_class_name = {L"WhoClassName"};
+    TargetResult who_class_name = {L"LeftClickedOnPlayerSurrogate"};
     TargetResult get_class_desc = {L"GetClassDesc"};
     TargetResult get_class_three_letter_code = {L"GetClassThreeLetterCode"};
     TargetResult char_select_class_name_func = {L"ProgressionSelectionClassValueWriter"};

@@ -18,7 +18,7 @@ What is confirmed working:
 - The server is sending `OP_ServerAuthStats`, and the client is receiving it.
 - The client parses the authoritative multiclass mask correctly.
 - Shared multiclass formatting works.
-- At least one live UI surface already overrides correctly through the `GetClassThreeLetterCode` producer path.
+- At least one live UI surface already overrides correctly through the `GetClassDesc` producer path.
 - `/who` now visibly overrides correctly through the live class-label seam at `0x477e6`.
 
 What is still not working visibly:
@@ -40,7 +40,7 @@ The client log confirms receipt and decoding of who data and multiclass state.
 Relevant 17:00 run lines:
 - `hook_manager: WhoClassNameClassLookupCallsiteA callsite hook installed address=0x5364e7 ...`
 - `hook_manager: multiclass UI display hook installed target=WhoClassName/GetClassDesc/GetClassThreeLetterCode local_self_only=true`
-- `UiClassHelperTrace ... helper=GetClassThreeLetterCode caller_rva=0x2781a6 ... override_applied=true formatted="PAL/MNK/MAG"`
+- `UiClassHelperTrace ... helper=GetClassDesc caller_rva=0x2781a6 ... override_applied=true formatted="PAL/MNK/MAG"`
 - `PacketObserverWhoAllResponseEntry ... class_id=3 ... name="Driton"`
 
 Interpretation:
@@ -48,6 +48,20 @@ Interpretation:
 - helper detour is live
 - one 3-letter-code surface is proven
 - `/who` still arrives as a normal single-class packet row and must be rewritten in a later producer/UI step
+
+### Address-label correction from `eqlib`
+
+The clean-room repo had drifted on a few ROF2 symbol names. `eqlib` maps:
+- `0x514dc0` -> `CEverQuest::GetClassDesc`
+- `0x5153c0` -> `CEverQuest::GetClassThreeLetterCode`
+- `0x536310` -> `CEverQuest::LeftClickedOnPlayer`
+
+So any older notes that referred to:
+- `0x514dc0` as `GetClassThreeLetterCode`
+- `0x5153c0` as `GetClassDesc`
+- `0x536310` as `WhoClassName`
+
+should now be treated as naming drift, not as current truth.
 
 ### THJ DLL findings changed the strategy
 
@@ -100,7 +114,7 @@ Implemented in:
 - [src/runtime_capabilities.cpp](/home/zutfen/code/EQEmu-Monomyth-Client/src/runtime_capabilities.cpp)
 
 Current validated targets:
-- `WhoClassName`
+- `LeftClickedOnPlayerSurrogate`
 - `GetClassDesc`
 - `GetClassThreeLetterCode`
 - progression-selection class-value writer seam currently still stored in the `char_select_class_name_func` slot in code/logging
@@ -118,12 +132,12 @@ Implemented in:
 Current UI-related hook behavior:
 - `GetClassDesc` inline detour
 - `GetClassThreeLetterCode` inline detour
-- `WhoClassName` now uses an entry/context inline detour plus a filtered `WhoClassNameClassLookup` inline detour
+- `LeftClickedOnPlayerSurrogate` now uses an entry/context inline detour plus a filtered `WhoClassNameClassLookup` inline detour
 - progression selection `ClassValueLabel` callsite patch
 - inventory title interception experiments were retired after THJ/local evidence showed they were the wrong layer
 
 Important `/who` update:
-- the original `0x536310` wrapper-context theory was not the visible row seam
+- the original `0x536310` `LeftClickedOnPlayerSurrogate` theory was not the visible row seam
 - the shared lookup at `0x7d0660` is still involved, but the real visible `/who` class-label caller is `0x477e6`
 - that caller now overrides correctly during the bounded post-`OP_WhoAllResponse` correlation window
 
@@ -131,17 +145,17 @@ Important `/who` update:
 
 These live-client call sites have now been confirmed:
 
-### `0x514dc0` caller at `0x2781a6`
+### `0x514dc0` (`GetClassDesc`) caller at `0x2781a6`
 
 Confirmed by both logs and disassembly.
 
 Behavior:
-- currently reaches our `GetClassThreeLetterCode` hook
+- currently reaches our `GetClassDesc` hook
 - successfully overrides to `PAL/MNK/MAG`
 
 This is the one proven working display surface so far.
 
-### `0x514dc0` caller at `0x6843ff`
+### `0x514dc0` (`GetClassDesc`) caller at `0x6843ff`
 
 Confirmed in the live `eqgame.exe` disassembly.
 
@@ -155,7 +169,7 @@ Interpretation:
 - Hermes’ THJ result is real and maps to this client
 - this is a concrete candidate for the abbreviated branch of the inventory / char-select-adjacent producer path
 
-### `0x514dc0` caller at `0x18e554`
+### `0x514dc0` (`GetClassDesc`) caller at `0x18e554`
 
 Confirmed in the live `eqgame.exe` disassembly and in logs:
 - `UiClassHelperTrace ... caller_rva=0x18e554 ...`
@@ -184,7 +198,7 @@ Interpretation:
 
 ## Latest Code Direction
 
-The latest patch changes the `0x514dc0` producer hook from a naive class-id match rule to caller-based semantic rules.
+The latest patch changes the `0x514dc0` `GetClassDesc` producer hook from a naive class-id match rule to caller-based semantic rules.
 
 Current caller-specific override mapping in [src/hook_manager.cpp](/home/zutfen/code/EQEmu-Monomyth-Client/src/hook_manager.cpp):
 - caller `0x002843ff` -> force `three_letter`

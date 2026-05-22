@@ -173,11 +173,13 @@ constexpr std::uint32_t kInventoryWindowGlobalRva = 0x0091ec8c;
 // authoritative local character object when we need the live PC profile.
 constexpr std::uint32_t kLocalCharDataGlobalRva = 0x009d261c;
 constexpr std::uint32_t kLocalPlayerGlobalRva = 0x009d2630;
-constexpr std::uint32_t kGetClassThreeLetterCodeRva = 0x00114dc0;
-constexpr std::uint32_t kGetClassDescRva = 0x001153c0;
+constexpr std::uint32_t kGetClassDescRva = 0x00114dc0;
+constexpr std::uint32_t kGetClassThreeLetterCodeRva = 0x001153c0;
 constexpr std::uint32_t kCXStrAssignTargetRva = 0x00405d90;
 constexpr std::uint32_t kCXWndSetWindowTextATargetRva = 0x00406ec0;
-constexpr std::uint32_t kWhoClassNameRva = 0x00136310;
+// eqlib maps 0x136310 to CEverQuest::LeftClickedOnPlayer, not a live /who wrapper.
+// Keep the detour code path for legacy context experiments, but label the seam honestly.
+constexpr std::uint32_t kLeftClickedOnPlayerSurrogateRva = 0x00136310;
 constexpr std::uint32_t kWhoClassNameClassLookupTargetRva = 0x003d0660;
 constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnARva = 0x001364ec;
 constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnBRva = 0x001365c7;
@@ -1044,7 +1046,7 @@ const wchar_t* DescribeKnownUiClassProducerCandidate(
         return nullptr;
     }
 
-    if (std::wcscmp(helper, L"GetClassThreeLetterCode") == 0) {
+    if (std::wcscmp(helper, L"GetClassDesc") == 0) {
         switch (caller_rva) {
             case 0x0018e554:
                 return L"known_early_full_name_candidate_pre_auth";
@@ -1063,7 +1065,7 @@ const wchar_t* DescribeKnownUiClassProducerCandidate(
         }
     }
 
-    if (std::wcscmp(helper, L"GetClassDesc") == 0) {
+    if (std::wcscmp(helper, L"GetClassThreeLetterCode") == 0) {
         switch (caller_rva) {
             case 0x0027997b:
                 return L"static_scan_full_name_ui_candidate_a";
@@ -2839,8 +2841,7 @@ const char* MONOMYTH_FASTCALL GetClassDescHook(
     if (TryResolveSemanticClassDisplayStyleForCaller(
             caller_return_address,
             &semantic_style,
-            &semantic_reason) &&
-        semantic_style == monomyth::multiclass_identity::ClassDisplayStyle::kFullName) {
+            &semantic_reason)) {
         const char* display = BuildLocalPlayerClassDisplayAscii(
             semantic_style,
             L"GetClassDesc");
@@ -11688,10 +11689,10 @@ bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest)
     if (manifest.who_class_name_state ==
             monomyth::spell_usability_discovery::TargetState::kValidated &&
         manifest.who_class_name_address != 0) {
-        if (manifest.who_class_name_address != module_base + kWhoClassNameRva) {
+        if (manifest.who_class_name_address != module_base + kLeftClickedOnPlayerSurrogateRva) {
             std::wstring message =
-                L"hook_manager: WhoClassName validation address drift expected=";
-            message += HexPtr(module_base + kWhoClassNameRva);
+                L"hook_manager: LeftClickedOnPlayerSurrogate validation address drift expected=";
+            message += HexPtr(module_base + kLeftClickedOnPlayerSurrogateRva);
             message += L" actual=";
             message += HexPtr(manifest.who_class_name_address);
             monomyth::logger::Log(message);
@@ -11702,11 +11703,12 @@ bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest)
                 reinterpret_cast<void*>(&WhoClassNameHook),
                 &g_who_class_name_detour,
                 reinterpret_cast<void**>(&g_original_who_class_name),
-                L"WhoClassName")) {
+                L"LeftClickedOnPlayerSurrogate")) {
             goto cleanup;
         }
         {
-            std::wstring message = L"hook_manager: WhoClassName inline detour installed address=";
+            std::wstring message =
+                L"hook_manager: LeftClickedOnPlayerSurrogate inline detour installed address=";
             message += HexPtr(manifest.who_class_name_address);
             message += L" hook=";
             message += HexPtr(reinterpret_cast<std::uintptr_t>(&WhoClassNameHook));
@@ -11734,7 +11736,7 @@ bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest)
     } else {
         std::wstring message = L"hook_manager: multiclass UI display hook denied ";
         message += FormatDiscoveryDetails(
-            L"WhoClassName",
+            L"LeftClickedOnPlayerSurrogate",
             manifest.who_class_name_evidence_source,
             manifest.who_class_name_failure_reason);
         monomyth::logger::Log(message);
@@ -11811,7 +11813,7 @@ success:
     g_inventory_class_display_correlation_sender_window.store(0);
     g_inventory_class_display_correlation_payload_like.store(0);
     monomyth::logger::Log(
-        L"hook_manager: multiclass UI display hook installed target=WhoClassName/GetClassDesc/GetClassThreeLetterCode local_self_only=true");
+        L"hook_manager: multiclass UI display hook installed target=LeftClickedOnPlayerSurrogate/GetClassDesc/GetClassThreeLetterCode local_self_only=true");
     return true;
 
 cleanup:
@@ -13597,7 +13599,7 @@ bool RemoveWhoClassNameDisplayHook() noexcept {
     g_multiclass_ui_display_enabled = false;
     if (ok) {
         monomyth::logger::Log(
-            L"hook_manager: multiclass UI display hook removed target=WhoClassName/GetClassDesc/GetClassThreeLetterCode");
+            L"hook_manager: multiclass UI display hook removed target=LeftClickedOnPlayerSurrogate/GetClassDesc/GetClassThreeLetterCode");
     }
     return ok;
 }
@@ -14508,7 +14510,7 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
             ui_display_active = true;
         } else {
             monomyth::logger::Log(
-                L"hook_manager: multiclass UI display install failed target=WhoClassName/GetClassDesc/GetClassThreeLetterCode local/self path");
+                L"hook_manager: multiclass UI display install failed target=LeftClickedOnPlayerSurrogate/GetClassDesc/GetClassThreeLetterCode local/self path");
         }
         if (InstallProgressionSelectionClassDisplayHook(manifest)) {
             progression_selection_display_active = true;
