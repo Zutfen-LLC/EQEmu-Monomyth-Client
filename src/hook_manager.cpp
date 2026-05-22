@@ -3773,6 +3773,93 @@ bool InstallInlineDetour(
     return true;
 }
 
+bool InstallValidatedInlineDetour(
+    void* target,
+    void* hook,
+    std::size_t patch_length,
+    InlineDetour* detour,
+    void** original_out,
+    const wchar_t* failure_label) noexcept {
+    if (target == nullptr || hook == nullptr || detour == nullptr ||
+        original_out == nullptr || detour->installed || patch_length < kJmpPatchBytes ||
+        patch_length > kMaxStolenBytes) {
+        return false;
+    }
+
+    auto* target_bytes = reinterpret_cast<std::uint8_t*>(target);
+    auto* trampoline = reinterpret_cast<std::uint8_t*>(VirtualAlloc(
+        nullptr,
+        patch_length + kJmpPatchBytes,
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_EXECUTE_READWRITE));
+    if (trampoline == nullptr) {
+        std::wstring message = L"hook_manager: ";
+        message += failure_label;
+        message += L" trampoline allocation failed; hook disabled";
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    std::array<std::uint8_t, kJmpPatchBytes> trampoline_jump = {};
+    if (!BuildRelativeJump(
+            trampoline + patch_length,
+            target_bytes + patch_length,
+            &trampoline_jump)) {
+        VirtualFree(trampoline, 0, MEM_RELEASE);
+        std::wstring message = L"hook_manager: ";
+        message += failure_label;
+        message += L" trampoline jump out of range; hook disabled";
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    std::array<std::uint8_t, kJmpPatchBytes> target_jump = {};
+    if (!BuildRelativeJump(target_bytes, hook, &target_jump)) {
+        VirtualFree(trampoline, 0, MEM_RELEASE);
+        std::wstring message = L"hook_manager: ";
+        message += failure_label;
+        message += L" target jump out of range; hook disabled";
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    std::memcpy(trampoline, target_bytes, patch_length);
+    std::memcpy(trampoline + patch_length, trampoline_jump.data(), trampoline_jump.size());
+    FlushInstructionCache(GetCurrentProcess(), trampoline, patch_length + kJmpPatchBytes);
+
+    DWORD old_protect = 0;
+    if (!VirtualProtect(target_bytes, patch_length, PAGE_EXECUTE_READWRITE, &old_protect)) {
+        VirtualFree(trampoline, 0, MEM_RELEASE);
+        *original_out = nullptr;
+        std::wstring message = L"hook_manager: ";
+        message += failure_label;
+        message += L" target memory protection failed; hook disabled";
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    detour->target = target_bytes;
+    detour->hook = hook;
+    detour->trampoline = trampoline;
+    detour->patch_length = patch_length;
+    detour->patch = target_jump;
+    *original_out = trampoline;
+
+    std::memcpy(detour->original.data(), target_bytes, patch_length);
+    std::memcpy(target_bytes, target_jump.data(), target_jump.size());
+    for (std::size_t i = kJmpPatchBytes; i < patch_length; ++i) {
+        target_bytes[i] = 0x90;
+    }
+
+    FlushInstructionCache(GetCurrentProcess(), target_bytes, patch_length);
+
+    DWORD ignored = 0;
+    VirtualProtect(target_bytes, patch_length, old_protect, &ignored);
+
+    detour->installed = true;
+    return true;
+}
+
 bool InstallCallsitePatch(
     void* callsite,
     void* hook,
@@ -13975,9 +14062,10 @@ bool InstallGuildTrainerHook(const monomyth::runtime::Manifest& manifest) noexce
         return false;
     }
 
-    if (!InstallInlineDetour(
+    if (!InstallValidatedInlineDetour(
             target,
             g_guild_trainer_post_class_gate_stub,
+            kGuildTrainerPostClassGateBytes.size(),
             &g_guild_trainer_post_class_gate_detour,
             &g_guild_trainer_post_class_gate_trampoline,
             L"GuildTrainerPostClassGate")) {
