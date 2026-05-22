@@ -42,7 +42,7 @@ This is not the item display / item inspection window.
 Do not reopen these assumptions:
 - `ItemDisplayWindow` is not the active blocker for the user’s screenshot.
 - `InventoryWindow + 0x2cc/+0x2d0` is not the class-title path in this client.
-- direct final-text interception (`CXStr::Assign`, `CXWnd::SetWindowTextA`) was the wrong layer
+- direct final-text interception (`CXStr::Assign`, `CXWnd::SetWindowTextA`) was the wrong layer for the inventory summary blocker
 
 Relevant confirmed facts:
 - `/who` was solved through shared lookup target `0x7d0660` with visible caller `0x477e6`
@@ -100,6 +100,7 @@ Recent changes already in the repo:
 - inventory trace install bug behind an early return was fixed
 - inventory summary candidate C was added and later disproven in live repro
 - shared inventory correlation tracing now preserves budget instead of spending it on unrelated `WhoClassNameClassLookup` traffic
+- char-select now has a pragmatic display-only fallback: authoritative `statClassesBitmask` is cached per character under `Resources/monomyth-multiclass-cache.txt` when auth lands in-game, and `CXWnd::SetWindowTextA` can rewrite `Name [Level NativeClass]` captions to short-code multiclass text from that cache
 
 Files to inspect first:
 - `src/hook_manager.cpp`
@@ -118,9 +119,11 @@ Current verdict:
 - `OP_ServerAuthStats` arrives later with the correct mask `0x1044`, but no later full-name refresh seam has been observed
 - the progression-selection callsite hook at `0x3212b6` is installed but stays cold in the active repro
 - the validated `0x321210` `CharSelectClassNameFunc` entry trace now also stays completely cold in live repros, even after clean install logging confirmed `entry_trace=true callsite_patch=true`
+- the later full-name helper callsite trio at `0x3249ac` / `0x324d84` / `0x3252ab` also installed cleanly at `2026-05-22 09:55`, but produced zero `CharSelectLateFullNameTrace` lines
 - inventory summary candidate C at `0x712b00` is not the live seam for the active top-left summary repro
 - `eqlib` plus direct vtable recovery pin `CInventoryWnd::OnProcessFrame` to `0x692c90` / `rva=0x292c90`
 - the neighboring `Activate` slot resolves to the generic show wrapper pattern, so `OnProcessFrame` is the better inventory self-refresh seam
+- current attempt to hook `OnProcessFrame` did not install: live startup at `2026-05-22 09:55:23` logged `InventorySummaryRefreshCandidateD trace prologue unsupported; hook disabled`
 
 The next useful validation step is to repro the inventory summary pane and inspect the log for:
 - `InventoryClassDisplayCorrelationWindow`
@@ -129,16 +132,15 @@ The next useful validation step is to repro the inventory summary pane and inspe
 - any fresh entry traces from the next inventory self-refresh seam once instrumented
 
 For character select, the next useful step is:
-- stop treating the current progression-selection / `CharSelectClassNameFunc` family as the active visible class-list seam for this client flow
-- prefer later full-name producers or refreshers that run after `ServerAuthStats valid=true ... statClassesBitmask=0x00001044`
-- check whether the newly instrumented late full-name `GetClassDesc` callsites around `0x3249b1` / `0x324d89` / `0x3252b0` are the real post-auth class-list seam
-- if the next repro still shows zero `CharSelectLateFullNameTrace` lines, treat those later helper callsites as cold too and pivot away from helper-level char-select probes
+- prefer validating the cache-backed caption fallback before reopening more seam archaeology
+- if the cache fallback fails, inspect `CharSelectCachedClassCaptionTrace` and `MulticlassCachePersist` first
+- otherwise keep deeper char-select seam work deprioritized behind the inventory summary blocker
 
 Expected live log path:
 - `/home/zutfen/everquest_rof2/monomyth-client.log`
 
 Next seam direction:
-- bias toward `CInventoryWindow` self-refresh paths, now led by the concrete `OnProcessFrame` seam at `0x292c90`
+- for inventory, bias toward `CInventoryWindow` self-refresh child seams inside the concrete `OnProcessFrame` flow at `0x292c90`, since the parent prologue is not patchable with the current inline detour helper
 - prefer binary-backed summary producers over more generic UI callback guesses
 - use `eqlib`, `MacroQuest`, and prior clean-room Ghidra outputs as steering references
 

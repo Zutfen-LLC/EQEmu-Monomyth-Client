@@ -6,5 +6,6 @@ namespace monomyth::hooks {
 
 bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept;
 void Shutdown() noexcept;
+void NotifyServerAuthStatsUpdated() noexcept;
 
 }  // namespace monomyth::hooks

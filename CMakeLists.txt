@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 3.20)
 
 project(MonomythClientDll LANGUAGES CXX)
 
+function(monomyth_apply_mingw_static_runtime target_name)
+    if(MINGW)
+        target_link_options(${target_name} PRIVATE
+            -static
+            -static-libgcc
+            -static-libstdc++
+        )
+    endif()
+endfunction()
+
 add_library(dinput8 SHARED
     src/dllmain.cpp
     src/dinput_proxy.cpp
@@ -9,6 +19,7 @@ add_library(dinput8 SHARED
     src/logger.cpp
     src/fingerprint.cpp
     src/hook_manager.cpp
+    src/multiclass_cache.cpp
     src/multiclass_identity.cpp
     src/opcode_reference.cpp
     src/packet_observer.cpp
@@ -45,6 +56,7 @@ set_target_properties(dinput8 PROPERTIES
 )
 
 target_link_libraries(dinput8 PRIVATE version)
+monomyth_apply_mingw_static_runtime(dinput8)
 
 enable_testing()
 
@@ -67,6 +79,7 @@ if(MSVC)
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
     )
 endif()
+monomyth_apply_mingw_static_runtime(server_auth_stats_observer_tests)
 
 add_test(NAME server_auth_stats_observer_tests COMMAND server_auth_stats_observer_tests)
 
@@ -77,6 +90,7 @@ add_executable(spell_level_selection_tests
 )
 target_include_directories(spell_level_selection_tests PRIVATE src)
 target_compile_features(spell_level_selection_tests PRIVATE cxx_std_20)
+monomyth_apply_mingw_static_runtime(spell_level_selection_tests)
 
 add_test(NAME spell_level_selection_tests COMMAND spell_level_selection_tests)
 
@@ -86,6 +100,7 @@ add_executable(multiclass_identity_tests
 )
 target_include_directories(multiclass_identity_tests PRIVATE src)
 target_compile_features(multiclass_identity_tests PRIVATE cxx_std_20)
+monomyth_apply_mingw_static_runtime(multiclass_identity_tests)
 
 add_test(NAME multiclass_identity_tests COMMAND multiclass_identity_tests)
 
@@ -96,6 +111,7 @@ add_executable(class_display_discovery_tests
 )
 target_include_directories(class_display_discovery_tests PRIVATE src)
 target_compile_features(class_display_discovery_tests PRIVATE cxx_std_20)
+monomyth_apply_mingw_static_runtime(class_display_discovery_tests)
 
 add_test(NAME class_display_discovery_tests COMMAND class_display_discovery_tests)
 
@@ -106,6 +122,7 @@ add_executable(runtime_capabilities_tests
 )
 target_include_directories(runtime_capabilities_tests PRIVATE src)
 target_compile_features(runtime_capabilities_tests PRIVATE cxx_std_20)
+monomyth_apply_mingw_static_runtime(runtime_capabilities_tests)
 
 add_test(NAME runtime_capabilities_tests COMMAND runtime_capabilities_tests)
 
@@ -115,6 +132,7 @@ add_executable(spell_usability_discovery_policy_tests
 )
 target_include_directories(spell_usability_discovery_policy_tests PRIVATE src)
 target_compile_features(spell_usability_discovery_policy_tests PRIVATE cxx_std_20)
+monomyth_apply_mingw_static_runtime(spell_usability_discovery_policy_tests)
 
 add_test(
     NAME spell_usability_discovery_policy_tests
