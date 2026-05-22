@@ -83,6 +83,7 @@ constexpr std::uint32_t kMoveItemStackLocalGateTargetRva = 0x000322b0;
 constexpr std::uint32_t kEverQuestLMouseUpTargetRva = 0x000c1760;
 constexpr std::uint32_t kCXWndHandleLButtonUpTargetRva = 0x000c1e91;
 constexpr std::uint32_t kInventoryWindowWndNotificationTargetRva = 0x001939e0;
+constexpr std::uint32_t kItemDisplayRefreshWorkerTargetRva = 0x002ae100;
 constexpr std::uint32_t kItemDisplayClassRowBuilderTargetRva = 0x002a9540;
 constexpr std::uint32_t kInvSlotWndHandleLButtonUpTargetRva = 0x0029a5d0;
 constexpr std::uint32_t kInvSlotWndHandleLButtonUpAfterHeldTargetRva = 0x00299c30;
@@ -287,6 +288,10 @@ using InventoryWindowWndNotificationFn = int (MONOMYTH_THISCALL*)(
     void* sender_window,
     std::uint32_t notification_code,
     void* payload_like);
+using ItemDisplayRefreshWorkerFn = void (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* arg1_like,
+    void* arg2_like);
 using ItemDisplayClassRowBuilderFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     void* arg1_like,
@@ -668,6 +673,7 @@ InlineDetour g_move_item_slot_populate_detour = {};
 InlineDetour g_everquest_lmouse_up_detour = {};
 InlineDetour g_cxwnd_handle_lbutton_up_detour = {};
 InlineDetour g_inventory_window_wnd_notification_detour = {};
+InlineDetour g_item_display_refresh_worker_trace_detour = {};
 InlineDetour g_item_display_refresh_worker_detour = {};
 InlineDetour g_invslot_wnd_handle_lbutton_up_detour = {};
 InlineDetour g_invslot_wnd_handle_lbutton_up_afterheld_detour = {};
@@ -765,6 +771,7 @@ MoveItemStackLocalGateFn g_original_move_item_stack_local_gate = nullptr;
 EverQuestLMouseUpFn g_original_everquest_lmouse_up = nullptr;
 CXWndHandleLButtonUpFn g_original_cxwnd_handle_lbutton_up = nullptr;
 InventoryWindowWndNotificationFn g_original_inventory_window_wnd_notification = nullptr;
+ItemDisplayRefreshWorkerFn g_original_item_display_refresh_worker_trace = nullptr;
 ItemDisplayClassRowBuilderFn g_original_item_display_class_row_builder = nullptr;
 InvSlotWndHandleLButtonUpFn g_original_invslot_wnd_handle_lbutton_up = nullptr;
 InvSlotWndHandleLButtonUpFn g_original_invslot_wnd_handle_lbutton_up_afterheld = nullptr;
@@ -846,6 +853,7 @@ std::uint64_t g_memorize_send_trace_count = 0;
 std::uint64_t g_scroll_scribe_event_count = 0;
 std::uint64_t g_ui_class_helper_trace_count = 0;
 std::uint64_t g_inventory_class_title_trace_count = 0;
+std::uint64_t g_item_display_refresh_worker_entry_trace_count = 0;
 constexpr std::size_t kUiClassHelperCallerCatalogCapacity = 64;
 constexpr std::size_t kUiClassProducerCandidateCatalogCapacity = 24;
 std::array<std::uint32_t, kUiClassHelperCallerCatalogCapacity>
@@ -1065,6 +1073,10 @@ bool ShouldLogUiClassHelperTrace(std::uint64_t count) noexcept {
 }
 
 bool ShouldLogWhoClassNameTrace(std::uint64_t count) noexcept {
+    return count <= 20 || (count % 50) == 0;
+}
+
+bool ShouldLogItemDisplayRefreshWorkerEntryTrace(std::uint64_t count) noexcept {
     return count <= 20 || (count % 50) == 0;
 }
 
@@ -1624,6 +1636,39 @@ void ArmItemDisplayClassDisplayCorrelation(
     message += Hex32(kItemDisplayClassRowBuilderTargetRva);
     message += L" budget=";
     message += std::to_wstring(kItemDisplayClassDisplayCorrelationBudget);
+    monomyth::logger::Log(message);
+}
+
+void LogItemDisplayRefreshWorkerEntryTrace(
+    std::uintptr_t caller_return_address,
+    void* this_context,
+    void* arg1_like,
+    void* arg2_like) noexcept {
+    const std::uint64_t count = ++g_item_display_refresh_worker_entry_trace_count;
+    if (!ShouldLogItemDisplayRefreshWorkerEntryTrace(count)) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_rva = module_base != 0 && caller_return_address >= module_base
+        ? static_cast<std::uint32_t>(caller_return_address - module_base)
+        : 0;
+
+    std::wstring message = L"ItemDisplayRefreshWorkerEntryTrace";
+    message += L" count=";
+    message += std::to_wstring(count);
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" window_this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" arg1_like=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(arg1_like));
+    message += L" arg2_like=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(arg2_like));
+    message += L" target_rva=";
+    message += Hex32(kItemDisplayRefreshWorkerTargetRva);
     monomyth::logger::Log(message);
 }
 
@@ -11010,6 +11055,21 @@ void MONOMYTH_FASTCALL ItemDisplayClassRowBuilderHook(
     }
 }
 
+void MONOMYTH_FASTCALL ItemDisplayRefreshWorkerHook(
+    void* this_context,
+    void*,
+    void* arg1_like,
+    void* arg2_like) noexcept {
+    LogItemDisplayRefreshWorkerEntryTrace(
+        GetCallerReturnAddress(),
+        this_context,
+        arg1_like,
+        arg2_like);
+    if (g_original_item_display_refresh_worker_trace != nullptr) {
+        g_original_item_display_refresh_worker_trace(this_context, arg1_like, arg2_like);
+    }
+}
+
 int MONOMYTH_FASTCALL InvSlotWndHandleLButtonUpHook(
     void* this_context,
     void*,
@@ -12088,9 +12148,24 @@ bool InstallInventoryClassTitleDisplayHook(
         return false;
     }
 
+    constexpr std::array<std::uint8_t, 16> kItemDisplayRefreshWorkerEntryBytes = {
+        0x64, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x6a, 0xff,
+        0x68, 0xa6, 0xbf, 0x98, 0x00, 0x50, 0xb8, 0x70};
     constexpr std::array<std::uint8_t, 16> kItemDisplayClassRowBuilderEntryBytes = {
         0x6a, 0xff, 0x68, 0x74, 0xbf, 0x98, 0x00, 0x64,
         0xa1, 0x00, 0x00, 0x00, 0x00, 0x50, 0x64, 0x89};
+    std::array<std::uint8_t, kItemDisplayRefreshWorkerEntryBytes.size()>
+        live_item_display_refresh_worker_entry = {};
+    const bool item_display_refresh_worker_entry_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kItemDisplayRefreshWorkerTargetRva),
+        live_item_display_refresh_worker_entry.size(),
+        live_item_display_refresh_worker_entry.data());
+    const bool item_display_refresh_worker_entry_matches =
+        item_display_refresh_worker_entry_copied &&
+        std::memcmp(
+            live_item_display_refresh_worker_entry.data(),
+            kItemDisplayRefreshWorkerEntryBytes.data(),
+            kItemDisplayRefreshWorkerEntryBytes.size()) == 0;
     std::array<std::uint8_t, kItemDisplayClassRowBuilderEntryBytes.size()>
         live_item_display_class_row_builder_entry = {};
     const bool item_display_class_row_builder_entry_copied = TryCopyBytes(
@@ -12139,6 +12214,41 @@ bool InstallInventoryClassTitleDisplayHook(
     g_item_display_class_display_correlation_window_this.store(0);
     g_item_display_class_display_correlation_arg1_like.store(0);
     g_item_display_class_display_correlation_arg2_like.store(0);
+    g_item_display_refresh_worker_entry_trace_count = 0;
+
+    if (item_display_refresh_worker_entry_matches) {
+        if (!InstallInlineDetour(
+                reinterpret_cast<void*>(module_base + kItemDisplayRefreshWorkerTargetRva),
+                reinterpret_cast<void*>(&ItemDisplayRefreshWorkerHook),
+                &g_item_display_refresh_worker_trace_detour,
+                reinterpret_cast<void**>(&g_original_item_display_refresh_worker_trace),
+                L"ItemDisplayRefreshWorker trace")) {
+            RemoveInlineDetour(&g_item_display_refresh_worker_trace_detour);
+            g_original_item_display_refresh_worker_trace = nullptr;
+        } else {
+            std::wstring refresh_message =
+                L"hook_manager: item display refresh worker trace installed target=ItemDisplayRefreshWorker address=";
+            refresh_message += HexPtr(module_base + kItemDisplayRefreshWorkerTargetRva);
+            refresh_message += L" target_rva=";
+            refresh_message += Hex32(kItemDisplayRefreshWorkerTargetRva);
+            monomyth::logger::Log(refresh_message);
+        }
+    } else {
+        std::wstring refresh_message =
+            L"hook_manager: item display refresh worker trace denied target=ItemDisplayRefreshWorker validation=entry_bytes_mismatch expected=\"";
+        refresh_message += HexBytes(
+            kItemDisplayRefreshWorkerEntryBytes.data(),
+            kItemDisplayRefreshWorkerEntryBytes.size());
+        refresh_message += L"\" live=\"";
+        refresh_message += HexBytes(
+            live_item_display_refresh_worker_entry.data(),
+            live_item_display_refresh_worker_entry.size());
+        refresh_message += L"\" address=";
+        refresh_message += HexPtr(module_base + kItemDisplayRefreshWorkerTargetRva);
+        refresh_message += L" target_rva=";
+        refresh_message += Hex32(kItemDisplayRefreshWorkerTargetRva);
+        monomyth::logger::Log(refresh_message);
+    }
 
     std::wstring message =
         L"hook_manager: item display class text trace installed target=ItemDisplayClassRowBuilder address=";
@@ -13886,6 +13996,14 @@ bool RemoveProgressionSelectionClassDisplayHook() noexcept {
 
 bool RemoveInventoryClassTitleDisplayHook() noexcept {
     bool ok = true;
+    const bool had_item_display_refresh_worker_trace =
+        g_item_display_refresh_worker_trace_detour.installed;
+    if (g_item_display_refresh_worker_trace_detour.installed &&
+        RemoveInlineDetour(&g_item_display_refresh_worker_trace_detour)) {
+        g_original_item_display_refresh_worker_trace = nullptr;
+    } else if (g_item_display_refresh_worker_trace_detour.installed) {
+        ok = false;
+    }
     const bool had_item_display_class_row_builder =
         g_item_display_refresh_worker_detour.installed;
     if (g_item_display_refresh_worker_detour.installed &&
@@ -13901,6 +14019,11 @@ bool RemoveInventoryClassTitleDisplayHook() noexcept {
     g_item_display_class_display_correlation_window_this.store(0);
     g_item_display_class_display_correlation_arg1_like.store(0);
     g_item_display_class_display_correlation_arg2_like.store(0);
+    g_item_display_refresh_worker_entry_trace_count = 0;
+    if (ok && had_item_display_refresh_worker_trace) {
+        monomyth::logger::Log(
+            L"hook_manager: item display refresh worker trace removed target=ItemDisplayRefreshWorker");
+    }
     if (ok && had_item_display_class_row_builder) {
         monomyth::logger::Log(
             L"hook_manager: item display class text trace removed target=ItemDisplayClassRowBuilder");
