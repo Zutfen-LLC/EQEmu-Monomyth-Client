@@ -86,6 +86,7 @@ constexpr std::uint32_t kInventoryWindowWndNotificationTargetRva = 0x00293490;
 constexpr std::uint32_t kInventorySummaryRefreshCandidateARva = 0x00290100;
 constexpr std::uint32_t kInventorySummaryRefreshCandidateBRva = 0x002905f0;
 constexpr std::uint32_t kInventorySummaryRefreshCandidateCRva = 0x00312b00;
+constexpr std::uint32_t kCharSelectClassNameFuncRva = 0x00321210;
 constexpr std::uint32_t kItemDisplayRefreshWorkerTargetRva = 0x002ae100;
 constexpr std::uint32_t kItemDisplayClassRowBuilderTargetRva = 0x002a9540;
 constexpr std::uint32_t kInvSlotWndHandleLButtonUpTargetRva = 0x0029a5d0;
@@ -478,6 +479,9 @@ using InventorySummaryRefreshCandidateBFn = void (MONOMYTH_THISCALL*)(
     void* this_context);
 using InventorySummaryRefreshCandidateCFn = void (MONOMYTH_THISCALL*)(
     void* this_context);
+using CharSelectClassNameFuncFn = void (MONOMYTH_THISCALL*)(
+    void* this_context,
+    unsigned int selected_index);
 using WhoClassNameFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     void* subject);
@@ -688,6 +692,7 @@ InlineDetour g_inventory_window_wnd_notification_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_a_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_b_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_c_detour = {};
+InlineDetour g_char_select_class_name_func_detour = {};
 InlineDetour g_item_display_refresh_worker_trace_detour = {};
 InlineDetour g_item_display_refresh_worker_detour = {};
 InlineDetour g_invslot_wnd_handle_lbutton_up_detour = {};
@@ -862,6 +867,7 @@ GetClassThreeLetterCodeFn g_original_get_class_three_letter_code = nullptr;
 InventorySummaryRefreshCandidateAFn g_original_inventory_summary_refresh_candidate_a = nullptr;
 InventorySummaryRefreshCandidateBFn g_original_inventory_summary_refresh_candidate_b = nullptr;
 InventorySummaryRefreshCandidateCFn g_original_inventory_summary_refresh_candidate_c = nullptr;
+CharSelectClassNameFuncFn g_original_char_select_class_name_func = nullptr;
 WhoClassNameFn g_original_who_class_name = nullptr;
 CXStrAssignFn g_original_cxstr_assign = nullptr;
 CXWndSetWindowTextAFn g_original_cxwnd_set_window_text_a = nullptr;
@@ -875,6 +881,7 @@ std::uint64_t g_ui_class_helper_trace_count = 0;
 std::uint64_t g_inventory_class_title_trace_count = 0;
 std::uint64_t g_item_display_refresh_worker_entry_trace_count = 0;
 std::uint64_t g_progression_selection_trace_count = 0;
+std::uint64_t g_char_select_class_name_func_trace_count = 0;
 constexpr std::size_t kUiClassHelperCallerCatalogCapacity = 64;
 constexpr std::size_t kUiClassProducerCandidateCatalogCapacity = 24;
 std::array<std::uint32_t, kUiClassHelperCallerCatalogCapacity>
@@ -1105,6 +1112,10 @@ std::wstring FormatAssignedMask(
     const monomyth::server_auth_stats::Snapshot& snapshot);
 
 bool ShouldLogProgressionSelectionTrace(std::uint64_t count) noexcept {
+    return count <= 20 || (count % 50) == 0;
+}
+
+bool ShouldLogCharSelectClassNameFuncTrace(std::uint64_t count) noexcept {
     return count <= 20 || (count % 50) == 0;
 }
 
@@ -1648,6 +1659,66 @@ void LogInventorySummaryCandidateEntryTrace(
     message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
     message += L" arg_like=";
     message += HexPtr(reinterpret_cast<std::uintptr_t>(arg_like));
+    monomyth::logger::Log(message);
+}
+
+void LogCharSelectClassNameFuncTrace(
+    const wchar_t* phase,
+    std::uint64_t count,
+    void* this_context,
+    unsigned int selected_index,
+    std::uintptr_t caller_return_address,
+    std::uintptr_t field_22c,
+    bool field_22c_copied,
+    std::uintptr_t field_248,
+    bool field_248_copied,
+    std::uintptr_t field_24c,
+    bool field_24c_copied) noexcept {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_rva = module_base != 0 && caller_return_address >= module_base
+        ? static_cast<std::uint32_t>(caller_return_address - module_base)
+        : 0;
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+
+    std::wstring message = L"CharSelectClassNameFuncTrace count=";
+    message += std::to_wstring(count);
+    message += L" phase=";
+    message += phase == nullptr ? L"unknown" : phase;
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" selected_index=";
+    message += std::to_wstring(selected_index);
+    message += L" field_22c_status=";
+    message += field_22c_copied ? L"copied" : L"unavailable";
+    if (field_22c_copied) {
+        message += L" field_22c=";
+        message += HexPtr(field_22c);
+    }
+    message += L" field_248_status=";
+    message += field_248_copied ? L"copied" : L"unavailable";
+    if (field_248_copied) {
+        message += L" field_248=";
+        message += HexPtr(field_248);
+        message += L" branch_248_active=";
+        message += field_248 != 0 ? L"true" : L"false";
+    }
+    message += L" field_24c_status=";
+    message += field_24c_copied ? L"copied" : L"unavailable";
+    if (field_24c_copied) {
+        message += L" field_24c=";
+        message += HexPtr(field_24c);
+        message += L" branch_24c_active=";
+        message += field_24c != 0 ? L"true" : L"false";
+    }
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    message += L" has_assigned_mask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
     monomyth::logger::Log(message);
 }
 
@@ -3615,6 +3686,73 @@ const char* CDECL ProgressionSelectionClassLookupCallsiteHook(
         monomyth::logger::Log(message);
     }
     return result;
+}
+
+void MONOMYTH_FASTCALL CharSelectClassNameFuncHook(
+    void* this_context,
+    void*,
+    unsigned int selected_index) noexcept {
+    const std::uint64_t count = ++g_char_select_class_name_func_trace_count;
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    std::uintptr_t field_22c_before = 0;
+    std::uintptr_t field_248_before = 0;
+    std::uintptr_t field_24c_before = 0;
+    const bool field_22c_before_copied =
+        this_context != nullptr &&
+        TryCopyObject(reinterpret_cast<const std::uint8_t*>(this_context) + 0x22c, &field_22c_before);
+    const bool field_248_before_copied =
+        this_context != nullptr &&
+        TryCopyObject(reinterpret_cast<const std::uint8_t*>(this_context) + 0x248, &field_248_before);
+    const bool field_24c_before_copied =
+        this_context != nullptr &&
+        TryCopyObject(reinterpret_cast<const std::uint8_t*>(this_context) + 0x24c, &field_24c_before);
+    if (ShouldLogCharSelectClassNameFuncTrace(count)) {
+        LogCharSelectClassNameFuncTrace(
+            L"before",
+            count,
+            this_context,
+            selected_index,
+            caller_return_address,
+            field_22c_before,
+            field_22c_before_copied,
+            field_248_before,
+            field_248_before_copied,
+            field_24c_before,
+            field_24c_before_copied);
+    }
+
+    if (g_original_char_select_class_name_func != nullptr) {
+        g_original_char_select_class_name_func(this_context, selected_index);
+    }
+
+    if (!ShouldLogCharSelectClassNameFuncTrace(count)) {
+        return;
+    }
+
+    std::uintptr_t field_22c_after = 0;
+    std::uintptr_t field_248_after = 0;
+    std::uintptr_t field_24c_after = 0;
+    const bool field_22c_after_copied =
+        this_context != nullptr &&
+        TryCopyObject(reinterpret_cast<const std::uint8_t*>(this_context) + 0x22c, &field_22c_after);
+    const bool field_248_after_copied =
+        this_context != nullptr &&
+        TryCopyObject(reinterpret_cast<const std::uint8_t*>(this_context) + 0x248, &field_248_after);
+    const bool field_24c_after_copied =
+        this_context != nullptr &&
+        TryCopyObject(reinterpret_cast<const std::uint8_t*>(this_context) + 0x24c, &field_24c_after);
+    LogCharSelectClassNameFuncTrace(
+        L"after",
+        count,
+        this_context,
+        selected_index,
+        caller_return_address,
+        field_22c_after,
+        field_22c_after_copied,
+        field_248_after,
+        field_248_after_copied,
+        field_24c_after,
+        field_24c_after_copied);
 }
 
 bool IsWhoClassNameLookupCaller(std::uintptr_t caller_return_address) noexcept {
@@ -12449,6 +12587,58 @@ bool InstallProgressionSelectionClassDisplayHook(
         return false;
     }
 
+    bool installed_any = false;
+    constexpr std::array<std::uint8_t, 32> kCharSelectClassNameFuncEntryBytes = {{
+        0x6A, 0xFF, 0x64, 0xA1, 0x00, 0x00, 0x00, 0x00,
+        0x68, 0x15, 0x2D, 0x99, 0x00, 0x50, 0x64, 0x89,
+        0x25, 0x00, 0x00, 0x00, 0x00, 0x81, 0xEC, 0x98,
+        0x00, 0x00, 0x00, 0x53, 0x55, 0x56, 0x57, 0x8B,
+    }};
+    std::array<std::uint8_t, kCharSelectClassNameFuncEntryBytes.size()>
+        live_char_select_class_name_func_entry = {};
+    const bool char_select_class_name_func_entry_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kCharSelectClassNameFuncRva),
+        live_char_select_class_name_func_entry.size(),
+        live_char_select_class_name_func_entry.data());
+    const bool char_select_class_name_func_entry_matches =
+        char_select_class_name_func_entry_copied &&
+        std::memcmp(
+            live_char_select_class_name_func_entry.data(),
+            kCharSelectClassNameFuncEntryBytes.data(),
+            kCharSelectClassNameFuncEntryBytes.size()) == 0;
+    if (!char_select_class_name_func_entry_matches) {
+        std::wstring message =
+            L"hook_manager: char select class-name function trace denied target=CharSelectClassNameFunc validation=entry_bytes_mismatch expected=\"";
+        message += HexBytes(
+            kCharSelectClassNameFuncEntryBytes.data(),
+            kCharSelectClassNameFuncEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(
+            live_char_select_class_name_func_entry.data(),
+            live_char_select_class_name_func_entry.size());
+        message += L"\" address=";
+        message += HexPtr(module_base + kCharSelectClassNameFuncRva);
+        message += L" target_rva=";
+        message += Hex32(kCharSelectClassNameFuncRva);
+        monomyth::logger::Log(message);
+    } else if (!InstallInlineDetour(
+                   reinterpret_cast<void*>(manifest.char_select_class_name_func_address),
+                   reinterpret_cast<void*>(&CharSelectClassNameFuncHook),
+                   &g_char_select_class_name_func_detour,
+                   reinterpret_cast<void**>(&g_original_char_select_class_name_func),
+                   L"CharSelectClassNameFunc trace")) {
+        RemoveInlineDetour(&g_char_select_class_name_func_detour);
+        g_original_char_select_class_name_func = nullptr;
+    } else {
+        std::wstring message =
+            L"hook_manager: char select class-name function trace installed target=CharSelectClassNameFunc address=";
+        message += HexPtr(manifest.char_select_class_name_func_address);
+        message += L" target_rva=";
+        message += Hex32(manifest.char_select_class_name_func_rva);
+        monomyth::logger::Log(message);
+        installed_any = true;
+    }
+
     g_original_progression_selection_class_lookup =
         reinterpret_cast<ProgressionSelectionClassLookupFn>(
             module_base + kProgressionSelectionClassLookupTargetRva);
@@ -12459,11 +12649,21 @@ bool InstallProgressionSelectionClassDisplayHook(
             &g_progression_selection_class_lookup_callsite_patch,
             L"ProgressionSelectionClassLookupCallsite")) {
         g_original_progression_selection_class_lookup = nullptr;
+    } else {
+        installed_any = true;
+    }
+
+    if (!installed_any) {
         return false;
     }
 
-    monomyth::logger::Log(
-        L"hook_manager: progression selection class display hook installed target=ClassValueLabel local_self_style=three_letter");
+    std::wstring message =
+        L"hook_manager: progression selection class display hook installed target=ClassValueLabel entry_trace=";
+    message += g_char_select_class_name_func_detour.installed ? L"true" : L"false";
+    message += L" callsite_patch=";
+    message += g_progression_selection_class_lookup_callsite_patch.installed ? L"true" : L"false";
+    message += L" local_self_style=three_letter";
+    monomyth::logger::Log(message);
     return true;
 }
 
@@ -14384,12 +14584,15 @@ bool RemoveWhoClassNameDisplayHook() noexcept {
 }
 
 bool RemoveProgressionSelectionClassDisplayHook() noexcept {
-    const bool ok =
-        RemoveCallsitePatch(&g_progression_selection_class_lookup_callsite_patch);
+    bool ok = true;
+    g_char_select_class_name_func_trace_count = 0;
+    ok &= RemoveInlineDetour(&g_char_select_class_name_func_detour);
+    ok &= RemoveCallsitePatch(&g_progression_selection_class_lookup_callsite_patch);
+    g_original_char_select_class_name_func = nullptr;
     g_original_progression_selection_class_lookup = nullptr;
     if (ok) {
         monomyth::logger::Log(
-            L"hook_manager: progression selection class display hook removed target=ClassValueLabel");
+            L"hook_manager: progression selection class display hook removed target=ClassValueLabel/CharSelectClassNameFunc");
     }
     return ok;
 }
