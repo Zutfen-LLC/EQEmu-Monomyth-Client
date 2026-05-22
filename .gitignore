@@ -11,6 +11,7 @@
 /MinSizeRel/
 /cmake-build-*/
 build-cross-i686/
+build-cross/
 
 # CMake
 CMakeCache.txt

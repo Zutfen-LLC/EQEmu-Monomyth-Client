@@ -16,6 +16,7 @@
 #include <string_view>
 #include <vector>
 
+#include "hook_manager.h"
 #include "logger.h"
 #include "opcode_reference.h"
 #include "server_auth_stats_observer.h"
@@ -722,8 +723,15 @@ void ObserveReceiveMetadata(
     }
 
     if (IsServerAuthStatsOpcode(opcode)) {
+        const monomyth::server_auth_stats::Snapshot auth_before =
+            monomyth::server_auth_stats::GetSnapshot();
         g_server_auth_stats_exact_match_count.fetch_add(1);
         monomyth::server_auth_stats::ObserveReceivePayload(payload, payload_length);
+        const monomyth::server_auth_stats::Snapshot auth_after =
+            monomyth::server_auth_stats::GetSnapshot();
+        if (auth_after.has_classes_bitmask) {
+            monomyth::hooks::NotifyServerAuthStatsUpdated();
+        }
     } else {
         MaybeLogServerAuthStatsCandidate(sequence, opcode, payload_length, payload);
     }

@@ -91,7 +91,8 @@ int main() {
     monomyth::class_display_discovery::Result validated_discovery = {};
     validated_discovery.allowed = true;
     validated_discovery.reason = L"validated";
-    validated_discovery.who_class_name = ValidatedTarget(L"WhoClassName");
+    validated_discovery.who_class_name =
+        ValidatedTarget(L"LeftClickedOnPlayerSurrogate");
     validated_discovery.get_class_desc = ValidatedTarget(L"GetClassDesc");
     validated_discovery.get_class_three_letter_code =
         ValidatedTarget(L"GetClassThreeLetterCode");

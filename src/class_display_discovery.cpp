@@ -14,24 +14,24 @@
 namespace monomyth::class_display_discovery {
 namespace {
 
-constexpr std::uint32_t kGetClassDescRva = 0x001153C0;
+constexpr std::uint32_t kGetClassDescRva = 0x00114DC0;
 constexpr std::array<std::uint8_t, 24> kGetClassDescEntryBytes = {{
-    0x8B, 0x44, 0x24, 0x04, 0x48, 0x83, 0xF8, 0x0F,
-    0x0F, 0x87, 0x57, 0x01, 0x00, 0x00, 0xFF, 0x24,
-    0x85, 0x3C, 0x55, 0x51, 0x00, 0x8B, 0x0D, 0xC4,
+    0x8B, 0x44, 0x24, 0x04, 0x48, 0x83, 0xF8, 0x41,
+    0x0F, 0x87, 0xED, 0x02, 0x00, 0x00, 0x0F, 0xB6,
+    0x80, 0x60, 0x51, 0x51, 0x00, 0xFF, 0x24, 0x85,
 }};
-constexpr std::uint32_t kWhoClassNameRva = 0x00136310;
-constexpr std::array<std::uint8_t, 32> kWhoClassNameEntryBytes = {{
+constexpr std::uint32_t kLeftClickedOnPlayerSurrogateRva = 0x00136310;
+constexpr std::array<std::uint8_t, 32> kLeftClickedOnPlayerSurrogateEntryBytes = {{
     0x6A, 0xFF, 0x68, 0xA4, 0x89, 0x97, 0x00, 0x64,
     0xA1, 0x00, 0x00, 0x00, 0x00, 0x50, 0x64, 0x89,
     0x25, 0x00, 0x00, 0x00, 0x00, 0x81, 0xEC, 0x14,
     0x02, 0x00, 0x00, 0x53, 0x57, 0x33, 0xFF, 0x89,
 }};
-constexpr std::uint32_t kGetClassThreeLetterCodeRva = 0x00114DC0;
+constexpr std::uint32_t kGetClassThreeLetterCodeRva = 0x001153C0;
 constexpr std::array<std::uint8_t, 24> kGetClassThreeLetterCodeEntryBytes = {{
-    0x8B, 0x44, 0x24, 0x04, 0x48, 0x83, 0xF8, 0x41,
-    0x0F, 0x87, 0xED, 0x02, 0x00, 0x00, 0x0F, 0xB6,
-    0x80, 0x60, 0x51, 0x51, 0x00, 0xFF, 0x24, 0x85,
+    0x8B, 0x44, 0x24, 0x04, 0x48, 0x83, 0xF8, 0x0F,
+    0x0F, 0x87, 0x57, 0x01, 0x00, 0x00, 0xFF, 0x24,
+    0x85, 0x3C, 0x55, 0x51, 0x00, 0x8B, 0x0D, 0xC4,
 }};
 constexpr std::uint32_t kCharSelectClassNameFuncRva = 0x00321210;
 constexpr std::array<std::uint8_t, 32> kCharSelectClassNameFuncEntryBytes = {{
@@ -282,14 +282,14 @@ TargetResult DiscoverPinnedEntryBytesTarget(
 TargetResult DiscoverPinnedWhoClassName(const ImageView& image) noexcept {
     return DiscoverPinnedEntryBytesTarget(
         image,
-        L"WhoClassName",
-        kWhoClassNameRva,
-        kWhoClassNameEntryBytes.data(),
-        kWhoClassNameEntryBytes.size(),
-        L"WhoClassName surrogate RVA did not resolve inside the loaded image",
-        L"WhoClassName surrogate RVA resolved to a non-executable region",
-        L"WhoClassName surrogate RVA resolved, but the entry bytes did not match",
-        L"WhoClassName validated by exact cleanroom RVA and entry-byte match on the strongest recovered implementation seam");
+        L"LeftClickedOnPlayerSurrogate",
+        kLeftClickedOnPlayerSurrogateRva,
+        kLeftClickedOnPlayerSurrogateEntryBytes.data(),
+        kLeftClickedOnPlayerSurrogateEntryBytes.size(),
+        L"LeftClickedOnPlayerSurrogate cleanroom RVA did not resolve inside the loaded image",
+        L"LeftClickedOnPlayerSurrogate cleanroom RVA resolved to a non-executable region",
+        L"LeftClickedOnPlayerSurrogate cleanroom RVA resolved, but the entry bytes did not match",
+        L"LeftClickedOnPlayerSurrogate validated by exact cleanroom RVA and entry-byte match on the strongest recovered legacy wrapper-context seam");
 }
 
 TargetResult DiscoverPinnedGetClassThreeLetterCode(const ImageView& image) noexcept {
@@ -343,7 +343,7 @@ void LogTarget(const TargetResult& target) {
 void InitializeResult() noexcept {
     g_result = {};
     g_result.reason = L"initialized";
-    ResetTarget(&g_result.who_class_name, L"WhoClassName");
+    ResetTarget(&g_result.who_class_name, L"LeftClickedOnPlayerSurrogate");
     ResetTarget(&g_result.get_class_desc, L"GetClassDesc");
     ResetTarget(&g_result.get_class_three_letter_code, L"GetClassThreeLetterCode");
     ResetTarget(
@@ -374,7 +374,7 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
         MarkUnavailable(
             &g_result.who_class_name,
             L"cleanroom_locator_unpinned",
-            L"WhoClassName target is not pinned for the current ROF2 binary");
+            L"LeftClickedOnPlayerSurrogate target is not pinned for the current ROF2 binary");
         MarkUnavailable(
             &g_result.get_class_desc,
             L"cleanroom_locator_unpinned",
@@ -393,7 +393,7 @@ Result Run(bool discovery_allowed, bool fingerprint_matched) noexcept {
         MarkUnavailable(
             &g_result.who_class_name,
             L"image_view_unavailable",
-            L"WhoClassName target could not be evaluated because the host PE image was unavailable");
+            L"LeftClickedOnPlayerSurrogate target could not be evaluated because the host PE image was unavailable");
         MarkUnavailable(
             &g_result.get_class_desc,
             L"image_view_unavailable",
