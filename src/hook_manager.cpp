@@ -2008,6 +2008,25 @@ void LogCharacterListUpdateListTrace(
     monomyth::logger::Log(message);
 }
 
+bool TryInvokeCharacterListUpdateList(void* character_list_window) noexcept {
+    if (character_list_window == nullptr ||
+        g_original_character_list_update_list == nullptr) {
+        return false;
+    }
+
+#if defined(_MSC_VER)
+    __try {
+        g_original_character_list_update_list(character_list_window, true);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    g_original_character_list_update_list(character_list_window, true);
+    return true;
+#endif
+}
+
 bool TryForceCharacterListRefreshForAssignedMask(std::uint32_t assigned_mask) noexcept {
     if (!g_multiclass_ui_display_enabled || g_original_character_list_update_list == nullptr ||
         !g_character_list_update_list_detour.installed ||
@@ -2029,19 +2048,8 @@ bool TryForceCharacterListRefreshForAssignedMask(std::uint32_t assigned_mask) no
         return false;
     }
 
-    bool call_succeeded = false;
     g_character_list_manual_refresh_in_progress = true;
-#if defined(_MSC_VER)
-    __try {
-        g_original_character_list_update_list(character_list_window, true);
-        call_succeeded = true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        call_succeeded = false;
-    }
-#else
-    g_original_character_list_update_list(character_list_window, true);
-    call_succeeded = true;
-#endif
+    const bool call_succeeded = TryInvokeCharacterListUpdateList(character_list_window);
     g_character_list_manual_refresh_in_progress = false;
 
     std::wstring message = L"CharacterListForcedRefresh";
