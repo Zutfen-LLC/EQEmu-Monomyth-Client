@@ -1101,6 +1101,9 @@ bool ShouldLogItemDisplayRefreshWorkerEntryTrace(std::uint64_t count) noexcept {
     return count <= 20 || (count % 50) == 0;
 }
 
+std::wstring FormatAssignedMask(
+    const monomyth::server_auth_stats::Snapshot& snapshot);
+
 bool ShouldLogProgressionSelectionTrace(std::uint64_t count) noexcept {
     return count <= 20 || (count % 50) == 0;
 }
