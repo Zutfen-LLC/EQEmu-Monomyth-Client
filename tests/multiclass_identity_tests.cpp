@@ -142,6 +142,41 @@ int main() {
             0x00001014u,
             0x0000839fu),
         "barbed ringmail intersects authoritative paladin shadowknight mask");
+    passed &= Expect(
+        !HasAuthoritativeOffhandWeaponClassAndDualWield(
+            true,
+            ClassBitForTest(3) | ClassBitForTest(13),
+            ClientItemClassBitForTest(3),
+            false),
+        "item class overlap alone does not grant offhand weapon entitlement");
+    passed &= Expect(
+        !HasAuthoritativeOffhandWeaponClassAndDualWield(
+            true,
+            ClassBitForTest(3) | ClassBitForTest(13),
+            ClientItemClassBitForTest(16),
+            true),
+        "dual wield alone does not grant offhand weapon entitlement");
+    passed &= Expect(
+        HasAuthoritativeOffhandWeaponClassAndDualWield(
+            true,
+            ClassBitForTest(3) | ClassBitForTest(7) | ClassBitForTest(13),
+            ClientItemClassBitForTest(13),
+            true),
+        "different assigned classes can satisfy item use and dual wield together");
+    passed &= Expect(
+        !HasAuthoritativeOffhandWeaponClassAndDualWield(
+            false,
+            ClassBitForTest(3) | ClassBitForTest(7) | ClassBitForTest(13),
+            ClientItemClassBitForTest(13),
+            true),
+        "missing authoritative mask denies offhand weapon entitlement");
+    passed &= Expect(
+        !HasAuthoritativeOffhandWeaponClassAndDualWield(
+            true,
+            0x00010040u,
+            ClientItemClassBitForTest(7),
+            true),
+        "non-playable authoritative bits deny offhand weapon entitlement");
 
     const OrderedClassIds ordered_primary_only =
         BuildOrderedClassIdList(3, true, ClassBitForTest(3));

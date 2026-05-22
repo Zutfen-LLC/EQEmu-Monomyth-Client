@@ -175,6 +175,18 @@ bool HasAnyAuthoritativeClientItemClass(
     return false;
 }
 
+bool HasAuthoritativeOffhandWeaponClassAndDualWield(
+    bool has_class_mask,
+    std::uint32_t authoritative_class_mask,
+    std::uint32_t client_item_class_mask,
+    bool has_dual_wield_entitlement) noexcept {
+    return has_dual_wield_entitlement &&
+        HasAnyAuthoritativeClientItemClass(
+            has_class_mask,
+            authoritative_class_mask,
+            client_item_class_mask);
+}
+
 const wchar_t* ClassDisplayToken(
     unsigned int class_id,
     ClassDisplayStyle style) noexcept {

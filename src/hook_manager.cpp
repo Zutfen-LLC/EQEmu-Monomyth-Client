@@ -61,9 +61,23 @@ constexpr std::size_t kScribeGateResolvedClassIdOffset = 0x3374;
 constexpr std::uint32_t kScribeGateMaxRelativeLookupOffset = 0x00100000;
 constexpr std::size_t kScribeGateMaxLookupNodes = 256;
 constexpr std::size_t kClientItemClassMaskOffset = 0x68;
+constexpr std::size_t kClientItemInfoEquipSlotsOffset = 0x0f0;
 constexpr std::size_t kClientItemInfoClassesOffset = 0x170;
+constexpr std::size_t kClientItemInfoItemClassOffset = 0x1d4;
 constexpr std::uint32_t kClientItemWrapperGetDataThunkRva = 0x003b06e0;
+constexpr std::uint32_t kCharacterZoneClientHasSkillRva = 0x0004a1b0;
 constexpr std::int32_t kFirstGeneralInventorySlot = 23;
+constexpr std::int32_t kPrimaryEquipmentSlot = 13;
+constexpr std::int32_t kSecondaryEquipmentSlot = 14;
+constexpr std::uint32_t kSecondaryEquipmentSlotBit = 1u << kSecondaryEquipmentSlot;
+constexpr std::size_t kLocalPlayerCharacterOffset = 0x02cc;
+constexpr std::size_t kLocalPlayerHoldingAnimationOffset = 0x0334;
+constexpr std::uint8_t kHoldingAnimationShield = 2;
+constexpr std::uint8_t kHoldingAnimationDualWield = 3;
+constexpr std::uint8_t kHoldingAnimationLeftHandWeapon = 5;
+constexpr std::uint8_t kHoldingAnimationTwoHandedWeapon = 6;
+constexpr std::uint8_t kHoldingAnimationBow = 7;
+constexpr int kSkillDualWield = 22;
 constexpr std::size_t kPacketOpcodeBytes = 2;
 constexpr std::uint32_t kEquipClickRecordLookupCallsiteRva = 0x000f7827;
 constexpr std::uint32_t kEquipClickCanEquipCallsiteRva = 0x000f7841;
@@ -300,6 +314,9 @@ using MoveItemBranchResolvedObjectFn = void* (MONOMYTH_THISCALL*)(
     void* this_context);
 using ItemWrapperGetDataThunkFn = void* (MONOMYTH_THISCALL*)(
     void* this_context);
+using CharacterZoneClientHasSkillFn = bool (MONOMYTH_THISCALL*)(
+    void* this_context,
+    int skill_id);
 using EverQuestLMouseUpFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     void* point_like);
@@ -980,6 +997,8 @@ std::uintptr_t g_spellbook_memorize_send_path_address = 0;
 std::uintptr_t g_start_spell_memorization_path_address = 0;
 std::uintptr_t g_memorize_send_packet_wrapper_address = 0;
 std::uintptr_t g_inv_slot_mgr_move_item_address = 0;
+std::uintptr_t g_character_zone_client_has_skill_address = 0;
+CharacterZoneClientHasSkillFn g_character_zone_client_has_skill = nullptr;
 bool g_scroll_scribe_active_logging = false;
 StartSpellScribePrecheckClassMaskSnapshot g_start_spell_scribe_precheck_class_mask_snapshot = {};
 std::wstring g_handle_rbutton_up_evidence_source = L"unknown";
@@ -1025,6 +1044,25 @@ struct ItemDisplayClassDisplayCorrelationWindow {
     std::uintptr_t arg2_like = 0;
     std::uint32_t remaining_before = 0;
     std::uint32_t remaining_after = 0;
+};
+
+struct OffhandWeaponPolicySnapshot {
+    std::uintptr_t item_data_like = 0;
+    std::uint32_t item_class_mask = 0;
+    std::uint32_t equip_slots = 0;
+    std::uint8_t item_class = 0xff;
+    std::uint8_t holding_animation = 0;
+    bool item_class_mask_copied = false;
+    bool equip_slots_copied = false;
+    bool item_class_copied = false;
+    bool holding_animation_copied = false;
+    bool is_weapon = false;
+    bool can_wear_secondary = false;
+    bool item_matches_assigned_class = false;
+    bool dual_wield_skill_checked = false;
+    bool has_dual_wield_skill = false;
+    bool primary_blocks_secondary_weapon = false;
+    bool eligible = false;
 };
 
 struct GuildTrainerClassResolution {
@@ -3207,6 +3245,158 @@ bool TryReadClientItemClassMaskFromWrapper(
     return TryCopyObject(
         reinterpret_cast<const std::uint8_t*>(resolved_item_data) + kClientItemInfoClassesOffset,
         item_class_mask);
+}
+
+template <typename T>
+bool TryReadClientItemFieldFromWrapper(
+    std::uintptr_t item_wrapper_like,
+    std::size_t offset,
+    T* value,
+    std::uintptr_t* item_data_like) noexcept {
+    if (value == nullptr) {
+        return false;
+    }
+
+    std::uintptr_t resolved_item_data = 0;
+    if (!TryResolveClientItemDataFromWrapper(item_wrapper_like, &resolved_item_data)) {
+        return false;
+    }
+
+    if (item_data_like != nullptr) {
+        *item_data_like = resolved_item_data;
+    }
+
+    return TryCopyObject(
+        reinterpret_cast<const std::uint8_t*>(resolved_item_data) + offset,
+        value);
+}
+
+bool TryReadLocalPlayerCharacterPointer(void** character) noexcept {
+    if (character == nullptr) {
+        return false;
+    }
+
+    void* local_player = nullptr;
+    if (!TryReadLocalPlayerPointer(&local_player) || local_player == nullptr) {
+        return false;
+    }
+
+    return TryCopyObject(
+        reinterpret_cast<const std::uint8_t*>(local_player) + kLocalPlayerCharacterOffset,
+        character);
+}
+
+bool TryReadLocalPlayerHoldingAnimation(std::uint8_t* holding_animation) noexcept {
+    if (holding_animation == nullptr) {
+        return false;
+    }
+
+    void* local_player = nullptr;
+    if (!TryReadLocalPlayerPointer(&local_player) || local_player == nullptr) {
+        return false;
+    }
+
+    return TryCopyObject(
+        reinterpret_cast<const std::uint8_t*>(local_player) + kLocalPlayerHoldingAnimationOffset,
+        holding_animation);
+}
+
+bool IsWeaponItemClass(std::uint8_t item_class) noexcept {
+    switch (item_class) {
+    case 0:   // 1H slashing
+    case 1:   // 2H slashing
+    case 2:   // piercing
+    case 3:   // 1H blunt
+    case 4:   // 2H blunt
+    case 5:   // bow
+    case 7:   // thrown
+    case 35:  // 2H piercing
+    case 36:  // fishing pole
+    case 45:  // martial
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool HoldingAnimationBlocksSecondaryWeapon(std::uint8_t holding_animation) noexcept {
+    return holding_animation == kHoldingAnimationTwoHandedWeapon ||
+        holding_animation == kHoldingAnimationBow;
+}
+
+bool TryHasLocalPlayerSkill(int skill_id, bool* has_skill) noexcept {
+    if (has_skill == nullptr ||
+        g_character_zone_client_has_skill == nullptr ||
+        skill_id < 0) {
+        return false;
+    }
+
+    void* character = nullptr;
+    if (!TryReadLocalPlayerCharacterPointer(&character) || character == nullptr) {
+        return false;
+    }
+
+#if defined(_MSC_VER)
+    __try {
+        *has_skill = g_character_zone_client_has_skill(character, skill_id);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    *has_skill = g_character_zone_client_has_skill(character, skill_id);
+#endif
+
+    return true;
+}
+
+OffhandWeaponPolicySnapshot CaptureOffhandWeaponPolicySnapshot(
+    std::uintptr_t item_wrapper_like,
+    const monomyth::server_auth_stats::Snapshot& authoritative_snapshot) noexcept {
+    OffhandWeaponPolicySnapshot snapshot = {};
+    snapshot.item_class_mask_copied =
+        TryReadClientItemClassMaskFromWrapper(
+            item_wrapper_like,
+            &snapshot.item_class_mask,
+            &snapshot.item_data_like);
+    snapshot.equip_slots_copied =
+        TryReadClientItemFieldFromWrapper(
+            item_wrapper_like,
+            kClientItemInfoEquipSlotsOffset,
+            &snapshot.equip_slots,
+            nullptr);
+    snapshot.item_class_copied =
+        TryReadClientItemFieldFromWrapper(
+            item_wrapper_like,
+            kClientItemInfoItemClassOffset,
+            &snapshot.item_class,
+            nullptr);
+    snapshot.holding_animation_copied =
+        TryReadLocalPlayerHoldingAnimation(&snapshot.holding_animation);
+    snapshot.is_weapon = snapshot.item_class_copied && IsWeaponItemClass(snapshot.item_class);
+    snapshot.can_wear_secondary =
+        snapshot.equip_slots_copied &&
+        (snapshot.equip_slots & kSecondaryEquipmentSlotBit) != 0;
+    snapshot.item_matches_assigned_class =
+        monomyth::multiclass_identity::HasAnyAuthoritativeClientItemClass(
+            authoritative_snapshot.has_classes_bitmask,
+            authoritative_snapshot.classes_bitmask,
+            snapshot.item_class_mask);
+    snapshot.dual_wield_skill_checked =
+        TryHasLocalPlayerSkill(kSkillDualWield, &snapshot.has_dual_wield_skill);
+    snapshot.primary_blocks_secondary_weapon =
+        snapshot.holding_animation_copied &&
+        HoldingAnimationBlocksSecondaryWeapon(snapshot.holding_animation);
+    snapshot.eligible =
+        snapshot.is_weapon &&
+        snapshot.can_wear_secondary &&
+        snapshot.dual_wield_skill_checked &&
+        !snapshot.primary_blocks_secondary_weapon &&
+        monomyth::multiclass_identity::HasAuthoritativeOffhandWeaponClassAndDualWield(
+            authoritative_snapshot.has_classes_bitmask,
+            authoritative_snapshot.classes_bitmask,
+            snapshot.item_class_mask,
+            snapshot.has_dual_wield_skill);
+    return snapshot;
 }
 
 SpellbookMemStateSnapshot CaptureSpellbookMemState(const void* this_window) noexcept {
@@ -6518,6 +6708,51 @@ void AppendClientInventorySlotFields(
     message->append(std::to_wstring(slot.unknown01));
 }
 
+void AppendOffhandWeaponPolicyFields(
+    std::wstring* message,
+    const OffhandWeaponPolicySnapshot& snapshot) {
+    if (message == nullptr) {
+        return;
+    }
+
+    message->append(L" item_class_mask_status=");
+    message->append(snapshot.item_class_mask_copied ? L"copied" : L"unavailable");
+    if (snapshot.item_class_mask_copied) {
+        message->append(L" item_class_mask_client=");
+        message->append(Hex32(snapshot.item_class_mask));
+    }
+    message->append(L" equip_slots_status=");
+    message->append(snapshot.equip_slots_copied ? L"copied" : L"unavailable");
+    if (snapshot.equip_slots_copied) {
+        message->append(L" equip_slots=");
+        message->append(Hex32(snapshot.equip_slots));
+    }
+    message->append(L" item_class_status=");
+    message->append(snapshot.item_class_copied ? L"copied" : L"unavailable");
+    if (snapshot.item_class_copied) {
+        message->append(L" item_class=");
+        message->append(std::to_wstring(snapshot.item_class));
+    }
+    message->append(L" offhand_weapon_candidate=");
+    message->append(snapshot.is_weapon && snapshot.can_wear_secondary ? L"true" : L"false");
+    message->append(L" holding_animation_status=");
+    message->append(snapshot.holding_animation_copied ? L"copied" : L"unavailable");
+    if (snapshot.holding_animation_copied) {
+        message->append(L" holding_animation=");
+        message->append(std::to_wstring(snapshot.holding_animation));
+    }
+    message->append(L" item_matches_assigned_class=");
+    message->append(snapshot.item_matches_assigned_class ? L"true" : L"false");
+    message->append(L" dual_wield_skill_checked=");
+    message->append(snapshot.dual_wield_skill_checked ? L"true" : L"false");
+    message->append(L" has_dual_wield_skill=");
+    message->append(snapshot.has_dual_wield_skill ? L"true" : L"false");
+    message->append(L" primary_blocks_secondary_weapon=");
+    message->append(snapshot.primary_blocks_secondary_weapon ? L"true" : L"false");
+    message->append(L" eligible_secondary_weapon_override=");
+    message->append(snapshot.eligible ? L"true" : L"false");
+}
+
 void LogAutoEquipClassGateDecision(
     void* this_context,
     std::uintptr_t caller_return_address,
@@ -6527,10 +6762,9 @@ void LogAutoEquipClassGateDecision(
     std::uint8_t original_result,
     std::uint8_t returned_result,
     std::uintptr_t item_like,
-    std::uintptr_t item_data_like,
-    std::uint32_t item_class_mask,
-    bool item_class_mask_copied,
-    bool item_matches_assigned_class,
+    const OffhandWeaponPolicySnapshot& offhand_policy,
+    bool candidate_slot_proven,
+    bool candidate_slot_is_secondary,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
     const std::uintptr_t module_base = GetHostModuleBase();
     std::wstring message =
@@ -6558,16 +6792,13 @@ void LogAutoEquipClassGateDecision(
     message += L" item_like=";
     message += HexPtr(item_like);
     message += L" item_data_like=";
-    message += HexPtr(item_data_like);
-    message += L" item_class_mask_status=";
-    message += item_class_mask_copied ? L"copied" : L"unavailable";
-    if (item_class_mask_copied) {
-        message += L" item_class_mask_client=";
-        message += Hex32(item_class_mask);
-    }
-    message += L" item_matches_assigned_class=";
-    message += item_matches_assigned_class ? L"true" : L"false";
-    message += L" override_mode=autoequip_hot_class_gate_authoritative_item_mask_intersection";
+    message += HexPtr(offhand_policy.item_data_like);
+    AppendOffhandWeaponPolicyFields(&message, offhand_policy);
+    message += L" candidate_slot_proven=";
+    message += candidate_slot_proven ? L"true" : L"false";
+    message += L" candidate_slot_is_secondary=";
+    message += candidate_slot_is_secondary ? L"true" : L"false";
+    message += L" override_mode=autoequip_hot_class_gate_trace_only";
     message += L" assigned_mask=";
     message += FormatAssignedMask(snapshot);
     message += L" has_assigned_mask=";
@@ -9522,9 +9753,7 @@ void LogInvSlotHandleLButtonCoreLateBranchGateBOverride(
     const ClientInventorySlotWire& slot_record,
     bool slot_record_copied,
     std::uintptr_t item_like,
-    std::uintptr_t item_data_like,
-    std::uint32_t item_class_mask,
-    bool item_class_mask_copied,
+    const OffhandWeaponPolicySnapshot& offhand_policy,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
     const std::uintptr_t module_base = GetHostModuleBase();
     std::wstring message =
@@ -9548,15 +9777,10 @@ void LogInvSlotHandleLButtonCoreLateBranchGateBOverride(
     message += L" item_like=";
     message += HexPtr(item_like);
     message += L" item_data_like=";
-    message += HexPtr(item_data_like);
-    message += L" item_class_mask_status=";
-    message += item_class_mask_copied ? L"copied" : L"unavailable";
-    if (item_class_mask_copied) {
-        message += L" item_class_mask_client=";
-        message += Hex32(item_class_mask);
-    }
-    message += L" item_matches_assigned_class=true";
-    message += L" override_mode=late_slot17_authoritative_item_mask_intersection";
+    message += HexPtr(offhand_policy.item_data_like);
+    AppendOffhandWeaponPolicyFields(&message, offhand_policy);
+    message += L" gate_label=equipment_slot_late_gate";
+    message += L" override_mode=secondary_weapon_authoritative_dual_wield";
     message += L" assigned_mask=";
     message += FormatAssignedMask(snapshot);
     message += L" has_assigned_mask=";
@@ -9573,10 +9797,7 @@ void LogInvSlotHandleLButtonCoreLateBranchGateBObservation(
     const ClientInventorySlotWire& slot_record,
     bool slot_record_copied,
     std::uintptr_t item_like,
-    std::uintptr_t item_data_like,
-    std::uint32_t item_class_mask,
-    bool item_class_mask_copied,
-    bool item_matches_assigned_class,
+    const OffhandWeaponPolicySnapshot& offhand_policy,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
     const std::uintptr_t module_base = GetHostModuleBase();
     std::wstring message =
@@ -9601,17 +9822,11 @@ void LogInvSlotHandleLButtonCoreLateBranchGateBObservation(
     message += L" item_like=";
     message += HexPtr(item_like);
     message += L" item_data_like=";
-    message += HexPtr(item_data_like);
-    message += L" item_class_mask_status=";
-    message += item_class_mask_copied ? L"copied" : L"unavailable";
-    if (item_class_mask_copied) {
-        message += L" item_class_mask_client=";
-        message += Hex32(item_class_mask);
-    }
-    message += L" item_matches_assigned_class=";
-    message += item_matches_assigned_class ? L"true" : L"false";
+    message += HexPtr(offhand_policy.item_data_like);
+    AppendOffhandWeaponPolicyFields(&message, offhand_policy);
     message += L" override_candidate=";
-    message += item_class_mask_copied && item_matches_assigned_class ? L"true" : L"false";
+    message += offhand_policy.eligible ? L"true" : L"false";
+    message += L" gate_label=equipment_slot_late_gate";
     message += L" assigned_mask=";
     message += FormatAssignedMask(snapshot);
     message += L" has_assigned_mask=";
@@ -10126,25 +10341,15 @@ bool MONOMYTH_FASTCALL StartSpellScribePrecheckGateHook(
     if (is_hot_autoequip_caller) {
         std::uintptr_t item_like = 0;
         const bool item_like_copied = TryCopyObject(descriptor_like, &item_like);
-        std::uintptr_t item_data_like = 0;
-        std::uint32_t item_class_mask = 0;
-        const bool item_class_mask_copied =
-            item_like_copied &&
-            TryReadClientItemClassMaskFromWrapper(item_like, &item_class_mask, &item_data_like);
-        const bool item_matches_assigned_class =
-            item_class_mask_copied &&
-            monomyth::multiclass_identity::HasAnyAuthoritativeClientItemClass(
-                authoritative_snapshot.has_classes_bitmask,
-                authoritative_snapshot.classes_bitmask,
-                item_class_mask);
-        if (g_multiclass_item_usability_enabled &&
-            !final_result &&
-            require_known_like == 0 &&
-            item_matches_assigned_class) {
-            final_result = true;
-            ++g_auto_equip_class_gate_override_count;
-        }
-        if (!original_result || final_result != original_result) {
+        const OffhandWeaponPolicySnapshot offhand_policy =
+            item_like_copied
+            ? CaptureOffhandWeaponPolicySnapshot(item_like, authoritative_snapshot)
+            : OffhandWeaponPolicySnapshot {};
+        const bool candidate_slot_proven = false;
+        const bool candidate_slot_is_secondary = false;
+        if ((offhand_policy.is_weapon && offhand_policy.can_wear_secondary) ||
+            !original_result ||
+            final_result != original_result) {
             LogAutoEquipClassGateDecision(
                 this_context,
                 caller_return_address,
@@ -10154,10 +10359,9 @@ bool MONOMYTH_FASTCALL StartSpellScribePrecheckGateHook(
                 original_result ? 1 : 0,
                 final_result ? 1 : 0,
                 item_like,
-                item_data_like,
-                item_class_mask,
-                item_class_mask_copied,
-                item_matches_assigned_class,
+                offhand_policy,
+                candidate_slot_proven,
+                candidate_slot_is_secondary,
                 authoritative_snapshot);
         }
     }
@@ -11787,24 +11991,17 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchGateBCallsiteHo
         slot_record_copied &&
         slot_record.type == 0 &&
         slot_record.unknown02 == 0 &&
-        slot_record.slot >= 0 &&
-        slot_record.slot < kFirstGeneralInventorySlot &&
+        slot_record.slot == kSecondaryEquipmentSlot &&
         slot_record.subindex == -1) {
         const monomyth::server_auth_stats::Snapshot snapshot =
             monomyth::server_auth_stats::GetSnapshot();
         const std::uintptr_t item_like =
             g_invslot_handle_lbutton_core_last_late_lookup_item_pointer;
-        std::uintptr_t item_data_like = 0;
-        std::uint32_t item_class_mask = 0;
-        const bool item_class_mask_copied =
-            TryReadClientItemClassMaskFromWrapper(item_like, &item_class_mask, &item_data_like);
-        const bool item_matches_assigned_class =
-            item_class_mask_copied &&
-            monomyth::multiclass_identity::HasAnyAuthoritativeClientItemClass(
-                snapshot.has_classes_bitmask,
-                snapshot.classes_bitmask,
-                item_class_mask);
-        if (item_matches_assigned_class) {
+        const OffhandWeaponPolicySnapshot offhand_policy =
+            CaptureOffhandWeaponPolicySnapshot(item_like, snapshot);
+        const bool is_offhand_weapon_attempt =
+            offhand_policy.is_weapon && offhand_policy.can_wear_secondary;
+        if (is_offhand_weapon_attempt && offhand_policy.eligible) {
             ++g_invslot_handle_lbutton_core_late_branch_gate_b_override_count;
             LogInvSlotHandleLButtonCoreLateBranchGateBOverride(
                 slot_record_like,
@@ -11813,24 +12010,21 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchGateBCallsiteHo
                 slot_record,
                 slot_record_copied,
                 item_like,
-                item_data_like,
-                item_class_mask,
-                item_class_mask_copied,
+                offhand_policy,
                 snapshot);
             return 1;
         }
-        LogInvSlotHandleLButtonCoreLateBranchGateBObservation(
-            slot_record_like,
-            caller_return_address,
-            original_result,
-            slot_record,
-            slot_record_copied,
-            item_like,
-            item_data_like,
-            item_class_mask,
-            item_class_mask_copied,
-            item_matches_assigned_class,
-            snapshot);
+        if (is_offhand_weapon_attempt) {
+            LogInvSlotHandleLButtonCoreLateBranchGateBObservation(
+                slot_record_like,
+                caller_return_address,
+                original_result,
+                slot_record,
+                slot_record_copied,
+                item_like,
+                offhand_policy,
+                snapshot);
+        }
     }
     if (!g_multiclass_item_usability_enabled) {
         LogInvSlotHandleLButtonCoreLateBranchGateTrace(
@@ -14515,6 +14709,53 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
     monomyth::logger::Log(message);
 
     const std::uintptr_t module_base = GetHostModuleBase();
+    constexpr std::array<std::uint8_t, 16> kCharacterZoneClientHasSkillEntryBytes = {
+        0x8b, 0x08, 0x6a, 0x00, 0x6a, 0x01, 0xc7, 0x44,
+        0x24, 0x40, 0x0a, 0x00, 0x00, 0x00, 0xe8, 0xad};
+    std::array<std::uint8_t, kCharacterZoneClientHasSkillEntryBytes.size()>
+        live_character_zone_client_has_skill_entry = {};
+    const bool has_skill_entry_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kCharacterZoneClientHasSkillRva),
+        live_character_zone_client_has_skill_entry.size(),
+        live_character_zone_client_has_skill_entry.data());
+    const bool has_skill_entry_matches =
+        has_skill_entry_copied &&
+        std::memcmp(
+            live_character_zone_client_has_skill_entry.data(),
+            kCharacterZoneClientHasSkillEntryBytes.data(),
+            kCharacterZoneClientHasSkillEntryBytes.size()) == 0;
+    if (!has_skill_entry_matches) {
+        std::wstring has_skill_message =
+            L"hook_manager: offhand dual wield seam denied target=CharacterZoneClient::HasSkill expected=\"";
+        has_skill_message += HexBytes(
+            kCharacterZoneClientHasSkillEntryBytes.data(),
+            kCharacterZoneClientHasSkillEntryBytes.size());
+        has_skill_message += L"\" live=\"";
+        has_skill_message += HexBytes(
+            live_character_zone_client_has_skill_entry.data(),
+            live_character_zone_client_has_skill_entry.size());
+        has_skill_message += L"\" address=";
+        has_skill_message += HexPtr(module_base + kCharacterZoneClientHasSkillRva);
+        has_skill_message += L" target_rva=";
+        has_skill_message += Hex32(kCharacterZoneClientHasSkillRva);
+        monomyth::logger::Log(has_skill_message);
+        RemoveInlineDetour(&g_can_equip_detour);
+        g_original_can_equip = nullptr;
+        g_multiclass_item_usability_enabled = false;
+        return false;
+    }
+    g_character_zone_client_has_skill_address = module_base + kCharacterZoneClientHasSkillRva;
+    g_character_zone_client_has_skill =
+        reinterpret_cast<CharacterZoneClientHasSkillFn>(g_character_zone_client_has_skill_address);
+    {
+        std::wstring has_skill_message =
+            L"hook_manager: offhand dual wield seam validated target=CharacterZoneClient::HasSkill address=";
+        has_skill_message += HexPtr(g_character_zone_client_has_skill_address);
+        has_skill_message += L" target_rva=";
+        has_skill_message += Hex32(kCharacterZoneClientHasSkillRva);
+        monomyth::logger::Log(has_skill_message);
+    }
+
     constexpr std::array<std::uint8_t, 8> kMoveItemSlot21LookupEntryBytes = {
         0x51, 0x56, 0x83, 0xc1, 0x04, 0xc7, 0x44, 0x24};
     std::array<std::uint8_t, kMoveItemSlot21LookupEntryBytes.size()> live_slot21_lookup_entry =
@@ -16573,6 +16814,8 @@ bool RemoveCanEquipHook() noexcept {
     g_original_move_item_slot21_lookup = nullptr;
     g_original_move_item_descriptor_build = nullptr;
     g_original_move_item_slot_populate = nullptr;
+    g_character_zone_client_has_skill = nullptr;
+    g_character_zone_client_has_skill_address = 0;
     if (!g_can_equip_detour.installed) {
         return true;
     }
