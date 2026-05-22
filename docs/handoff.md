@@ -22,7 +22,7 @@ What is confirmed working:
 - `/who` now visibly overrides correctly through the live class-label seam at `0x477e6`.
 
 What is still not working visibly:
-- Inventory class title still shows the single native class.
+- Item-display class text still shows the single native class.
 
 ## Important Evidence
 
@@ -63,6 +63,29 @@ So any older notes that referred to:
 
 should now be treated as naming drift, not as current truth.
 
+### Focused Ghidra correction for the remaining surface
+
+See `/home/zutfen/inventory_title_path_report.md`.
+
+Main conclusions:
+- `InventoryWindow + 0x2cc/+0x2d0` is the wrong object for class text in this ROF2 client; those offsets are alt-currency controls there.
+- `IDW_ClassTitle1` / `IDW_ClassTitle2` belong to `ItemDisplayWindow`, constructed at `0x6a0d80`.
+- The proven item-display refresh chain is:
+  - `0x6ae610` / `0x6ae710`
+  - `0x6ae100`
+  - `0x6a9540`
+- The proven class-text producer inside that path does not use:
+  - `0x514dc0` (`GetClassDesc`)
+  - `0x5153c0` (`GetClassThreeLetterCode`)
+- It does use:
+  - direct class-bitmask formatting
+  - shared string lookup `0x7d0660`
+  - row-control writes under `this + 0x314`
+
+Interpretation:
+- the remaining blocker is no longer well-described as an `InventoryWindow` title issue
+- the active clean-room target is the `ItemDisplayWindow` class-text producer path at `0x6ae100 -> 0x6a9540`
+
 ### THJ DLL findings changed the strategy
 
 See [thj-decompile-results.md](/home/zutfen/code/EQEmu-Monomyth-Client/docs/thj-decompile-results.md).
@@ -84,13 +107,14 @@ Important THJ clue:
 
 ### Working rules from THJ decomp
 
-These should actively constrain the next inventory attempts:
+These should actively constrain the next item-display attempts:
 - do not reopen final-control text interception ideas like `CXStr::Assign`, `CXWnd::SetWindowTextA`, or guessed direct title writes; THJ evidence points away from that layer
 - do not treat inventory window notifications as the likely fix seam; at most they are a bounded correlation trigger to help find the real producer
 - prefer recovering the clean-room equivalent of `EQ_CharSelectClassNameFunc` over deepening unrelated helper or UI callback hooks
 - treat `0x6843ff` as a proven anchor for the abbreviated branch only, not as proof that the visible inventory title uses the same caller path
 - if a trace path is not converging on a producer shaped like `EQ_CharSelectClassNameFunc` / `FUN_10024920`, assume drift and stop before building more patches on that seam
 - keep the current progression-selection writer separate from inventory until a distinct producer is pinned; the current `char_select_class_name_func` slot is still not proof of THJ parity
+- do not keep assuming the remaining surface uses `InventoryWindow + 0x2cc/+0x2d0` or the `GetClassDesc` / `GetClassThreeLetterCode` helpers; the focused Ghidra report ruled those out for the visible item-display path
 
 ## What We Have Implemented
 
@@ -221,7 +245,7 @@ The same cleanup pass also split the capability gate correctly:
 
 ## Dead Ends / Ruled-Out Approaches
 
-These have been tried and did not produce the visible inventory class title:
+These have been tried and did not produce the remaining visible class text surface:
 - guessed inventory refresh function
 - `CXWnd::SetWindowTextA`
 - `CXStr` assign helper at `0x405d90`
@@ -229,8 +253,8 @@ These have been tried and did not produce the visible inventory class title:
 The strongest current read is that these were the wrong layer, not that multiclass formatting was wrong.
 
 The runtime now reflects that conclusion:
-- the startup path no longer attempts the `CXStr::Assign` / `CXWnd::SetWindowTextA` inventory-title hook
-- inventory title work should resume only once a real producer seam is pinned
+- the startup path no longer attempts the `CXStr::Assign` / `CXWnd::SetWindowTextA` title hook
+- the remaining work should stay on the proven `ItemDisplayWindow` producer path rather than reopening `InventoryWindow` offsets
 
 ## Most Recent Solved `/who` Run Summary
 
@@ -252,12 +276,15 @@ The useful live seam is now known:
 - shared lookup target `0x7d0660`
 - visible class-label caller `0x477e6`
 
-### 2. Pivot fully to the inventory-window full-name surface
+### 2. Pivot fully to the item-display full-name surface
 
 Current strongest hypothesis:
-- the remaining inventory class title still needs a producer seam equivalent to THJ `EQ_CharSelectClassNameFunc`
+- the remaining visible class text lives in the proven `ItemDisplayWindow` refresh path:
+  - `0x6ae100`
+  - `0x6a9540`
+- that path is item-display-specific and does not use `GetClassDesc` / `GetClassThreeLetterCode`
 - direct UI-text interception remains disproven
-- the early `0x18e554` full-name path is still only inconclusive, not proven useful for the visible inventory title
+- the early `0x18e554` full-name path is still only inconclusive, not proven useful for the visible item-display path
 
 ### 3. Stop conflating progression-selection writer with real `EQ_CharSelectClassNameFunc`
 
