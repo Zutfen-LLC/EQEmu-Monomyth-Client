@@ -21,9 +21,10 @@
 #include "opcode_reference.h"
 #include "server_auth_stats_observer.h"
 
-// PacketObserver remains non-mutating. The only opcode-specific payload decode
-// is the read-only OP_ServerAuthStats class-bitmask capture; optional generic
-// introspection still requires both dev opt-ins and reads only a small prefix.
+// PacketObserver remains non-mutating. The only opcode-specific payload decodes
+// are read-only observers for OP_ServerAuthStats and OP_WhoAllResponse;
+// optional generic introspection still requires both dev opt-ins and reads
+// only a small prefix.
 
 namespace monomyth::packet_observer {
 namespace {

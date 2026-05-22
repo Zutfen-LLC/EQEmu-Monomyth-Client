@@ -37,6 +37,22 @@ Treat `HANDOFF.md` as the current source of truth for the active seam, known dea
 - Prefer direct producer/update seams over generic UI hooks.
 - When a seam is disproven, update `docs/multiclass-negative-results.md`.
 
+## RVA Discipline
+
+- Do not hand-transcribe an RVA from a nearby VA without proving the subtraction against the live module base.
+- When deriving an RVA from disassembly, write down the full EQ virtual address first, then compute `rva = va - module_base`, with ROF2 `eqgame.exe` usually loading at `0x400000`.
+- Before shipping a new pinned seam, validate it in two ways:
+  - static: confirm the exact bytes at the intended VA/RVA with `objdump` or equivalent
+  - runtime: log the computed `callsite_address` or `target_address` and confirm it matches the expected live address
+- Prefer `scripts/va_rva.py` for VA/RVA conversion instead of hand-doing `0x400000` subtraction in notes or patches.
+- For callsite patches, always validate both:
+  - the exact callsite bytes
+  - the resolved original call target
+- Prefer naming constants from the proved seam role plus the final RVA, not from an earlier guess.
+- If a hook install fails because of byte mismatch, treat that as evidence the seam may be wrong before trying behavior changes.
+- When disassembly shows both a full VA and an RVA in notes/logs, keep both in comments or diagnostic output until the seam is proven hot in live logs.
+- Before asking the user to retest a new hook, verify the startup log contains the exact installed seam name and the expected RVA/address pair.
+
 ## Validation
 
 When touching the current client tracing work, prefer:
@@ -50,4 +66,3 @@ When touching the current client tracing work, prefer:
 - Be concise.
 - Prefer action over long summaries.
 - State the current verdict and the next concrete step.
-

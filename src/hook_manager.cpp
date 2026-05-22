@@ -45,6 +45,8 @@ constexpr std::uint64_t kSpellTraceLogInterval = 100;
 constexpr std::uint32_t kMemorizeSpellOpcode = 0x217c;
 constexpr std::uint32_t kDeleteSpellOpcode = 0x3358;
 constexpr std::uint32_t kMoveItemOpcode = 0x32ee;
+constexpr std::uint32_t kGmTrainingOpcode = 0x1966;
+constexpr std::uint32_t kGmEndTrainingOpcode = 0x4d6b;
 constexpr std::uint32_t kMemorizeSendCorrelationMaxWrapperSends = 8;
 constexpr std::uint32_t kSpellbookScribeCorrelationMaxWrapperSends = 8;
 constexpr std::uint32_t kInventoryClassDisplayCorrelationBudget = 48;
@@ -69,7 +71,8 @@ constexpr std::uint32_t kEquipClickRequirementLookupCallsiteRva = 0x000f78d5;
 constexpr std::uint32_t kAutoEquipClassGateCallerReturnARva = 0x000fe184;
 constexpr std::uint32_t kAutoEquipClassGateCallerReturnBRva = 0x000fe354;
 constexpr std::uint32_t kAutoEquipClassGateTargetRva = 0x0004c430;
-constexpr std::uint32_t kGuildTrainerValidationTargetRva = 0x001b0200;
+constexpr std::uint32_t kGuildTrainerClassLookupCallsiteRva = 0x001374a1;
+constexpr std::uint32_t kGuildTrainerClassLookupTargetRva = 0x003db210;
 constexpr std::uint32_t kEquipLocalRejectMessageCallsiteRva = 0x000f7987;
 constexpr std::uint32_t kDragDropLocalRejectMessageCallsiteRva = 0x002995b3;
 constexpr std::uint32_t kDragDropSilentPrecheckCallsiteRva = 0x00299718;
@@ -182,6 +185,7 @@ constexpr std::uint32_t kDragContextGlobalRva = 0x009d261c;
 constexpr std::uint32_t kDragFlagsGlobalRva = 0x009d2660;
 constexpr std::uint32_t kActiveWindowGlobalRva = 0x009d25ac;
 constexpr std::uint32_t kInventoryWindowGlobalRva = 0x0091ec8c;
+constexpr std::uint32_t kActiveGuildTrainerGlobalRva = 0x009d2658;
 // MQ2 legacy ROF2 exposes pinstCharData at this same RVA; use it as the
 // authoritative local character object when we need the live PC profile.
 constexpr std::uint32_t kLocalCharDataGlobalRva = 0x009d261c;
@@ -210,13 +214,15 @@ constexpr std::size_t kInventoryClassTitleControlOffset = 0x02cc;
 constexpr std::size_t kCxWndTextFieldOffset = 0x00e8;
 constexpr std::size_t kEqSpawnNameOffset = 0x00a4;
 constexpr std::size_t kEqSpawnNameMaxBytes = 0x40;
+constexpr std::size_t kGuildTrainerClassLookupResolvedClassOffset = 0x3374;
+constexpr std::size_t kGuildTrainerCallerClassOffset = 0x0eb8;
 // MacroQuest eqlib's emu/ROF2 layout reads PlayerClient::GetClass() from
 // mActorClient.Class. With mActorClient at 0x0ea4 and Class at +0x13c inside
 // ActorClient, the effective in-world class field is PlayerClient + 0x0fe0.
 constexpr std::size_t kEqPlayerDisplayedClassOffset = 0x0fe0;
 constexpr wchar_t kMemorizeSendTraceSliceId[] = L"CLIENT-MEM-SEND-TRACE-001";
-constexpr std::array<std::uint8_t, 11> kGuildTrainerValidationBytes = {{
-    0x83, 0xec, 0x08, 0x53, 0x8b, 0x5c, 0x24, 0x10, 0x55, 0x8b, 0xe9,
+constexpr std::array<std::uint8_t, 5> kGuildTrainerClassLookupCallsiteBytes = {{
+    0xe8, 0x6a, 0x3d, 0x2a, 0x00,
 }};
 
 using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
@@ -235,11 +241,7 @@ using GetSpellLevelNeededFn = std::uint8_t (MONOMYTH_THISCALL*)(
 using IsClassUsablePredicateFn = int (MONOMYTH_THISCALL*)(
     void* this_character,
     unsigned int class_id);
-using GuildTrainerValidationFn = int (MONOMYTH_THISCALL*)(
-    void* this_context,
-    void* actor_like,
-    void* unknown_like,
-    void* descriptor_like);
+using GuildTrainerClassLookupFn = void* (MONOMYTH_THISCALL*)(void* this_context);
 // Cleanroom evidence pins a bool-like item usability gate with ECX=this and five stack args.
 using CanEquipFn = int (MONOMYTH_THISCALL*)(
     void* this_context,
@@ -702,7 +704,6 @@ InlineDetour g_receive_dispatch_detour = {};
 InlineDetour g_handle_rbutton_up_detour = {};
 InlineDetour g_get_spell_level_needed_detour = {};
 InlineDetour g_is_class_usable_predicate_detour = {};
-InlineDetour g_guild_trainer_validation_detour = {};
 InlineDetour g_can_equip_detour = {};
 InlineDetour g_inv_slot_mgr_move_item_detour = {};
 InlineDetour g_move_item_validation_gate_detour = {};
@@ -797,6 +798,7 @@ CallsitePatch g_invslot_handle_lbutton_core_late_branch_gate_b_callsite_patch = 
 CallsitePatch g_invslot_handle_lbutton_core_late_branch_dispatch_callsite_patch = {};
 CallsitePatch g_move_item_ctor_site_a_callsite_patch = {};
 CallsitePatch g_move_item_ctor_site_b_callsite_patch = {};
+CallsitePatch g_guild_trainer_class_lookup_callsite_patch = {};
 CallsitePatch g_equip_local_record_lookup_callsite_patch = {};
 CallsitePatch g_equip_local_requirement_lookup_a_callsite_patch = {};
 CallsitePatch g_equip_local_requirement_lookup_b_callsite_patch = {};
@@ -806,7 +808,7 @@ ReceiveDispatchFn g_original_receive_dispatch = nullptr;
 HandleRButtonUpFn g_original_handle_rbutton_up = nullptr;
 GetSpellLevelNeededFn g_original_get_spell_level_needed = nullptr;
 IsClassUsablePredicateFn g_original_is_class_usable_predicate = nullptr;
-GuildTrainerValidationFn g_original_guild_trainer_validation = nullptr;
+GuildTrainerClassLookupFn g_original_guild_trainer_class_lookup = nullptr;
 CanEquipFn g_original_can_equip = nullptr;
 InvSlotMgrMoveItemFn g_original_inv_slot_mgr_move_item = nullptr;
 EquipRecordLookupFn g_original_equip_record_lookup = nullptr;
@@ -989,13 +991,17 @@ thread_local bool g_character_list_manual_refresh_in_progress = false;
 std::uint64_t g_is_class_usable_predicate_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
 std::uint64_t g_auto_equip_class_gate_override_count = 0;
-std::uint64_t g_guild_trainer_validation_override_count = 0;
+std::uint64_t g_guild_trainer_class_lookup_override_count = 0;
+std::uint64_t g_guild_trainer_class_lookup_call_count = 0;
+std::uint8_t g_pending_guild_trainer_session_class_id = 0;
 std::uint64_t g_who_class_name_entry_trace_count = 0;
 thread_local const void* g_active_who_class_name_subject = nullptr;
 std::uint64_t g_ui_class_display_trace_count = 0;
 std::uint32_t g_active_equip_nested_validation_id = 0;
 std::uint32_t g_equip_nested_validation_count = 0;
 std::uintptr_t g_invslot_handle_lbutton_core_last_late_lookup_item_pointer = 0;
+std::array<std::uint8_t, kGuildTrainerClassLookupResolvedClassOffset + 1>
+    g_guild_trainer_class_lookup_override_record = {};
 
 struct InventoryClassDisplayCorrelationWindow {
     bool active = false;
@@ -1020,6 +1026,37 @@ struct ItemDisplayClassDisplayCorrelationWindow {
     std::uint32_t remaining_before = 0;
     std::uint32_t remaining_after = 0;
 };
+
+struct GuildTrainerClassResolution {
+    bool module_base_available = false;
+    bool current_frame_copied = false;
+    bool caller_ebp_copied = false;
+    bool active_trainer_global_copied = false;
+    bool active_trainer_present = false;
+    bool caller_context_used = false;
+    bool caller_class_copied = false;
+    bool displayed_class_copied = false;
+    bool fallback_class_copied = false;
+    bool normalized_class_copied = false;
+    std::uintptr_t current_frame = 0;
+    std::uintptr_t caller_ebp = 0;
+    std::uintptr_t trainer_spawn_like = 0;
+    unsigned int trainer_class_id = 0;
+    unsigned int normalized_class_id = 0;
+};
+
+struct GuildTrainerSessionClassOverrideState {
+    bool active = false;
+    std::uint8_t active_class_id = 0;
+    std::uintptr_t local_player = 0;
+    bool displayed_original_copied = false;
+    std::uint8_t displayed_original_class_id = 0;
+    std::uintptr_t profile = 0;
+    bool profile_original_copied = false;
+    std::uint32_t profile_original_class_id = 0;
+};
+
+GuildTrainerSessionClassOverrideState g_guild_trainer_session_class_override = {};
 
 std::uintptr_t GetHostModuleBase() noexcept;
 
@@ -2438,6 +2475,39 @@ bool TryCopyObject(const void* source, T* destination) noexcept {
         reinterpret_cast<std::uint8_t*>(destination));
 }
 
+bool TryWriteBytes(void* destination, const void* source, std::size_t length) noexcept {
+    if (destination == nullptr || source == nullptr || length == 0) {
+        return false;
+    }
+
+    DWORD old_protect = 0;
+    if (!VirtualProtect(destination, length, PAGE_EXECUTE_READWRITE, &old_protect)) {
+        return false;
+    }
+
+    bool copied = true;
+#if defined(_MSC_VER)
+    __try {
+        std::memcpy(destination, source, length);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        copied = false;
+    }
+#else
+    std::memcpy(destination, source, length);
+#endif
+
+    FlushInstructionCache(GetCurrentProcess(), destination, length);
+
+    DWORD ignored = 0;
+    VirtualProtect(destination, length, old_protect, &ignored);
+    return copied;
+}
+
+template <typename T>
+bool TryWriteObject(void* destination, const T& value) noexcept {
+    return TryWriteBytes(destination, &value, sizeof(T));
+}
+
 bool TryReadEqPlayerDisplayedClassId(
     const void* subject,
     std::uint8_t* class_id) noexcept {
@@ -2582,6 +2652,54 @@ bool TryReadLocalCharDataPointer(void** local_char_data) noexcept {
         local_char_data);
 }
 
+bool TryResolveLocalProfileClassStorage(
+    void** profile_out,
+    std::uint32_t* class_id_out) noexcept {
+    if (profile_out == nullptr || class_id_out == nullptr) {
+        return false;
+    }
+
+    *profile_out = nullptr;
+    *class_id_out = 0;
+
+    void* local_char_data = nullptr;
+    if (!TryReadLocalCharDataPointer(&local_char_data) || local_char_data == nullptr) {
+        return false;
+    }
+
+    constexpr std::size_t kCharInfoCi2Offset = 0x31f0;
+    constexpr std::size_t kCi2InfoCharInfo2Offset = 0x0004;
+    constexpr std::size_t kPcProfileClassOffset = 0x3374;
+
+    void* ci2 = nullptr;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(local_char_data) + kCharInfoCi2Offset,
+            &ci2) ||
+        ci2 == nullptr) {
+        return false;
+    }
+
+    void* profile = nullptr;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(ci2) + kCi2InfoCharInfo2Offset,
+            &profile) ||
+        profile == nullptr) {
+        return false;
+    }
+
+    std::uint32_t profile_class_id = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(profile) + kPcProfileClassOffset,
+            &profile_class_id) ||
+        !monomyth::multiclass_identity::IsPlayableClassId(profile_class_id)) {
+        return false;
+    }
+
+    *profile_out = profile;
+    *class_id_out = profile_class_id;
+    return true;
+}
+
 bool TryReadInventoryWindowPointer(void** inventory_window) noexcept {
     if (inventory_window == nullptr) {
         return false;
@@ -2617,38 +2735,9 @@ bool TryReadLocalProfileClassId(std::uint8_t* class_id) noexcept {
         return false;
     }
 
-    void* local_char_data = nullptr;
-    if (!TryReadLocalCharDataPointer(&local_char_data) || local_char_data == nullptr) {
-        return false;
-    }
-
-    // MQ2 legacy ROF2 reads GetCharInfo2() as:
-    //   ((PCHARINFO)pCharData)->pCI2->pCharInfo2
-    constexpr std::size_t kCharInfoCi2Offset = 0x31f0;
-    constexpr std::size_t kCi2InfoCharInfo2Offset = 0x0004;
-    constexpr std::size_t kPcProfileClassOffset = 0x3374;
-
-    void* ci2 = nullptr;
-    if (!TryCopyObject(
-            reinterpret_cast<const std::uint8_t*>(local_char_data) + kCharInfoCi2Offset,
-            &ci2) ||
-        ci2 == nullptr) {
-        return false;
-    }
-
     void* profile = nullptr;
-    if (!TryCopyObject(
-            reinterpret_cast<const std::uint8_t*>(ci2) + kCi2InfoCharInfo2Offset,
-            &profile) ||
-        profile == nullptr) {
-        return false;
-    }
-
     std::uint32_t profile_class_id = 0;
-    if (!TryCopyObject(
-            reinterpret_cast<const std::uint8_t*>(profile) + kPcProfileClassOffset,
-            &profile_class_id) ||
-        !monomyth::multiclass_identity::IsPlayableClassId(profile_class_id)) {
+    if (!TryResolveLocalProfileClassStorage(&profile, &profile_class_id)) {
         return false;
     }
 
@@ -2670,6 +2759,126 @@ bool TryReadLocalPlayerDisplayedClassId(std::uint8_t* class_id) noexcept {
     }
 
     return TryReadLocalProfileClassId(class_id);
+}
+
+void RestoreGuildTrainerSessionClassOverride(const wchar_t* trigger) noexcept {
+    if (!g_guild_trainer_session_class_override.active) {
+        return;
+    }
+
+    bool displayed_restore_ok = false;
+    if (g_guild_trainer_session_class_override.displayed_original_copied &&
+        g_guild_trainer_session_class_override.local_player != 0) {
+        displayed_restore_ok = TryWriteObject(
+            reinterpret_cast<void*>(
+                g_guild_trainer_session_class_override.local_player +
+                kEqPlayerDisplayedClassOffset),
+            g_guild_trainer_session_class_override.displayed_original_class_id);
+    }
+
+    bool profile_restore_ok = false;
+    if (g_guild_trainer_session_class_override.profile_original_copied &&
+        g_guild_trainer_session_class_override.profile != 0) {
+        profile_restore_ok = TryWriteObject(
+            reinterpret_cast<void*>(
+                g_guild_trainer_session_class_override.profile + 0x3374),
+            g_guild_trainer_session_class_override.profile_original_class_id);
+    }
+
+    std::wstring message = L"GuildTrainerSessionClassOverride";
+    message += L" action=restore";
+    message += L" trigger=\"";
+    message += (trigger == nullptr ? L"" : trigger);
+    message += L"\" active_class_id=";
+    message += std::to_wstring(g_guild_trainer_session_class_override.active_class_id);
+    message += L" displayed_restore_ok=";
+    message += displayed_restore_ok ? L"true" : L"false";
+    message += L" profile_restore_ok=";
+    message += profile_restore_ok ? L"true" : L"false";
+    monomyth::logger::Log(message);
+
+    g_guild_trainer_session_class_override = {};
+}
+
+void ApplyGuildTrainerSessionClassOverride(
+    std::uint8_t class_id,
+    const wchar_t* trigger) noexcept {
+    if (!monomyth::multiclass_identity::IsPlayableClassId(class_id)) {
+        return;
+    }
+
+    if (g_guild_trainer_session_class_override.active &&
+        g_guild_trainer_session_class_override.active_class_id == class_id) {
+        return;
+    }
+
+    if (g_guild_trainer_session_class_override.active) {
+        RestoreGuildTrainerSessionClassOverride(L"switch_trainer_session");
+    }
+
+    GuildTrainerSessionClassOverrideState state = {};
+    state.active = true;
+    state.active_class_id = class_id;
+
+    void* local_player = nullptr;
+    std::uint8_t displayed_class_id = 0;
+    const bool displayed_ok =
+        TryReadLocalPlayerPointer(&local_player) &&
+        local_player != nullptr &&
+        TryReadEqPlayerDisplayedClassId(local_player, &displayed_class_id) &&
+        monomyth::multiclass_identity::IsPlayableClassId(displayed_class_id);
+    if (displayed_ok) {
+        state.local_player = reinterpret_cast<std::uintptr_t>(local_player);
+        state.displayed_original_copied = true;
+        state.displayed_original_class_id = displayed_class_id;
+    }
+
+    void* profile = nullptr;
+    std::uint32_t profile_class_id = 0;
+    const bool profile_ok =
+        TryResolveLocalProfileClassStorage(&profile, &profile_class_id);
+    if (profile_ok) {
+        state.profile = reinterpret_cast<std::uintptr_t>(profile);
+        state.profile_original_copied = true;
+        state.profile_original_class_id = profile_class_id;
+    }
+
+    bool displayed_write_ok = false;
+    if (state.displayed_original_copied && state.local_player != 0) {
+        displayed_write_ok = TryWriteObject(
+            reinterpret_cast<void*>(state.local_player + kEqPlayerDisplayedClassOffset),
+            class_id);
+    }
+
+    bool profile_write_ok = false;
+    if (state.profile_original_copied && state.profile != 0) {
+        const std::uint32_t widened_class_id = class_id;
+        profile_write_ok = TryWriteObject(
+            reinterpret_cast<void*>(state.profile + 0x3374),
+            widened_class_id);
+    }
+
+    if (!displayed_write_ok && !profile_write_ok) {
+        state = {};
+    }
+
+    std::wstring message = L"GuildTrainerSessionClassOverride";
+    message += L" action=apply";
+    message += L" trigger=\"";
+    message += (trigger == nullptr ? L"" : trigger);
+    message += L"\" requested_class_id=";
+    message += std::to_wstring(class_id);
+    message += L" displayed_original_ok=";
+    message += state.displayed_original_copied ? L"true" : L"false";
+    message += L" profile_original_ok=";
+    message += state.profile_original_copied ? L"true" : L"false";
+    message += L" displayed_write_ok=";
+    message += displayed_write_ok ? L"true" : L"false";
+    message += L" profile_write_ok=";
+    message += profile_write_ok ? L"true" : L"false";
+    monomyth::logger::Log(message);
+
+    g_guild_trainer_session_class_override = state;
 }
 
 const char* BuildLocalPlayerClassDisplayAscii(
@@ -5015,40 +5224,46 @@ bool NormalizeGuildTrainerClassId(unsigned int trainer_class_id, unsigned int* n
     return true;
 }
 
-bool TryReadGuildTrainerClassFromValidatorContext(
-    void* actor_like,
-    unsigned int* trainer_class_id,
-    unsigned int* normalized_class_id,
-    std::uintptr_t* trainer_spawn_like) noexcept {
-    if (trainer_class_id == nullptr || normalized_class_id == nullptr) {
+std::uintptr_t GetCurrentFramePointer() noexcept {
+#if defined(_MSC_VER)
+    std::uintptr_t frame = 0;
+    __asm {
+        mov frame, ebp
+    }
+    return frame;
+#else
+    std::uintptr_t frame = 0;
+    asm volatile("movl %%ebp, %0" : "=r"(frame));
+    return frame;
+#endif
+}
+
+bool TryReadGuildTrainerClassFromSpawn(
+    const void* trainer_like,
+    GuildTrainerClassResolution* resolution) noexcept {
+    if (resolution == nullptr) {
         return false;
     }
 
-    constexpr std::size_t kGuildTrainerSpawnPointerOffset = 0x2dd0;
     constexpr std::size_t kEqActorClassOffset = 0x013c;
 
-    *trainer_class_id = 0;
-    *normalized_class_id = 0;
-    if (trainer_spawn_like != nullptr) {
-        *trainer_spawn_like = 0;
-    }
-
-    std::uintptr_t trainer_like = 0;
-    if (actor_like == nullptr ||
-        !TryCopyObject(
-            reinterpret_cast<const std::uint8_t*>(actor_like) + kGuildTrainerSpawnPointerOffset,
-            &trainer_like) ||
-        trainer_like == 0) {
+    const std::uintptr_t trainer_spawn =
+        reinterpret_cast<std::uintptr_t>(trainer_like);
+    if (trainer_spawn == 0) {
         return false;
     }
 
-    if (trainer_spawn_like != nullptr) {
-        *trainer_spawn_like = trainer_like;
-    }
+    resolution->trainer_spawn_like = trainer_spawn;
+    resolution->active_trainer_present = true;
 
     std::uint8_t raw_class_id = 0;
-    if (!TryReadEqPlayerDisplayedClassId(reinterpret_cast<const void*>(trainer_like), &raw_class_id) &&
-        !TryCopyObject(reinterpret_cast<const void*>(trainer_like + kEqActorClassOffset), &raw_class_id)) {
+    if (TryReadEqPlayerDisplayedClassId(reinterpret_cast<const void*>(trainer_spawn), &raw_class_id)) {
+        resolution->displayed_class_copied = true;
+    } else if (TryCopyObject(
+                   reinterpret_cast<const void*>(trainer_spawn + kEqActorClassOffset),
+                   &raw_class_id)) {
+        resolution->fallback_class_copied = true;
+    } else {
         return false;
     }
 
@@ -5057,68 +5272,176 @@ bool TryReadGuildTrainerClassFromValidatorContext(
         return false;
     }
 
-    *trainer_class_id = raw_class_id;
-    *normalized_class_id = normalized;
+    resolution->trainer_class_id = raw_class_id;
+    resolution->normalized_class_id = normalized;
+    resolution->normalized_class_copied = true;
     return true;
 }
 
+bool TryReadGuildTrainerClassFromCallerFrame(
+    GuildTrainerClassResolution* resolution) noexcept {
+    if (resolution == nullptr) {
+        return false;
+    }
+
+    const std::uintptr_t current_frame = GetCurrentFramePointer();
+    resolution->current_frame = current_frame;
+    resolution->current_frame_copied = (current_frame != 0);
+    if (current_frame == 0) {
+        return false;
+    }
+
+    std::uintptr_t caller_ebp = 0;
+    if (!TryCopyObject(reinterpret_cast<const void*>(current_frame), &caller_ebp) ||
+        caller_ebp == 0) {
+        return false;
+    }
+
+    resolution->caller_ebp_copied = true;
+    resolution->caller_ebp = caller_ebp;
+    resolution->caller_context_used = true;
+
+    std::uint8_t raw_class_id = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const void*>(caller_ebp + kGuildTrainerCallerClassOffset),
+            &raw_class_id)) {
+        return false;
+    }
+
+    resolution->caller_class_copied = true;
+
+    unsigned int normalized = 0;
+    if (!NormalizeGuildTrainerClassId(raw_class_id, &normalized)) {
+        return false;
+    }
+
+    resolution->trainer_spawn_like = caller_ebp;
+    resolution->trainer_class_id = raw_class_id;
+    resolution->normalized_class_id = normalized;
+    resolution->normalized_class_copied = true;
+    return true;
+}
+
+bool TryReadActiveGuildTrainerClass(
+    GuildTrainerClassResolution* resolution) noexcept {
+    if (resolution == nullptr) {
+        return false;
+    }
+
+    *resolution = {};
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return false;
+    }
+    resolution->module_base_available = true;
+
+    std::uintptr_t trainer_spawn = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const void*>(module_base + kActiveGuildTrainerGlobalRva),
+            &trainer_spawn)) {
+        resolution->active_trainer_global_copied = false;
+        return false;
+    }
+
+    resolution->active_trainer_global_copied = true;
+    if (trainer_spawn == 0) {
+        return false;
+    }
+
+    resolution->active_trainer_present = true;
+
+    return TryReadGuildTrainerClassFromSpawn(
+        reinterpret_cast<const void*>(trainer_spawn),
+        resolution);
+}
+
 void LogGuildTrainerOverride(
-    unsigned int trainer_class_id,
-    unsigned int normalized_class_id,
-    bool original_result,
+    const GuildTrainerClassResolution& resolution,
+    bool resolution_success,
+    bool original_result_present,
+    std::uintptr_t original_result,
+    bool assigned_match,
     bool override_applied,
+    std::uintptr_t final_result,
+    void* this_context,
     std::uintptr_t trainer_spawn_like,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
     const std::uintptr_t module_base = GetHostModuleBase();
-    std::wstring message = L"MulticlassTrainerHook target=GuildTrainerValidation";
-    message += L" validator_rva=";
-    message += Hex32(kGuildTrainerValidationTargetRva);
+    std::wstring message = L"MulticlassTrainerHook target=GuildTrainerClassLookupCallsite";
+    message += L" call_count=";
+    message += std::to_wstring(g_guild_trainer_class_lookup_call_count);
+    message += L" callsite_rva=";
+    message += Hex32(kGuildTrainerClassLookupCallsiteRva);
     if (module_base != 0) {
-        message += L" validator_address=";
-        message += HexPtr(module_base + kGuildTrainerValidationTargetRva);
+        message += L" callsite_address=";
+        message += HexPtr(module_base + kGuildTrainerClassLookupCallsiteRva);
     }
+    message += L" this_context=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" current_frame=";
+    message += HexPtr(resolution.current_frame);
+    message += L" caller_ebp=";
+    message += HexPtr(resolution.caller_ebp);
     message += L" trainer_spawn_like=";
     message += HexPtr(trainer_spawn_like);
+    message += L" module_base_available=";
+    message += resolution.module_base_available ? L"true" : L"false";
+    message += L" current_frame_copied=";
+    message += resolution.current_frame_copied ? L"true" : L"false";
+    message += L" caller_ebp_copied=";
+    message += resolution.caller_ebp_copied ? L"true" : L"false";
+    message += L" active_trainer_global_copied=";
+    message += resolution.active_trainer_global_copied ? L"true" : L"false";
+    message += L" active_trainer_present=";
+    message += resolution.active_trainer_present ? L"true" : L"false";
+    message += L" caller_context_used=";
+    message += resolution.caller_context_used ? L"true" : L"false";
+    message += L" caller_class_copied=";
+    message += resolution.caller_class_copied ? L"true" : L"false";
+    message += L" displayed_class_copied=";
+    message += resolution.displayed_class_copied ? L"true" : L"false";
+    message += L" fallback_class_copied=";
+    message += resolution.fallback_class_copied ? L"true" : L"false";
+    message += L" normalized_class_copied=";
+    message += resolution.normalized_class_copied ? L"true" : L"false";
+    message += L" resolution_success=";
+    message += resolution_success ? L"true" : L"false";
     message += L" trainer_class_id=";
-    message += std::to_wstring(trainer_class_id);
+    message += std::to_wstring(resolution.trainer_class_id);
     message += L" normalized_class_id=";
-    message += std::to_wstring(normalized_class_id);
+    message += std::to_wstring(resolution.normalized_class_id);
     message += L" assigned_mask=";
     message += FormatAssignedMask(snapshot);
     message += L" has_assigned_mask=";
     message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    message += L" original_result_present=";
+    message += original_result_present ? L"true" : L"false";
     message += L" original_result=";
-    message += original_result ? L"true" : L"false";
+    message += HexPtr(original_result);
+    message += L" assigned_match=";
+    message += assigned_match ? L"true" : L"false";
     message += L" override_applied=";
     message += override_applied ? L"true" : L"false";
+    message += L" final_result=";
+    message += HexPtr(final_result);
     message += L" override_count=";
-    message += std::to_wstring(g_guild_trainer_validation_override_count);
+    message += std::to_wstring(g_guild_trainer_class_lookup_override_count);
     monomyth::logger::Log(message);
 }
 
-int MONOMYTH_FASTCALL GuildTrainerValidationHook(
-    void* this_context,
-    void*,
-    void* actor_like,
-    void* unknown_like,
-    void* descriptor_like) noexcept {
-    const int original_result =
-        g_original_guild_trainer_validation != nullptr
-            ? g_original_guild_trainer_validation(
-                this_context,
-                actor_like,
-                unknown_like,
-                descriptor_like)
-            : 0;
+void* MONOMYTH_THISCALL GuildTrainerClassLookupCallsiteHook(void* this_context) noexcept {
+    ++g_guild_trainer_class_lookup_call_count;
+    void* original_result =
+        g_original_guild_trainer_class_lookup != nullptr
+            ? g_original_guild_trainer_class_lookup(this_context)
+            : nullptr;
+    void* result = original_result;
 
-    unsigned int trainer_class_id = 0;
-    unsigned int normalized_class_id = 0;
-    std::uintptr_t trainer_spawn_like = 0;
-    const bool trainer_class_copied = TryReadGuildTrainerClassFromValidatorContext(
-        actor_like,
-        &trainer_class_id,
-        &normalized_class_id,
-        &trainer_spawn_like);
+    GuildTrainerClassResolution resolution = {};
+    bool trainer_class_copied = TryReadActiveGuildTrainerClass(&resolution);
+    if (!trainer_class_copied) {
+        trainer_class_copied = TryReadGuildTrainerClassFromCallerFrame(&resolution);
+    }
 
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
@@ -5127,23 +5450,31 @@ int MONOMYTH_FASTCALL GuildTrainerValidationHook(
         monomyth::multiclass_identity::HasAuthoritativeClass(
             snapshot.has_classes_bitmask,
             snapshot.classes_bitmask,
-            normalized_class_id);
-    const bool override_applied = !original_result && assigned_match;
+            resolution.normalized_class_id);
+    const bool override_applied = assigned_match;
     if (override_applied) {
-        ++g_guild_trainer_validation_override_count;
+        ++g_guild_trainer_class_lookup_override_count;
+        g_guild_trainer_class_lookup_override_record.fill(0);
+        g_guild_trainer_class_lookup_override_record[kGuildTrainerClassLookupResolvedClassOffset] =
+            static_cast<std::uint8_t>(resolution.normalized_class_id);
+        g_pending_guild_trainer_session_class_id =
+            static_cast<std::uint8_t>(resolution.normalized_class_id);
+        result = g_guild_trainer_class_lookup_override_record.data();
     }
 
-    if (!original_result || override_applied) {
-        LogGuildTrainerOverride(
-            trainer_class_id,
-            normalized_class_id,
-            original_result != 0,
-            override_applied,
-            trainer_spawn_like,
-            snapshot);
-    }
+    LogGuildTrainerOverride(
+        resolution,
+        trainer_class_copied,
+        g_original_guild_trainer_class_lookup != nullptr,
+        reinterpret_cast<std::uintptr_t>(original_result),
+        assigned_match,
+        override_applied,
+        reinterpret_cast<std::uintptr_t>(result),
+        this_context,
+        resolution.trainer_spawn_like,
+        snapshot);
 
-    return override_applied ? 1 : original_result;
+    return result;
 }
 
 void AppendActiveScrollCorrelation(std::wstring* message) {
@@ -10232,6 +10563,20 @@ bool MONOMYTH_FASTCALL MemorizeSendPacketWrapperHook(
         true,
         correlation_id);
 
+    if (opcode_decoded && original_result) {
+        const std::uint32_t opcode32 = static_cast<std::uint32_t>(opcode);
+        if (opcode32 == kGmTrainingOpcode &&
+            monomyth::multiclass_identity::IsPlayableClassId(
+                g_pending_guild_trainer_session_class_id)) {
+            ApplyGuildTrainerSessionClassOverride(
+                g_pending_guild_trainer_session_class_id,
+                L"OP_GMTraining_send");
+        } else if (opcode32 == kGmEndTrainingOpcode) {
+            RestoreGuildTrainerSessionClassOverride(L"OP_GMEndTraining_send");
+            g_pending_guild_trainer_session_class_id = 0;
+        }
+    }
+
     if (correlation_id != 0) {
         if (!opcode_decoded) {
             LogMemorizeSendDecodeFailure(correlation_id, not_decoded_reason);
@@ -14086,42 +14431,50 @@ bool InstallGuildTrainerHook(const monomyth::runtime::Manifest& manifest) noexce
         return false;
     }
 
-    auto* target = reinterpret_cast<void*>(module_base + kGuildTrainerValidationTargetRva);
+    auto* target = reinterpret_cast<void*>(module_base + kGuildTrainerClassLookupCallsiteRva);
     if (std::memcmp(
             target,
-            kGuildTrainerValidationBytes.data(),
-            kGuildTrainerValidationBytes.size()) != 0) {
+            kGuildTrainerClassLookupCallsiteBytes.data(),
+            kGuildTrainerClassLookupCallsiteBytes.size()) != 0) {
         std::wstring message =
-            L"hook_manager: guild trainer hook denied reason=\"validator bytes mismatch\"";
-        message += L" validator_rva=";
-        message += Hex32(kGuildTrainerValidationTargetRva);
-        message += L" validator_address=";
-        message += HexPtr(module_base + kGuildTrainerValidationTargetRva);
+            L"hook_manager: guild trainer hook denied reason=\"class lookup callsite bytes mismatch\"";
+        message += L" callsite_rva=";
+        message += Hex32(kGuildTrainerClassLookupCallsiteRva);
+        message += L" callsite_address=";
+        message += HexPtr(module_base + kGuildTrainerClassLookupCallsiteRva);
         monomyth::logger::Log(message);
         return false;
     }
 
-    if (!InstallInlineDetour(
+    g_original_guild_trainer_class_lookup =
+        reinterpret_cast<GuildTrainerClassLookupFn>(
+            module_base + kGuildTrainerClassLookupTargetRva);
+    if (!InstallCallsitePatch(
             target,
-            reinterpret_cast<void*>(&GuildTrainerValidationHook),
-            &g_guild_trainer_validation_detour,
-            reinterpret_cast<void**>(&g_original_guild_trainer_validation),
-            L"GuildTrainerValidation")) {
-        RemoveInlineDetour(&g_guild_trainer_validation_detour);
-        g_original_guild_trainer_validation = nullptr;
+            reinterpret_cast<void*>(&GuildTrainerClassLookupCallsiteHook),
+            module_base + kGuildTrainerClassLookupTargetRva,
+            &g_guild_trainer_class_lookup_callsite_patch,
+            L"GuildTrainerClassLookupCallsite")) {
+        g_original_guild_trainer_class_lookup = nullptr;
         return false;
     }
 
-    g_guild_trainer_validation_override_count = 0;
+    g_guild_trainer_class_lookup_override_count = 0;
+    g_guild_trainer_class_lookup_override_record.fill(0);
 
-    std::wstring message = L"hook_manager: guild trainer hook installed target=GuildTrainerValidation";
-    message += L" validator_rva=";
-    message += Hex32(kGuildTrainerValidationTargetRva);
-    message += L" validator_address=";
-    message += HexPtr(module_base + kGuildTrainerValidationTargetRva);
+    std::wstring message =
+        L"hook_manager: guild trainer hook installed target=GuildTrainerClassLookupCallsite";
+    message += L" callsite_rva=";
+    message += Hex32(kGuildTrainerClassLookupCallsiteRva);
+    message += L" callsite_address=";
+    message += HexPtr(module_base + kGuildTrainerClassLookupCallsiteRva);
+    message += L" original_target_rva=";
+    message += Hex32(kGuildTrainerClassLookupTargetRva);
+    message += L" original_target_address=";
+    message += HexPtr(module_base + kGuildTrainerClassLookupTargetRva);
     message += L" packet_hooks_allowed=";
     message += manifest.packet_hooks_allowed ? L"true" : L"false";
-    message += L" evidence_source=cleanroom_rva_exact_bytes";
+    message += L" evidence_source=active_guildmaster_class_match_callsite";
     monomyth::logger::Log(message);
     return true;
 }
@@ -16054,19 +16407,27 @@ bool RemoveScrollScribeTraceHooks() noexcept {
 }
 
 bool RemoveGuildTrainerHook() noexcept {
-    if (!g_guild_trainer_validation_detour.installed) {
+    if (!g_guild_trainer_class_lookup_callsite_patch.installed) {
+        RestoreGuildTrainerSessionClassOverride(L"guild_trainer_hook_remove_inactive");
+        g_original_guild_trainer_class_lookup = nullptr;
+        g_guild_trainer_class_lookup_override_count = 0;
+        g_pending_guild_trainer_session_class_id = 0;
+        g_guild_trainer_class_lookup_override_record.fill(0);
         return true;
     }
 
-    if (!RemoveInlineDetour(&g_guild_trainer_validation_detour)) {
+    if (!RemoveCallsitePatch(&g_guild_trainer_class_lookup_callsite_patch)) {
         return false;
     }
 
-    g_original_guild_trainer_validation = nullptr;
-    g_guild_trainer_validation_override_count = 0;
+    RestoreGuildTrainerSessionClassOverride(L"guild_trainer_hook_remove");
+    g_original_guild_trainer_class_lookup = nullptr;
+    g_guild_trainer_class_lookup_override_count = 0;
+    g_pending_guild_trainer_session_class_id = 0;
+    g_guild_trainer_class_lookup_override_record.fill(0);
 
     monomyth::logger::Log(
-        L"hook_manager: guild trainer hook removed target=GuildTrainerValidation");
+        L"hook_manager: guild trainer hook removed target=GuildTrainerClassLookupCallsite");
     return true;
 }
 
