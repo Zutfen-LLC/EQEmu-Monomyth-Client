@@ -874,6 +874,7 @@ std::uint64_t g_scroll_scribe_event_count = 0;
 std::uint64_t g_ui_class_helper_trace_count = 0;
 std::uint64_t g_inventory_class_title_trace_count = 0;
 std::uint64_t g_item_display_refresh_worker_entry_trace_count = 0;
+std::uint64_t g_progression_selection_trace_count = 0;
 constexpr std::size_t kUiClassHelperCallerCatalogCapacity = 64;
 constexpr std::size_t kUiClassProducerCandidateCatalogCapacity = 24;
 std::array<std::uint32_t, kUiClassHelperCallerCatalogCapacity>
@@ -1097,6 +1098,10 @@ bool ShouldLogWhoClassNameTrace(std::uint64_t count) noexcept {
 }
 
 bool ShouldLogItemDisplayRefreshWorkerEntryTrace(std::uint64_t count) noexcept {
+    return count <= 20 || (count % 50) == 0;
+}
+
+bool ShouldLogProgressionSelectionTrace(std::uint64_t count) noexcept {
     return count <= 20 || (count % 50) == 0;
 }
 
@@ -3551,18 +3556,62 @@ const char* CDECL GetDeityDescHook(unsigned int deity_id) noexcept {
 
 const char* CDECL ProgressionSelectionClassLookupCallsiteHook(
     unsigned int class_id) noexcept {
+    const std::uint64_t count = ++g_progression_selection_trace_count;
     const char* display = BuildLocalPlayerClassDisplayAscii(
         monomyth::multiclass_identity::ClassDisplayStyle::kThreeLetterCode,
         L"ProgressionSelection");
     if (display != nullptr) {
+        if (ShouldLogProgressionSelectionTrace(count)) {
+            const monomyth::server_auth_stats::Snapshot snapshot =
+                monomyth::server_auth_stats::GetSnapshot();
+            std::wstring message = L"ProgressionSelectionTrace count=";
+            message += std::to_wstring(count);
+            message += L" class_id=";
+            message += std::to_wstring(class_id);
+            message += L" override_applied=true formatted=\"";
+            message += WidenAsciiLossy(display);
+            message += L"\" assigned_mask=";
+            message += FormatAssignedMask(snapshot);
+            message += L" has_assigned_mask=";
+            message += snapshot.has_classes_bitmask ? L"true" : L"false";
+            monomyth::logger::Log(message);
+        }
         return display;
     }
 
     if (g_original_progression_selection_class_lookup == nullptr) {
+        if (ShouldLogProgressionSelectionTrace(count)) {
+            std::wstring message = L"ProgressionSelectionTrace count=";
+            message += std::to_wstring(count);
+            message += L" class_id=";
+            message += std::to_wstring(class_id);
+            message += L" override_applied=false reason=\"original_lookup_unavailable\"";
+            monomyth::logger::Log(message);
+        }
         return nullptr;
     }
 
-    return g_original_progression_selection_class_lookup(class_id);
+    const char* result = g_original_progression_selection_class_lookup(class_id);
+    if (ShouldLogProgressionSelectionTrace(count)) {
+        const monomyth::server_auth_stats::Snapshot snapshot =
+            monomyth::server_auth_stats::GetSnapshot();
+        std::wstring message = L"ProgressionSelectionTrace count=";
+        message += std::to_wstring(count);
+        message += L" class_id=";
+        message += std::to_wstring(class_id);
+        message += L" override_applied=false";
+        if (result != nullptr && result[0] != '\0') {
+            message += L" formatted=\"";
+            message += WidenAsciiLossy(result);
+            message += L"\"";
+        }
+        message += L" assigned_mask=";
+        message += FormatAssignedMask(snapshot);
+        message += L" has_assigned_mask=";
+        message += snapshot.has_classes_bitmask ? L"true" : L"false";
+        monomyth::logger::Log(message);
+    }
+    return result;
 }
 
 bool IsWhoClassNameLookupCaller(std::uintptr_t caller_return_address) noexcept {
