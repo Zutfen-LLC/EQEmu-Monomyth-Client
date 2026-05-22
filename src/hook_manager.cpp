@@ -5429,7 +5429,9 @@ void LogGuildTrainerOverride(
     monomyth::logger::Log(message);
 }
 
-void* MONOMYTH_THISCALL GuildTrainerClassLookupCallsiteHook(void* this_context) noexcept {
+void* MONOMYTH_FASTCALL GuildTrainerClassLookupCallsiteHook(
+    void* this_context,
+    void*) noexcept {
     ++g_guild_trainer_class_lookup_call_count;
     void* original_result =
         g_original_guild_trainer_class_lookup != nullptr
