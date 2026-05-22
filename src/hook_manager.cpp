@@ -69,6 +69,8 @@ constexpr std::uint32_t kEquipClickRequirementLookupCallsiteRva = 0x000f78d5;
 constexpr std::uint32_t kAutoEquipClassGateCallerReturnARva = 0x000fe184;
 constexpr std::uint32_t kAutoEquipClassGateCallerReturnBRva = 0x000fe354;
 constexpr std::uint32_t kAutoEquipClassGateTargetRva = 0x0004c430;
+constexpr std::uint32_t kGuildTrainerValidationTargetRva = 0x001af200;
+constexpr std::uint32_t kGuildTrainerPostClassGateRva = 0x001af304;
 constexpr std::uint32_t kEquipLocalRejectMessageCallsiteRva = 0x000f7987;
 constexpr std::uint32_t kDragDropLocalRejectMessageCallsiteRva = 0x002995b3;
 constexpr std::uint32_t kDragDropSilentPrecheckCallsiteRva = 0x00299718;
@@ -214,6 +216,13 @@ constexpr std::size_t kEqSpawnNameMaxBytes = 0x40;
 // ActorClient, the effective in-world class field is PlayerClient + 0x0fe0.
 constexpr std::size_t kEqPlayerDisplayedClassOffset = 0x0fe0;
 constexpr wchar_t kMemorizeSendTraceSliceId[] = L"CLIENT-MEM-SEND-TRACE-001";
+constexpr std::size_t kGuildTrainerPostClassGateStubSize = 33;
+constexpr std::size_t kGuildTrainerPostClassGateStubHelperAddressOffset = 4;
+constexpr std::size_t kGuildTrainerPostClassGateStubTrampolineAddressOffset = 27;
+
+constexpr std::array<std::uint8_t, 11> kGuildTrainerPostClassGateBytes = {{
+    0x80, 0x7c, 0x24, 0x24, 0x00, 0x74, 0x58, 0x85, 0xff, 0x74, 0x54,
+}};
 
 using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
@@ -693,6 +702,7 @@ InlineDetour g_receive_dispatch_detour = {};
 InlineDetour g_handle_rbutton_up_detour = {};
 InlineDetour g_get_spell_level_needed_detour = {};
 InlineDetour g_is_class_usable_predicate_detour = {};
+InlineDetour g_guild_trainer_post_class_gate_detour = {};
 InlineDetour g_can_equip_detour = {};
 InlineDetour g_inv_slot_mgr_move_item_detour = {};
 InlineDetour g_move_item_validation_gate_detour = {};
@@ -796,6 +806,8 @@ ReceiveDispatchFn g_original_receive_dispatch = nullptr;
 HandleRButtonUpFn g_original_handle_rbutton_up = nullptr;
 GetSpellLevelNeededFn g_original_get_spell_level_needed = nullptr;
 IsClassUsablePredicateFn g_original_is_class_usable_predicate = nullptr;
+void* g_guild_trainer_post_class_gate_trampoline = nullptr;
+void* g_guild_trainer_post_class_gate_stub = nullptr;
 CanEquipFn g_original_can_equip = nullptr;
 InvSlotMgrMoveItemFn g_original_inv_slot_mgr_move_item = nullptr;
 EquipRecordLookupFn g_original_equip_record_lookup = nullptr;
@@ -978,6 +990,7 @@ thread_local bool g_character_list_manual_refresh_in_progress = false;
 std::uint64_t g_is_class_usable_predicate_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
 std::uint64_t g_auto_equip_class_gate_override_count = 0;
+std::uint64_t g_guild_trainer_post_class_gate_override_count = 0;
 std::uint64_t g_who_class_name_entry_trace_count = 0;
 thread_local const void* g_active_who_class_name_subject = nullptr;
 std::uint64_t g_ui_class_display_trace_count = 0;
@@ -4896,6 +4909,106 @@ bool ShouldLogScrollScribeTrace(std::uint64_t count) noexcept {
 
 std::wstring FormatAssignedMask(const monomyth::server_auth_stats::Snapshot& snapshot) {
     return Hex32(snapshot.has_classes_bitmask ? snapshot.classes_bitmask : 0);
+}
+
+bool ShouldAllowAssignedClassTrainer(unsigned int trainer_class_id) noexcept {
+    if (!monomyth::multiclass_identity::IsPlayableClassId(trainer_class_id)) {
+        return false;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    return monomyth::multiclass_identity::HasAuthoritativeClass(
+        snapshot.has_classes_bitmask,
+        snapshot.classes_bitmask,
+        trainer_class_id);
+}
+
+void LogGuildTrainerOverride(
+    unsigned int trainer_class_id,
+    const monomyth::server_auth_stats::Snapshot& snapshot) {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message = L"MulticlassTrainerHook target=GuildTrainerPostClassGate";
+    message += L" validator_rva=";
+    message += Hex32(kGuildTrainerValidationTargetRva);
+    message += L" gate_rva=";
+    message += Hex32(kGuildTrainerPostClassGateRva);
+    if (module_base != 0) {
+        message += L" gate_address=";
+        message += HexPtr(module_base + kGuildTrainerPostClassGateRva);
+    }
+    message += L" trainer_class_id=";
+    message += std::to_wstring(trainer_class_id);
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    message += L" has_assigned_mask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    message += L" override_count=";
+    message += std::to_wstring(g_guild_trainer_post_class_gate_override_count);
+    monomyth::logger::Log(message);
+}
+
+bool CDECL GuildTrainerShouldAllowClassOverride(unsigned int trainer_class_id) noexcept {
+    const bool should_allow = ShouldAllowAssignedClassTrainer(trainer_class_id);
+    if (!should_allow) {
+        return false;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    ++g_guild_trainer_post_class_gate_override_count;
+    LogGuildTrainerOverride(trainer_class_id, snapshot);
+    return true;
+}
+
+void* AllocateGuildTrainerPostClassGateStub() noexcept {
+    auto* stub = reinterpret_cast<std::uint8_t*>(VirtualAlloc(
+        nullptr,
+        kGuildTrainerPostClassGateStubSize,
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_EXECUTE_READWRITE));
+    if (stub == nullptr) {
+        return nullptr;
+    }
+
+    constexpr std::array<std::uint8_t, kGuildTrainerPostClassGateStubSize> kStubTemplate = {{
+        0x9c,
+        0x60,
+        0x57,
+        0xb8, 0x00, 0x00, 0x00, 0x00,
+        0xff, 0xd0,
+        0x83, 0xc4, 0x04,
+        0x84, 0xc0,
+        0x74, 0x07,
+        0xc7, 0x04, 0x24, 0x00, 0x00, 0x00, 0x00,
+        0x61,
+        0x9d,
+        0xb8, 0x00, 0x00, 0x00, 0x00,
+        0xff, 0xe0,
+    }};
+
+    std::memcpy(stub, kStubTemplate.data(), kStubTemplate.size());
+    const auto helper_address = reinterpret_cast<std::uintptr_t>(
+        &GuildTrainerShouldAllowClassOverride);
+    std::memcpy(
+        stub + kGuildTrainerPostClassGateStubHelperAddressOffset,
+        &helper_address,
+        sizeof(std::uint32_t));
+    FlushInstructionCache(GetCurrentProcess(), stub, kStubTemplate.size());
+    return stub;
+}
+
+void FinalizeGuildTrainerPostClassGateStub(void* stub, void* trampoline) noexcept {
+    if (stub == nullptr || trampoline == nullptr) {
+        return;
+    }
+
+    const auto trampoline_address = reinterpret_cast<std::uintptr_t>(trampoline);
+    std::memcpy(
+        static_cast<std::uint8_t*>(stub) + kGuildTrainerPostClassGateStubTrampolineAddressOffset,
+        &trampoline_address,
+        sizeof(std::uint32_t));
+    FlushInstructionCache(GetCurrentProcess(), stub, kGuildTrainerPostClassGateStubSize);
 }
 
 void AppendActiveScrollCorrelation(std::wstring* message) {
@@ -13826,6 +13939,73 @@ bool InstallScrollScribeTraceHooks(const monomyth::runtime::Manifest& manifest) 
     return true;
 }
 
+bool InstallGuildTrainerHook(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.hooks_allowed || !manifest.packet_hooks_allowed) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: guild trainer hook denied reason=\"missing host module base\"");
+        return false;
+    }
+
+    auto* target = reinterpret_cast<void*>(module_base + kGuildTrainerPostClassGateRva);
+    if (std::memcmp(
+            target,
+            kGuildTrainerPostClassGateBytes.data(),
+            kGuildTrainerPostClassGateBytes.size()) != 0) {
+        std::wstring message =
+            L"hook_manager: guild trainer hook denied reason=\"post-class gate bytes mismatch\"";
+        message += L" validator_rva=";
+        message += Hex32(kGuildTrainerValidationTargetRva);
+        message += L" gate_rva=";
+        message += Hex32(kGuildTrainerPostClassGateRva);
+        message += L" gate_address=";
+        message += HexPtr(module_base + kGuildTrainerPostClassGateRva);
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    g_guild_trainer_post_class_gate_stub = AllocateGuildTrainerPostClassGateStub();
+    if (g_guild_trainer_post_class_gate_stub == nullptr) {
+        monomyth::logger::Log(
+            L"hook_manager: guild trainer hook install failed reason=\"stub allocation failed\"");
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            target,
+            g_guild_trainer_post_class_gate_stub,
+            &g_guild_trainer_post_class_gate_detour,
+            &g_guild_trainer_post_class_gate_trampoline,
+            L"GuildTrainerPostClassGate")) {
+        VirtualFree(g_guild_trainer_post_class_gate_stub, 0, MEM_RELEASE);
+        g_guild_trainer_post_class_gate_stub = nullptr;
+        g_guild_trainer_post_class_gate_trampoline = nullptr;
+        return false;
+    }
+
+    FinalizeGuildTrainerPostClassGateStub(
+        g_guild_trainer_post_class_gate_stub,
+        g_guild_trainer_post_class_gate_trampoline);
+    g_guild_trainer_post_class_gate_override_count = 0;
+
+    std::wstring message = L"hook_manager: guild trainer hook installed target=GuildTrainerPostClassGate";
+    message += L" validator_rva=";
+    message += Hex32(kGuildTrainerValidationTargetRva);
+    message += L" gate_rva=";
+    message += Hex32(kGuildTrainerPostClassGateRva);
+    message += L" gate_address=";
+    message += HexPtr(module_base + kGuildTrainerPostClassGateRva);
+    message += L" packet_hooks_allowed=";
+    message += manifest.packet_hooks_allowed ? L"true" : L"false";
+    message += L" evidence_source=cleanroom_rva_exact_bytes";
+    monomyth::logger::Log(message);
+    return true;
+}
+
 bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
     if (!manifest.multiclass_item_usability_allowed ||
         manifest.can_equip_state !=
@@ -15753,6 +15933,29 @@ bool RemoveScrollScribeTraceHooks() noexcept {
     return ok;
 }
 
+bool RemoveGuildTrainerHook() noexcept {
+    if (!g_guild_trainer_post_class_gate_detour.installed &&
+        g_guild_trainer_post_class_gate_stub == nullptr) {
+        return true;
+    }
+
+    if (g_guild_trainer_post_class_gate_detour.installed &&
+        !RemoveInlineDetour(&g_guild_trainer_post_class_gate_detour)) {
+        return false;
+    }
+
+    g_guild_trainer_post_class_gate_trampoline = nullptr;
+    g_guild_trainer_post_class_gate_override_count = 0;
+    if (g_guild_trainer_post_class_gate_stub != nullptr) {
+        VirtualFree(g_guild_trainer_post_class_gate_stub, 0, MEM_RELEASE);
+        g_guild_trainer_post_class_gate_stub = nullptr;
+    }
+
+    monomyth::logger::Log(
+        L"hook_manager: guild trainer hook removed target=GuildTrainerPostClassGate");
+    return true;
+}
+
 bool RemoveCanEquipHook() noexcept {
     if (g_move_item_validation_gate_detour.installed) {
         RemoveInlineDetour(&g_move_item_validation_gate_detour);
@@ -16239,6 +16442,10 @@ bool InstallScrollScribeTraceHooks(const monomyth::runtime::Manifest&) noexcept 
     return false;
 }
 
+bool InstallGuildTrainerHook(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
 bool InstallCanEquipHook(const monomyth::runtime::Manifest&) noexcept {
     return false;
 }
@@ -16324,6 +16531,10 @@ bool RemoveGetSpellLevelNeededTrace() noexcept {
 }
 
 bool RemoveScrollScribeTraceHooks() noexcept {
+    return true;
+}
+
+bool RemoveGuildTrainerHook() noexcept {
     return true;
 }
 
@@ -16430,6 +16641,7 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     bool memorize_send_trace_active = false;
     bool spell_behavior_active = false;
     bool item_behavior_active = false;
+    bool trainer_behavior_active = false;
     bool move_item_trace_active = false;
     bool move_item_send_trace_active = false;
     bool ui_display_active = false;
@@ -16570,6 +16782,10 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         monomyth::logger::Log(message);
     }
 
+    if (receive_hook_active) {
+        trainer_behavior_active = InstallGuildTrainerHook(manifest);
+    }
+
     if (manifest.multiclass_item_usability_allowed) {
         if (InstallCanEquipHook(manifest)) {
             item_behavior_active = true;
@@ -16654,8 +16870,9 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     g_initialized = true;
     if (receive_hook_active || spell_trace_active || scroll_scribe_trace_active ||
         memorize_send_trace_active || spell_behavior_active || item_behavior_active ||
-        move_item_trace_active || move_item_send_trace_active || ui_display_active ||
-        progression_selection_display_active || inventory_class_title_display_active) {
+        trainer_behavior_active || move_item_trace_active || move_item_send_trace_active ||
+        ui_display_active || progression_selection_display_active ||
+        inventory_class_title_display_active) {
         std::wstring message = L"hook_manager: initialized (";
         bool first = true;
         if (receive_hook_active) {
@@ -16695,6 +16912,13 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
                 message += L", ";
             }
             message += L"multiclass item usability";
+            first = false;
+        }
+        if (trainer_behavior_active) {
+            if (!first) {
+                message += L", ";
+            }
+            message += L"multiclass trainer gate";
             first = false;
         }
         if (move_item_trace_active) {
@@ -16823,6 +17047,11 @@ void Shutdown() noexcept {
     if (!RemoveScrollScribeTraceHooks()) {
         monomyth::logger::Log(
             L"hook_manager: shutdown deferred because scroll scribe trace removal failed");
+        return;
+    }
+    if (!RemoveGuildTrainerHook()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because guild trainer hook removal failed");
         return;
     }
     if (!RemoveCanStartMemmingTrace()) {
