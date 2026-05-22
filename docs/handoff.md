@@ -84,7 +84,7 @@ Main conclusions:
 
 Interpretation:
 - the remaining blocker is no longer well-described as an `InventoryWindow` title issue
-- the active clean-room target is the `ItemDisplayWindow` class-text producer path at `0x6ae100 -> 0x6a9540`
+- the active clean-room target is the `ItemDisplayWindow` class-text producer path, with THJ-confirmed hook seam at `base + 0x2a9540` (`EQ VA 0x6a9540`)
 
 ### THJ DLL findings changed the strategy
 
@@ -279,9 +279,9 @@ The useful live seam is now known:
 ### 2. Pivot fully to the item-display full-name surface
 
 Current strongest hypothesis:
-- the remaining visible class text lives in the proven `ItemDisplayWindow` refresh path:
-  - `0x6ae100`
-  - `0x6a9540`
+- the remaining visible class text lives in the proven `ItemDisplayWindow` refresh path, but the THJ-confirmed patch seam is the lower producer/writer offset:
+  - `base + 0x2a9540`
+  - rebased EQ VA `0x6a9540`
 - that path is item-display-specific and does not use `GetClassDesc` / `GetClassThreeLetterCode`
 - direct UI-text interception remains disproven
 - the early `0x18e554` full-name path is still only inconclusive, not proven useful for the visible item-display path
