@@ -216,9 +216,9 @@ constexpr std::size_t kEqSpawnNameMaxBytes = 0x40;
 // ActorClient, the effective in-world class field is PlayerClient + 0x0fe0.
 constexpr std::size_t kEqPlayerDisplayedClassOffset = 0x0fe0;
 constexpr wchar_t kMemorizeSendTraceSliceId[] = L"CLIENT-MEM-SEND-TRACE-001";
-constexpr std::size_t kGuildTrainerPostClassGateStubSize = 33;
+constexpr std::size_t kGuildTrainerPostClassGateStubSize = 38;
 constexpr std::size_t kGuildTrainerPostClassGateStubHelperAddressOffset = 4;
-constexpr std::size_t kGuildTrainerPostClassGateStubTrampolineAddressOffset = 27;
+constexpr std::size_t kGuildTrainerPostClassGateStubTrampolineAddressOffset = 32;
 
 constexpr std::array<std::uint8_t, 11> kGuildTrainerPostClassGateBytes = {{
     0x80, 0x7c, 0x24, 0x24, 0x00, 0x74, 0x58, 0x85, 0xff, 0x74, 0x54,
@@ -4998,21 +4998,10 @@ std::wstring FormatAssignedMask(const monomyth::server_auth_stats::Snapshot& sna
     return Hex32(snapshot.has_classes_bitmask ? snapshot.classes_bitmask : 0);
 }
 
-bool ShouldAllowAssignedClassTrainer(unsigned int trainer_class_id) noexcept {
-    if (!monomyth::multiclass_identity::IsPlayableClassId(trainer_class_id)) {
-        return false;
-    }
-
-    const monomyth::server_auth_stats::Snapshot snapshot =
-        monomyth::server_auth_stats::GetSnapshot();
-    return monomyth::multiclass_identity::HasAuthoritativeClass(
-        snapshot.has_classes_bitmask,
-        snapshot.classes_bitmask,
-        trainer_class_id);
-}
-
 void LogGuildTrainerOverride(
     unsigned int trainer_class_id,
+    unsigned int normalized_class_id,
+    bool override_applied,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
     const std::uintptr_t module_base = GetHostModuleBase();
     std::wstring message = L"MulticlassTrainerHook target=GuildTrainerPostClassGate";
@@ -5026,25 +5015,42 @@ void LogGuildTrainerOverride(
     }
     message += L" trainer_class_id=";
     message += std::to_wstring(trainer_class_id);
+    message += L" normalized_class_id=";
+    message += std::to_wstring(normalized_class_id);
     message += L" assigned_mask=";
     message += FormatAssignedMask(snapshot);
     message += L" has_assigned_mask=";
     message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    message += L" override_applied=";
+    message += override_applied ? L"true" : L"false";
     message += L" override_count=";
     message += std::to_wstring(g_guild_trainer_post_class_gate_override_count);
     monomyth::logger::Log(message);
 }
 
 bool CDECL GuildTrainerShouldAllowClassOverride(unsigned int trainer_class_id) noexcept {
-    const bool should_allow = ShouldAllowAssignedClassTrainer(trainer_class_id);
-    if (!should_allow) {
-        return false;
+    unsigned int normalized_class_id = trainer_class_id;
+    if (trainer_class_id >= 20 && trainer_class_id <= 35) {
+        normalized_class_id -= 19;
     }
 
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
+    const bool should_allow = monomyth::multiclass_identity::HasAuthoritativeClass(
+        snapshot.has_classes_bitmask,
+        snapshot.classes_bitmask,
+        normalized_class_id);
+    if (!should_allow) {
+        LogGuildTrainerOverride(
+            trainer_class_id,
+            normalized_class_id,
+            false,
+            snapshot);
+        return false;
+    }
+
     ++g_guild_trainer_post_class_gate_override_count;
-    LogGuildTrainerOverride(trainer_class_id, snapshot);
+    LogGuildTrainerOverride(trainer_class_id, normalized_class_id, true, snapshot);
     return true;
 }
 
@@ -5066,8 +5072,9 @@ void* AllocateGuildTrainerPostClassGateStub() noexcept {
         0xff, 0xd0,
         0x83, 0xc4, 0x04,
         0x84, 0xc0,
-        0x74, 0x07,
-        0xc7, 0x04, 0x24, 0x00, 0x00, 0x00, 0x00,
+        0x74, 0x0c,
+        0xc7, 0x04, 0x24, 0x01, 0x00, 0x00, 0x00,
+        0xc6, 0x44, 0x24, 0x48, 0x00,
         0x61,
         0x9d,
         0xb8, 0x00, 0x00, 0x00, 0x00,
