@@ -35,7 +35,7 @@ Project history is tracked in [CHANGELOG.md](CHANGELOG.md).
   - The local developer explicitly sets `MONOMYTH_ENABLE_PACKET_HOOKS=1`.
 - When enabled, installs exactly one receive dispatcher hook at the validated candidate and routes metadata to `PacketObserver`.
 - When that receive hook observes THJ `OP_ServerAuthStats` (`0x1338`), parses the server-authored stat payload read-only, extracts only `statClassesBitmask`, stores the latest valid bitmask in internal DLL state, and logs concise diagnostics.
-- When packet hooks are active, installs a byte-validated multiclass guild-trainer gate on the real ROF2 trainer validator at RVA `0x001b0304`; it clears the native trainer-class rejection only when the latest authoritative `statClassesBitmask` contains the clicked trainer's playable class.
+- When packet hooks are active, installs a byte-validated multiclass guild-trainer gate on the real ROF2 trainer validator at the earlier class-membership branch RVA `0x001b0298`; it clears the native trainer-class rejection only when the latest authoritative `statClassesBitmask` contains the clicked trainer's playable class.
 - A second explicit developer opt-in can enable bounded receive payload-prefix introspection for an allowlisted opcode set only.
 - Leaves `ui_hooks_allowed=false`.
 

@@ -70,7 +70,8 @@ constexpr std::uint32_t kAutoEquipClassGateCallerReturnARva = 0x000fe184;
 constexpr std::uint32_t kAutoEquipClassGateCallerReturnBRva = 0x000fe354;
 constexpr std::uint32_t kAutoEquipClassGateTargetRva = 0x0004c430;
 constexpr std::uint32_t kGuildTrainerValidationTargetRva = 0x001b0200;
-constexpr std::uint32_t kGuildTrainerPostClassGateRva = 0x001b0304;
+constexpr std::uint32_t kGuildTrainerClassGateRva = 0x001b0298;
+constexpr std::uint32_t kGuildTrainerRejectRva = 0x001b0304;
 constexpr std::uint32_t kEquipLocalRejectMessageCallsiteRva = 0x000f7987;
 constexpr std::uint32_t kDragDropLocalRejectMessageCallsiteRva = 0x002995b3;
 constexpr std::uint32_t kDragDropSilentPrecheckCallsiteRva = 0x00299718;
@@ -216,12 +217,14 @@ constexpr std::size_t kEqSpawnNameMaxBytes = 0x40;
 // ActorClient, the effective in-world class field is PlayerClient + 0x0fe0.
 constexpr std::size_t kEqPlayerDisplayedClassOffset = 0x0fe0;
 constexpr wchar_t kMemorizeSendTraceSliceId[] = L"CLIENT-MEM-SEND-TRACE-001";
-constexpr std::size_t kGuildTrainerPostClassGateStubSize = 38;
+constexpr std::size_t kGuildTrainerPostClassGateStubSize = 49;
 constexpr std::size_t kGuildTrainerPostClassGateStubHelperAddressOffset = 4;
-constexpr std::size_t kGuildTrainerPostClassGateStubTrampolineAddressOffset = 32;
+constexpr std::size_t kGuildTrainerPostClassGateStubContinueAddressOffsetA = 27;
+constexpr std::size_t kGuildTrainerPostClassGateStubContinueAddressOffsetB = 36;
+constexpr std::size_t kGuildTrainerPostClassGateStubRejectAddressOffset = 43;
 
-constexpr std::array<std::uint8_t, 11> kGuildTrainerPostClassGateBytes = {{
-    0x80, 0x7c, 0x24, 0x24, 0x00, 0x74, 0x58, 0x85, 0xff, 0x74, 0x54,
+constexpr std::array<std::uint8_t, 7> kGuildTrainerPostClassGateBytes = {{
+    0x80, 0x7c, 0x24, 0x1c, 0x00, 0x74, 0x65,
 }};
 
 using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
@@ -5004,14 +5007,14 @@ void LogGuildTrainerOverride(
     bool override_applied,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
     const std::uintptr_t module_base = GetHostModuleBase();
-    std::wstring message = L"MulticlassTrainerHook target=GuildTrainerPostClassGate";
+    std::wstring message = L"MulticlassTrainerHook target=GuildTrainerClassGate";
     message += L" validator_rva=";
     message += Hex32(kGuildTrainerValidationTargetRva);
     message += L" gate_rva=";
-    message += Hex32(kGuildTrainerPostClassGateRva);
+    message += Hex32(kGuildTrainerClassGateRva);
     if (module_base != 0) {
         message += L" gate_address=";
-        message += HexPtr(module_base + kGuildTrainerPostClassGateRva);
+        message += HexPtr(module_base + kGuildTrainerClassGateRva);
     }
     message += L" trainer_class_id=";
     message += std::to_wstring(trainer_class_id);
@@ -5072,11 +5075,17 @@ void* AllocateGuildTrainerPostClassGateStub() noexcept {
         0xff, 0xd0,
         0x83, 0xc4, 0x04,
         0x84, 0xc0,
-        0x74, 0x0c,
-        0xc7, 0x04, 0x24, 0x01, 0x00, 0x00, 0x00,
-        0xc6, 0x44, 0x24, 0x48, 0x00,
+        0x75, 0x10,
         0x61,
         0x9d,
+        0x80, 0x7c, 0x24, 0x1c, 0x00,
+        0x74, 0x10,
+        0xb8, 0x00, 0x00, 0x00, 0x00,
+        0xff, 0xe0,
+        0x61,
+        0x9d,
+        0xb8, 0x00, 0x00, 0x00, 0x00,
+        0xff, 0xe0,
         0xb8, 0x00, 0x00, 0x00, 0x00,
         0xff, 0xe0,
     }};
@@ -5092,15 +5101,24 @@ void* AllocateGuildTrainerPostClassGateStub() noexcept {
     return stub;
 }
 
-void FinalizeGuildTrainerPostClassGateStub(void* stub, void* trampoline) noexcept {
-    if (stub == nullptr || trampoline == nullptr) {
+void FinalizeGuildTrainerPostClassGateStub(void* stub, std::uintptr_t module_base) noexcept {
+    if (stub == nullptr || module_base == 0) {
         return;
     }
 
-    const auto trampoline_address = reinterpret_cast<std::uintptr_t>(trampoline);
+    const std::uintptr_t continue_address = module_base + kGuildTrainerClassGateRva + kGuildTrainerPostClassGateBytes.size();
+    const std::uintptr_t reject_address = module_base + kGuildTrainerRejectRva;
     std::memcpy(
-        static_cast<std::uint8_t*>(stub) + kGuildTrainerPostClassGateStubTrampolineAddressOffset,
-        &trampoline_address,
+        static_cast<std::uint8_t*>(stub) + kGuildTrainerPostClassGateStubContinueAddressOffsetA,
+        &continue_address,
+        sizeof(std::uint32_t));
+    std::memcpy(
+        static_cast<std::uint8_t*>(stub) + kGuildTrainerPostClassGateStubContinueAddressOffsetB,
+        &continue_address,
+        sizeof(std::uint32_t));
+    std::memcpy(
+        static_cast<std::uint8_t*>(stub) + kGuildTrainerPostClassGateStubRejectAddressOffset,
+        &reject_address,
         sizeof(std::uint32_t));
     FlushInstructionCache(GetCurrentProcess(), stub, kGuildTrainerPostClassGateStubSize);
 }
@@ -14045,19 +14063,19 @@ bool InstallGuildTrainerHook(const monomyth::runtime::Manifest& manifest) noexce
         return false;
     }
 
-    auto* target = reinterpret_cast<void*>(module_base + kGuildTrainerPostClassGateRva);
+    auto* target = reinterpret_cast<void*>(module_base + kGuildTrainerClassGateRva);
     if (std::memcmp(
             target,
             kGuildTrainerPostClassGateBytes.data(),
             kGuildTrainerPostClassGateBytes.size()) != 0) {
         std::wstring message =
-            L"hook_manager: guild trainer hook denied reason=\"post-class gate bytes mismatch\"";
+            L"hook_manager: guild trainer hook denied reason=\"class gate bytes mismatch\"";
         message += L" validator_rva=";
         message += Hex32(kGuildTrainerValidationTargetRva);
         message += L" gate_rva=";
-        message += Hex32(kGuildTrainerPostClassGateRva);
+        message += Hex32(kGuildTrainerClassGateRva);
         message += L" gate_address=";
-        message += HexPtr(module_base + kGuildTrainerPostClassGateRva);
+        message += HexPtr(module_base + kGuildTrainerClassGateRva);
         monomyth::logger::Log(message);
         return false;
     }
@@ -14075,7 +14093,7 @@ bool InstallGuildTrainerHook(const monomyth::runtime::Manifest& manifest) noexce
             kGuildTrainerPostClassGateBytes.size(),
             &g_guild_trainer_post_class_gate_detour,
             &g_guild_trainer_post_class_gate_trampoline,
-            L"GuildTrainerPostClassGate")) {
+            L"GuildTrainerClassGate")) {
         VirtualFree(g_guild_trainer_post_class_gate_stub, 0, MEM_RELEASE);
         g_guild_trainer_post_class_gate_stub = nullptr;
         g_guild_trainer_post_class_gate_trampoline = nullptr;
@@ -14084,16 +14102,16 @@ bool InstallGuildTrainerHook(const monomyth::runtime::Manifest& manifest) noexce
 
     FinalizeGuildTrainerPostClassGateStub(
         g_guild_trainer_post_class_gate_stub,
-        g_guild_trainer_post_class_gate_trampoline);
+        module_base);
     g_guild_trainer_post_class_gate_override_count = 0;
 
-    std::wstring message = L"hook_manager: guild trainer hook installed target=GuildTrainerPostClassGate";
+    std::wstring message = L"hook_manager: guild trainer hook installed target=GuildTrainerClassGate";
     message += L" validator_rva=";
     message += Hex32(kGuildTrainerValidationTargetRva);
     message += L" gate_rva=";
-    message += Hex32(kGuildTrainerPostClassGateRva);
+    message += Hex32(kGuildTrainerClassGateRva);
     message += L" gate_address=";
-    message += HexPtr(module_base + kGuildTrainerPostClassGateRva);
+    message += HexPtr(module_base + kGuildTrainerClassGateRva);
     message += L" packet_hooks_allowed=";
     message += manifest.packet_hooks_allowed ? L"true" : L"false";
     message += L" evidence_source=cleanroom_rva_exact_bytes";
@@ -16047,7 +16065,7 @@ bool RemoveGuildTrainerHook() noexcept {
     }
 
     monomyth::logger::Log(
-        L"hook_manager: guild trainer hook removed target=GuildTrainerPostClassGate");
+        L"hook_manager: guild trainer hook removed target=GuildTrainerClassGate");
     return true;
 }
 
