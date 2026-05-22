@@ -12103,9 +12103,46 @@ bool InstallInventoryClassTitleDisplayHook(
             live_item_display_refresh_worker_entry.data(),
             kItemDisplayRefreshWorkerEntryBytes.data(),
             kItemDisplayRefreshWorkerEntryBytes.size()) == 0;
+    constexpr std::array<std::uint8_t, 16> kItemDisplayClassRowBuilderEntryBytes = {
+        0x6a, 0xff, 0x68, 0x74, 0xbf, 0x98, 0x00, 0x64,
+        0xa1, 0x00, 0x00, 0x00, 0x00, 0x50, 0x64, 0x89};
+    std::array<std::uint8_t, kItemDisplayClassRowBuilderEntryBytes.size()>
+        live_item_display_class_row_builder_entry = {};
+    const bool item_display_class_row_builder_entry_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kItemDisplayClassRowBuilderTargetRva),
+        live_item_display_class_row_builder_entry.size(),
+        live_item_display_class_row_builder_entry.data());
+    const bool item_display_class_row_builder_entry_matches =
+        item_display_class_row_builder_entry_copied &&
+        std::memcmp(
+            live_item_display_class_row_builder_entry.data(),
+            kItemDisplayClassRowBuilderEntryBytes.data(),
+            kItemDisplayClassRowBuilderEntryBytes.size()) == 0;
     if (!item_display_refresh_worker_entry_matches) {
-        monomyth::logger::Log(
-            L"hook_manager: item display class text trace denied target=ItemDisplayRefreshWorker validation=entry_bytes_mismatch");
+        std::wstring message =
+            L"hook_manager: item display class text trace denied target=ItemDisplayRefreshWorker validation=entry_bytes_mismatch expected=\"";
+        message += HexBytes(
+            kItemDisplayRefreshWorkerEntryBytes.data(),
+            kItemDisplayRefreshWorkerEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(
+            live_item_display_refresh_worker_entry.data(),
+            live_item_display_refresh_worker_entry.size());
+        message += L"\" address=";
+        message += HexPtr(module_base + kItemDisplayRefreshWorkerTargetRva);
+        message += L" target_rva=";
+        message += Hex32(kItemDisplayRefreshWorkerTargetRva);
+        message += L" row_builder_expected_match=";
+        message += (item_display_class_row_builder_entry_matches ? L"true" : L"false");
+        message += L" row_builder_live=\"";
+        message += HexBytes(
+            live_item_display_class_row_builder_entry.data(),
+            live_item_display_class_row_builder_entry.size());
+        message += L"\" row_builder_address=";
+        message += HexPtr(module_base + kItemDisplayClassRowBuilderTargetRva);
+        message += L" row_builder_rva=";
+        message += Hex32(kItemDisplayClassRowBuilderTargetRva);
+        monomyth::logger::Log(message);
         return false;
     }
 
