@@ -83,6 +83,8 @@ constexpr std::uint32_t kMoveItemStackLocalGateTargetRva = 0x000322b0;
 constexpr std::uint32_t kEverQuestLMouseUpTargetRva = 0x000c1760;
 constexpr std::uint32_t kCXWndHandleLButtonUpTargetRva = 0x000c1e91;
 constexpr std::uint32_t kInventoryWindowWndNotificationTargetRva = 0x00293490;
+constexpr std::uint32_t kInventorySummaryRefreshCandidateARva = 0x00290100;
+constexpr std::uint32_t kInventorySummaryRefreshCandidateBRva = 0x002905f0;
 constexpr std::uint32_t kItemDisplayRefreshWorkerTargetRva = 0x002ae100;
 constexpr std::uint32_t kItemDisplayClassRowBuilderTargetRva = 0x002a9540;
 constexpr std::uint32_t kInvSlotWndHandleLButtonUpTargetRva = 0x0029a5d0;
@@ -178,6 +180,7 @@ constexpr std::uint32_t kLocalCharDataGlobalRva = 0x009d261c;
 constexpr std::uint32_t kLocalPlayerGlobalRva = 0x009d2630;
 constexpr std::uint32_t kGetClassDescRva = 0x00114dc0;
 constexpr std::uint32_t kGetClassThreeLetterCodeRva = 0x001153c0;
+constexpr std::uint32_t kGetDeityDescRva = 0x00115f70;
 constexpr std::uint32_t kCXStrAssignTargetRva = 0x00405d90;
 constexpr std::uint32_t kCXWndSetWindowTextATargetRva = 0x00406ec0;
 // eqlib maps 0x136310 to CEverQuest::LeftClickedOnPlayer, not a live /who wrapper.
@@ -463,9 +466,15 @@ using MemorizeSendPacketWrapperFn = bool (MONOMYTH_THISCALL*)(
 using GetClassDescFn = const char* (MONOMYTH_THISCALL*)(
     void* this_context,
     unsigned int class_id);
+using GetDeityDescFn = const char* (CDECL*)(
+    unsigned int deity_id);
 using GetClassThreeLetterCodeFn = const char* (MONOMYTH_THISCALL*)(
     void* this_context,
     unsigned int class_id);
+using InventorySummaryRefreshCandidateAFn = void (MONOMYTH_THISCALL*)(
+    void* this_context);
+using InventorySummaryRefreshCandidateBFn = void (MONOMYTH_THISCALL*)(
+    void* this_context);
 using WhoClassNameFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     void* subject);
@@ -673,6 +682,8 @@ InlineDetour g_move_item_slot_populate_detour = {};
 InlineDetour g_everquest_lmouse_up_detour = {};
 InlineDetour g_cxwnd_handle_lbutton_up_detour = {};
 InlineDetour g_inventory_window_wnd_notification_detour = {};
+InlineDetour g_inventory_summary_refresh_candidate_a_detour = {};
+InlineDetour g_inventory_summary_refresh_candidate_b_detour = {};
 InlineDetour g_item_display_refresh_worker_trace_detour = {};
 InlineDetour g_item_display_refresh_worker_detour = {};
 InlineDetour g_invslot_wnd_handle_lbutton_up_detour = {};
@@ -697,6 +708,7 @@ InlineDetour g_start_spell_memorization_path_detour = {};
 InlineDetour g_memorize_send_packet_wrapper_detour = {};
 InlineDetour g_get_class_desc_detour = {};
 InlineDetour g_get_class_three_letter_code_detour = {};
+InlineDetour g_get_deity_desc_detour = {};
 InlineDetour g_who_class_name_detour = {};
 InlineDetour g_who_class_name_class_lookup_detour = {};
 InlineDetour g_cxstr_assign_detour = {};
@@ -841,7 +853,10 @@ SpellbookMemorizeSendPathFn g_original_spellbook_memorize_send_path = nullptr;
 StartSpellMemorizationPathFn g_original_start_spell_memorization_path = nullptr;
 MemorizeSendPacketWrapperFn g_original_memorize_send_packet_wrapper = nullptr;
 GetClassDescFn g_original_get_class_desc = nullptr;
+GetDeityDescFn g_original_get_deity_desc = nullptr;
 GetClassThreeLetterCodeFn g_original_get_class_three_letter_code = nullptr;
+InventorySummaryRefreshCandidateAFn g_original_inventory_summary_refresh_candidate_a = nullptr;
+InventorySummaryRefreshCandidateBFn g_original_inventory_summary_refresh_candidate_b = nullptr;
 WhoClassNameFn g_original_who_class_name = nullptr;
 CXStrAssignFn g_original_cxstr_assign = nullptr;
 CXWndSetWindowTextAFn g_original_cxwnd_set_window_text_a = nullptr;
@@ -1595,6 +1610,51 @@ void LogInventoryClassDisplayCorrelationTrace(
         message += L"\"";
     }
     monomyth::logger::Log(message);
+}
+
+void LogInventorySummaryCandidateEntryTrace(
+    const wchar_t* candidate,
+    std::uint32_t target_rva,
+    std::uintptr_t caller_return_address,
+    void* this_context,
+    void* arg_like) noexcept {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_rva = module_base != 0 && caller_return_address >= module_base
+        ? static_cast<std::uint32_t>(caller_return_address - module_base)
+        : 0;
+
+    std::wstring message = L"InventorySummaryCandidateEntryTrace candidate=";
+    message += (candidate == nullptr ? L"unknown" : candidate);
+    message += L" target_rva=";
+    message += Hex32(target_rva);
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" arg_like=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(arg_like));
+    monomyth::logger::Log(message);
+}
+
+void ArmInventoryClassDisplayCorrelationFromCandidate(
+    const wchar_t* candidate,
+    std::uint32_t target_rva,
+    std::uintptr_t caller_return_address,
+    void* this_context,
+    void* arg_like) noexcept {
+    LogInventorySummaryCandidateEntryTrace(
+        candidate,
+        target_rva,
+        caller_return_address,
+        this_context,
+        arg_like);
+    ArmInventoryClassDisplayCorrelation(
+        caller_return_address,
+        this_context,
+        target_rva,
+        arg_like);
 }
 
 void ArmItemDisplayClassDisplayCorrelation(
@@ -3332,6 +3392,29 @@ const char* MONOMYTH_FASTCALL GetClassThreeLetterCodeHook(
         false,
         result,
         fallback_reason);
+    return result;
+}
+
+const char* CDECL GetDeityDescHook(unsigned int deity_id) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    InventoryClassDisplayCorrelationWindow inventory_correlation = {};
+    const bool inventory_correlation_active =
+        TryConsumeInventoryClassDisplayCorrelation(&inventory_correlation);
+    const char* result = g_original_get_deity_desc == nullptr
+        ? nullptr
+        : g_original_get_deity_desc(deity_id);
+    if (inventory_correlation_active) {
+        LogInventoryClassDisplayCorrelationTrace(
+            L"GetDeityDesc",
+            L"deity_id",
+            caller_return_address,
+            deity_id,
+            inventory_correlation,
+            nullptr,
+            false,
+            L"inventory_summary_deity_observed",
+            result);
+    }
     return result;
 }
 
@@ -11040,6 +11123,40 @@ int MONOMYTH_FASTCALL InventoryWindowWndNotificationHook(
     return original_result;
 }
 
+void MONOMYTH_FASTCALL InventorySummaryRefreshCandidateAHook(
+    void* this_context,
+    void*) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    if (g_multiclass_ui_display_enabled) {
+        ArmInventoryClassDisplayCorrelationFromCandidate(
+            L"InventorySummaryRefreshCandidateA",
+            kInventorySummaryRefreshCandidateARva,
+            caller_return_address,
+            this_context,
+            nullptr);
+    }
+    if (g_original_inventory_summary_refresh_candidate_a != nullptr) {
+        g_original_inventory_summary_refresh_candidate_a(this_context);
+    }
+}
+
+void MONOMYTH_FASTCALL InventorySummaryRefreshCandidateBHook(
+    void* this_context,
+    void*) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    if (g_multiclass_ui_display_enabled) {
+        ArmInventoryClassDisplayCorrelationFromCandidate(
+            L"InventorySummaryRefreshCandidateB",
+            kInventorySummaryRefreshCandidateBRva,
+            caller_return_address,
+            this_context,
+            nullptr);
+    }
+    if (g_original_inventory_summary_refresh_candidate_b != nullptr) {
+        g_original_inventory_summary_refresh_candidate_b(this_context);
+    }
+}
+
 void MONOMYTH_FASTCALL ItemDisplayClassRowBuilderHook(
     void* this_context,
     void*,
@@ -12061,6 +12178,17 @@ bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest)
         }
         goto success;
     }
+    installed = true;
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(module_base + kGetDeityDescRva),
+            reinterpret_cast<void*>(&GetDeityDescHook),
+            &g_get_deity_desc_detour,
+            reinterpret_cast<void**>(&g_original_get_deity_desc),
+            L"GetDeityDesc")) {
+        monomyth::logger::Log(
+            L"hook_manager: inventory deity trace denied target=GetDeityDesc install_failed");
+    }
 
 success:
     g_get_class_desc_seen_caller_rvas = {};
@@ -12082,10 +12210,12 @@ success:
 
 cleanup:
     g_active_who_class_name_subject = nullptr;
+    RemoveInlineDetour(&g_get_deity_desc_detour);
     RemoveInlineDetour(&g_who_class_name_class_lookup_detour);
     RemoveInlineDetour(&g_who_class_name_detour);
     RemoveInlineDetour(&g_get_class_three_letter_code_detour);
     RemoveInlineDetour(&g_get_class_desc_detour);
+    g_original_get_deity_desc = nullptr;
     g_original_get_class_desc = nullptr;
     g_original_get_class_three_letter_code = nullptr;
     g_original_who_class_name = nullptr;
@@ -12449,6 +12579,127 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             auto_equip_class_gate_message += L",";
             auto_equip_class_gate_message += Hex32(kAutoEquipClassGateCallerReturnBRva);
             monomyth::logger::Log(auto_equip_class_gate_message);
+        }
+
+        constexpr std::array<std::uint8_t, 8> kInventoryWindowWndNotificationEntryBytes = {
+            0x6a, 0xff, 0x68, 0xa8, 0xa3, 0x98, 0x00, 0x64};
+        std::array<std::uint8_t, kInventoryWindowWndNotificationEntryBytes.size()>
+            live_inventory_wnd_notification_entry = {};
+        const bool inventory_wnd_notification_entry_copied = TryCopyBytes(
+            reinterpret_cast<const void*>(module_base + kInventoryWindowWndNotificationTargetRva),
+            live_inventory_wnd_notification_entry.size(),
+            live_inventory_wnd_notification_entry.data());
+        const bool inventory_wnd_notification_entry_matches =
+            inventory_wnd_notification_entry_copied &&
+            std::memcmp(
+                live_inventory_wnd_notification_entry.data(),
+                kInventoryWindowWndNotificationEntryBytes.data(),
+                kInventoryWindowWndNotificationEntryBytes.size()) == 0;
+        if (!inventory_wnd_notification_entry_matches) {
+            std::wstring inventory_wnd_notification_message =
+                L"hook_manager: inventory window wnd notification trace denied target=InventoryWindowWndNotification validation=entry_bytes_mismatch expected=\"";
+            inventory_wnd_notification_message += HexBytes(
+                kInventoryWindowWndNotificationEntryBytes.data(),
+                kInventoryWindowWndNotificationEntryBytes.size());
+            inventory_wnd_notification_message += L"\" live=\"";
+            inventory_wnd_notification_message += HexBytes(
+                live_inventory_wnd_notification_entry.data(),
+                live_inventory_wnd_notification_entry.size());
+            inventory_wnd_notification_message += L"\" address=";
+            inventory_wnd_notification_message +=
+                HexPtr(module_base + kInventoryWindowWndNotificationTargetRva);
+            inventory_wnd_notification_message += L" target_rva=";
+            inventory_wnd_notification_message +=
+                Hex32(kInventoryWindowWndNotificationTargetRva);
+            monomyth::logger::Log(inventory_wnd_notification_message);
+        } else if (!InstallInlineDetour(
+                       reinterpret_cast<void*>(
+                           module_base + kInventoryWindowWndNotificationTargetRva),
+                       reinterpret_cast<void*>(&InventoryWindowWndNotificationHook),
+                       &g_inventory_window_wnd_notification_detour,
+                       reinterpret_cast<void**>(&g_original_inventory_window_wnd_notification),
+                       L"CInventoryWindow::WndNotification trace")) {
+            RemoveInlineDetour(&g_inventory_window_wnd_notification_detour);
+            g_original_inventory_window_wnd_notification = nullptr;
+        } else {
+            std::wstring inventory_wnd_notification_message =
+                L"hook_manager: inventory window wnd notification trace installed address=";
+            inventory_wnd_notification_message +=
+                HexPtr(module_base + kInventoryWindowWndNotificationTargetRva);
+            inventory_wnd_notification_message += L" target_rva=";
+            inventory_wnd_notification_message +=
+                Hex32(kInventoryWindowWndNotificationTargetRva);
+            monomyth::logger::Log(inventory_wnd_notification_message);
+        }
+
+        constexpr std::array<std::uint8_t, 8> kInventorySummaryRefreshCandidateAEntryBytes = {
+            0x64, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x6a, 0xff};
+        std::array<std::uint8_t, kInventorySummaryRefreshCandidateAEntryBytes.size()>
+            live_inventory_summary_candidate_a_entry = {};
+        const bool inventory_summary_candidate_a_entry_copied = TryCopyBytes(
+            reinterpret_cast<const void*>(module_base + kInventorySummaryRefreshCandidateARva),
+            live_inventory_summary_candidate_a_entry.size(),
+            live_inventory_summary_candidate_a_entry.data());
+        const bool inventory_summary_candidate_a_entry_matches =
+            inventory_summary_candidate_a_entry_copied &&
+            std::memcmp(
+                live_inventory_summary_candidate_a_entry.data(),
+                kInventorySummaryRefreshCandidateAEntryBytes.data(),
+                kInventorySummaryRefreshCandidateAEntryBytes.size()) == 0;
+        if (!inventory_summary_candidate_a_entry_matches) {
+            monomyth::logger::Log(
+                L"hook_manager: inventory summary candidate trace denied target=InventorySummaryRefreshCandidateA validation=entry_bytes_mismatch");
+        } else if (!InstallInlineDetour(
+                       reinterpret_cast<void*>(
+                           module_base + kInventorySummaryRefreshCandidateARva),
+                       reinterpret_cast<void*>(&InventorySummaryRefreshCandidateAHook),
+                       &g_inventory_summary_refresh_candidate_a_detour,
+                       reinterpret_cast<void**>(&g_original_inventory_summary_refresh_candidate_a),
+                       L"InventorySummaryRefreshCandidateA trace")) {
+            RemoveInlineDetour(&g_inventory_summary_refresh_candidate_a_detour);
+            g_original_inventory_summary_refresh_candidate_a = nullptr;
+        } else {
+            std::wstring candidate_message =
+                L"hook_manager: inventory summary candidate trace installed target=InventorySummaryRefreshCandidateA address=";
+            candidate_message += HexPtr(module_base + kInventorySummaryRefreshCandidateARva);
+            candidate_message += L" target_rva=";
+            candidate_message += Hex32(kInventorySummaryRefreshCandidateARva);
+            monomyth::logger::Log(candidate_message);
+        }
+
+        constexpr std::array<std::uint8_t, 8> kInventorySummaryRefreshCandidateBEntryBytes = {
+            0x83, 0xec, 0x24, 0x53, 0x57, 0x8b, 0xf9, 0x8b};
+        std::array<std::uint8_t, kInventorySummaryRefreshCandidateBEntryBytes.size()>
+            live_inventory_summary_candidate_b_entry = {};
+        const bool inventory_summary_candidate_b_entry_copied = TryCopyBytes(
+            reinterpret_cast<const void*>(module_base + kInventorySummaryRefreshCandidateBRva),
+            live_inventory_summary_candidate_b_entry.size(),
+            live_inventory_summary_candidate_b_entry.data());
+        const bool inventory_summary_candidate_b_entry_matches =
+            inventory_summary_candidate_b_entry_copied &&
+            std::memcmp(
+                live_inventory_summary_candidate_b_entry.data(),
+                kInventorySummaryRefreshCandidateBEntryBytes.data(),
+                kInventorySummaryRefreshCandidateBEntryBytes.size()) == 0;
+        if (!inventory_summary_candidate_b_entry_matches) {
+            monomyth::logger::Log(
+                L"hook_manager: inventory summary candidate trace denied target=InventorySummaryRefreshCandidateB validation=entry_bytes_mismatch");
+        } else if (!InstallInlineDetour(
+                       reinterpret_cast<void*>(
+                           module_base + kInventorySummaryRefreshCandidateBRva),
+                       reinterpret_cast<void*>(&InventorySummaryRefreshCandidateBHook),
+                       &g_inventory_summary_refresh_candidate_b_detour,
+                       reinterpret_cast<void**>(&g_original_inventory_summary_refresh_candidate_b),
+                       L"InventorySummaryRefreshCandidateB trace")) {
+            RemoveInlineDetour(&g_inventory_summary_refresh_candidate_b_detour);
+            g_original_inventory_summary_refresh_candidate_b = nullptr;
+        } else {
+            std::wstring candidate_message =
+                L"hook_manager: inventory summary candidate trace installed target=InventorySummaryRefreshCandidateB address=";
+            candidate_message += HexPtr(module_base + kInventorySummaryRefreshCandidateBRva);
+            candidate_message += L" target_rva=";
+            candidate_message += Hex32(kInventorySummaryRefreshCandidateBRva);
+            monomyth::logger::Log(candidate_message);
         }
 
         return true;
@@ -13866,12 +14117,14 @@ bool RemoveWhoClassNameDisplayHook() noexcept {
     g_inventory_class_display_correlation_notification_caller_rva.store(0);
     g_inventory_class_display_correlation_sender_window.store(0);
     g_inventory_class_display_correlation_payload_like.store(0);
+    ok &= RemoveInlineDetour(&g_get_deity_desc_detour);
     ok &= RemoveInlineDetour(&g_get_class_three_letter_code_detour);
     ok &= RemoveInlineDetour(&g_get_class_desc_detour);
     ok &= RemoveInlineDetour(&g_who_class_name_class_lookup_detour);
     ok &= RemoveInlineDetour(&g_who_class_name_detour);
     g_original_get_class_three_letter_code = nullptr;
     g_original_get_class_desc = nullptr;
+    g_original_get_deity_desc = nullptr;
     g_original_who_class_name = nullptr;
     g_original_who_class_name_class_lookup = nullptr;
     g_multiclass_ui_display_enabled = false;
@@ -13980,6 +14233,12 @@ bool RemoveCanEquipHook() noexcept {
     if (g_move_item_slot21_lookup_detour.installed) {
         RemoveInlineDetour(&g_move_item_slot21_lookup_detour);
     }
+    if (g_inventory_summary_refresh_candidate_a_detour.installed) {
+        RemoveInlineDetour(&g_inventory_summary_refresh_candidate_a_detour);
+    }
+    if (g_inventory_summary_refresh_candidate_b_detour.installed) {
+        RemoveInlineDetour(&g_inventory_summary_refresh_candidate_b_detour);
+    }
     if (g_inventory_window_wnd_notification_detour.installed) {
         RemoveInlineDetour(&g_inventory_window_wnd_notification_detour);
     }
@@ -14069,6 +14328,8 @@ bool RemoveCanEquipHook() noexcept {
     g_original_move_item_branch_bool = nullptr;
     g_original_move_item_stack_local_gate = nullptr;
     g_original_inventory_window_wnd_notification = nullptr;
+    g_original_inventory_summary_refresh_candidate_a = nullptr;
+    g_original_inventory_summary_refresh_candidate_b = nullptr;
     g_original_invslot_handle_lbutton_core = nullptr;
     g_original_invslot_handle_lbutton_core_precheck = nullptr;
     g_original_invslot_handle_lbutton_core_mode_bits = nullptr;
