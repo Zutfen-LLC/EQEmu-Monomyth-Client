@@ -46,6 +46,10 @@ constexpr std::uint64_t kAuthStatsCandidateLogLimit = 16;
 constexpr std::size_t kPrefixByteCap = 16;
 constexpr std::uint32_t kServerAuthStatsOpcode = 0x1338;
 constexpr std::uint32_t kMoveItemOpcode = 0x32ee;
+constexpr std::uint32_t kGmTrainingOpcode = 0x1966;
+constexpr std::uint32_t kGmEndTrainingOpcode = 0x4d6b;
+constexpr std::uint32_t kGmTrainSkillOpcode = 0x2a85;
+constexpr std::uint32_t kGmTrainSkillConfirmOpcode = 0x4b64;
 constexpr std::uint32_t kMoveItemReceiveFocusBudget = 12;
 constexpr std::array<std::uint32_t, 1> kDefaultAllowlist = {
     0x7dfc,
@@ -94,6 +98,13 @@ bool ShouldLogPacket(std::uint64_t sequence) noexcept {
     }
     return sequence <= kFirstPacketLogLimit ||
         (sequence % kPacketLogSampleInterval) == 0;
+}
+
+bool IsGuildTrainerOpcode(std::uint32_t opcode) noexcept {
+    return opcode == kGmTrainingOpcode ||
+        opcode == kGmEndTrainingOpcode ||
+        opcode == kGmTrainSkillOpcode ||
+        opcode == kGmTrainSkillConfirmOpcode;
 }
 
 bool ShouldLogIntrospection(std::uint64_t sequence) noexcept {
@@ -701,7 +712,8 @@ void ObserveReceiveMetadata(
     const bool auth_stats_bootstrap_logging =
         !server_auth_snapshot.has_classes_bitmask &&
         sequence <= kAuthStatsBootstrapPacketLogLimit;
-    if (move_item_focus || auth_stats_bootstrap_logging || ShouldLogPacket(sequence)) {
+    const bool guild_trainer_focus = IsGuildTrainerOpcode(opcode);
+    if (move_item_focus || guild_trainer_focus || auth_stats_bootstrap_logging || ShouldLogPacket(sequence)) {
         std::wstringstream message;
         const std::wstring_view opcode_name = monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
         message
@@ -718,6 +730,9 @@ void ObserveReceiveMetadata(
                 << L" move_item_focus_activation=" << move_item_focus_activation
                 << L" move_item_focus_remaining_before=" << move_item_focus_remaining_before
                 << L" move_item_focus_remaining_after=" << move_item_focus_remaining_after;
+        }
+        if (guild_trainer_focus) {
+            message << L" guild_trainer_focus=true";
         }
         monomyth::logger::Log(message.str());
     }
@@ -817,7 +832,8 @@ void ObserveSendMetadata(
         g_move_item_receive_focus_remaining.store(kMoveItemReceiveFocusBudget);
         move_item_focus_armed = true;
     }
-    if (!move_item_focus_armed && !ShouldLogPacket(sequence)) {
+    const bool guild_trainer_focus = opcode_decoded && IsGuildTrainerOpcode(opcode);
+    if (!move_item_focus_armed && !guild_trainer_focus && !ShouldLogPacket(sequence)) {
         return;
     }
 
@@ -862,6 +878,9 @@ void ObserveSendMetadata(
         message << L" move_item_focus_armed=true"
                 << L" move_item_focus_activation=" << move_item_focus_activation
                 << L" move_item_focus_budget=" << kMoveItemReceiveFocusBudget;
+    }
+    if (guild_trainer_focus) {
+        message << L" guild_trainer_focus=true";
     }
     monomyth::logger::Log(message.str());
 }
