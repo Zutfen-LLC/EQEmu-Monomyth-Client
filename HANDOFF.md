@@ -81,6 +81,8 @@ Current trace hooks in `src/hook_manager.cpp`:
 - inventory summary candidate A at `rva=0x00290100`
 - inventory summary candidate B at `rva=0x002905f0`
 - inventory summary candidate C at `rva=0x00312b00`
+- inventory summary candidate D / `CInventoryWnd::OnProcessFrame` at `rva=0x00292c90`
+- late full-name `GetClassDesc` candidate callsites at `rva=0x003249ac`, `0x00324d84`, and `0x003252ab`
 
 Candidate C is now disproven for the active repro.
 - `0x712b00` is still a real binary-backed multi-label refresh function
@@ -115,24 +117,28 @@ Current verdict:
 - character-select full-name rendering still happens on the early pre-auth `GetClassDesc` caller `0x18e554`
 - `OP_ServerAuthStats` arrives later with the correct mask `0x1044`, but no later full-name refresh seam has been observed
 - the progression-selection callsite hook at `0x3212b6` is installed but stays cold in the active repro
-- the validated `0x321210` `CharSelectClassNameFunc` entry is now trace-hooked directly so the next repro can prove whether the broader producer runs even when the inner `0x3212b6` class-label branch stays cold
+- the validated `0x321210` `CharSelectClassNameFunc` entry trace now also stays completely cold in live repros, even after clean install logging confirmed `entry_trace=true callsite_patch=true`
 - inventory summary candidate C at `0x712b00` is not the live seam for the active top-left summary repro
+- `eqlib` plus direct vtable recovery pin `CInventoryWnd::OnProcessFrame` to `0x692c90` / `rva=0x292c90`
+- the neighboring `Activate` slot resolves to the generic show wrapper pattern, so `OnProcessFrame` is the better inventory self-refresh seam
 
 The next useful validation step is to repro the inventory summary pane and inspect the log for:
 - `InventoryClassDisplayCorrelationWindow`
+- `InventoryOnProcessFrameTrace`
 - whether any later `UiClassHelperTrace` now survives after the shared-string budget-preservation change
 - any fresh entry traces from the next inventory self-refresh seam once instrumented
 
 For character select, the next useful step is:
-- bias toward the actual post-auth character-select refresh/repaint path instead of the cold progression-selection seam
+- stop treating the current progression-selection / `CharSelectClassNameFunc` family as the active visible class-list seam for this client flow
 - prefer later full-name producers or refreshers that run after `ServerAuthStats valid=true ... statClassesBitmask=0x00001044`
-- inspect the next repro for `CharSelectClassNameFuncTrace phase=before/after` to see whether `field_248` or `field_24c` branches are active post-auth inside the validated `0x321210` producer
+- check whether the newly instrumented late full-name `GetClassDesc` callsites around `0x3249b1` / `0x324d89` / `0x3252b0` are the real post-auth class-list seam
+- if the next repro still shows zero `CharSelectLateFullNameTrace` lines, treat those later helper callsites as cold too and pivot away from helper-level char-select probes
 
 Expected live log path:
 - `/home/zutfen/everquest_rof2/monomyth-client.log`
 
 Next seam direction:
-- bias toward `CInventoryWindow` self-refresh paths such as `Activate` / `OnProcessFrame`
+- bias toward `CInventoryWindow` self-refresh paths, now led by the concrete `OnProcessFrame` seam at `0x292c90`
 - prefer binary-backed summary producers over more generic UI callback guesses
 - use `eqlib`, `MacroQuest`, and prior clean-room Ghidra outputs as steering references
 
