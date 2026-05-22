@@ -91,6 +91,44 @@ std::wstring TimestampPrefix() noexcept {
     return buffer;
 }
 
+std::string WideToUtf8(std::wstring_view value) noexcept {
+    if (value.empty()) {
+        return {};
+    }
+
+    const int required = WideCharToMultiByte(
+        CP_UTF8,
+        0,
+        value.data(),
+        static_cast<int>(value.size()),
+        nullptr,
+        0,
+        nullptr,
+        nullptr);
+    if (required <= 0) {
+        return {};
+    }
+
+    std::string utf8(static_cast<std::size_t>(required), '\0');
+    const int written = WideCharToMultiByte(
+        CP_UTF8,
+        0,
+        value.data(),
+        static_cast<int>(value.size()),
+        utf8.data(),
+        required,
+        nullptr,
+        nullptr);
+    if (written <= 0) {
+        return {};
+    }
+
+    if (written < required) {
+        utf8.resize(static_cast<std::size_t>(written));
+    }
+    return utf8;
+}
+
 void WriteLine(std::wstring_view line) noexcept {
     if (g_log_file == INVALID_HANDLE_VALUE) {
         return;
@@ -100,9 +138,14 @@ void WriteLine(std::wstring_view line) noexcept {
     output.append(line.begin(), line.end());
     output.append(L"\r\n");
 
-    DWORD bytes_to_write = static_cast<DWORD>(output.size() * sizeof(wchar_t));
+    const std::string utf8_output = WideToUtf8(output);
+    if (utf8_output.empty()) {
+        return;
+    }
+
+    DWORD bytes_to_write = static_cast<DWORD>(utf8_output.size());
     DWORD bytes_written = 0;
-    WriteFile(g_log_file, output.data(), bytes_to_write, &bytes_written, nullptr);
+    WriteFile(g_log_file, utf8_output.data(), bytes_to_write, &bytes_written, nullptr);
 }
 
 }  // namespace
