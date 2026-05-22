@@ -3479,9 +3479,6 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
     monomyth::packet_observer::WhoAllClassDisplayCorrelationWindow correlation = {};
     const bool correlation_active =
         monomyth::packet_observer::TryConsumeWhoAllClassDisplayCorrelation(&correlation);
-    InventoryClassDisplayCorrelationWindow inventory_correlation = {};
-    const bool inventory_correlation_active =
-        TryConsumeInventoryClassDisplayCorrelation(&inventory_correlation);
     ItemDisplayClassDisplayCorrelationWindow item_display_correlation = {};
     const bool item_display_correlation_active =
         IsLikelyItemDisplayStringLookupCaller(caller_return_rva) &&
@@ -3489,6 +3486,10 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
     const bool who_all_class_label_caller =
         caller_return_rva == kWhoAllClassLabelLookupCallerRva;
     const bool caller_matches = IsWhoClassNameLookupCaller(caller_return_address);
+    InventoryClassDisplayCorrelationWindow inventory_correlation = {};
+    const bool inventory_correlation_active =
+        (who_all_class_label_caller || caller_matches) &&
+        TryConsumeInventoryClassDisplayCorrelation(&inventory_correlation);
     if (who_all_class_label_caller && correlation_active) {
         const char* display = BuildLocalPlayerClassDisplayAscii(
             monomyth::multiclass_identity::ClassDisplayStyle::kFullName,

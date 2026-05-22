@@ -74,12 +74,13 @@ Current trace hooks in `src/hook_manager.cpp`:
 - inventory summary candidate B at `rva=0x002905f0`
 - inventory summary candidate C at `rva=0x00312b00`
 
-Candidate C is the most promising current seam.
-- `0x712b00` is a binary-backed multi-label refresh function
+Candidate C is now disproven for the active repro.
+- `0x712b00` is still a real binary-backed multi-label refresh function
 - it contains:
   - `GetClassDesc` callsite at `0x712c50`
   - `GetRaceDesc` callsite at `0x712ca2`
-- this is why it was promoted into the live trace set
+- but repeated live inventory repros still produced no `InventorySummaryCandidateEntryTrace`
+- treat it as a dead seam for the top-left inventory summary pane unless fresh contrary evidence appears
 
 ## Current Code State
 
@@ -87,7 +88,8 @@ Recent changes already in the repo:
 - logger writes UTF-8
 - item-display tracing is retired as the active blocker
 - inventory trace install bug behind an early return was fixed
-- inventory summary candidate C was added
+- inventory summary candidate C was added and later disproven in live repro
+- shared inventory correlation tracing now preserves budget instead of spending it on unrelated `WhoClassNameClassLookup` traffic
 
 Files to inspect first:
 - `src/hook_manager.cpp`
@@ -101,20 +103,21 @@ Notable current rough edge:
 
 ## Latest Practical Direction
 
+Current verdict:
+- char-select full-name formatting should no longer prepend non-authoritative classes
+- inventory summary candidate C at `0x712b00` is not the live seam for the active top-left summary repro
+
 The next useful validation step is to repro the inventory summary pane and inspect the log for:
-- `hook_manager: inventory summary candidate trace installed target=InventorySummaryRefreshCandidateC`
-- `InventorySummaryCandidateEntryTrace candidate=InventorySummaryRefreshCandidateC`
-- any following:
-  - `InventoryClassDisplayCorrelationWindow`
-  - `InventoryClassDisplayTrace`
-  - `UiClassHelperTrace`
+- `InventoryClassDisplayCorrelationWindow`
+- whether any later `UiClassHelperTrace` now survives after the shared-string budget-preservation change
+- any fresh entry traces from the next inventory self-refresh seam once instrumented
 
 Expected live log path:
 - `/home/zutfen/everquest_rof2/monomyth-client.log`
 
-If candidate C still does not fire:
-- use more focused binary/Ghidra work
-- bias toward the actual summary refresh/writer path, not more UI callback guesses
+Next seam direction:
+- bias toward `CInventoryWindow` self-refresh paths such as `Activate` / `OnProcessFrame`
+- prefer binary-backed summary producers over more generic UI callback guesses
 - use `eqlib`, `MacroQuest`, and prior clean-room Ghidra outputs as steering references
 
 ## Working Rules
@@ -126,4 +129,3 @@ If candidate C still does not fire:
 - Prefer producer/update seams over final text-write interception.
 - Keep logs and traces bounded and decision-oriented.
 - If a seam is disproven, record it in `docs/multiclass-negative-results.md`.
-

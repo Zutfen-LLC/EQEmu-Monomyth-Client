@@ -209,7 +209,12 @@ OrderedClassIds BuildOrderedClassIdList(
         return ordered_ids;
     }
 
-    AppendClassIfMissing(&ordered_ids, primary_class_id);
+    // Only trust the primary-class hint when it is actually present in the
+    // authoritative multiclass mask; otherwise prefer the server-provided mask
+    // ordering so we do not prepend stale or unrelated class ids.
+    if (HasClass(class_mask, primary_class_id)) {
+        AppendClassIfMissing(&ordered_ids, primary_class_id);
+    }
 
     for (unsigned int class_id = kFirstPlayableClassId;
          class_id <= kLastPlayableClassId;
