@@ -222,7 +222,7 @@ struct Manifest {
     std::wstring multiclass_item_usability_reason =
         L"multiclass item usability unavailable";
     std::wstring multiclass_skill_visibility_reason =
-        L"multiclass activated skill visibility unavailable";
+        L"multiclass activated skill visibility/use unavailable";
     std::wstring multiclass_ui_display_reason =
         L"multiclass UI display unavailable";
 };

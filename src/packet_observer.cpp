@@ -18,6 +18,7 @@
 
 #include "hook_manager.h"
 #include "logger.h"
+#include "multiclass_skill_visibility.h"
 #include "opcode_reference.h"
 #include "server_auth_stats_observer.h"
 
@@ -51,7 +52,15 @@ constexpr std::uint32_t kGmTrainingOpcode = 0x1966;
 constexpr std::uint32_t kGmEndTrainingOpcode = 0x4d6b;
 constexpr std::uint32_t kGmTrainSkillOpcode = 0x2a85;
 constexpr std::uint32_t kGmTrainSkillConfirmOpcode = 0x4b64;
+constexpr std::uint32_t kActionOpcode = 0x744c;
+constexpr std::uint32_t kApplyPoisonOpcode = 0x31e6;
+constexpr std::uint32_t kCombatAbilityOpcode = 0x3eba;
+constexpr std::uint32_t kFeignDeathOpcode = 0x52fa;
+constexpr std::uint32_t kTauntOpcode = 0x2703;
+constexpr std::uint32_t kTrackOpcode = 0x17e5;
+constexpr std::uint32_t kTrackTargetOpcode = 0x695e;
 constexpr std::uint32_t kMoveItemReceiveFocusBudget = 12;
+constexpr std::uint32_t kActivatedSkillSendCorrelationBudget = 12;
 constexpr std::array<std::uint32_t, 1> kDefaultAllowlist = {
     0x7dfc,
 };
@@ -73,6 +82,11 @@ std::atomic<std::uint32_t> g_who_all_class_display_correlation_remaining = 0;
 std::atomic<std::uint64_t> g_who_all_class_display_correlation_activation = 0;
 std::atomic<std::uint64_t> g_who_all_class_display_correlation_receive_sequence = 0;
 std::atomic<std::uint64_t> g_who_all_class_display_correlation_response_index = 0;
+std::atomic<std::uint32_t> g_activated_skill_send_correlation_remaining = 0;
+std::atomic<std::uint64_t> g_activated_skill_send_correlation_activation = 0;
+std::atomic<int> g_activated_skill_send_correlation_skill_id = -1;
+std::atomic<std::uintptr_t> g_activated_skill_send_correlation_caller_return = 0;
+std::atomic<std::uint32_t> g_activated_skill_send_correlation_caller_rva = 0;
 std::vector<std::uint32_t> g_introspection_allowlist;
 
 struct IntrospectionAllowlistConfig {
@@ -82,6 +96,12 @@ struct IntrospectionAllowlistConfig {
 };
 
 std::wstring Hex32(std::uint32_t value) {
+    std::wstringstream stream;
+    stream << L"0x" << std::hex << value;
+    return stream.str();
+}
+
+std::wstring Hex64(std::uint64_t value) {
     std::wstringstream stream;
     stream << L"0x" << std::hex << value;
     return stream.str();
@@ -108,6 +128,16 @@ bool IsGuildTrainerOpcode(std::uint32_t opcode) noexcept {
         opcode == kGmTrainSkillConfirmOpcode;
 }
 
+bool IsActivatedSkillUseOpcode(std::uint32_t opcode) noexcept {
+    return opcode == kActionOpcode ||
+        opcode == kApplyPoisonOpcode ||
+        opcode == kCombatAbilityOpcode ||
+        opcode == kFeignDeathOpcode ||
+        opcode == kTauntOpcode ||
+        opcode == kTrackOpcode ||
+        opcode == kTrackTargetOpcode;
+}
+
 bool ShouldLogIntrospection(std::uint64_t sequence) noexcept {
     return sequence <= kFirstIntrospectionLogLimit ||
         (sequence % kIntrospectionLogSampleInterval) == 0;
@@ -127,6 +157,38 @@ bool TryConsumeMoveItemReceiveFocus(
             *remaining_before = current;
             *remaining_after = current - 1;
             *activation = g_move_item_receive_focus_activation.load();
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool TryConsumeActivatedSkillSendCorrelation(
+    std::uint32_t* remaining_before,
+    std::uint32_t* remaining_after,
+    std::uint64_t* activation,
+    int* skill_id,
+    std::uintptr_t* caller_return_address,
+    std::uint32_t* caller_rva) noexcept {
+    if (remaining_before == nullptr || remaining_after == nullptr ||
+        activation == nullptr || skill_id == nullptr ||
+        caller_return_address == nullptr || caller_rva == nullptr) {
+        return false;
+    }
+
+    std::uint32_t current = g_activated_skill_send_correlation_remaining.load();
+    while (current != 0) {
+        if (g_activated_skill_send_correlation_remaining.compare_exchange_weak(
+                current,
+                current - 1)) {
+            *remaining_before = current;
+            *remaining_after = current - 1;
+            *activation = g_activated_skill_send_correlation_activation.load();
+            *skill_id = g_activated_skill_send_correlation_skill_id.load();
+            *caller_return_address =
+                g_activated_skill_send_correlation_caller_return.load();
+            *caller_rva = g_activated_skill_send_correlation_caller_rva.load();
             return true;
         }
     }
@@ -318,6 +380,23 @@ std::wstring FormatPrefixHex(
         stream << std::setw(2) << static_cast<unsigned int>(prefix[i]);
     }
     return stream.str();
+}
+
+bool TryReadU32FromPrefix(
+    const std::array<std::uint8_t, kPrefixByteCap>& prefix,
+    std::size_t prefix_length,
+    std::size_t offset,
+    std::uint32_t* value_out) noexcept {
+    if (value_out == nullptr ||
+        offset > prefix_length ||
+        (prefix_length - offset) < sizeof(std::uint32_t)) {
+        return false;
+    }
+
+    std::uint32_t value = 0;
+    std::memcpy(&value, prefix.data() + offset, sizeof(value));
+    *value_out = value;
+    return true;
 }
 
 void MaybeLogServerAuthStatsCandidate(
@@ -658,6 +737,8 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     message += manifest.full_packet_trace_allowed ? L"true" : L"false";
     message += L" move_item_recv_focus_budget=";
     message += std::to_wstring(kMoveItemReceiveFocusBudget);
+    message += L" activated_skill_send_correlation_budget=";
+    message += std::to_wstring(kActivatedSkillSendCorrelationBudget);
     if (manifest.receive_introspection_allowed) {
         message += L" recv_introspection=true recv_introspection_prefix_cap=16";
         message += L" recv_introspection_safety_ceiling=";
@@ -834,9 +915,37 @@ void ObserveSendMetadata(
         move_item_focus_armed = true;
     }
     const bool guild_trainer_focus = opcode_decoded && IsGuildTrainerOpcode(opcode);
-    if (!move_item_focus_armed && !guild_trainer_focus && !ShouldLogPacket(sequence)) {
+    const bool activated_skill_use_focus =
+        opcode_decoded && IsActivatedSkillUseOpcode(opcode);
+    std::uint32_t activated_skill_remaining_before = 0;
+    std::uint32_t activated_skill_remaining_after = 0;
+    std::uint64_t activated_skill_activation = 0;
+    int activated_skill_id = -1;
+    std::uintptr_t activated_skill_caller_return = 0;
+    std::uint32_t activated_skill_caller_rva = 0;
+    const bool activated_skill_correlation_focus =
+        TryConsumeActivatedSkillSendCorrelation(
+            &activated_skill_remaining_before,
+            &activated_skill_remaining_after,
+            &activated_skill_activation,
+            &activated_skill_id,
+            &activated_skill_caller_return,
+            &activated_skill_caller_rva);
+    if (!move_item_focus_armed && !guild_trainer_focus &&
+        !activated_skill_use_focus && !activated_skill_correlation_focus &&
+        !ShouldLogPacket(sequence)) {
         return;
     }
+
+    const std::size_t prefix_length = static_cast<std::size_t>(
+        (total_length < kPrefixByteCap) ? total_length : kPrefixByteCap);
+    std::array<std::uint8_t, kPrefixByteCap> prefix = {};
+    const bool prefix_copied =
+        prefix_length != 0 &&
+        TryCopyPrefixBytes(
+            reinterpret_cast<const void*>(packet_pointer),
+            prefix_length,
+            prefix.data());
 
     std::wstringstream message;
     const std::wstring_view opcode_name = opcode_decoded
@@ -883,6 +992,102 @@ void ObserveSendMetadata(
     if (guild_trainer_focus) {
         message << L" guild_trainer_focus=true";
     }
+    if (activated_skill_correlation_focus) {
+        message << L" activated_skill_gate_correlation=true"
+                << L" activated_skill_correlation_activation="
+                << activated_skill_activation
+                << L" activated_skill_correlation_remaining_before="
+                << activated_skill_remaining_before
+                << L" activated_skill_correlation_remaining_after="
+                << activated_skill_remaining_after
+                << L" activated_skill_correlation_skill_id="
+                << activated_skill_id
+                << L" activated_skill_correlation_skill_name=\""
+                << monomyth::multiclass_skill_visibility::ActivatedSkillName(
+                    activated_skill_id)
+                << L"\" activated_skill_gate_caller_return="
+                << HexPtr(activated_skill_caller_return)
+                << L" activated_skill_gate_caller_rva="
+                << Hex32(activated_skill_caller_rva);
+        if (prefix_copied) {
+            message << L" activated_skill_correlation_packet_prefix_len="
+                    << prefix_length
+                    << L" activated_skill_correlation_packet_prefix_hex=\""
+                    << FormatPrefixHex(prefix.data(), prefix_length)
+                    << L"\"";
+        } else {
+            message << L" activated_skill_correlation_packet_prefix_status=not_copied";
+        }
+    }
+    if (activated_skill_use_focus) {
+        const monomyth::server_auth_stats::Snapshot snapshot =
+            monomyth::server_auth_stats::GetSnapshot();
+        message << L" activated_skill_use_focus=true"
+                << L" attempted_send=true"
+                << L" has_statClassesBitmask="
+                << (snapshot.has_classes_bitmask ? L"true" : L"false");
+        if (snapshot.has_classes_bitmask) {
+            message << L" statClassesBitmask=" << Hex32(snapshot.classes_bitmask);
+        }
+        message << L" has_statActivatedSkillMaskLow="
+                << (snapshot.has_activated_skill_mask_low ? L"true" : L"false")
+                << L" statActivatedSkillMaskLow=" << Hex64(snapshot.activated_skill_mask_low)
+                << L" has_statActivatedSkillMaskHigh="
+                << (snapshot.has_activated_skill_mask_high ? L"true" : L"false")
+                << L" statActivatedSkillMaskHigh=" << Hex64(snapshot.activated_skill_mask_high);
+        if (prefix_copied) {
+            message << L" packet_prefix_len=" << prefix_length
+                    << L" packet_prefix_hex=\""
+                    << FormatPrefixHex(prefix.data(), prefix_length)
+                    << L"\"";
+            if (opcode == kCombatAbilityOpcode) {
+                std::uint32_t field0 = 0;
+                std::uint32_t field1 = 0;
+                std::uint32_t field2 = 0;
+                const bool combat_fields_decoded =
+                    TryReadU32FromPrefix(prefix, prefix_length, 2, &field0) &&
+                    TryReadU32FromPrefix(prefix, prefix_length, 6, &field1) &&
+                    TryReadU32FromPrefix(prefix, prefix_length, 10, &field2);
+                message << L" combat_ability_payload_decoded="
+                        << (combat_fields_decoded ? L"true" : L"false");
+                if (combat_fields_decoded) {
+                    message << L" combat_ability_field0=" << field0
+                            << L" combat_ability_field1=" << field1
+                            << L" combat_ability_field2=" << field2;
+                }
+            }
+        } else {
+            message << L" packet_prefix_status=not_copied";
+        }
+    }
+    monomyth::logger::Log(message.str());
+}
+
+void ArmActivatedSkillSendCorrelation(
+    int skill_id,
+    std::uintptr_t caller_return_address,
+    std::uint32_t caller_rva) noexcept {
+    if (g_state.load() != State::kInitialized) {
+        return;
+    }
+
+    const std::uint64_t activation =
+        g_activated_skill_send_correlation_activation.fetch_add(1) + 1;
+    g_activated_skill_send_correlation_skill_id.store(skill_id);
+    g_activated_skill_send_correlation_caller_return.store(caller_return_address);
+    g_activated_skill_send_correlation_caller_rva.store(caller_rva);
+    g_activated_skill_send_correlation_remaining.store(
+        kActivatedSkillSendCorrelationBudget);
+
+    std::wstringstream message;
+    message << L"PacketObserverActivatedSkillSendCorrelationWindow"
+            << L" activation=" << activation
+            << L" skill_id=" << skill_id
+            << L" skill_name=\""
+            << monomyth::multiclass_skill_visibility::ActivatedSkillName(skill_id)
+            << L"\" caller_return=" << HexPtr(caller_return_address)
+            << L" caller_rva=" << Hex32(caller_rva)
+            << L" budget=" << kActivatedSkillSendCorrelationBudget;
     monomyth::logger::Log(message.str());
 }
 

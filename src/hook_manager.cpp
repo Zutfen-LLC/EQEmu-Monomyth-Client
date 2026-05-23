@@ -73,6 +73,17 @@ constexpr std::size_t kClientItemInfoClassesOffset = 0x170;
 constexpr std::size_t kClientItemInfoItemClassOffset = 0x1d4;
 constexpr std::uint32_t kClientItemWrapperGetDataThunkRva = 0x003b06e0;
 constexpr std::uint32_t kCharacterZoneClientHasSkillRva = 0x0004a1b0;
+constexpr std::uint32_t kCharacterZoneClientGetAdjustedSkillRva = 0x00049fe0;
+constexpr std::uint32_t kCharacterZoneClientUseSkillRva = 0x0005b2d0;
+constexpr std::uint32_t kActivatedSkillHasSkillActionCallerRva = 0x00151b5e;
+constexpr std::uint32_t kActivatedSkillHasSkillAbilityCallerRva = 0x00356daa;
+constexpr std::uint32_t kActivatedSkillUseSkillAdjustedSkillCallsiteRva = 0x0005b33e;
+constexpr std::uint32_t kActivatedSkillUseSkillAdjustedSkillReturnRva = 0x0005b343;
+constexpr std::uint32_t kActivatedSkillActionSlotDispatcherRva = 0x0028c8b0;
+constexpr std::uint32_t kActivatedSkillActionSlotUseSkillCallsiteRva = 0x0028ca21;
+constexpr std::uint32_t kActivatedSkillCombatProducerRva = 0x000fb3d0;
+constexpr std::uint32_t kActivatedSkillCombatSendOpcodeRva = 0x000fb65e;
+constexpr std::uint32_t kActivatedSkillCombatSendWrapperCallRva = 0x000fb68f;
 constexpr std::int32_t kFirstGeneralInventorySlot = 23;
 constexpr std::int32_t kPrimaryEquipmentSlot = 13;
 constexpr std::int32_t kSecondaryEquipmentSlot = 14;
@@ -324,6 +335,13 @@ using ItemWrapperGetDataThunkFn = void* (MONOMYTH_THISCALL*)(
 using CharacterZoneClientHasSkillFn = bool (MONOMYTH_THISCALL*)(
     void* this_context,
     int skill_id);
+using CharacterZoneClientGetAdjustedSkillFn = int (MONOMYTH_THISCALL*)(
+    void* this_context,
+    int skill_id);
+using CharacterZoneClientUseSkillFn = void (MONOMYTH_THISCALL*)(
+    void* this_context,
+    unsigned char skill_id,
+    void* target);
 using EverQuestLMouseUpFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     void* point_like);
@@ -742,6 +760,8 @@ InlineDetour g_inventory_summary_refresh_candidate_b_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_c_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_d_detour = {};
 InlineDetour g_character_zone_client_has_skill_detour = {};
+InlineDetour g_character_zone_client_get_adjusted_skill_detour = {};
+InlineDetour g_character_zone_client_use_skill_detour = {};
 InlineDetour g_char_select_class_name_func_detour = {};
 InlineDetour g_character_list_update_list_detour = {};
 InlineDetour g_item_display_refresh_worker_trace_detour = {};
@@ -836,6 +856,8 @@ IsClassUsablePredicateFn g_original_is_class_usable_predicate = nullptr;
 GuildTrainerClassLookupFn g_original_guild_trainer_class_lookup = nullptr;
 CanEquipFn g_original_can_equip = nullptr;
 CharacterZoneClientHasSkillFn g_original_character_zone_client_has_skill = nullptr;
+CharacterZoneClientGetAdjustedSkillFn g_original_character_zone_client_get_adjusted_skill = nullptr;
+CharacterZoneClientUseSkillFn g_original_character_zone_client_use_skill = nullptr;
 InvSlotMgrMoveItemFn g_original_inv_slot_mgr_move_item = nullptr;
 EquipRecordLookupFn g_original_equip_record_lookup = nullptr;
 EquipRequirementLookupFn g_original_equip_requirement_lookup = nullptr;
@@ -1026,6 +1048,9 @@ std::uint64_t g_guild_trainer_class_lookup_override_count = 0;
 std::uint64_t g_guild_trainer_class_lookup_call_count = 0;
 std::uint8_t g_pending_guild_trainer_session_class_id = 0;
 std::uint64_t g_who_class_name_entry_trace_count = 0;
+std::uint64_t g_activated_skill_use_skill_trace_count = 0;
+std::uint64_t g_activated_skill_adjusted_skill_trace_count = 0;
+std::uint64_t g_activated_skill_adjusted_skill_override_count = 0;
 thread_local const void* g_active_who_class_name_subject = nullptr;
 std::uint64_t g_ui_class_display_trace_count = 0;
 std::uint32_t g_active_equip_nested_validation_id = 0;
@@ -3437,6 +3462,131 @@ bool TryHasLocalPlayerSkill(int skill_id, bool* has_skill) noexcept {
     return true;
 }
 
+const wchar_t* ActivatedSkillCallerSurface(std::uint32_t caller_rva) noexcept {
+    switch (caller_rva) {
+    case kActivatedSkillHasSkillActionCallerRva:
+        return L"known_has_skill_caller_action_slot_0x00151b5e";
+    case kActivatedSkillHasSkillAbilityCallerRva:
+        return L"known_has_skill_caller_ability_surface_0x00356daa";
+    case kActivatedSkillUseSkillAdjustedSkillReturnRva:
+        return L"known_useskill_adjusted_skill_gate_0x0005b343";
+    case kActivatedSkillActionSlotUseSkillCallsiteRva + kJmpPatchBytes:
+        return L"known_action_slot_direct_useskill_0x0028ca26";
+    default:
+        return L"unknown";
+    }
+}
+
+std::wstring HexBytes(const std::uint8_t* bytes, std::size_t length);
+
+bool ValidateActivatedSkillUseSeamBytes(
+    const wchar_t* name,
+    std::uintptr_t address,
+    std::uint32_t rva,
+    const std::uint8_t* expected,
+    std::size_t expected_length) noexcept {
+    std::array<std::uint8_t, 16> live = {};
+    if (expected == nullptr || expected_length == 0 || expected_length > live.size()) {
+        return false;
+    }
+
+    const bool copied = TryCopyBytes(
+        reinterpret_cast<const void*>(address),
+        expected_length,
+        live.data());
+    const bool matches =
+        copied && std::memcmp(live.data(), expected, expected_length) == 0;
+
+    std::wstring message = L"hook_manager: activated skill use seam ";
+    message += matches ? L"validated" : L"denied";
+    message += L" target=";
+    message += (name == nullptr || name[0] == L'\0') ? L"unknown" : name;
+    message += L" address=";
+    message += HexPtr(address);
+    message += L" rva=";
+    message += Hex32(rva);
+    message += L" expected=\"";
+    message += HexBytes(expected, expected_length);
+    message += L"\" live=\"";
+    message += HexBytes(live.data(), expected_length);
+    message += L"\"";
+    monomyth::logger::Log(message);
+    return matches;
+}
+
+bool ValidateActivatedSkillUseTraceSeams(std::uintptr_t module_base) noexcept {
+    constexpr std::array<std::uint8_t, 9> kCombatProducerEntryBytes = {
+        0x83, 0xec, 0x0c, 0x55, 0x56, 0x8b, 0x74, 0x24, 0x1c};
+    constexpr std::array<std::uint8_t, 5> kCombatAbilityOpcodePushBytes = {
+        0x68, 0xba, 0x3e, 0x00, 0x00};
+    constexpr std::array<std::uint8_t, 5> kCombatSendWrapperCallBytes = {
+        0xe8, 0x5c, 0x9b, 0x3c, 0x00};
+    constexpr std::array<std::uint8_t, 9> kUseSkillEntryBytes = {
+        0x6a, 0xff, 0x68, 0x41, 0x32, 0x97, 0x00, 0x64, 0xa1};
+    constexpr std::array<std::uint8_t, 7> kGetAdjustedSkillEntryBytes = {
+        0x51, 0x56, 0x57, 0x8b, 0x7c, 0x24, 0x10};
+    constexpr std::array<std::uint8_t, 5> kUseSkillAdjustedSkillCallBytes = {
+        0xe8, 0x9d, 0xec, 0xfe, 0xff};
+    constexpr std::array<std::uint8_t, 9> kActionSlotDispatcherEntryBytes = {
+        0x8b, 0xc1, 0x8b, 0x0d, 0x30, 0x26, 0xdd, 0x00, 0x83};
+    constexpr std::array<std::uint8_t, 5> kActionSlotUseSkillCallBytes = {
+        0xe8, 0xaa, 0xe8, 0xdc, 0xff};
+
+    const bool producer_matches = ValidateActivatedSkillUseSeamBytes(
+        L"ActivatedSkillCombatProducer",
+        module_base + kActivatedSkillCombatProducerRva,
+        kActivatedSkillCombatProducerRva,
+        kCombatProducerEntryBytes.data(),
+        kCombatProducerEntryBytes.size());
+    const bool opcode_matches = ValidateActivatedSkillUseSeamBytes(
+        L"OP_CombatAbilityOpcodePush",
+        module_base + kActivatedSkillCombatSendOpcodeRva,
+        kActivatedSkillCombatSendOpcodeRva,
+        kCombatAbilityOpcodePushBytes.data(),
+        kCombatAbilityOpcodePushBytes.size());
+    const bool wrapper_call_matches = ValidateActivatedSkillUseSeamBytes(
+        L"OP_CombatAbilityWrapperCall",
+        module_base + kActivatedSkillCombatSendWrapperCallRva,
+        kActivatedSkillCombatSendWrapperCallRva,
+        kCombatSendWrapperCallBytes.data(),
+        kCombatSendWrapperCallBytes.size());
+    const bool use_skill_entry_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CharacterZoneClient::UseSkill",
+        module_base + kCharacterZoneClientUseSkillRva,
+        kCharacterZoneClientUseSkillRva,
+        kUseSkillEntryBytes.data(),
+        kUseSkillEntryBytes.size());
+    const bool get_adjusted_skill_entry_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CharacterZoneClient::GetAdjustedSkill",
+        module_base + kCharacterZoneClientGetAdjustedSkillRva,
+        kCharacterZoneClientGetAdjustedSkillRva,
+        kGetAdjustedSkillEntryBytes.data(),
+        kGetAdjustedSkillEntryBytes.size());
+    const bool use_skill_adjusted_skill_call_matches = ValidateActivatedSkillUseSeamBytes(
+        L"UseSkillAdjustedSkillCallsite",
+        module_base + kActivatedSkillUseSkillAdjustedSkillCallsiteRva,
+        kActivatedSkillUseSkillAdjustedSkillCallsiteRva,
+        kUseSkillAdjustedSkillCallBytes.data(),
+        kUseSkillAdjustedSkillCallBytes.size());
+    const bool action_slot_dispatcher_matches = ValidateActivatedSkillUseSeamBytes(
+        L"ActionSlotDispatcher",
+        module_base + kActivatedSkillActionSlotDispatcherRva,
+        kActivatedSkillActionSlotDispatcherRva,
+        kActionSlotDispatcherEntryBytes.data(),
+        kActionSlotDispatcherEntryBytes.size());
+    const bool action_slot_use_skill_call_matches = ValidateActivatedSkillUseSeamBytes(
+        L"ActionSlotDirectUseSkillCallsite",
+        module_base + kActivatedSkillActionSlotUseSkillCallsiteRva,
+        kActivatedSkillActionSlotUseSkillCallsiteRva,
+        kActionSlotUseSkillCallBytes.data(),
+        kActionSlotUseSkillCallBytes.size());
+
+    return producer_matches && opcode_matches && wrapper_call_matches &&
+        use_skill_entry_matches && get_adjusted_skill_entry_matches &&
+        use_skill_adjusted_skill_call_matches && action_slot_dispatcher_matches &&
+        action_slot_use_skill_call_matches;
+}
+
 void LogActivatedSkillVisibilityOverride(
     int skill_id,
     std::uintptr_t caller_return_address,
@@ -3454,15 +3604,35 @@ void LogActivatedSkillVisibilityOverride(
             ? static_cast<std::uint32_t>(caller_return_address - module_base)
             : 0;
 
-    std::wstring message = L"hook_manager: activated skill visibility override";
+    const bool multiclass_mask_result =
+        monomyth::multiclass_skill_visibility::HasAuthoritativeActivatedSkill(
+            snapshot,
+            skill_id);
+
+    std::wstring message = L"hook_manager: activated skill visibility/use gate override";
     message += L" skill_id=";
     message += std::to_wstring(skill_id);
+    message += L" skill_name=\"";
+    message += monomyth::multiclass_skill_visibility::ActivatedSkillName(skill_id);
+    message += L"\"";
+    message += L" source_surface=\"";
+    message += ActivatedSkillCallerSurface(caller_rva);
+    message += L"\"";
     message += L" caller_return=";
     message += HexPtr(caller_return_address);
     message += L" caller_rva=";
     message += Hex32(caller_rva);
-    message += L" native_result=";
+    message += L" native_gate_allowed=";
     message += native_result ? L"true" : L"false";
+    message += L" multiclass_mask_allowed=";
+    message += multiclass_mask_result ? L"true" : L"false";
+    message += L" send_attempted=unknown";
+    message += L" has_statClassesBitmask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    if (snapshot.has_classes_bitmask) {
+        message += L" statClassesBitmask=";
+        message += Hex32(snapshot.classes_bitmask);
+    }
     message += L" has_statActivatedSkillMaskLow=";
     message += snapshot.has_activated_skill_mask_low ? L"true" : L"false";
     message += L" statActivatedSkillMaskLow=";
@@ -3507,8 +3677,242 @@ bool MONOMYTH_FASTCALL CharacterZoneClientHasSkillVisibilityHook(
         return false;
     }
 
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_rva =
+        (module_base != 0 && caller_return_address >= module_base)
+            ? static_cast<std::uint32_t>(caller_return_address - module_base)
+            : 0;
+    monomyth::packet_observer::ArmActivatedSkillSendCorrelation(
+        skill_id,
+        caller_return_address,
+        caller_rva);
     LogActivatedSkillVisibilityOverride(skill_id, caller_return_address, native_result, snapshot);
     return true;
+}
+
+void LogActivatedSkillUseSkillTrace(
+    int skill_id,
+    void* target,
+    std::uintptr_t caller_return_address,
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    bool multiclass_mask_result) noexcept {
+    ++g_activated_skill_use_skill_trace_count;
+    if (g_activated_skill_use_skill_trace_count > kSkillVisibilityOverrideInitialLogCount &&
+        (g_activated_skill_use_skill_trace_count % kSkillVisibilityOverrideLogInterval) != 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_rva =
+        (module_base != 0 && caller_return_address >= module_base)
+            ? static_cast<std::uint32_t>(caller_return_address - module_base)
+            : 0;
+
+    std::wstring message = L"hook_manager: activated skill UseSkill trace";
+    message += L" skill_id=";
+    message += std::to_wstring(skill_id);
+    message += L" skill_name=\"";
+    message += monomyth::multiclass_skill_visibility::ActivatedSkillName(skill_id);
+    message += L"\"";
+    message += L" source_surface=\"";
+    message += ActivatedSkillCallerSurface(caller_rva);
+    message += L"\"";
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" target=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(target));
+    message += L" native_gate_allowed=pending";
+    message += L" multiclass_mask_allowed=";
+    message += multiclass_mask_result ? L"true" : L"false";
+    message += L" send_attempted=after_original_if_gate_allows";
+    message += L" has_statClassesBitmask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    if (snapshot.has_classes_bitmask) {
+        message += L" statClassesBitmask=";
+        message += Hex32(snapshot.classes_bitmask);
+    }
+    message += L" has_statActivatedSkillMaskLow=";
+    message += snapshot.has_activated_skill_mask_low ? L"true" : L"false";
+    message += L" statActivatedSkillMaskLow=";
+    message += Hex64(snapshot.activated_skill_mask_low);
+    message += L" has_statActivatedSkillMaskHigh=";
+    message += snapshot.has_activated_skill_mask_high ? L"true" : L"false";
+    message += L" statActivatedSkillMaskHigh=";
+    message += Hex64(snapshot.activated_skill_mask_high);
+    monomyth::logger::Log(message);
+}
+
+void LogActivatedSkillAdjustedSkillGateTrace(
+    int skill_id,
+    std::uintptr_t caller_return_address,
+    int original_result,
+    int returned_result,
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    bool multiclass_mask_result,
+    bool override_applied) noexcept {
+    if (override_applied) {
+        ++g_activated_skill_adjusted_skill_override_count;
+    }
+    ++g_activated_skill_adjusted_skill_trace_count;
+    if (g_activated_skill_adjusted_skill_trace_count > kSkillVisibilityOverrideInitialLogCount &&
+        (g_activated_skill_adjusted_skill_trace_count % kSkillVisibilityOverrideLogInterval) != 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_rva =
+        (module_base != 0 && caller_return_address >= module_base)
+            ? static_cast<std::uint32_t>(caller_return_address - module_base)
+            : 0;
+
+    std::wstring message =
+        override_applied
+            ? L"hook_manager: activated skill adjusted-skill gate override"
+            : L"hook_manager: activated skill adjusted-skill gate trace";
+    message += L" skill_id=";
+    message += std::to_wstring(skill_id);
+    message += L" skill_name=\"";
+    message += monomyth::multiclass_skill_visibility::ActivatedSkillName(skill_id);
+    message += L"\"";
+    message += L" source_surface=\"";
+    message += ActivatedSkillCallerSurface(caller_rva);
+    message += L"\"";
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" native_gate_allowed=";
+    message += original_result > 0 ? L"true" : L"false";
+    message += L" multiclass_mask_allowed=";
+    message += multiclass_mask_result ? L"true" : L"false";
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    message += L" returned_result=";
+    message += std::to_wstring(returned_result);
+    message += L" override_applied=";
+    message += override_applied ? L"true" : L"false";
+    message += L" send_attempted=gate_allows_followup";
+    message += L" has_statClassesBitmask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    if (snapshot.has_classes_bitmask) {
+        message += L" statClassesBitmask=";
+        message += Hex32(snapshot.classes_bitmask);
+    }
+    message += L" has_statActivatedSkillMaskLow=";
+    message += snapshot.has_activated_skill_mask_low ? L"true" : L"false";
+    message += L" statActivatedSkillMaskLow=";
+    message += Hex64(snapshot.activated_skill_mask_low);
+    message += L" has_statActivatedSkillMaskHigh=";
+    message += snapshot.has_activated_skill_mask_high ? L"true" : L"false";
+    message += L" statActivatedSkillMaskHigh=";
+    message += Hex64(snapshot.activated_skill_mask_high);
+    monomyth::logger::Log(message);
+}
+
+void MONOMYTH_FASTCALL CharacterZoneClientUseSkillHook(
+    void* this_context,
+    void*,
+    unsigned char skill_id,
+    void* target) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const int skill = static_cast<int>(skill_id);
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    const bool multiclass_mask_result =
+        monomyth::multiclass_skill_visibility::HasAuthoritativeActivatedSkill(
+            snapshot,
+            skill);
+
+    if (monomyth::multiclass_skill_visibility::IsAdvertisedActivatedSkill(skill)) {
+        const std::uintptr_t module_base = GetHostModuleBase();
+        const std::uint32_t caller_rva =
+            (module_base != 0 && caller_return_address >= module_base)
+                ? static_cast<std::uint32_t>(caller_return_address - module_base)
+                : 0;
+        if (multiclass_mask_result) {
+            monomyth::packet_observer::ArmActivatedSkillSendCorrelation(
+                skill,
+                caller_return_address,
+                caller_rva);
+        }
+        LogActivatedSkillUseSkillTrace(
+            skill,
+            target,
+            caller_return_address,
+            snapshot,
+            multiclass_mask_result);
+    }
+
+    if (g_original_character_zone_client_use_skill == nullptr) {
+        return;
+    }
+
+#if defined(_MSC_VER)
+    __try {
+        g_original_character_zone_client_use_skill(this_context, skill_id, target);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return;
+    }
+#else
+    g_original_character_zone_client_use_skill(this_context, skill_id, target);
+#endif
+}
+
+int MONOMYTH_FASTCALL CharacterZoneClientGetAdjustedSkillHook(
+    void* this_context,
+    void*,
+    int skill_id) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    int native_result = 0;
+
+    if (g_original_character_zone_client_get_adjusted_skill == nullptr) {
+        return 0;
+    }
+
+#if defined(_MSC_VER)
+    __try {
+        native_result =
+            g_original_character_zone_client_get_adjusted_skill(this_context, skill_id);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+#else
+    native_result =
+        g_original_character_zone_client_get_adjusted_skill(this_context, skill_id);
+#endif
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_rva =
+        (module_base != 0 && caller_return_address >= module_base)
+            ? static_cast<std::uint32_t>(caller_return_address - module_base)
+            : 0;
+    const bool from_use_skill_gate =
+        caller_rva == kActivatedSkillUseSkillAdjustedSkillReturnRva;
+    if (!from_use_skill_gate ||
+        !monomyth::multiclass_skill_visibility::IsAdvertisedActivatedSkill(skill_id)) {
+        return native_result;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    const bool multiclass_mask_result =
+        monomyth::multiclass_skill_visibility::HasAuthoritativeActivatedSkill(
+            snapshot,
+            skill_id);
+    const bool override_applied = native_result <= 0 && multiclass_mask_result;
+    const int returned_result = override_applied ? 1 : native_result;
+
+    LogActivatedSkillAdjustedSkillGateTrace(
+        skill_id,
+        caller_return_address,
+        native_result,
+        returned_result,
+        snapshot,
+        multiclass_mask_result,
+        override_applied);
+    return returned_result;
 }
 
 OffhandWeaponPolicySnapshot CaptureOffhandWeaponPolicySnapshot(
@@ -10084,7 +10488,8 @@ void LogMemorizeSendTraceStartupMarker(
     bool hook_installed) {
     const bool wrapper_trace_enabled =
         manifest.memorize_send_trace_allowed ||
-        manifest.multiclass_item_usability_allowed;
+        manifest.multiclass_item_usability_allowed ||
+        manifest.multiclass_skill_visibility_allowed;
     const bool target_validated =
         manifest.memorize_send_packet_wrapper_state ==
             monomyth::spell_usability_discovery::TargetState::kValidated &&
@@ -10097,6 +10502,8 @@ void LogMemorizeSendTraceStartupMarker(
     message += manifest.memorize_send_trace_allowed ? L"true" : L"false";
     message += L" move_item_focus=";
     message += manifest.multiclass_item_usability_allowed ? L"true" : L"false";
+    message += L" activated_skill_use_focus=";
+    message += manifest.multiclass_skill_visibility_allowed ? L"true" : L"false";
     message += L" target_validated=";
     message += target_validated ? L"true" : L"false";
     message += L" hook_installed=";
@@ -16583,27 +16990,89 @@ bool InstallActivatedSkillVisibilityHook(const monomyth::runtime::Manifest& mani
         return false;
     }
 
+    const bool activated_skill_use_trace_seams_valid =
+        ValidateActivatedSkillUseTraceSeams(module_base);
+
     if (!InstallInlineDetour(
             reinterpret_cast<void*>(target_address),
             reinterpret_cast<void*>(&CharacterZoneClientHasSkillVisibilityHook),
             &g_character_zone_client_has_skill_detour,
             reinterpret_cast<void**>(&g_original_character_zone_client_has_skill),
-            L"CharacterZoneClient::HasSkill activated skill visibility")) {
+            L"CharacterZoneClient::HasSkill activated skill visibility/use")) {
         RemoveInlineDetour(&g_character_zone_client_has_skill_detour);
         g_original_character_zone_client_has_skill = nullptr;
         return false;
+    }
+
+    bool activated_skill_use_hooks_installed = false;
+    if (activated_skill_use_trace_seams_valid) {
+        const std::uintptr_t get_adjusted_skill_address =
+            module_base + kCharacterZoneClientGetAdjustedSkillRva;
+        const std::uintptr_t use_skill_address =
+            module_base + kCharacterZoneClientUseSkillRva;
+        if (InstallInlineDetour(
+                reinterpret_cast<void*>(get_adjusted_skill_address),
+                reinterpret_cast<void*>(&CharacterZoneClientGetAdjustedSkillHook),
+                &g_character_zone_client_get_adjusted_skill_detour,
+                reinterpret_cast<void**>(
+                    &g_original_character_zone_client_get_adjusted_skill),
+                L"CharacterZoneClient::GetAdjustedSkill activated skill use gate") &&
+            InstallInlineDetour(
+                reinterpret_cast<void*>(use_skill_address),
+                reinterpret_cast<void*>(&CharacterZoneClientUseSkillHook),
+                &g_character_zone_client_use_skill_detour,
+                reinterpret_cast<void**>(&g_original_character_zone_client_use_skill),
+                L"CharacterZoneClient::UseSkill activated skill send trace")) {
+            activated_skill_use_hooks_installed = true;
+
+            std::wstring use_message =
+                L"hook_manager: activated skill use hooks installed get_adjusted_skill_address=";
+            use_message += HexPtr(get_adjusted_skill_address);
+            use_message += L" get_adjusted_skill_rva=";
+            use_message += Hex32(kCharacterZoneClientGetAdjustedSkillRva);
+            use_message += L" use_skill_address=";
+            use_message += HexPtr(use_skill_address);
+            use_message += L" use_skill_rva=";
+            use_message += Hex32(kCharacterZoneClientUseSkillRva);
+            use_message += L" adjusted_skill_gate_return_rva=";
+            use_message += Hex32(kActivatedSkillUseSkillAdjustedSkillReturnRva);
+            use_message += L" action_slot_use_skill_callsite_rva=";
+            use_message += Hex32(kActivatedSkillActionSlotUseSkillCallsiteRva);
+            monomyth::logger::Log(use_message);
+        } else {
+            RemoveInlineDetour(&g_character_zone_client_use_skill_detour);
+            RemoveInlineDetour(&g_character_zone_client_get_adjusted_skill_detour);
+            g_original_character_zone_client_use_skill = nullptr;
+            g_original_character_zone_client_get_adjusted_skill = nullptr;
+            monomyth::logger::Log(
+                L"hook_manager: activated skill use hooks denied reason=\"inline_detour_install_failed\"");
+        }
+    } else {
+        monomyth::logger::Log(
+            L"hook_manager: activated skill use hooks denied reason=\"seam_validation_failed\"");
     }
 
     g_character_zone_client_has_skill_address = target_address;
     g_character_zone_client_has_skill = g_original_character_zone_client_has_skill;
     g_multiclass_skill_visibility_enabled = true;
     g_skill_visibility_override_count = 0;
+    g_activated_skill_use_skill_trace_count = 0;
+    g_activated_skill_adjusted_skill_trace_count = 0;
+    g_activated_skill_adjusted_skill_override_count = 0;
 
     std::wstring message =
-        L"hook_manager: activated skill visibility hook installed target=CharacterZoneClient::HasSkill address=";
+        L"hook_manager: activated skill visibility/use hook installed target=CharacterZoneClient::HasSkill address=";
     message += HexPtr(target_address);
     message += L" target_rva=";
     message += Hex32(kCharacterZoneClientHasSkillRva);
+    message += L" known_has_skill_callers=\"";
+    message += Hex32(kActivatedSkillHasSkillActionCallerRva);
+    message += L",";
+    message += Hex32(kActivatedSkillHasSkillAbilityCallerRva);
+    message += L"\" combat_trace_seams_valid=";
+    message += activated_skill_use_trace_seams_valid ? L"true" : L"false";
+    message += L" activated_skill_use_hooks_installed=";
+    message += activated_skill_use_hooks_installed ? L"true" : L"false";
     monomyth::logger::Log(message);
     return true;
 }
@@ -17221,10 +17690,12 @@ bool InstallStartSpellMemorizationPathTrace(
 bool InstallMemorizeSendTrace(const monomyth::runtime::Manifest& manifest) noexcept {
     const bool enable_send_trace =
         manifest.memorize_send_trace_allowed ||
-        manifest.multiclass_item_usability_allowed;
+        manifest.multiclass_item_usability_allowed ||
+        manifest.multiclass_skill_visibility_allowed;
     const bool log_denial =
         manifest.memorize_send_trace_dev_opt_in ||
-        manifest.multiclass_item_usability_allowed;
+        manifest.multiclass_item_usability_allowed ||
+        manifest.multiclass_skill_visibility_allowed;
     if (!enable_send_trace ||
         manifest.memorize_send_packet_wrapper_state !=
             monomyth::spell_usability_discovery::TargetState::kValidated ||
@@ -17258,6 +17729,8 @@ bool InstallMemorizeSendTrace(const monomyth::runtime::Manifest& manifest) noexc
     message += manifest.memorize_send_trace_allowed ? L"true" : L"false";
     message += L" move_item_focus=";
     message += manifest.multiclass_item_usability_allowed ? L"true" : L"false";
+    message += L" activated_skill_use_focus=";
+    message += manifest.multiclass_skill_visibility_allowed ? L"true" : L"false";
     monomyth::logger::Log(message);
     g_memorize_send_packet_wrapper_address = manifest.memorize_send_packet_wrapper_address;
     g_memorize_send_trace_count = 0;
@@ -17471,6 +17944,22 @@ bool RemoveGuildTrainerHook() noexcept {
 }
 
 bool RemoveActivatedSkillVisibilityHook() noexcept {
+    if (RemoveInlineDetour(&g_character_zone_client_use_skill_detour)) {
+        g_original_character_zone_client_use_skill = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: activated skill use hook removed target=CharacterZoneClient::UseSkill");
+    } else if (!g_character_zone_client_use_skill_detour.installed) {
+        g_original_character_zone_client_use_skill = nullptr;
+    }
+
+    if (RemoveInlineDetour(&g_character_zone_client_get_adjusted_skill_detour)) {
+        g_original_character_zone_client_get_adjusted_skill = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: activated skill use hook removed target=CharacterZoneClient::GetAdjustedSkill");
+    } else if (!g_character_zone_client_get_adjusted_skill_detour.installed) {
+        g_original_character_zone_client_get_adjusted_skill = nullptr;
+    }
+
     if (!g_character_zone_client_has_skill_detour.installed) {
         g_original_character_zone_client_has_skill = nullptr;
         if (!g_multiclass_item_usability_enabled) {
@@ -17479,6 +17968,9 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         }
         g_multiclass_skill_visibility_enabled = false;
         g_skill_visibility_override_count = 0;
+        g_activated_skill_use_skill_trace_count = 0;
+        g_activated_skill_adjusted_skill_trace_count = 0;
+        g_activated_skill_adjusted_skill_override_count = 0;
         return true;
     }
 
@@ -17494,6 +17986,9 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         }
         g_multiclass_skill_visibility_enabled = false;
         g_skill_visibility_override_count = 0;
+        g_activated_skill_use_skill_trace_count = 0;
+        g_activated_skill_adjusted_skill_trace_count = 0;
+        g_activated_skill_adjusted_skill_override_count = 0;
         monomyth::logger::Log(
             L"hook_manager: activated skill visibility hook removed target=CharacterZoneClient::HasSkill");
         return true;
@@ -18202,6 +18697,7 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     bool trainer_behavior_active = false;
     bool move_item_trace_active = false;
     bool move_item_send_trace_active = false;
+    bool activated_skill_send_trace_active = false;
     bool ui_display_active = false;
     bool progression_selection_display_active = false;
     bool inventory_class_title_display_active = false;
@@ -18358,7 +18854,16 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     if (manifest.multiclass_skill_visibility_allowed) {
         if (!InstallActivatedSkillVisibilityHook(manifest)) {
             monomyth::logger::Log(
-                L"hook_manager: activated skill visibility hook install failed target=CharacterZoneClient::HasSkill");
+                L"hook_manager: activated skill visibility/use hook install failed target=CharacterZoneClient::HasSkill");
+        }
+        if (g_memorize_send_packet_wrapper_detour.installed ||
+            InstallMemorizeSendTrace(manifest)) {
+            activated_skill_send_trace_active = true;
+        } else if (
+            manifest.memorize_send_packet_wrapper_state ==
+                monomyth::spell_usability_discovery::TargetState::kValidated) {
+            monomyth::logger::Log(
+                L"hook_manager: activated skill use send trace install failed target=MemorizeSendPacketWrapper");
         }
     }
 
@@ -18371,7 +18876,8 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
             monomyth::logger::Log(
                 L"hook_manager: move item trace install failed target=CInvSlotMgr::MoveItem");
         }
-        if (InstallMemorizeSendTrace(manifest)) {
+        if (g_memorize_send_packet_wrapper_detour.installed ||
+            InstallMemorizeSendTrace(manifest)) {
             move_item_send_trace_active = true;
         } else if (
             manifest.memorize_send_packet_wrapper_state ==
@@ -18433,13 +18939,15 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     }
     LogMemorizeSendTraceStartupMarker(
         manifest,
-        memorize_send_trace_active || move_item_send_trace_active);
+        memorize_send_trace_active ||
+            move_item_send_trace_active ||
+            activated_skill_send_trace_active);
 
     g_initialized = true;
     if (receive_hook_active || spell_trace_active || scroll_scribe_trace_active ||
         memorize_send_trace_active || spell_behavior_active || item_behavior_active ||
         trainer_behavior_active || move_item_trace_active || move_item_send_trace_active ||
-        ui_display_active || progression_selection_display_active ||
+        activated_skill_send_trace_active || ui_display_active || progression_selection_display_active ||
         inventory_class_title_display_active) {
         std::wstring message = L"hook_manager: initialized (";
         bool first = true;
@@ -18501,6 +19009,13 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
                 message += L", ";
             }
             message += L"move item send trace";
+            first = false;
+        }
+        if (activated_skill_send_trace_active) {
+            if (!first) {
+                message += L", ";
+            }
+            message += L"activated skill use send trace";
             first = false;
         }
         if (ui_display_active) {

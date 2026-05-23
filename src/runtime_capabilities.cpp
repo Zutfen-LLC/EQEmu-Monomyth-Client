@@ -139,8 +139,8 @@ Manifest BuildCapabilityManifest(
         L"default ROF2 multiclass item usability pending target validation";
     manifest.multiclass_skill_visibility_reason =
         manifest.multiclass_skill_visibility_allowed
-            ? L"enabled by default for validated ROF2 activated skill visibility"
-            : L"multiclass activated skill visibility requires validated ROF2 fingerprint and hook allowance";
+            ? L"enabled by default for validated ROF2 activated skill visibility/use"
+            : L"multiclass activated skill visibility/use requires validated ROF2 fingerprint and hook allowance";
     manifest.multiclass_ui_display_reason =
         L"default ROF2 multiclass UI display pending target validation";
     return manifest;
@@ -183,7 +183,7 @@ Manifest BuildDisabledCapabilityManifest(
     manifest.multiclass_item_usability_reason =
         L"default multiclass item usability disabled before fingerprint/discovery gates";
     manifest.multiclass_skill_visibility_reason =
-        L"default multiclass activated skill visibility disabled before fingerprint/discovery gates";
+        L"default multiclass activated skill visibility/use disabled before fingerprint/discovery gates";
     manifest.multiclass_ui_display_reason =
         L"default multiclass UI display disabled before fingerprint/discovery gates";
     return manifest;
