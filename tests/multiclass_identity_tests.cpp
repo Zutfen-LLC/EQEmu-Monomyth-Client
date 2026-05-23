@@ -143,6 +143,36 @@ int main() {
             0x0000839fu),
         "barbed ringmail intersects authoritative paladin shadowknight mask");
     passed &= Expect(
+        HasAnyAuthoritativeDualWieldClass(
+            true,
+            ClassBitForTest(3) | ClassBitForTest(7) | ClassBitForTest(13)),
+        "authoritative mask detects monk dual wield class");
+    passed &= Expect(
+        HasAnyAuthoritativeDualWieldClass(
+            true,
+            ClassBitForTest(1)),
+        "authoritative mask detects warrior dual wield class");
+    passed &= Expect(
+        !HasAnyAuthoritativeDualWieldClass(
+            true,
+            ClassBitForTest(16)),
+        "authoritative mask rejects berserker as dual wield fallback");
+    passed &= Expect(
+        !HasAnyAuthoritativeDualWieldClass(
+            true,
+            ClassBitForTest(3) | ClassBitForTest(13)),
+        "authoritative mask rejects paladin magician as dual wield classes");
+    passed &= Expect(
+        !HasAnyAuthoritativeDualWieldClass(
+            false,
+            ClassBitForTest(7)),
+        "missing authoritative mask denies dual wield class fallback");
+    passed &= Expect(
+        !HasAnyAuthoritativeDualWieldClass(
+            true,
+            0x00010040u),
+        "non-playable authoritative bits deny dual wield class fallback");
+    passed &= Expect(
         !HasAuthoritativeOffhandWeaponClassAndDualWield(
             true,
             ClassBitForTest(3) | ClassBitForTest(13),

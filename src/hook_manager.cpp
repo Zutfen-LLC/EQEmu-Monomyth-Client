@@ -32,9 +32,13 @@ bool g_initialized = false;
 #if defined(_MSC_VER)
 #define MONOMYTH_FASTCALL __fastcall
 #define MONOMYTH_THISCALL __thiscall
+#define MONOMYTH_NOINLINE __declspec(noinline)
+#define MONOMYTH_USED
 #else
 #define MONOMYTH_FASTCALL __attribute__((fastcall))
 #define MONOMYTH_THISCALL __attribute__((thiscall))
+#define MONOMYTH_NOINLINE __attribute__((noinline))
+#define MONOMYTH_USED __attribute__((used))
 #endif
 
 constexpr std::size_t kJmpPatchBytes = 5;
@@ -51,6 +55,7 @@ constexpr std::uint32_t kMemorizeSendCorrelationMaxWrapperSends = 8;
 constexpr std::uint32_t kSpellbookScribeCorrelationMaxWrapperSends = 8;
 constexpr std::uint32_t kInventoryClassDisplayCorrelationBudget = 48;
 constexpr std::uint32_t kItemDisplayClassDisplayCorrelationBudget = 64;
+constexpr std::uint32_t kMoveItemPostSendLocalFocusBudget = 4;
 constexpr std::size_t kScribeGateDescriptorTableOffset = 0x4;
 constexpr std::size_t kScribeGateRelativeOffsetField = 0x4;
 constexpr std::size_t kScribeGateLookupContextBias = 0x8;
@@ -100,6 +105,9 @@ constexpr std::uint32_t kMoveItemBranchBoolSiteBCallsiteRva = 0x002960f2;
 constexpr std::uint32_t kMoveItemBranchBoolTargetRva = 0x003b03d0;
 constexpr std::uint32_t kMoveItemStackLocalGateSiteBCallsiteRva = 0x00296111;
 constexpr std::uint32_t kMoveItemStackLocalGateTargetRva = 0x000322b0;
+constexpr std::uint32_t kMoveItemPostSendUpdateSiteACallsiteRva = 0x00299992;
+constexpr std::uint32_t kMoveItemPostSendUpdateSiteBCallsiteRva = 0x002999c0;
+constexpr std::uint32_t kMoveItemPostSendUpdateTargetRva = 0x000919b0;
 constexpr std::uint32_t kEverQuestLMouseUpTargetRva = 0x000c1760;
 constexpr std::uint32_t kCXWndHandleLButtonUpTargetRva = 0x000c1e91;
 constexpr std::uint32_t kInventoryWindowWndNotificationTargetRva = 0x00293490;
@@ -310,6 +318,14 @@ using MoveItemBranchBoolFn = std::uint8_t (MONOMYTH_THISCALL*)(
     void* this_context);
 using MoveItemStackLocalGateFn = std::uint8_t (MONOMYTH_THISCALL*)(
     void* this_context);
+using MoveItemPostSendUpdateFn = void (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* inventory_root_like,
+    std::uint32_t slot_like,
+    void* descriptor_like,
+    std::uint32_t zero_a,
+    std::uint32_t zero_b,
+    std::uint32_t zero_c);
 using MoveItemBranchResolvedObjectFn = void* (MONOMYTH_THISCALL*)(
     void* this_context);
 using ItemWrapperGetDataThunkFn = void* (MONOMYTH_THISCALL*)(
@@ -598,6 +614,15 @@ struct ClientPointWire {
     std::int32_t y = 0;
 };
 
+struct MoveItemPostSendLocalFocusWindow {
+    bool active = false;
+    std::uint64_t activation = 0;
+    std::uint32_t remaining_before = 0;
+    std::uint32_t remaining_after = 0;
+    std::int32_t from_slot = -1;
+    std::int32_t to_slot = -1;
+};
+
 struct InvSlotHandleLButtonCoreSlotContextSnapshot {
     std::uintptr_t child_pointer = 0;
     ClientInventorySlotWire slot_record = {};
@@ -782,6 +807,8 @@ CallsitePatch g_move_item_branch_kind_site_b_callsite_patch = {};
 CallsitePatch g_move_item_branch_bool_site_a_callsite_patch = {};
 CallsitePatch g_move_item_branch_bool_site_b_callsite_patch = {};
 CallsitePatch g_move_item_stack_local_gate_site_b_callsite_patch = {};
+CallsitePatch g_move_item_post_send_update_site_a_callsite_patch = {};
+CallsitePatch g_move_item_post_send_update_site_b_callsite_patch = {};
 CallsitePatch g_invslot_handle_lbutton_core_precheck_callsite_patch = {};
 CallsitePatch g_invslot_handle_lbutton_core_mode_bits_a_callsite_patch = {};
 CallsitePatch g_invslot_handle_lbutton_core_mode_bits_b_callsite_patch = {};
@@ -838,6 +865,7 @@ MoveItemSlotResolveFn g_original_move_item_slot_resolve = nullptr;
 MoveItemBranchKindFn g_original_move_item_branch_kind = nullptr;
 MoveItemBranchBoolFn g_original_move_item_branch_bool = nullptr;
 MoveItemStackLocalGateFn g_original_move_item_stack_local_gate = nullptr;
+MoveItemPostSendUpdateFn g_original_move_item_post_send_update = nullptr;
 EverQuestLMouseUpFn g_original_everquest_lmouse_up = nullptr;
 CXWndHandleLButtonUpFn g_original_cxwnd_handle_lbutton_up = nullptr;
 InventoryWindowWndNotificationFn g_original_inventory_window_wnd_notification = nullptr;
@@ -971,6 +999,10 @@ std::atomic<std::uint32_t> g_item_display_class_display_correlation_refresh_call
 std::atomic<std::uintptr_t> g_item_display_class_display_correlation_window_this = 0;
 std::atomic<std::uintptr_t> g_item_display_class_display_correlation_arg1_like = 0;
 std::atomic<std::uintptr_t> g_item_display_class_display_correlation_arg2_like = 0;
+std::atomic<std::uint32_t> g_move_item_post_send_local_focus_remaining = 0;
+std::atomic<std::uint64_t> g_move_item_post_send_local_focus_activation = 0;
+std::atomic<std::int32_t> g_move_item_post_send_local_focus_from_slot = -1;
+std::atomic<std::int32_t> g_move_item_post_send_local_focus_to_slot = -1;
 std::uint32_t g_memorize_send_pending_correlation_id = 0;
 std::uint32_t g_memorize_send_correlation_count = 0;
 std::uint32_t g_memorize_send_pending_wrapper_sends = 0;
@@ -1008,6 +1040,7 @@ bool g_multiclass_item_usability_enabled = false;
 bool g_multiclass_ui_display_enabled = false;
 thread_local bool g_character_list_manual_refresh_in_progress = false;
 std::uint64_t g_is_class_usable_predicate_override_count = 0;
+std::uint64_t g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
 std::uint64_t g_auto_equip_class_gate_override_count = 0;
 std::uint64_t g_guild_trainer_class_lookup_override_count = 0;
@@ -1061,6 +1094,9 @@ struct OffhandWeaponPolicySnapshot {
     bool item_matches_assigned_class = false;
     bool dual_wield_skill_checked = false;
     bool has_dual_wield_skill = false;
+    bool authoritative_dual_wield_class_present = false;
+    bool dual_wield_entitlement_fallback_used = false;
+    bool has_dual_wield_entitlement = false;
     bool primary_blocks_secondary_weapon = false;
     bool eligible = false;
 };
@@ -1781,6 +1817,56 @@ bool TryConsumeInventoryClassDisplayCorrelation(
             window->payload_like = g_inventory_class_display_correlation_payload_like.load();
             window->remaining_before = current;
             window->remaining_after = current - 1;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void ArmMoveItemPostSendLocalFocus(const ClientMoveItemWire& move_item) noexcept {
+    if (move_item.from_slot.slot != kSecondaryEquipmentSlot &&
+        move_item.to_slot.slot != kSecondaryEquipmentSlot) {
+        return;
+    }
+
+    const std::uint64_t activation =
+        g_move_item_post_send_local_focus_activation.fetch_add(1) + 1;
+    g_move_item_post_send_local_focus_from_slot.store(move_item.from_slot.slot);
+    g_move_item_post_send_local_focus_to_slot.store(move_item.to_slot.slot);
+    g_move_item_post_send_local_focus_remaining.store(kMoveItemPostSendLocalFocusBudget);
+
+    std::wstring message = L"MoveItemPostSendLocalFocus";
+    message += L" activation=";
+    message += std::to_wstring(activation);
+    message += L" from_slot=";
+    message += std::to_wstring(move_item.from_slot.slot);
+    message += L" to_slot=";
+    message += std::to_wstring(move_item.to_slot.slot);
+    message += L" budget=";
+    message += std::to_wstring(kMoveItemPostSendLocalFocusBudget);
+    monomyth::logger::Log(message);
+}
+
+bool TryConsumeMoveItemPostSendLocalFocus(
+    MoveItemPostSendLocalFocusWindow* window) noexcept {
+    if (window == nullptr) {
+        return false;
+    }
+
+    *window = {};
+
+    std::uint32_t current = g_move_item_post_send_local_focus_remaining.load();
+    while (current != 0) {
+        if (g_move_item_post_send_local_focus_remaining.compare_exchange_weak(
+                current,
+                current - 1)) {
+            window->active = true;
+            window->activation = g_move_item_post_send_local_focus_activation.load();
+            window->remaining_before = current;
+            window->remaining_after = current - 1;
+            window->from_slot = g_move_item_post_send_local_focus_from_slot.load();
+            window->to_slot = g_move_item_post_send_local_focus_to_slot.load();
             return true;
         }
     }
@@ -3383,19 +3469,30 @@ OffhandWeaponPolicySnapshot CaptureOffhandWeaponPolicySnapshot(
             snapshot.item_class_mask);
     snapshot.dual_wield_skill_checked =
         TryHasLocalPlayerSkill(kSkillDualWield, &snapshot.has_dual_wield_skill);
+    snapshot.authoritative_dual_wield_class_present =
+        monomyth::multiclass_identity::HasAnyAuthoritativeDualWieldClass(
+            authoritative_snapshot.has_classes_bitmask,
+            authoritative_snapshot.classes_bitmask);
+    snapshot.has_dual_wield_entitlement =
+        snapshot.has_dual_wield_skill ||
+        (snapshot.dual_wield_skill_checked &&
+         !snapshot.has_dual_wield_skill &&
+         snapshot.authoritative_dual_wield_class_present);
+    snapshot.dual_wield_entitlement_fallback_used =
+        snapshot.has_dual_wield_entitlement && !snapshot.has_dual_wield_skill;
     snapshot.primary_blocks_secondary_weapon =
         snapshot.holding_animation_copied &&
         HoldingAnimationBlocksSecondaryWeapon(snapshot.holding_animation);
     snapshot.eligible =
         snapshot.is_weapon &&
         snapshot.can_wear_secondary &&
-        snapshot.dual_wield_skill_checked &&
+        (snapshot.dual_wield_skill_checked || snapshot.authoritative_dual_wield_class_present) &&
         !snapshot.primary_blocks_secondary_weapon &&
         monomyth::multiclass_identity::HasAuthoritativeOffhandWeaponClassAndDualWield(
             authoritative_snapshot.has_classes_bitmask,
             authoritative_snapshot.classes_bitmask,
             snapshot.item_class_mask,
-            snapshot.has_dual_wield_skill);
+            snapshot.has_dual_wield_entitlement);
     return snapshot;
 }
 
@@ -5414,18 +5511,360 @@ bool NormalizeGuildTrainerClassId(unsigned int trainer_class_id, unsigned int* n
     return true;
 }
 
-std::uintptr_t GetCurrentFramePointer() noexcept {
-#if defined(_MSC_VER)
-    std::uintptr_t frame = 0;
-    __asm {
-        mov frame, ebp
+std::uint8_t MONOMYTH_FASTCALL DragDropSilentPrecheckCallsiteHook(
+    void* this_context,
+    void*,
+    void* probe_like) noexcept;
+void MONOMYTH_FASTCALL MoveItemFromSlotResolveCallsiteHook(
+    void* this_context,
+    void*,
+    void* slot_like,
+    void* resolved_slot_like) noexcept;
+void MONOMYTH_FASTCALL MoveItemToSlotResolveCallsiteHook(
+    void* this_context,
+    void*,
+    void* slot_like,
+    void* resolved_slot_like) noexcept;
+void MONOMYTH_FASTCALL MoveItemPostSendUpdateSiteACallsiteHook(
+    void* this_context,
+    void*,
+    void* inventory_root_like,
+    std::uint32_t slot_like,
+    void* descriptor_like,
+    std::uint32_t zero_a,
+    std::uint32_t zero_b,
+    std::uint32_t zero_c) noexcept;
+void MONOMYTH_FASTCALL MoveItemPostSendUpdateSiteBCallsiteHook(
+    void* this_context,
+    void*,
+    void* inventory_root_like,
+    std::uint32_t slot_like,
+    void* descriptor_like,
+    std::uint32_t zero_a,
+    std::uint32_t zero_b,
+    std::uint32_t zero_c) noexcept;
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCorePrecheckCallsiteHook(
+    void* this_context,
+    void*) noexcept;
+std::uint32_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreModeBitsACallsiteHook(
+    void* this_context,
+    void*) noexcept;
+std::uint32_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreModeBitsBCallsiteHook(
+    void* this_context,
+    void*) noexcept;
+std::uint32_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreModeBitsCCallsiteHook(
+    void* this_context,
+    void*) noexcept;
+std::uint32_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreModeBitsDCallsiteHook(
+    void* this_context,
+    void*) noexcept;
+std::uint32_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreModeBitsECallsiteHook(
+    void* this_context,
+    void*) noexcept;
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLocalGateCallsiteHook(
+    void* this_context,
+    void*,
+    const void* slot_record_pointer) noexcept;
+void* MONOMYTH_FASTCALL InvSlotHandleLButtonCoreResolveObjectCallsiteHook(
+    void* this_context,
+    void*,
+    void* output_pointer) noexcept;
+int MONOMYTH_FASTCALL InvSlotHandleLButtonCoreResolvedKindACallsiteHook(
+    void* this_context,
+    void*) noexcept;
+int MONOMYTH_FASTCALL InvSlotHandleLButtonCoreResolvedKindBCallsiteHook(
+    void* this_context,
+    void*) noexcept;
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreResolvedFlagACallsiteHook(
+    void* this_context,
+    void*) noexcept;
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreResolvedFlagBCallsiteHook(
+    void* this_context,
+    void*) noexcept;
+std::uint32_t WINAPI InvSlotHandleLButtonCorePostResolveGateCallsiteHook(
+    void* slot_context_like,
+    std::uint32_t mode_like) noexcept;
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCorePostLookupModeGateCallsiteHook(
+    void* this_context,
+    void*) noexcept;
+void MONOMYTH_FASTCALL InvSlotHandleLButtonCorePostLookupUiPulseCallsiteHook(
+    void* this_context,
+    void*,
+    std::uint32_t target_id,
+    std::int32_t value_a,
+    std::int32_t value_b,
+    std::int32_t x,
+    std::int32_t y,
+    std::uint32_t one_like,
+    std::uint32_t zero_a,
+    std::uint32_t zero_b) noexcept;
+void MONOMYTH_FASTCALL InvSlotHandleLButtonCoreAltDispatchCallsiteHook(
+    void* this_context,
+    void*,
+    const void* slot_record_pointer,
+    std::uint32_t mode_flag) noexcept;
+std::uint8_t CDECL InvSlotHandleLButtonCoreItemRangeGateCallsiteHook(
+    std::uint32_t item_id_like) noexcept;
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateSlot17GateCallsiteHook(
+    void* this_context,
+    void*,
+    const void* slot_record_pointer) noexcept;
+void MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateSlot17ApplyCallsiteHook(
+    void* this_context,
+    void*,
+    const void* slot_record_pointer) noexcept;
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchGateACallsiteHook(
+    void* slot_record_like,
+    void*) noexcept;
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchPrepCallsiteHook(
+    void* this_context,
+    void*,
+    std::int32_t slot_like,
+    void* lookup_result_like) noexcept;
+std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsiteHook(
+    void* this_context,
+    void*,
+    void* lookup_result_like,
+    std::uint32_t zero_a,
+    std::uint32_t zero_b) noexcept;
+
+void InstallDetailedItemUsabilityTraceCallsites(
+    const monomyth::runtime::Manifest& manifest,
+    std::uintptr_t module_base) noexcept {
+    if (module_base == 0) {
+        return;
     }
-    return frame;
-#else
-    std::uintptr_t frame = 0;
-    asm volatile("movl %%ebp, %0" : "=r"(frame));
-    return frame;
-#endif
+
+    g_original_equip_record_lookup = reinterpret_cast<EquipRecordLookupFn>(
+        module_base + kEquipRecordLookupTargetRva);
+    g_original_equip_requirement_lookup = reinterpret_cast<EquipRequirementLookupFn>(
+        module_base + kEquipRequirementLookupTargetRva);
+    g_original_equip_nested_inventory_gate = reinterpret_cast<EquipNestedInventoryGateFn>(
+        module_base + kEquipNestedInventoryGateTargetRva);
+    g_original_equip_nested_validator = reinterpret_cast<EquipNestedValidatorFn>(
+        module_base + kEquipNestedValidatorTargetRva);
+    g_original_equip_message_resolver = reinterpret_cast<EquipMessageResolverFn>(
+        module_base + kEquipMessageResolverTargetRva);
+    g_original_drag_drop_silent_precheck = reinterpret_cast<DragDropSilentPrecheckFn>(
+        module_base + kDragDropSilentPrecheckTargetRva);
+    g_original_move_item_slot_resolve = reinterpret_cast<MoveItemSlotResolveFn>(
+        module_base + kMoveItemSlotResolveTargetRva);
+    g_original_move_item_branch_kind = reinterpret_cast<MoveItemBranchKindFn>(
+        module_base + kMoveItemBranchKindTargetRva);
+    g_original_move_item_branch_bool = reinterpret_cast<MoveItemBranchBoolFn>(
+        module_base + kMoveItemBranchBoolTargetRva);
+    g_original_move_item_stack_local_gate = reinterpret_cast<MoveItemStackLocalGateFn>(
+        module_base + kMoveItemStackLocalGateTargetRva);
+    g_original_move_item_post_send_update = reinterpret_cast<MoveItemPostSendUpdateFn>(
+        module_base + kMoveItemPostSendUpdateTargetRva);
+    g_original_invslot_handle_lbutton_core_precheck =
+        reinterpret_cast<InvSlotHandleLButtonCorePrecheckFn>(
+            module_base + kInvSlotHandleLButtonCorePrecheckTargetRva);
+    g_original_invslot_handle_lbutton_core_mode_bits =
+        reinterpret_cast<InvSlotHandleLButtonCoreModeBitsFn>(
+            module_base + kInvSlotHandleLButtonCoreModeBitsTargetRva);
+    g_original_invslot_handle_lbutton_core_local_gate =
+        reinterpret_cast<InvSlotHandleLButtonCoreLocalGateFn>(
+            module_base + kInvSlotHandleLButtonCoreLocalGateTargetRva);
+    g_original_invslot_handle_lbutton_core_resolve_object =
+        reinterpret_cast<InvSlotHandleLButtonCoreResolveObjectFn>(
+            module_base + kInvSlotHandleLButtonCoreResolveObjectTargetRva);
+    g_original_invslot_handle_lbutton_core_resolved_kind =
+        reinterpret_cast<MoveItemBranchKindFn>(
+            module_base + kInvSlotHandleLButtonCoreResolvedKindTargetRva);
+    g_original_invslot_handle_lbutton_core_resolved_flag =
+        reinterpret_cast<InvSlotHandleLButtonCoreResolvedFlagFn>(
+            module_base + kInvSlotHandleLButtonCoreResolvedFlagTargetRva);
+    g_original_invslot_handle_lbutton_core_alt_dispatch =
+        reinterpret_cast<InvSlotHandleLButtonCoreAltDispatchFn>(
+            module_base + kInvSlotHandleLButtonCoreAltDispatchTargetRva);
+    g_original_invslot_handle_lbutton_core_slot17_message =
+        reinterpret_cast<InvSlotHandleLButtonCoreSlot17MessageFn>(
+            module_base + kInvSlotHandleLButtonCoreSlot17MessageTargetRva);
+    g_original_invslot_handle_lbutton_core_global_action49 =
+        reinterpret_cast<InvSlotHandleLButtonCoreGlobalAction49Fn>(
+            module_base + kInvSlotHandleLButtonCoreGlobalAction49TargetRva);
+    g_original_invslot_handle_lbutton_core_item_range_gate =
+        reinterpret_cast<InvSlotHandleLButtonCoreItemRangeGateFn>(
+            module_base + kInvSlotHandleLButtonCoreItemRangeGateTargetRva);
+    g_original_invslot_handle_lbutton_core_post_resolve_gate =
+        reinterpret_cast<InvSlotHandleLButtonCorePostResolveGateFn>(
+            module_base + kInvSlotHandleLButtonCorePostResolveGateTargetRva);
+    g_original_invslot_handle_lbutton_core_post_lookup_mode_gate =
+        reinterpret_cast<InvSlotHandleLButtonCorePostLookupModeGateFn>(
+            module_base + kInvSlotHandleLButtonCorePostLookupModeGateTargetRva);
+    g_original_invslot_handle_lbutton_core_post_lookup_ui_pulse =
+        reinterpret_cast<InvSlotHandleLButtonCorePostLookupUiPulseFn>(
+            module_base + kInvSlotHandleLButtonCorePostLookupUiPulseTargetRva);
+    g_original_invslot_handle_lbutton_core_late_branch_gate_a =
+        reinterpret_cast<InvSlotHandleLButtonCoreLateBranchGateAFn>(
+            module_base + kInvSlotHandleLButtonCoreLateBranchGateATargetRva);
+    g_original_invslot_handle_lbutton_core_late_branch_prep =
+        reinterpret_cast<InvSlotHandleLButtonCoreLateBranchPrepFn>(
+            module_base + kInvSlotHandleLButtonCoreLateBranchPrepTargetRva);
+    g_original_invslot_handle_lbutton_core_late_branch_gate_b =
+        reinterpret_cast<InvSlotHandleLButtonCoreLateBranchGateBFn>(
+            module_base + kInvSlotHandleLButtonCoreLateBranchGateBTargetRva);
+    g_original_invslot_handle_lbutton_core_late_branch_dispatch =
+        reinterpret_cast<InvSlotHandleLButtonCoreLateBranchDispatchFn>(
+            module_base + kInvSlotHandleLButtonCoreLateBranchDispatchTargetRva);
+    g_original_invslot_handle_lbutton_core_late_slot17_gate =
+        reinterpret_cast<InvSlotHandleLButtonCoreLateSlot17GateFn>(
+            module_base + kInvSlotHandleLButtonCoreLateSlot17GateTargetRva);
+    g_original_invslot_handle_lbutton_core_late_slot17_apply =
+        reinterpret_cast<InvSlotHandleLButtonCoreLateSlot17ApplyFn>(
+            module_base + kInvSlotHandleLButtonCoreLateSlot17ApplyTargetRva);
+
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kDragDropSilentPrecheckCallsiteRva),
+        reinterpret_cast<void*>(&DragDropSilentPrecheckCallsiteHook),
+        module_base + kDragDropSilentPrecheckTargetRva,
+        &g_drag_drop_silent_precheck_callsite_patch,
+        L"DragDropSilentPrecheckCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kMoveItemFromSlotResolveCallsiteRva),
+        reinterpret_cast<void*>(&MoveItemFromSlotResolveCallsiteHook),
+        module_base + kMoveItemSlotResolveTargetRva,
+        &g_move_item_from_slot_resolve_callsite_patch,
+        L"MoveItemFromSlotResolveCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kMoveItemToSlotResolveCallsiteRva),
+        reinterpret_cast<void*>(&MoveItemToSlotResolveCallsiteHook),
+        module_base + kMoveItemSlotResolveTargetRva,
+        &g_move_item_to_slot_resolve_callsite_patch,
+        L"MoveItemToSlotResolveCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCorePrecheckCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCorePrecheckCallsiteHook),
+        module_base + kInvSlotHandleLButtonCorePrecheckTargetRva,
+        &g_invslot_handle_lbutton_core_precheck_callsite_patch,
+        L"InvSlotHandleLButtonCorePrecheckCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreModeBitsACallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreModeBitsACallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreModeBitsTargetRva,
+        &g_invslot_handle_lbutton_core_mode_bits_a_callsite_patch,
+        L"InvSlotHandleLButtonCoreModeBitsACallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreModeBitsBCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreModeBitsBCallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreModeBitsTargetRva,
+        &g_invslot_handle_lbutton_core_mode_bits_b_callsite_patch,
+        L"InvSlotHandleLButtonCoreModeBitsBCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreModeBitsCCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreModeBitsCCallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreModeBitsTargetRva,
+        &g_invslot_handle_lbutton_core_mode_bits_c_callsite_patch,
+        L"InvSlotHandleLButtonCoreModeBitsCCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreModeBitsDCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreModeBitsDCallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreModeBitsTargetRva,
+        &g_invslot_handle_lbutton_core_mode_bits_d_callsite_patch,
+        L"InvSlotHandleLButtonCoreModeBitsDCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreModeBitsECallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreModeBitsECallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreModeBitsTargetRva,
+        &g_invslot_handle_lbutton_core_mode_bits_e_callsite_patch,
+        L"InvSlotHandleLButtonCoreModeBitsECallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreLocalGateCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreLocalGateCallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreLocalGateTargetRva,
+        &g_invslot_handle_lbutton_core_local_gate_callsite_patch,
+        L"InvSlotHandleLButtonCoreLocalGateCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreResolveObjectCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreResolveObjectCallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreResolveObjectTargetRva,
+        &g_invslot_handle_lbutton_core_resolve_object_callsite_patch,
+        L"InvSlotHandleLButtonCoreResolveObjectCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreResolvedKindACallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreResolvedKindACallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreResolvedKindTargetRva,
+        &g_invslot_handle_lbutton_core_resolved_kind_a_callsite_patch,
+        L"InvSlotHandleLButtonCoreResolvedKindACallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreResolvedKindBCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreResolvedKindBCallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreResolvedKindTargetRva,
+        &g_invslot_handle_lbutton_core_resolved_kind_b_callsite_patch,
+        L"InvSlotHandleLButtonCoreResolvedKindBCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreResolvedFlagACallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreResolvedFlagACallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreResolvedFlagTargetRva,
+        &g_invslot_handle_lbutton_core_resolved_flag_a_callsite_patch,
+        L"InvSlotHandleLButtonCoreResolvedFlagACallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreResolvedFlagBCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreResolvedFlagBCallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreResolvedFlagTargetRva,
+        &g_invslot_handle_lbutton_core_resolved_flag_b_callsite_patch,
+        L"InvSlotHandleLButtonCoreResolvedFlagBCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCorePostResolveGateCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCorePostResolveGateCallsiteHook),
+        module_base + kInvSlotHandleLButtonCorePostResolveGateTargetRva,
+        &g_invslot_handle_lbutton_core_post_resolve_gate_callsite_patch,
+        L"InvSlotHandleLButtonCorePostResolveGateCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCorePostLookupModeGateCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCorePostLookupModeGateCallsiteHook),
+        module_base + kInvSlotHandleLButtonCorePostLookupModeGateTargetRva,
+        &g_invslot_handle_lbutton_core_post_lookup_mode_gate_callsite_patch,
+        L"InvSlotHandleLButtonCorePostLookupModeGateCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCorePostLookupUiPulseCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCorePostLookupUiPulseCallsiteHook),
+        module_base + kInvSlotHandleLButtonCorePostLookupUiPulseTargetRva,
+        &g_invslot_handle_lbutton_core_post_lookup_ui_pulse_callsite_patch,
+        L"InvSlotHandleLButtonCorePostLookupUiPulseCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreAltDispatchCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreAltDispatchCallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreAltDispatchTargetRva,
+        &g_invslot_handle_lbutton_core_alt_dispatch_callsite_patch,
+        L"InvSlotHandleLButtonCoreAltDispatchCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreItemRangeGateCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreItemRangeGateCallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreItemRangeGateTargetRva,
+        &g_invslot_handle_lbutton_core_item_range_gate_callsite_patch,
+        L"InvSlotHandleLButtonCoreItemRangeGateCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreLateSlot17GateCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreLateSlot17GateCallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreLateSlot17GateTargetRva,
+        &g_invslot_handle_lbutton_core_late_slot17_gate_callsite_patch,
+        L"InvSlotHandleLButtonCoreLateSlot17GateCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreLateSlot17ApplyCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreLateSlot17ApplyCallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreLateSlot17ApplyTargetRva,
+        &g_invslot_handle_lbutton_core_late_slot17_apply_callsite_patch,
+        L"InvSlotHandleLButtonCoreLateSlot17ApplyCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreLateBranchGateACallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreLateBranchGateACallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreLateBranchGateATargetRva,
+        &g_invslot_handle_lbutton_core_late_branch_gate_a_callsite_patch,
+        L"InvSlotHandleLButtonCoreLateBranchGateACallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreLateBranchPrepCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreLateBranchPrepCallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreLateBranchPrepTargetRva,
+        &g_invslot_handle_lbutton_core_late_branch_prep_callsite_patch,
+        L"InvSlotHandleLButtonCoreLateBranchPrepCallsite");
+    InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCoreLateBranchDispatchCallsiteRva),
+        reinterpret_cast<void*>(&InvSlotHandleLButtonCoreLateBranchDispatchCallsiteHook),
+        module_base + kInvSlotHandleLButtonCoreLateBranchDispatchTargetRva,
+        &g_invslot_handle_lbutton_core_late_branch_dispatch_callsite_patch,
+        L"InvSlotHandleLButtonCoreLateBranchDispatchCallsite");
 }
 
 bool TryReadGuildTrainerClassFromSpawn(
@@ -5469,27 +5908,18 @@ bool TryReadGuildTrainerClassFromSpawn(
 }
 
 bool TryReadGuildTrainerClassFromCallerFrame(
+    std::uintptr_t caller_ebp,
     GuildTrainerClassResolution* resolution) noexcept {
     if (resolution == nullptr) {
         return false;
     }
 
-    const std::uintptr_t current_frame = GetCurrentFramePointer();
-    resolution->current_frame = current_frame;
-    resolution->current_frame_copied = (current_frame != 0);
-    if (current_frame == 0) {
-        return false;
-    }
-
-    std::uintptr_t caller_ebp = 0;
-    if (!TryCopyObject(reinterpret_cast<const void*>(current_frame), &caller_ebp) ||
-        caller_ebp == 0) {
-        return false;
-    }
-
-    resolution->caller_ebp_copied = true;
     resolution->caller_ebp = caller_ebp;
+    resolution->caller_ebp_copied = (caller_ebp != 0);
     resolution->caller_context_used = true;
+    if (caller_ebp == 0) {
+        return false;
+    }
 
     std::uint8_t raw_class_id = 0;
     if (!TryCopyObject(
@@ -5619,9 +6049,9 @@ void LogGuildTrainerOverride(
     monomyth::logger::Log(message);
 }
 
-void* MONOMYTH_FASTCALL GuildTrainerClassLookupCallsiteHook(
+extern "C" void* MONOMYTH_FASTCALL GuildTrainerClassLookupCallsiteHookImpl(
     void* this_context,
-    void*) noexcept {
+    void* caller_ebp_like) noexcept {
     ++g_guild_trainer_class_lookup_call_count;
     void* original_result =
         g_original_guild_trainer_class_lookup != nullptr
@@ -5632,7 +6062,9 @@ void* MONOMYTH_FASTCALL GuildTrainerClassLookupCallsiteHook(
     GuildTrainerClassResolution resolution = {};
     bool trainer_class_copied = TryReadActiveGuildTrainerClass(&resolution);
     if (!trainer_class_copied) {
-        trainer_class_copied = TryReadGuildTrainerClassFromCallerFrame(&resolution);
+        trainer_class_copied = TryReadGuildTrainerClassFromCallerFrame(
+            reinterpret_cast<std::uintptr_t>(caller_ebp_like),
+            &resolution);
     }
 
     const monomyth::server_auth_stats::Snapshot snapshot =
@@ -5668,6 +6100,24 @@ void* MONOMYTH_FASTCALL GuildTrainerClassLookupCallsiteHook(
 
     return result;
 }
+
+#if defined(_MSC_VER)
+extern "C" __declspec(naked) void GuildTrainerClassLookupCallsiteHookBridge() {
+    __asm {
+        mov edx, ebp
+        jmp GuildTrainerClassLookupCallsiteHookImpl
+    }
+}
+#else
+extern "C" __attribute__((naked)) void GuildTrainerClassLookupCallsiteHookBridge() {
+    asm volatile(
+        "movl %%ebp, %%edx\n\t"
+        "jmp *%0\n\t"
+        :
+        : "r"(&GuildTrainerClassLookupCallsiteHookImpl)
+        : "edx");
+}
+#endif
 
 void AppendActiveScrollCorrelation(std::wstring* message) {
     if (message == nullptr) {
@@ -6649,6 +7099,7 @@ void LogMoveItemSendObserved(
             static_cast<const std::uint8_t*>(packet) + kPacketOpcodeBytes,
             sizeof(move_item),
             reinterpret_cast<std::uint8_t*>(&move_item))) {
+        ArmMoveItemPostSendLocalFocus(move_item);
         message += L" move_item_payload_status=copied";
         message += L" from_type=";
         message += std::to_wstring(move_item.from_slot.type);
@@ -6747,6 +7198,12 @@ void AppendOffhandWeaponPolicyFields(
     message->append(snapshot.dual_wield_skill_checked ? L"true" : L"false");
     message->append(L" has_dual_wield_skill=");
     message->append(snapshot.has_dual_wield_skill ? L"true" : L"false");
+    message->append(L" authoritative_dual_wield_class_present=");
+    message->append(snapshot.authoritative_dual_wield_class_present ? L"true" : L"false");
+    message->append(L" dual_wield_entitlement_fallback_used=");
+    message->append(snapshot.dual_wield_entitlement_fallback_used ? L"true" : L"false");
+    message->append(L" has_dual_wield_entitlement=");
+    message->append(snapshot.has_dual_wield_entitlement ? L"true" : L"false");
     message->append(L" primary_blocks_secondary_weapon=");
     message->append(snapshot.primary_blocks_secondary_weapon ? L"true" : L"false");
     message->append(L" eligible_secondary_weapon_override=");
@@ -6961,6 +7418,88 @@ void LogMoveItemLocalSlotResolveTrace(
     message += resolved_slot_copied ? L"copied" : L"unavailable";
     if (resolved_slot_copied) {
         AppendClientInventorySlotFields(&message, L"resolved", resolved_slot);
+    }
+
+    monomyth::logger::Log(message);
+}
+
+MONOMYTH_USED MONOMYTH_NOINLINE void LogMoveItemPostSendUpdateTrace(
+    const wchar_t* callsite_label,
+    const wchar_t* packet_role,
+    std::uint32_t callsite_rva,
+    void* this_context,
+    void* inventory_root_like,
+    std::uint32_t slot_like,
+    void* descriptor_like,
+    std::uint32_t zero_a,
+    std::uint32_t zero_b,
+    std::uint32_t zero_c,
+    std::uintptr_t caller_return_address,
+    const std::array<std::uint8_t, 24>& descriptor_bytes_before,
+    bool descriptor_bytes_before_copied,
+    const std::array<std::uint8_t, 24>& descriptor_bytes_after,
+    bool descriptor_bytes_after_copied,
+    const MoveItemPostSendLocalFocusWindow& focus) {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message = L"MulticlassItemTrace target=MoveItemPostSendUpdate";
+    message += L" callsite_label=";
+    message += callsite_label == nullptr ? L"unknown" : callsite_label;
+    message += L" packet_role=";
+    message += packet_role == nullptr ? L"unknown" : packet_role;
+    message += L" target_address=";
+    message += HexPtr(module_base + kMoveItemPostSendUpdateTargetRva);
+    message += L" target_rva=";
+    message += Hex32(kMoveItemPostSendUpdateTargetRva);
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" callsite_rva=";
+    message += Hex32(callsite_rva);
+    message += L" inventory_root_like=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(inventory_root_like));
+    message += L" slot_like=";
+    message += std::to_wstring(slot_like);
+    message += L" descriptor_pointer=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(descriptor_like));
+    message += L" zero_a=";
+    message += std::to_wstring(zero_a);
+    message += L" zero_b=";
+    message += std::to_wstring(zero_b);
+    message += L" zero_c=";
+    message += std::to_wstring(zero_c);
+    message += L" slot_matches_focus_from=";
+    message += slot_like == static_cast<std::uint32_t>(focus.from_slot) ? L"true" : L"false";
+    message += L" slot_matches_focus_to=";
+    message += slot_like == static_cast<std::uint32_t>(focus.to_slot) ? L"true" : L"false";
+    message += L" descriptor_bytes_before_status=";
+    message += descriptor_bytes_before_copied ? L"copied" : L"unavailable";
+    if (descriptor_bytes_before_copied) {
+        message += L" descriptor_bytes_before=";
+        message += HexBytes(descriptor_bytes_before.data(), descriptor_bytes_before.size());
+    }
+    message += L" descriptor_bytes_after_status=";
+    message += descriptor_bytes_after_copied ? L"copied" : L"unavailable";
+    if (descriptor_bytes_after_copied) {
+        message += L" descriptor_bytes_after=";
+        message += HexBytes(descriptor_bytes_after.data(), descriptor_bytes_after.size());
+    }
+
+    if (focus.active) {
+        message += L" focus_activation=";
+        message += std::to_wstring(focus.activation);
+        message += L" focus_remaining_before=";
+        message += std::to_wstring(focus.remaining_before);
+        message += L" focus_remaining_after=";
+        message += std::to_wstring(focus.remaining_after);
+        message += L" focus_from_slot=";
+        message += std::to_wstring(focus.from_slot);
+        message += L" focus_to_slot=";
+        message += std::to_wstring(focus.to_slot);
     }
 
     monomyth::logger::Log(message);
@@ -9834,6 +10373,124 @@ void LogInvSlotHandleLButtonCoreLateBranchGateBObservation(
     monomyth::logger::Log(message);
 }
 
+void LogInvSlotHandleLButtonCoreLateBranchPrepOverride(
+    void* this_context,
+    std::int32_t slot_like,
+    void* lookup_result_like,
+    std::uintptr_t caller_return_address,
+    std::uint8_t original_result,
+    std::uint32_t lookup_dword0_before,
+    bool lookup_dword0_before_copied,
+    std::uint32_t lookup_dword0_after,
+    bool lookup_dword0_after_copied,
+    std::uintptr_t item_like,
+    const OffhandWeaponPolicySnapshot& offhand_policy,
+    const monomyth::server_auth_stats::Snapshot& snapshot) {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"MulticlassItemUsability target=InvSlotHandleLButtonCoreLateBranchPrep";
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" slot_like=";
+    message += std::to_wstring(slot_like);
+    message += L" lookup_result_pointer=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(lookup_result_like));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    message += L" returned_result=1";
+    message += L" lookup_dword0_before_status=";
+    message += lookup_dword0_before_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_before_copied) {
+        message += L" lookup_dword0_before=";
+        message += Hex32(lookup_dword0_before);
+    }
+    message += L" lookup_dword0_after_status=";
+    message += lookup_dword0_after_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_after_copied) {
+        message += L" lookup_dword0_after=";
+        message += Hex32(lookup_dword0_after);
+    }
+    message += L" item_like=";
+    message += HexPtr(item_like);
+    message += L" item_data_like=";
+    message += HexPtr(offhand_policy.item_data_like);
+    AppendOffhandWeaponPolicyFields(&message, offhand_policy);
+    message += L" gate_label=equipment_slot_late_branch_prep";
+    message += L" override_mode=secondary_weapon_authoritative_dual_wield";
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    message += L" has_assigned_mask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    message += L" override_count=";
+    message += std::to_wstring(g_invslot_handle_lbutton_core_late_branch_prep_override_count);
+    monomyth::logger::Log(message);
+}
+
+void LogInvSlotHandleLButtonCoreLateBranchPrepObservation(
+    void* this_context,
+    std::int32_t slot_like,
+    void* lookup_result_like,
+    std::uintptr_t caller_return_address,
+    std::uint8_t original_result,
+    std::uint32_t lookup_dword0_before,
+    bool lookup_dword0_before_copied,
+    std::uint32_t lookup_dword0_after,
+    bool lookup_dword0_after_copied,
+    std::uintptr_t item_like,
+    const OffhandWeaponPolicySnapshot& offhand_policy,
+    const monomyth::server_auth_stats::Snapshot& snapshot) {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"MulticlassItemTrace target=InvSlotHandleLButtonCoreLateBranchPrepObserved";
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" slot_like=";
+    message += std::to_wstring(slot_like);
+    message += L" lookup_result_pointer=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(lookup_result_like));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    message += L" returned_result=";
+    message += std::to_wstring(original_result);
+    message += L" lookup_dword0_before_status=";
+    message += lookup_dword0_before_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_before_copied) {
+        message += L" lookup_dword0_before=";
+        message += Hex32(lookup_dword0_before);
+    }
+    message += L" lookup_dword0_after_status=";
+    message += lookup_dword0_after_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_after_copied) {
+        message += L" lookup_dword0_after=";
+        message += Hex32(lookup_dword0_after);
+    }
+    message += L" item_like=";
+    message += HexPtr(item_like);
+    message += L" item_data_like=";
+    message += HexPtr(offhand_policy.item_data_like);
+    AppendOffhandWeaponPolicyFields(&message, offhand_policy);
+    message += L" override_candidate=";
+    message += offhand_policy.eligible ? L"true" : L"false";
+    message += L" gate_label=equipment_slot_late_branch_prep";
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    message += L" has_assigned_mask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    monomyth::logger::Log(message);
+}
+
 void LogCanEquipObservation(
     void* this_context,
     std::uintptr_t caller_return_address,
@@ -11369,6 +12026,101 @@ void MONOMYTH_FASTCALL MoveItemToSlotResolveCallsiteHook(
         GetCallerReturnAddress());
 }
 
+MONOMYTH_USED MONOMYTH_NOINLINE void InvokeMoveItemPostSendUpdateCallsiteHook(
+    const wchar_t* callsite_label,
+    const wchar_t* packet_role,
+    std::uint32_t callsite_rva,
+    void* this_context,
+    void* inventory_root_like,
+    std::uint32_t slot_like,
+    void* descriptor_like,
+    std::uint32_t zero_a,
+    std::uint32_t zero_b,
+    std::uint32_t zero_c) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    MoveItemPostSendLocalFocusWindow focus = {};
+    const bool focus_active = TryConsumeMoveItemPostSendLocalFocus(&focus);
+
+    std::array<std::uint8_t, 24> descriptor_bytes_before = {};
+    const bool descriptor_bytes_before_copied =
+        TryCopyBytes(descriptor_like, descriptor_bytes_before.size(), descriptor_bytes_before.data());
+    g_original_move_item_post_send_update(
+        this_context,
+        inventory_root_like,
+        slot_like,
+        descriptor_like,
+        zero_a,
+        zero_b,
+        zero_c);
+    std::array<std::uint8_t, 24> descriptor_bytes_after = {};
+    const bool descriptor_bytes_after_copied =
+        TryCopyBytes(descriptor_like, descriptor_bytes_after.size(), descriptor_bytes_after.data());
+
+    if (focus_active) {
+        LogMoveItemPostSendUpdateTrace(
+            callsite_label,
+            packet_role,
+            callsite_rva,
+            this_context,
+            inventory_root_like,
+            slot_like,
+            descriptor_like,
+            zero_a,
+            zero_b,
+            zero_c,
+            caller_return_address,
+            descriptor_bytes_before,
+            descriptor_bytes_before_copied,
+            descriptor_bytes_after,
+            descriptor_bytes_after_copied,
+            focus);
+    }
+}
+
+MONOMYTH_USED MONOMYTH_NOINLINE void MONOMYTH_FASTCALL MoveItemPostSendUpdateSiteACallsiteHook(
+    void* this_context,
+    void*,
+    void* inventory_root_like,
+    std::uint32_t slot_like,
+    void* descriptor_like,
+    std::uint32_t zero_a,
+    std::uint32_t zero_b,
+    std::uint32_t zero_c) noexcept {
+    InvokeMoveItemPostSendUpdateCallsiteHook(
+        L"MoveItemPostSendUpdateSiteA",
+        L"from_slot",
+        kMoveItemPostSendUpdateSiteACallsiteRva,
+        this_context,
+        inventory_root_like,
+        slot_like,
+        descriptor_like,
+        zero_a,
+        zero_b,
+        zero_c);
+}
+
+MONOMYTH_USED MONOMYTH_NOINLINE void MONOMYTH_FASTCALL MoveItemPostSendUpdateSiteBCallsiteHook(
+    void* this_context,
+    void*,
+    void* inventory_root_like,
+    std::uint32_t slot_like,
+    void* descriptor_like,
+    std::uint32_t zero_a,
+    std::uint32_t zero_b,
+    std::uint32_t zero_c) noexcept {
+    InvokeMoveItemPostSendUpdateCallsiteHook(
+        L"MoveItemPostSendUpdateSiteB",
+        L"to_slot",
+        kMoveItemPostSendUpdateSiteBCallsiteRva,
+        this_context,
+        inventory_root_like,
+        slot_like,
+        descriptor_like,
+        zero_a,
+        zero_b,
+        zero_c);
+}
+
 int MONOMYTH_FASTCALL MoveItemBranchKindSiteACallsiteHook(
     void* this_context,
     void*) noexcept {
@@ -11954,6 +12706,52 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchPrepCallsiteHoo
         TryCopyBytes(this_context, context_bytes_after.size(), context_bytes_after.data());
     std::uint32_t lookup_dword0_after = 0;
     const bool lookup_dword0_after_copied = TryCopyObject(lookup_result_like, &lookup_dword0_after);
+    if (g_multiclass_item_usability_enabled &&
+        original_result == 0 &&
+        slot_like == kSecondaryEquipmentSlot &&
+        lookup_dword0_before_copied &&
+        lookup_dword0_before != 0) {
+        const monomyth::server_auth_stats::Snapshot snapshot =
+            monomyth::server_auth_stats::GetSnapshot();
+        const std::uintptr_t item_like =
+            g_invslot_handle_lbutton_core_last_late_lookup_item_pointer;
+        const OffhandWeaponPolicySnapshot offhand_policy =
+            CaptureOffhandWeaponPolicySnapshot(item_like, snapshot);
+        const bool is_offhand_weapon_attempt =
+            offhand_policy.is_weapon && offhand_policy.can_wear_secondary;
+        if (is_offhand_weapon_attempt && offhand_policy.eligible) {
+            ++g_invslot_handle_lbutton_core_late_branch_prep_override_count;
+            LogInvSlotHandleLButtonCoreLateBranchPrepOverride(
+                this_context,
+                slot_like,
+                lookup_result_like,
+                caller_return_address,
+                original_result,
+                lookup_dword0_before,
+                lookup_dword0_before_copied,
+                lookup_dword0_after,
+                lookup_dword0_after_copied,
+                item_like,
+                offhand_policy,
+                snapshot);
+            return 1;
+        }
+        if (is_offhand_weapon_attempt) {
+            LogInvSlotHandleLButtonCoreLateBranchPrepObservation(
+                this_context,
+                slot_like,
+                lookup_result_like,
+                caller_return_address,
+                original_result,
+                lookup_dword0_before,
+                lookup_dword0_before_copied,
+                lookup_dword0_after,
+                lookup_dword0_after_copied,
+                item_like,
+                offhand_policy,
+                snapshot);
+        }
+    }
     LogInvSlotHandleLButtonCoreLateBranchPrepTrace(
         L"InvSlotHandleLButtonCoreLateBranchPrep",
         kInvSlotHandleLButtonCoreLateBranchPrepCallsiteRva,
@@ -13449,10 +14247,23 @@ void MONOMYTH_FASTCALL InvSlotHandleLButtonCoreHook(
     g_invslot_handle_lbutton_core_last_late_lookup_item_pointer = 0;
     const std::uintptr_t module_base = GetHostModuleBase();
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
-    const bool should_log =
-        !g_multiclass_item_usability_enabled &&
+    std::uintptr_t drag_context_pointer = 0;
+    bool drag_context_pointer_copied = false;
+    if (module_base != 0) {
+        drag_context_pointer_copied =
+            TryCopyObject(reinterpret_cast<const void*>(module_base + kDragContextGlobalRva),
+                          &drag_context_pointer);
+    }
+    const bool core_callsite_matched =
         module_base != 0 &&
         caller_return_address == module_base + kInvSlotHandleLButtonCoreCallerReturnRva;
+    const bool active_drag_context =
+        drag_context_pointer_copied && drag_context_pointer != 0;
+    const bool should_log =
+        core_callsite_matched &&
+        (!g_multiclass_item_usability_enabled ||
+         active_drag_context ||
+         held_flag_like != 0);
 
     ClientPointWire point_value = {};
     bool point_value_copied = false;
@@ -13470,8 +14281,6 @@ void MONOMYTH_FASTCALL InvSlotHandleLButtonCoreHook(
     bool this_bytes_before_copied = false;
     std::array<std::uint8_t, 24> field_04_bytes_before = {};
     bool field_04_bytes_before_copied = false;
-    std::uintptr_t drag_context_pointer = 0;
-    bool drag_context_pointer_copied = false;
     if (should_log) {
         point_value_copied = TryCopyObject(point_like, &point_value);
         field_10_before_copied =
@@ -13497,9 +14306,6 @@ void MONOMYTH_FASTCALL InvSlotHandleLButtonCoreHook(
         }
         this_bytes_before_copied =
             TryCopyBytes(this_context, this_bytes_before.size(), this_bytes_before.data());
-        drag_context_pointer_copied =
-            TryCopyObject(reinterpret_cast<const void*>(module_base + kDragContextGlobalRva),
-                          &drag_context_pointer);
     }
 
     g_original_invslot_handle_lbutton_core(
@@ -14074,7 +14880,7 @@ bool MONOMYTH_FASTCALL MoveItemValidationGateHook(
             arg4,
             arg5,
             arg6);
-    if (!g_multiclass_item_usability_enabled) {
+    if (!g_multiclass_item_usability_enabled || !original_result) {
         LogMoveItemValidationGateTrace(
             this_context,
             caller_return_address,
@@ -14647,7 +15453,7 @@ bool InstallGuildTrainerHook(const monomyth::runtime::Manifest& manifest) noexce
             module_base + kGuildTrainerClassLookupTargetRva);
     if (!InstallCallsitePatch(
             target,
-            reinterpret_cast<void*>(&GuildTrainerClassLookupCallsiteHook),
+            reinterpret_cast<void*>(&GuildTrainerClassLookupCallsiteHookBridge),
             module_base + kGuildTrainerClassLookupTargetRva,
             &g_guild_trainer_class_lookup_callsite_patch,
             L"GuildTrainerClassLookupCallsite")) {
@@ -14703,6 +15509,8 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
     }
 
     g_multiclass_item_usability_enabled = true;
+    g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
+    g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
     std::wstring message =
         L"hook_manager: item usability hook installed target=EQ_Character::CanEquip address=";
     message += HexPtr(manifest.can_equip_address);
@@ -14710,8 +15518,8 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
 
     const std::uintptr_t module_base = GetHostModuleBase();
     constexpr std::array<std::uint8_t, 16> kCharacterZoneClientHasSkillEntryBytes = {
-        0x8b, 0x08, 0x6a, 0x00, 0x6a, 0x01, 0xc7, 0x44,
-        0x24, 0x40, 0x0a, 0x00, 0x00, 0x00, 0xe8, 0xad};
+        0x8b, 0x44, 0x24, 0x04, 0x50, 0xe8, 0x26, 0xfe,
+        0xff, 0xff, 0x33, 0xc9, 0x85, 0xc0, 0x0f, 0x9f};
     std::array<std::uint8_t, kCharacterZoneClientHasSkillEntryBytes.size()>
         live_character_zone_client_has_skill_entry = {};
     const bool has_skill_entry_copied = TryCopyBytes(
@@ -15090,6 +15898,7 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             monomyth::logger::Log(candidate_message);
         }
 
+        InstallDetailedItemUsabilityTraceCallsites(manifest, module_base);
         return true;
     }
 
@@ -15611,6 +16420,45 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
         module_base + kMoveItemStackLocalGateTargetRva,
         &g_move_item_stack_local_gate_site_b_callsite_patch,
         L"MoveItemStackLocalGateSiteBCallsite");
+    {
+        const std::uintptr_t site_a_callsite_address =
+            module_base + kMoveItemPostSendUpdateSiteACallsiteRva;
+        const std::uintptr_t site_b_callsite_address =
+            module_base + kMoveItemPostSendUpdateSiteBCallsiteRva;
+        void* const site_a_hook =
+            reinterpret_cast<void*>(&MoveItemPostSendUpdateSiteACallsiteHook);
+        void* const site_b_hook =
+            reinterpret_cast<void*>(&MoveItemPostSendUpdateSiteBCallsiteHook);
+
+        std::wstring message =
+            L"hook_manager: MoveItemPostSendUpdate install preflight "
+            L"site_a_callsite=";
+        message += HexPtr(site_a_callsite_address);
+        message += L" site_a_hook=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(site_a_hook));
+        message += L" site_a_target=";
+        message += HexPtr(module_base + kMoveItemPostSendUpdateTargetRva);
+        message += L" site_b_callsite=";
+        message += HexPtr(site_b_callsite_address);
+        message += L" site_b_hook=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(site_b_hook));
+        message += L" site_b_target=";
+        message += HexPtr(module_base + kMoveItemPostSendUpdateTargetRva);
+        monomyth::logger::Log(message);
+
+        InstallCallsitePatch(
+            reinterpret_cast<void*>(site_a_callsite_address),
+            site_a_hook,
+            module_base + kMoveItemPostSendUpdateTargetRva,
+            &g_move_item_post_send_update_site_a_callsite_patch,
+            L"MoveItemPostSendUpdateSiteACallsite");
+        InstallCallsitePatch(
+            reinterpret_cast<void*>(site_b_callsite_address),
+            site_b_hook,
+            module_base + kMoveItemPostSendUpdateTargetRva,
+            &g_move_item_post_send_update_site_b_callsite_patch,
+            L"MoveItemPostSendUpdateSiteBCallsite");
+    }
     InstallCallsitePatch(
         reinterpret_cast<void*>(module_base + kInvSlotHandleLButtonCorePrecheckCallsiteRva),
         reinterpret_cast<void*>(&InvSlotHandleLButtonCorePrecheckCallsiteHook),
@@ -16753,6 +17601,8 @@ bool RemoveCanEquipHook() noexcept {
     RemoveCallsitePatch(&g_invslot_handle_lbutton_core_precheck_callsite_patch);
     RemoveCallsitePatch(&g_move_item_ctor_site_b_callsite_patch);
     RemoveCallsitePatch(&g_move_item_ctor_site_a_callsite_patch);
+    RemoveCallsitePatch(&g_move_item_post_send_update_site_b_callsite_patch);
+    RemoveCallsitePatch(&g_move_item_post_send_update_site_a_callsite_patch);
     RemoveCallsitePatch(&g_move_item_stack_local_gate_site_b_callsite_patch);
     RemoveCallsitePatch(&g_move_item_branch_bool_site_b_callsite_patch);
     RemoveCallsitePatch(&g_move_item_branch_bool_site_a_callsite_patch);
@@ -16781,6 +17631,7 @@ bool RemoveCanEquipHook() noexcept {
     g_original_move_item_branch_kind = nullptr;
     g_original_move_item_branch_bool = nullptr;
     g_original_move_item_stack_local_gate = nullptr;
+    g_original_move_item_post_send_update = nullptr;
     g_original_inventory_window_wnd_notification = nullptr;
     g_original_inventory_summary_refresh_candidate_a = nullptr;
     g_original_inventory_summary_refresh_candidate_b = nullptr;
@@ -16816,6 +17667,10 @@ bool RemoveCanEquipHook() noexcept {
     g_original_move_item_slot_populate = nullptr;
     g_character_zone_client_has_skill = nullptr;
     g_character_zone_client_has_skill_address = 0;
+    g_move_item_post_send_local_focus_remaining.store(0);
+    g_move_item_post_send_local_focus_activation.store(0);
+    g_move_item_post_send_local_focus_from_slot.store(-1);
+    g_move_item_post_send_local_focus_to_slot.store(-1);
     if (!g_can_equip_detour.installed) {
         return true;
     }
@@ -16823,6 +17678,8 @@ bool RemoveCanEquipHook() noexcept {
     if (RemoveInlineDetour(&g_can_equip_detour)) {
         g_original_can_equip = nullptr;
         g_multiclass_item_usability_enabled = false;
+        g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
+        g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
         monomyth::logger::Log(
             L"hook_manager: item usability hook removed target=EQ_Character::CanEquip");
         return true;

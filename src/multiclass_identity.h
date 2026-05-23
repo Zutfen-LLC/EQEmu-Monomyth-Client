@@ -37,6 +37,9 @@ bool HasAnyAuthoritativeClientItemClass(
     bool has_class_mask,
     std::uint32_t authoritative_class_mask,
     std::uint32_t client_item_class_mask) noexcept;
+bool HasAnyAuthoritativeDualWieldClass(
+    bool has_class_mask,
+    std::uint32_t authoritative_class_mask) noexcept;
 bool HasAuthoritativeOffhandWeaponClassAndDualWield(
     bool has_class_mask,
     std::uint32_t authoritative_class_mask,

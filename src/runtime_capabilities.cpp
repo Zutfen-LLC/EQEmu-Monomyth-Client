@@ -726,25 +726,33 @@ void ApplyReceiveDispatchDiscovery(
         manifest->fingerprint_matched &&
         discovery.validated;
     manifest->full_packet_trace_allowed = false;
-    manifest->receive_introspection_allowed = false;
+    manifest->receive_introspection_dev_opt_in = manifest->packet_hooks_allowed;
+    manifest->receive_introspection_allowed = manifest->packet_hooks_allowed;
     if (manifest->packet_hooks_allowed) {
         manifest->packet_hooks_reason =
             L"enabled by default for validated ROF2 server auth stats observation";
+        manifest->receive_introspection_reason =
+            L"temporarily hardwired on for validated packet-hook sessions";
     } else if (!manifest->proxy_ready) {
         manifest->packet_hooks_reason = L"proxy is not ready";
+        manifest->receive_introspection_reason = L"proxy is not ready";
     } else if (!manifest->hooks_allowed || !manifest->fingerprint_matched) {
         manifest->packet_hooks_reason = L"ROF2 fingerprint/host guard denied hook capability";
+        manifest->receive_introspection_reason =
+            L"ROF2 fingerprint/host guard denied hook capability";
     } else if (!discovery.validated) {
         manifest->packet_hooks_reason =
+            L"receive dispatcher discovery not validated";
+        manifest->receive_introspection_reason =
             L"receive dispatcher discovery not validated";
     } else {
         manifest->packet_hooks_reason =
             L"receive dispatcher capture denied for unknown reason";
+        manifest->receive_introspection_reason =
+            L"receive dispatcher capture denied for unknown reason";
     }
     manifest->full_packet_trace_reason =
         L"full packet tracing retired; capability disabled by default";
-    manifest->receive_introspection_reason =
-        L"receive introspection retired; capability disabled by default";
 }
 
 void ApplySpellUsabilityDiscovery(

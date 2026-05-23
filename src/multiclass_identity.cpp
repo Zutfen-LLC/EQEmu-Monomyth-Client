@@ -85,6 +85,8 @@ constexpr std::array<std::string_view, kPlayableClassCount + 1> kThreeLetterClas
     "BER",
 }};
 
+constexpr std::uint32_t kDualWieldClassMask = 0x000041c9u;
+
 void AppendClassIfMissing(
     OrderedClassIds* ordered_ids,
     unsigned int class_id) noexcept {
@@ -173,6 +175,15 @@ bool HasAnyAuthoritativeClientItemClass(
     }
 
     return false;
+}
+
+bool HasAnyAuthoritativeDualWieldClass(
+    bool has_class_mask,
+    std::uint32_t authoritative_class_mask) noexcept {
+    return has_class_mask &&
+        authoritative_class_mask != 0 &&
+        IsPlayableClassMask(authoritative_class_mask) &&
+        (authoritative_class_mask & kDualWieldClassMask) != 0;
 }
 
 bool HasAuthoritativeOffhandWeaponClassAndDualWield(
