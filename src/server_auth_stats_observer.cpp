@@ -275,6 +275,7 @@ ParseResult ParsePayload(const void* payload, std::uint32_t payload_length) noex
 
         switch (stat_key) {
         case kStatClassesBitmaskKey:
+            ++result.recognized_entry_count;
             if (stat_value > std::numeric_limits<std::uint32_t>::max()) {
                 result.invalid_classes_bitmask = true;
                 result.invalid_classes_bitmask_value = stat_value;
@@ -286,18 +287,21 @@ ParseResult ParsePayload(const void* payload, std::uint32_t payload_length) noex
             result.classes_bitmask = static_cast<std::uint32_t>(stat_value);
             break;
         case kStatActivatedSkillMaskLowKey:
+            ++result.recognized_entry_count;
             result.duplicate_activated_skill_mask_low =
                 result.has_activated_skill_mask_low;
             result.has_activated_skill_mask_low = true;
             result.activated_skill_mask_low = stat_value;
             break;
         case kStatActivatedSkillMaskHighKey:
+            ++result.recognized_entry_count;
             result.duplicate_activated_skill_mask_high =
                 result.has_activated_skill_mask_high;
             result.has_activated_skill_mask_high = true;
             result.activated_skill_mask_high = stat_value;
             break;
         default:
+            ++result.unknown_entry_count;
             break;
         }
     }

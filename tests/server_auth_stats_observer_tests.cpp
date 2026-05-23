@@ -85,6 +85,8 @@ int main() {
     passed &= Expect(
         key_scan_result.activated_skill_mask_high == 0x0000000000000400ull,
         "key scan high skill mask value");
+    passed &= Expect(key_scan_result.recognized_entry_count == 3, "key scan recognized stat count");
+    passed &= Expect(key_scan_result.unknown_entry_count == 1, "key scan unknown stat count");
 
     std::vector<std::uint8_t> without_key;
     AppendU32(&without_key, 2);
@@ -94,6 +96,8 @@ int main() {
         monomyth::server_auth_stats::ParsePayload(without_key.data(), static_cast<std::uint32_t>(without_key.size()));
     passed &= Expect(without_key_result.valid, "without key packet valid");
     passed &= Expect(!without_key_result.has_classes_bitmask, "without key has no class mask");
+    passed &= Expect(without_key_result.recognized_entry_count == 0, "without key recognized stat count");
+    passed &= Expect(without_key_result.unknown_entry_count == 2, "without key unknown stat count");
     passed &= Expect(
         !without_key_result.has_activated_skill_mask_low,
         "without key has no low activated skill mask");

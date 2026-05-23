@@ -76,6 +76,7 @@ std::atomic<std::uint32_t> g_move_item_receive_focus_remaining = 0;
 std::atomic<std::uint64_t> g_move_item_receive_focus_activation = 0;
 std::atomic<std::uint64_t> g_server_auth_stats_exact_match_count = 0;
 std::atomic<std::uint64_t> g_server_auth_stats_candidate_count = 0;
+std::atomic<std::uint64_t> g_server_auth_stats_fallback_accept_count = 0;
 std::atomic<bool> g_server_auth_stats_missing_warning_logged = false;
 std::atomic<std::uint64_t> g_who_all_response_count = 0;
 std::atomic<std::uint32_t> g_who_all_class_display_correlation_remaining = 0;
@@ -293,6 +294,21 @@ bool IsWhoAllResponseOpcode(std::uint32_t opcode) noexcept {
         resolved == kWhoAllResponseOpcode;
 }
 
+bool IsStrictServerAuthStatsFallbackCandidate(
+    std::uint32_t opcode,
+    std::uint32_t payload_length,
+    const monomyth::server_auth_stats::ParseResult& candidate) noexcept {
+    return opcode == 0 &&
+        payload_length <= kAuthStatsCandidatePayloadCeiling &&
+        candidate.valid &&
+        candidate.count > 0 &&
+        candidate.count <= 3 &&
+        candidate.has_classes_bitmask &&
+        !candidate.invalid_classes_bitmask &&
+        candidate.unknown_entry_count == 0 &&
+        candidate.recognized_entry_count == candidate.count;
+}
+
 std::wstring BuildAllowlistSummary() {
     std::wstringstream stream;
     for (std::size_t i = 0; i < g_introspection_allowlist.size(); ++i) {
@@ -399,26 +415,39 @@ bool TryReadU32FromPrefix(
     return true;
 }
 
-void MaybeLogServerAuthStatsCandidate(
+bool MaybeHandleServerAuthStatsCandidate(
     std::uint64_t sequence,
     std::uint32_t opcode,
     std::uint32_t payload_length,
     const void* payload) {
     if (opcode == kServerAuthStatsOpcode || payload == nullptr || payload_length < 16 ||
         payload_length > kAuthStatsCandidatePayloadCeiling) {
-        return;
+        return false;
     }
 
     const monomyth::server_auth_stats::ParseResult candidate =
         monomyth::server_auth_stats::ParsePayload(payload, payload_length);
     if (!candidate.valid ||
         (!candidate.has_classes_bitmask && !candidate.invalid_classes_bitmask)) {
-        return;
+        return false;
+    }
+
+    const bool fallback_accepted =
+        IsStrictServerAuthStatsFallbackCandidate(opcode, payload_length, candidate);
+    std::uint64_t fallback_accept_index = 0;
+    if (fallback_accepted) {
+        fallback_accept_index = g_server_auth_stats_fallback_accept_count.fetch_add(1) + 1;
+        monomyth::server_auth_stats::ObserveReceivePayload(payload, payload_length);
+        const monomyth::server_auth_stats::Snapshot auth_after =
+            monomyth::server_auth_stats::GetSnapshot();
+        if (auth_after.has_classes_bitmask) {
+            monomyth::hooks::NotifyServerAuthStatsUpdated();
+        }
     }
 
     const std::uint64_t candidate_index = g_server_auth_stats_candidate_count.fetch_add(1) + 1;
     if (candidate_index > kAuthStatsCandidateLogLimit) {
-        return;
+        return fallback_accepted;
     }
 
     std::wstringstream message;
@@ -432,15 +461,23 @@ void MaybeLogServerAuthStatsCandidate(
         << L" opcode_name=" << opcode_name
         << L" payload_length=" << payload_length
         << L" count=" << candidate.count
-        << L" has_statClassesBitmask=" << (candidate.has_classes_bitmask ? L"true" : L"false");
+        << L" has_statClassesBitmask=" << (candidate.has_classes_bitmask ? L"true" : L"false")
+        << L" recognized_entry_count=" << candidate.recognized_entry_count
+        << L" unknown_entry_count=" << candidate.unknown_entry_count;
     if (candidate.has_classes_bitmask) {
         message << L" statClassesBitmask=" << Hex32(candidate.classes_bitmask);
     }
     if (candidate.invalid_classes_bitmask) {
         message << L" invalid_statClassesBitmask=true";
     }
+    message
+        << L" fallback_accepted=" << (fallback_accepted ? L"true" : L"false");
+    if (fallback_accepted) {
+        message << L" fallback_accept_index=" << fallback_accept_index;
+    }
     message << L" reason=\"payload_matches_server_auth_stats_shape_but_opcode_differs\"";
     monomyth::logger::Log(message.str());
+    return fallback_accepted;
 }
 
 void MaybeLogMissingServerAuthStatsWarning(std::uint64_t sequence) {
@@ -830,7 +867,7 @@ void ObserveReceiveMetadata(
             monomyth::hooks::NotifyServerAuthStatsUpdated();
         }
     } else {
-        MaybeLogServerAuthStatsCandidate(sequence, opcode, payload_length, payload);
+        MaybeHandleServerAuthStatsCandidate(sequence, opcode, payload_length, payload);
     }
     MaybeLogWhoAllResponse(sequence, opcode, payload_length, payload);
 

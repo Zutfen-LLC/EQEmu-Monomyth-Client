@@ -143,6 +143,25 @@ int main() {
             0x0000839fu),
         "barbed ringmail intersects authoritative paladin shadowknight mask");
     passed &= Expect(
+        HasAnyAuthoritativeClientItemClass(
+            true,
+            ClassBitForTest(5) | ClassBitForTest(7) | ClassBitForTest(9),
+            ClientItemClassBitForTest(9)),
+        "shadowknight monk rogue mask can equip rogue-only primary item");
+    passed &= Expect(
+        !HasAnyAuthoritativeClientItemClass(
+            true,
+            ClassBitForTest(5) | ClassBitForTest(7) | ClassBitForTest(9),
+            ClientItemClassBitForTest(13)),
+        "shadowknight monk rogue mask rejects non-overlapping item class");
+    passed &= Expect(
+        !HasAuthoritativeOffhandWeaponClassAndDualWield(
+            true,
+            ClassBitForTest(5) | ClassBitForTest(9),
+            ClientItemClassBitForTest(9),
+            false),
+        "rogue item class alone does not grant offhand weapon entitlement");
+    passed &= Expect(
         HasAnyAuthoritativeDualWieldClass(
             true,
             ClassBitForTest(3) | ClassBitForTest(7) | ClassBitForTest(13)),
