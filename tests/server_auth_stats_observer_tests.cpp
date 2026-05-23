@@ -6,6 +6,14 @@
 #include <string_view>
 #include <vector>
 
+namespace monomyth::logger {
+
+void Log(std::wstring_view) noexcept {}
+void Log(const wchar_t*) noexcept {}
+void Flush() noexcept {}
+
+}  // namespace monomyth::logger
+
 namespace {
 
 void AppendU32(std::vector<std::uint8_t>* bytes, std::uint32_t value) {

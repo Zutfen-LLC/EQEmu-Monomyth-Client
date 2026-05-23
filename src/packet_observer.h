@@ -43,6 +43,10 @@ void ObserveSendMetadata(
     bool original_result,
     bool original_result_available,
     std::uint32_t correlation_id) noexcept;
+void ArmActivatedSkillSendCorrelation(
+    int skill_id,
+    std::uintptr_t caller_return_address,
+    std::uint32_t caller_rva) noexcept;
 bool TryConsumeWhoAllClassDisplayCorrelation(
     WhoAllClassDisplayCorrelationWindow* window) noexcept;
 void Shutdown() noexcept;

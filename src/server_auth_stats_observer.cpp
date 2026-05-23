@@ -1,6 +1,8 @@
 #include "server_auth_stats_observer.h"
 
+#if defined(_MSC_VER)
 #include <windows.h>
+#endif
 
 #include <array>
 #include <atomic>

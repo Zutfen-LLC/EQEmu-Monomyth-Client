@@ -72,7 +72,7 @@ int main() {
         "build manifest keeps multiclass ui display disabled by default");
     passed &= Expect(
         manifest.multiclass_skill_visibility_allowed,
-        "build manifest enables activated skill visibility on validated ROF2");
+        "build manifest enables activated skill visibility/use on validated ROF2");
 
     monomyth::fingerprint::Result denied_fingerprint = fingerprint;
     denied_fingerprint.hooks_allowed = false;
@@ -80,7 +80,7 @@ int main() {
         monomyth::runtime::BuildCapabilityManifest(true, true, true, denied_fingerprint);
     passed &= Expect(
         !denied_manifest.multiclass_skill_visibility_allowed,
-        "activated skill visibility requires hook allowance");
+        "activated skill visibility/use requires hook allowance");
 
     monomyth::runtime::Manifest gated_manifest = {};
     monomyth::class_display_discovery::Result gated_discovery = {};

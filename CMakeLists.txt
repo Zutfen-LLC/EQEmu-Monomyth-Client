@@ -63,7 +63,6 @@ enable_testing()
 
 add_executable(server_auth_stats_observer_tests
     tests/server_auth_stats_observer_tests.cpp
-    src/logger.cpp
     src/opcode_reference.cpp
     src/server_auth_stats_observer.cpp
 )
