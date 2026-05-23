@@ -88,6 +88,8 @@ constexpr std::int32_t kFirstGeneralInventorySlot = 23;
 constexpr std::int32_t kPrimaryEquipmentSlot = 13;
 constexpr std::int32_t kSecondaryEquipmentSlot = 14;
 constexpr std::uint32_t kSecondaryEquipmentSlotBit = 1u << kSecondaryEquipmentSlot;
+constexpr std::int32_t kFirstEquipmentSlot = 0;
+constexpr std::int32_t kLastEquipmentSlot = 21;
 constexpr std::size_t kLocalPlayerCharacterOffset = 0x02cc;
 constexpr std::size_t kLocalPlayerHoldingAnimationOffset = 0x0334;
 constexpr std::uint8_t kHoldingAnimationShield = 2;
@@ -182,7 +184,7 @@ constexpr std::uint32_t kInvSlotHandleLButtonCoreLateBranchPrepCallsiteRva = 0x0
 constexpr std::uint32_t kInvSlotHandleLButtonCoreLateBranchPrepTargetRva = 0x001831b0;
 constexpr std::uint32_t kInvSlotHandleLButtonCoreLateBranchGateBCallsiteRva = 0x0029604f;
 constexpr std::uint32_t kInvSlotHandleLButtonCoreLateBranchGateBTargetRva = 0x0025c160;
-constexpr std::uint32_t kInvSlotHandleLButtonCoreLateBranchDispatchCallsiteRva = 0x00296091;
+constexpr std::uint32_t kInvSlotHandleLButtonCoreLateBranchDispatchCallsiteRva = 0x00296095;
 constexpr std::uint32_t kInvSlotHandleLButtonCoreLateBranchDispatchTargetRva = 0x0004c430;
 constexpr std::uint32_t kInvSlotHandleLButtonCoreStateRootRva = 0x009d2630;
 constexpr std::uint32_t kInvSlotHandleLButtonCoreDispatcherObjectRva = 0x00a646b0;
@@ -1041,6 +1043,7 @@ bool g_multiclass_skill_visibility_enabled = false;
 bool g_multiclass_ui_display_enabled = false;
 thread_local bool g_character_list_manual_refresh_in_progress = false;
 std::uint64_t g_is_class_usable_predicate_override_count = 0;
+std::uint64_t g_invslot_handle_lbutton_core_equipment_class_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
 std::uint64_t g_auto_equip_class_gate_override_count = 0;
@@ -1056,6 +1059,7 @@ std::uint64_t g_ui_class_display_trace_count = 0;
 std::uint32_t g_active_equip_nested_validation_id = 0;
 std::uint32_t g_equip_nested_validation_count = 0;
 std::uintptr_t g_invslot_handle_lbutton_core_last_late_lookup_item_pointer = 0;
+std::int32_t g_invslot_handle_lbutton_core_last_late_branch_slot = -1;
 std::array<std::uint8_t, kGuildTrainerClassLookupResolvedClassOffset + 1>
     g_guild_trainer_class_lookup_override_record = {};
 
@@ -1107,6 +1111,19 @@ struct OffhandWeaponPolicySnapshot {
     bool dual_wield_matrix_matched = false;
     bool has_dual_wield_entitlement = false;
     bool primary_blocks_secondary_weapon = false;
+    bool eligible = false;
+};
+
+struct EquipmentClassPolicySnapshot {
+    std::uintptr_t item_data_like = 0;
+    std::uint32_t item_class_mask = 0;
+    std::uint32_t equip_slots = 0;
+    bool item_class_mask_copied = false;
+    bool equip_slots_copied = false;
+    bool target_slot_is_equipment = false;
+    bool target_slot_is_secondary = false;
+    bool target_slot_equippable = false;
+    bool item_matches_assigned_class = false;
     bool eligible = false;
 };
 
@@ -3915,6 +3932,9 @@ int MONOMYTH_FASTCALL CharacterZoneClientGetAdjustedSkillHook(
     return returned_result;
 }
 
+bool IsNormalEquipmentSlot(std::int32_t slot_like) noexcept;
+std::uint32_t ClientEquipmentSlotBit(std::int32_t slot_like) noexcept;
+
 OffhandWeaponPolicySnapshot CaptureOffhandWeaponPolicySnapshot(
     std::uintptr_t item_wrapper_like,
     const monomyth::server_auth_stats::Snapshot& authoritative_snapshot) noexcept {
@@ -3989,6 +4009,43 @@ OffhandWeaponPolicySnapshot CaptureOffhandWeaponPolicySnapshot(
             authoritative_snapshot.classes_bitmask,
             snapshot.item_class_mask,
             snapshot.has_dual_wield_entitlement);
+    return snapshot;
+}
+
+EquipmentClassPolicySnapshot CaptureEquipmentClassPolicySnapshot(
+    std::uintptr_t item_wrapper_like,
+    std::int32_t target_slot,
+    const monomyth::server_auth_stats::Snapshot& authoritative_snapshot) noexcept {
+    EquipmentClassPolicySnapshot snapshot = {};
+    snapshot.item_class_mask_copied =
+        TryReadClientItemClassMaskFromWrapper(
+            item_wrapper_like,
+            &snapshot.item_class_mask,
+            &snapshot.item_data_like);
+    snapshot.equip_slots_copied =
+        TryReadClientItemFieldFromWrapper(
+            item_wrapper_like,
+            kClientItemInfoEquipSlotsOffset,
+            &snapshot.equip_slots,
+            nullptr);
+    snapshot.target_slot_is_equipment = IsNormalEquipmentSlot(target_slot);
+    snapshot.target_slot_is_secondary = target_slot == kSecondaryEquipmentSlot;
+    const std::uint32_t target_slot_bit = ClientEquipmentSlotBit(target_slot);
+    snapshot.target_slot_equippable =
+        snapshot.equip_slots_copied &&
+        target_slot_bit != 0 &&
+        (snapshot.equip_slots & target_slot_bit) != 0;
+    snapshot.item_matches_assigned_class =
+        snapshot.item_class_mask_copied &&
+        monomyth::multiclass_identity::HasAnyAuthoritativeClientItemClass(
+            authoritative_snapshot.has_classes_bitmask,
+            authoritative_snapshot.classes_bitmask,
+            snapshot.item_class_mask);
+    snapshot.eligible =
+        snapshot.target_slot_is_equipment &&
+        !snapshot.target_slot_is_secondary &&
+        snapshot.target_slot_equippable &&
+        snapshot.item_matches_assigned_class;
     return snapshot;
 }
 
@@ -5985,6 +6042,18 @@ bool ShouldLogScrollScribeTrace(std::uint64_t count) noexcept {
     return count <= kInitialLogCount || (count % kLogInterval) == 0;
 }
 
+bool IsNormalEquipmentSlot(std::int32_t slot_like) noexcept {
+    return slot_like >= kFirstEquipmentSlot && slot_like <= kLastEquipmentSlot;
+}
+
+std::uint32_t ClientEquipmentSlotBit(std::int32_t slot_like) noexcept {
+    if (slot_like < 0 || slot_like >= 32) {
+        return 0;
+    }
+
+    return 1u << static_cast<std::uint32_t>(slot_like);
+}
+
 std::wstring FormatAssignedMask(const monomyth::server_auth_stats::Snapshot& snapshot) {
     return Hex32(snapshot.has_classes_bitmask ? snapshot.classes_bitmask : 0);
 }
@@ -7704,6 +7773,37 @@ void AppendOffhandWeaponPolicyFields(
     message->append(L" primary_blocks_secondary_weapon=");
     message->append(snapshot.primary_blocks_secondary_weapon ? L"true" : L"false");
     message->append(L" eligible_secondary_weapon_override=");
+    message->append(snapshot.eligible ? L"true" : L"false");
+}
+
+void AppendEquipmentClassPolicyFields(
+    std::wstring* message,
+    const EquipmentClassPolicySnapshot& snapshot) {
+    if (message == nullptr) {
+        return;
+    }
+
+    message->append(L" item_class_mask_status=");
+    message->append(snapshot.item_class_mask_copied ? L"copied" : L"unavailable");
+    if (snapshot.item_class_mask_copied) {
+        message->append(L" item_class_mask_client=");
+        message->append(Hex32(snapshot.item_class_mask));
+    }
+    message->append(L" equip_slots_status=");
+    message->append(snapshot.equip_slots_copied ? L"copied" : L"unavailable");
+    if (snapshot.equip_slots_copied) {
+        message->append(L" equip_slots=");
+        message->append(Hex32(snapshot.equip_slots));
+    }
+    message->append(L" target_slot_is_equipment=");
+    message->append(snapshot.target_slot_is_equipment ? L"true" : L"false");
+    message->append(L" target_slot_is_secondary=");
+    message->append(snapshot.target_slot_is_secondary ? L"true" : L"false");
+    message->append(L" target_slot_equippable=");
+    message->append(snapshot.target_slot_equippable ? L"true" : L"false");
+    message->append(L" item_matches_assigned_class=");
+    message->append(snapshot.item_matches_assigned_class ? L"true" : L"false");
+    message->append(L" eligible_equipment_class_override=");
     message->append(snapshot.eligible ? L"true" : L"false");
 }
 
@@ -10839,7 +10939,7 @@ void LogInvSlotHandleLButtonCoreLateBranchPrepOverride(
     message += L" item_data_like=";
     message += HexPtr(offhand_policy.item_data_like);
     AppendOffhandWeaponPolicyFields(&message, offhand_policy);
-    message += L" gate_label=equipment_slot_late_branch_prep";
+    message += L" gate_label=equipment_slot_late_branch_dispatch";
     message += L" override_mode=secondary_weapon_dual_wield_matrix";
     message += L" assigned_mask=";
     message += FormatAssignedMask(snapshot);
@@ -10906,6 +11006,77 @@ void LogInvSlotHandleLButtonCoreLateBranchPrepObservation(
     message += FormatAssignedMask(snapshot);
     message += L" has_assigned_mask=";
     message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    monomyth::logger::Log(message);
+}
+
+void LogInvSlotHandleLButtonCoreEquipmentClassPolicy(
+    const wchar_t* target,
+    void* this_context,
+    std::int32_t slot_like,
+    void* lookup_result_like,
+    std::uintptr_t caller_return_address,
+    std::uint8_t original_result,
+    std::uint8_t returned_result,
+    std::uint32_t lookup_dword0_before,
+    bool lookup_dword0_before_copied,
+    std::uint32_t lookup_dword0_after,
+    bool lookup_dword0_after_copied,
+    std::uintptr_t item_like,
+    const EquipmentClassPolicySnapshot& equipment_policy,
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    bool override_applied) {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message = override_applied
+        ? L"MulticlassItemUsability target="
+        : L"MulticlassItemTrace target=";
+    message += target == nullptr
+        ? L"InvSlotHandleLButtonCoreEquipmentClassPolicy"
+        : target;
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" slot_like=";
+    message += std::to_wstring(slot_like);
+    message += L" lookup_result_pointer=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(lookup_result_like));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    message += L" returned_result=";
+    message += std::to_wstring(returned_result);
+    message += L" lookup_dword0_before_status=";
+    message += lookup_dword0_before_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_before_copied) {
+        message += L" lookup_dword0_before=";
+        message += Hex32(lookup_dword0_before);
+    }
+    message += L" lookup_dword0_after_status=";
+    message += lookup_dword0_after_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_after_copied) {
+        message += L" lookup_dword0_after=";
+        message += Hex32(lookup_dword0_after);
+    }
+    message += L" item_like=";
+    message += HexPtr(item_like);
+    message += L" item_data_like=";
+    message += HexPtr(equipment_policy.item_data_like);
+    AppendEquipmentClassPolicyFields(&message, equipment_policy);
+    message += L" gate_label=equipment_slot_late_branch_prep";
+    message += L" override_mode=equipment_item_class_mask_intersection";
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    message += L" has_assigned_mask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    message += L" override_applied=";
+    message += override_applied ? L"true" : L"false";
+    if (override_applied) {
+        message += L" override_count=";
+        message += std::to_wstring(g_invslot_handle_lbutton_core_equipment_class_override_count);
+    }
     monomyth::logger::Log(message);
 }
 
@@ -12984,6 +13155,9 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchGateACallsiteHo
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     ClientInventorySlotWire slot_record = {};
     const bool slot_record_copied = TryCopyObject(slot_record_like, &slot_record);
+    if (slot_record_copied) {
+        g_invslot_handle_lbutton_core_last_late_branch_slot = slot_record.slot;
+    }
     std::array<std::uint8_t, sizeof(ClientInventorySlotWire)> slot_record_bytes = {};
     const bool slot_record_bytes_copied =
         TryCopyBytes(slot_record_like, slot_record_bytes.size(), slot_record_bytes.data());
@@ -13029,6 +13203,7 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchPrepCallsiteHoo
         TryCopyBytes(this_context, context_bytes_after.size(), context_bytes_after.data());
     std::uint32_t lookup_dword0_after = 0;
     const bool lookup_dword0_after_copied = TryCopyObject(lookup_result_like, &lookup_dword0_after);
+    g_invslot_handle_lbutton_core_last_late_branch_slot = slot_like;
     if (g_multiclass_item_usability_enabled &&
         original_result == 0 &&
         slot_like == kSecondaryEquipmentSlot &&
@@ -13100,6 +13275,9 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchGateBCallsiteHo
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     ClientInventorySlotWire slot_record = {};
     const bool slot_record_copied = TryCopyObject(slot_record_like, &slot_record);
+    if (slot_record_copied) {
+        g_invslot_handle_lbutton_core_last_late_branch_slot = slot_record.slot;
+    }
     std::array<std::uint8_t, sizeof(ClientInventorySlotWire)> slot_record_bytes = {};
     const bool slot_record_bytes_copied =
         TryCopyBytes(slot_record_like, slot_record_bytes.size(), slot_record_bytes.data());
@@ -13189,6 +13367,56 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
         TryCopyBytes(this_context, context_bytes_after.size(), context_bytes_after.data());
     std::uint32_t lookup_dword0_after = 0;
     const bool lookup_dword0_after_copied = TryCopyObject(lookup_result_like, &lookup_dword0_after);
+    if (g_multiclass_item_usability_enabled && original_result == 0) {
+        const monomyth::server_auth_stats::Snapshot snapshot =
+            monomyth::server_auth_stats::GetSnapshot();
+        const std::int32_t slot_like =
+            g_invslot_handle_lbutton_core_last_late_branch_slot;
+        const std::uintptr_t item_like =
+            g_invslot_handle_lbutton_core_last_late_lookup_item_pointer;
+        const EquipmentClassPolicySnapshot equipment_policy =
+            CaptureEquipmentClassPolicySnapshot(item_like, slot_like, snapshot);
+        if (equipment_policy.eligible) {
+            ++g_invslot_handle_lbutton_core_equipment_class_override_count;
+            LogInvSlotHandleLButtonCoreEquipmentClassPolicy(
+                L"InvSlotHandleLButtonCoreLateBranchDispatch",
+                this_context,
+                slot_like,
+                lookup_result_like,
+                caller_return_address,
+                original_result,
+                1,
+                lookup_dword0_before,
+                lookup_dword0_before_copied,
+                lookup_dword0_after,
+                lookup_dword0_after_copied,
+                item_like,
+                equipment_policy,
+                snapshot,
+                true);
+            return 1;
+        }
+        if (equipment_policy.target_slot_is_equipment &&
+            !equipment_policy.target_slot_is_secondary &&
+            equipment_policy.item_class_mask_copied) {
+            LogInvSlotHandleLButtonCoreEquipmentClassPolicy(
+                L"InvSlotHandleLButtonCoreLateBranchDispatchObserved",
+                this_context,
+                slot_like,
+                lookup_result_like,
+                caller_return_address,
+                original_result,
+                original_result,
+                lookup_dword0_before,
+                lookup_dword0_before_copied,
+                lookup_dword0_after,
+                lookup_dword0_after_copied,
+                item_like,
+                equipment_policy,
+                snapshot,
+                false);
+        }
+    }
     LogInvSlotHandleLButtonCoreLateBranchDispatchTrace(
         L"InvSlotHandleLButtonCoreLateBranchDispatch",
         kInvSlotHandleLButtonCoreLateBranchDispatchCallsiteRva,
@@ -15832,6 +16060,7 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
     }
 
     g_multiclass_item_usability_enabled = true;
+    g_invslot_handle_lbutton_core_equipment_class_override_count = 0;
     g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
     g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
     std::wstring message =
@@ -18146,6 +18375,7 @@ bool RemoveCanEquipHook() noexcept {
     if (RemoveInlineDetour(&g_can_equip_detour)) {
         g_original_can_equip = nullptr;
         g_multiclass_item_usability_enabled = false;
+        g_invslot_handle_lbutton_core_equipment_class_override_count = 0;
         g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
         g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
         monomyth::logger::Log(
