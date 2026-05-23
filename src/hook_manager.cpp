@@ -17,6 +17,7 @@
 #include "logger.h"
 #include "multiclass_cache.h"
 #include "multiclass_identity.h"
+#include "multiclass_skill_visibility.h"
 #include "opcode_reference.h"
 #include "packet_observer.h"
 #include "server_auth_stats_observer.h"
@@ -46,6 +47,8 @@ constexpr std::size_t kMaxStolenBytes = 16;
 constexpr std::size_t kIntermediateSendPrefixByteCap = 16;
 constexpr std::uint64_t kSpellTraceInitialLogCount = 20;
 constexpr std::uint64_t kSpellTraceLogInterval = 100;
+constexpr std::uint64_t kSkillVisibilityOverrideInitialLogCount = 32;
+constexpr std::uint64_t kSkillVisibilityOverrideLogInterval = 100;
 constexpr std::uint32_t kMemorizeSpellOpcode = 0x217c;
 constexpr std::uint32_t kDeleteSpellOpcode = 0x3358;
 constexpr std::uint32_t kMoveItemOpcode = 0x32ee;
@@ -738,6 +741,7 @@ InlineDetour g_inventory_summary_refresh_candidate_a_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_b_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_c_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_d_detour = {};
+InlineDetour g_character_zone_client_has_skill_detour = {};
 InlineDetour g_char_select_class_name_func_detour = {};
 InlineDetour g_character_list_update_list_detour = {};
 InlineDetour g_item_display_refresh_worker_trace_detour = {};
@@ -831,6 +835,7 @@ GetSpellLevelNeededFn g_original_get_spell_level_needed = nullptr;
 IsClassUsablePredicateFn g_original_is_class_usable_predicate = nullptr;
 GuildTrainerClassLookupFn g_original_guild_trainer_class_lookup = nullptr;
 CanEquipFn g_original_can_equip = nullptr;
+CharacterZoneClientHasSkillFn g_original_character_zone_client_has_skill = nullptr;
 InvSlotMgrMoveItemFn g_original_inv_slot_mgr_move_item = nullptr;
 EquipRecordLookupFn g_original_equip_record_lookup = nullptr;
 EquipRequirementLookupFn g_original_equip_requirement_lookup = nullptr;
@@ -942,6 +947,7 @@ std::uint64_t g_char_select_native_class_substitution_trace_count = 0;
 std::uint64_t g_progression_selection_trace_count = 0;
 std::uint64_t g_char_select_class_name_func_trace_count = 0;
 std::uint64_t g_char_select_late_full_name_trace_count = 0;
+std::uint64_t g_skill_visibility_override_count = 0;
 constexpr std::size_t kUiClassHelperCallerCatalogCapacity = 64;
 constexpr std::size_t kUiClassProducerCandidateCatalogCapacity = 24;
 std::array<std::uint32_t, kUiClassHelperCallerCatalogCapacity>
@@ -1009,6 +1015,7 @@ std::wstring g_handle_rbutton_up_evidence_source = L"unknown";
 std::wstring g_is_class_usable_predicate_evidence_source = L"unknown";
 bool g_multiclass_spell_usability_enabled = false;
 bool g_multiclass_item_usability_enabled = false;
+bool g_multiclass_skill_visibility_enabled = false;
 bool g_multiclass_ui_display_enabled = false;
 thread_local bool g_character_list_manual_refresh_in_progress = false;
 std::uint64_t g_is_class_usable_predicate_override_count = 0;
@@ -1131,6 +1138,12 @@ std::uint32_t ReadClientItemClassMask(const void* item_like) noexcept {
 }
 
 std::wstring Hex32(std::uint32_t value) {
+    std::wstringstream stream;
+    stream << L"0x" << std::hex << value;
+    return stream.str();
+}
+
+std::wstring Hex64(std::uint64_t value) {
     std::wstringstream stream;
     stream << L"0x" << std::hex << value;
     return stream.str();
@@ -3421,6 +3434,79 @@ bool TryHasLocalPlayerSkill(int skill_id, bool* has_skill) noexcept {
     *has_skill = g_character_zone_client_has_skill(character, skill_id);
 #endif
 
+    return true;
+}
+
+void LogActivatedSkillVisibilityOverride(
+    int skill_id,
+    std::uintptr_t caller_return_address,
+    bool native_result,
+    const monomyth::server_auth_stats::Snapshot& snapshot) noexcept {
+    ++g_skill_visibility_override_count;
+    if (g_skill_visibility_override_count > kSkillVisibilityOverrideInitialLogCount &&
+        (g_skill_visibility_override_count % kSkillVisibilityOverrideLogInterval) != 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t caller_rva =
+        (module_base != 0 && caller_return_address >= module_base)
+            ? static_cast<std::uint32_t>(caller_return_address - module_base)
+            : 0;
+
+    std::wstring message = L"hook_manager: activated skill visibility override";
+    message += L" skill_id=";
+    message += std::to_wstring(skill_id);
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" native_result=";
+    message += native_result ? L"true" : L"false";
+    message += L" has_statActivatedSkillMaskLow=";
+    message += snapshot.has_activated_skill_mask_low ? L"true" : L"false";
+    message += L" statActivatedSkillMaskLow=";
+    message += Hex64(snapshot.activated_skill_mask_low);
+    message += L" has_statActivatedSkillMaskHigh=";
+    message += snapshot.has_activated_skill_mask_high ? L"true" : L"false";
+    message += L" statActivatedSkillMaskHigh=";
+    message += Hex64(snapshot.activated_skill_mask_high);
+    monomyth::logger::Log(message);
+}
+
+bool MONOMYTH_THISCALL CharacterZoneClientHasSkillVisibilityHook(
+    void* this_context,
+    int skill_id) {
+    bool native_result = false;
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+
+    if (g_original_character_zone_client_has_skill == nullptr) {
+        return false;
+    }
+
+#if defined(_MSC_VER)
+    __try {
+        native_result = g_original_character_zone_client_has_skill(this_context, skill_id);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    native_result = g_original_character_zone_client_has_skill(this_context, skill_id);
+#endif
+
+    if (native_result) {
+        return true;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    if (!monomyth::multiclass_skill_visibility::HasAuthoritativeActivatedSkill(
+            snapshot,
+            skill_id)) {
+        return false;
+    }
+
+    LogActivatedSkillVisibilityOverride(skill_id, caller_return_address, native_result, snapshot);
     return true;
 }
 
@@ -16450,6 +16536,77 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
     return true;
 }
 
+bool InstallActivatedSkillVisibilityHook(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.multiclass_skill_visibility_allowed) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: activated skill visibility hook denied reason=\"module_base_unavailable\"");
+        return false;
+    }
+
+    constexpr std::array<std::uint8_t, 16> kCharacterZoneClientHasSkillEntryBytes = {
+        0x8b, 0x44, 0x24, 0x04, 0x50, 0xe8, 0x26, 0xfe,
+        0xff, 0xff, 0x33, 0xc9, 0x85, 0xc0, 0x0f, 0x9f};
+    std::array<std::uint8_t, kCharacterZoneClientHasSkillEntryBytes.size()>
+        live_character_zone_client_has_skill_entry = {};
+    const std::uintptr_t target_address = module_base + kCharacterZoneClientHasSkillRva;
+    const bool entry_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(target_address),
+        live_character_zone_client_has_skill_entry.size(),
+        live_character_zone_client_has_skill_entry.data());
+    const bool entry_matches =
+        entry_copied &&
+        std::memcmp(
+            live_character_zone_client_has_skill_entry.data(),
+            kCharacterZoneClientHasSkillEntryBytes.data(),
+            kCharacterZoneClientHasSkillEntryBytes.size()) == 0;
+    if (!entry_matches) {
+        std::wstring message =
+            L"hook_manager: activated skill visibility hook denied target=CharacterZoneClient::HasSkill expected=\"";
+        message += HexBytes(
+            kCharacterZoneClientHasSkillEntryBytes.data(),
+            kCharacterZoneClientHasSkillEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(
+            live_character_zone_client_has_skill_entry.data(),
+            live_character_zone_client_has_skill_entry.size());
+        message += L"\" address=";
+        message += HexPtr(target_address);
+        message += L" target_rva=";
+        message += Hex32(kCharacterZoneClientHasSkillRva);
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(target_address),
+            reinterpret_cast<void*>(&CharacterZoneClientHasSkillVisibilityHook),
+            &g_character_zone_client_has_skill_detour,
+            reinterpret_cast<void**>(&g_original_character_zone_client_has_skill),
+            L"CharacterZoneClient::HasSkill activated skill visibility")) {
+        RemoveInlineDetour(&g_character_zone_client_has_skill_detour);
+        g_original_character_zone_client_has_skill = nullptr;
+        return false;
+    }
+
+    g_character_zone_client_has_skill_address = target_address;
+    g_character_zone_client_has_skill = g_original_character_zone_client_has_skill;
+    g_multiclass_skill_visibility_enabled = true;
+    g_skill_visibility_override_count = 0;
+
+    std::wstring message =
+        L"hook_manager: activated skill visibility hook installed target=CharacterZoneClient::HasSkill address=";
+    message += HexPtr(target_address);
+    message += L" target_rva=";
+    message += Hex32(kCharacterZoneClientHasSkillRva);
+    monomyth::logger::Log(message);
+    return true;
+}
+
 bool InstallInvSlotMgrMoveItemTrace(const monomyth::runtime::Manifest& manifest) noexcept {
     if (!manifest.multiclass_item_usability_allowed ||
         manifest.inv_slot_mgr_move_item_state !=
@@ -17312,6 +17469,38 @@ bool RemoveGuildTrainerHook() noexcept {
     return true;
 }
 
+bool RemoveActivatedSkillVisibilityHook() noexcept {
+    if (!g_character_zone_client_has_skill_detour.installed) {
+        g_original_character_zone_client_has_skill = nullptr;
+        if (!g_multiclass_item_usability_enabled) {
+            g_character_zone_client_has_skill = nullptr;
+            g_character_zone_client_has_skill_address = 0;
+        }
+        g_multiclass_skill_visibility_enabled = false;
+        g_skill_visibility_override_count = 0;
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_character_zone_client_has_skill_detour)) {
+        g_original_character_zone_client_has_skill = nullptr;
+        g_character_zone_client_has_skill =
+            g_multiclass_item_usability_enabled
+                ? reinterpret_cast<CharacterZoneClientHasSkillFn>(
+                    g_character_zone_client_has_skill_address)
+                : nullptr;
+        if (!g_multiclass_item_usability_enabled) {
+            g_character_zone_client_has_skill_address = 0;
+        }
+        g_multiclass_skill_visibility_enabled = false;
+        g_skill_visibility_override_count = 0;
+        monomyth::logger::Log(
+            L"hook_manager: activated skill visibility hook removed target=CharacterZoneClient::HasSkill");
+        return true;
+    }
+
+    return false;
+}
+
 bool RemoveCanEquipHook() noexcept {
     if (g_move_item_validation_gate_detour.installed) {
         RemoveInlineDetour(&g_move_item_validation_gate_detour);
@@ -17810,6 +17999,10 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest&) noexcept {
     return false;
 }
 
+bool InstallActivatedSkillVisibilityHook(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
 bool InstallInvSlotMgrMoveItemTrace(const monomyth::runtime::Manifest&) noexcept {
     return false;
 }
@@ -17899,6 +18092,10 @@ bool RemoveGuildTrainerHook() noexcept {
 }
 
 bool RemoveCanEquipHook() noexcept {
+    return true;
+}
+
+bool RemoveActivatedSkillVisibilityHook() noexcept {
     return true;
 }
 
@@ -18155,6 +18352,16 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
             monomyth::logger::Log(
                 L"hook_manager: item usability hook install failed target=EQ_Character::CanEquip");
         }
+    }
+
+    if (manifest.multiclass_skill_visibility_allowed) {
+        if (!InstallActivatedSkillVisibilityHook(manifest)) {
+            monomyth::logger::Log(
+                L"hook_manager: activated skill visibility hook install failed target=CharacterZoneClient::HasSkill");
+        }
+    }
+
+    if (manifest.multiclass_item_usability_allowed) {
         if (InstallInvSlotMgrMoveItemTrace(manifest)) {
             move_item_trace_active = true;
         } else if (
@@ -18392,6 +18599,11 @@ void Shutdown() noexcept {
     if (!RemoveGetSpellLevelNeededTrace()) {
         monomyth::logger::Log(
             L"hook_manager: shutdown deferred because GetSpellLevelNeeded trace removal failed");
+        return;
+    }
+    if (!RemoveActivatedSkillVisibilityHook()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because activated skill visibility hook removal failed");
         return;
     }
     if (!RemoveCanEquipHook()) {

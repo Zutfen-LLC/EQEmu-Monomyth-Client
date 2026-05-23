@@ -18,11 +18,17 @@ namespace monomyth::server_auth_stats {
 namespace {
 
 constexpr std::uint32_t kStatClassesBitmaskKey = 1;
+constexpr std::uint32_t kStatActivatedSkillMaskLowKey = 2;
+constexpr std::uint32_t kStatActivatedSkillMaskHighKey = 3;
 constexpr std::uint32_t kHeaderBytes = 4;
 constexpr std::uint32_t kEntryBytes = 12;
 
 std::atomic<bool> g_has_classes_bitmask = false;
 std::atomic<std::uint32_t> g_classes_bitmask = 0;
+std::atomic<bool> g_has_activated_skill_mask_low = false;
+std::atomic<std::uint64_t> g_activated_skill_mask_low = 0;
+std::atomic<bool> g_has_activated_skill_mask_high = false;
+std::atomic<std::uint64_t> g_activated_skill_mask_high = 0;
 
 struct ClassNameEntry {
     std::uint32_t bit;
@@ -143,6 +149,13 @@ void StoreClassesBitmask(std::uint32_t bitmask) noexcept {
     g_has_classes_bitmask.store(true);
 }
 
+void StoreActivatedSkillMasks(const ParseResult& result) noexcept {
+    g_activated_skill_mask_low.store(result.activated_skill_mask_low);
+    g_activated_skill_mask_high.store(result.activated_skill_mask_high);
+    g_has_activated_skill_mask_low.store(result.has_activated_skill_mask_low);
+    g_has_activated_skill_mask_high.store(result.has_activated_skill_mask_high);
+}
+
 void LogMalformed(std::uint32_t payload_length, const wchar_t* reason) {
     std::wstringstream message;
     message
@@ -175,6 +188,28 @@ void LogValid(const ParseResult& result) {
     }
     if (result.duplicate_classes_bitmask) {
         message << L" duplicate_statClassesBitmask=true";
+    }
+    message
+        << L" has_statActivatedSkillMaskLow="
+        << (result.has_activated_skill_mask_low ? L"true" : L"false");
+    if (result.has_activated_skill_mask_low) {
+        message
+            << L" statActivatedSkillMaskLow="
+            << Hex64(result.activated_skill_mask_low);
+    }
+    if (result.duplicate_activated_skill_mask_low) {
+        message << L" duplicate_statActivatedSkillMaskLow=true";
+    }
+    message
+        << L" has_statActivatedSkillMaskHigh="
+        << (result.has_activated_skill_mask_high ? L"true" : L"false");
+    if (result.has_activated_skill_mask_high) {
+        message
+            << L" statActivatedSkillMaskHigh="
+            << Hex64(result.activated_skill_mask_high);
+    }
+    if (result.duplicate_activated_skill_mask_high) {
+        message << L" duplicate_statActivatedSkillMaskHigh=true";
     }
     monomyth::logger::Log(message.str());
 }
@@ -236,18 +271,33 @@ ParseResult ParsePayload(const void* payload, std::uint32_t payload_length) noex
             return result;
         }
 
-        if (stat_key != kStatClassesBitmaskKey) {
-            continue;
-        }
-        if (stat_value > std::numeric_limits<std::uint32_t>::max()) {
-            result.invalid_classes_bitmask = true;
-            result.invalid_classes_bitmask_value = stat_value;
-            continue;
-        }
+        switch (stat_key) {
+        case kStatClassesBitmaskKey:
+            if (stat_value > std::numeric_limits<std::uint32_t>::max()) {
+                result.invalid_classes_bitmask = true;
+                result.invalid_classes_bitmask_value = stat_value;
+                continue;
+            }
 
-        result.duplicate_classes_bitmask = result.has_classes_bitmask;
-        result.has_classes_bitmask = true;
-        result.classes_bitmask = static_cast<std::uint32_t>(stat_value);
+            result.duplicate_classes_bitmask = result.has_classes_bitmask;
+            result.has_classes_bitmask = true;
+            result.classes_bitmask = static_cast<std::uint32_t>(stat_value);
+            break;
+        case kStatActivatedSkillMaskLowKey:
+            result.duplicate_activated_skill_mask_low =
+                result.has_activated_skill_mask_low;
+            result.has_activated_skill_mask_low = true;
+            result.activated_skill_mask_low = stat_value;
+            break;
+        case kStatActivatedSkillMaskHighKey:
+            result.duplicate_activated_skill_mask_high =
+                result.has_activated_skill_mask_high;
+            result.has_activated_skill_mask_high = true;
+            result.activated_skill_mask_high = stat_value;
+            break;
+        default:
+            break;
+        }
     }
 
     result.valid = true;
@@ -269,6 +319,7 @@ void ObserveReceivePayload(const void* payload, std::uint32_t payload_length) no
         if (result.has_classes_bitmask) {
             StoreClassesBitmask(result.classes_bitmask);
         }
+        StoreActivatedSkillMasks(result);
         LogValid(result);
     } catch (...) {
         monomyth::logger::Log(L"ServerAuthStats malformed=true reason=\"handler_exception\"");
@@ -279,6 +330,10 @@ Snapshot GetSnapshot() noexcept {
     Snapshot snapshot = {};
     snapshot.has_classes_bitmask = g_has_classes_bitmask.load();
     snapshot.classes_bitmask = g_classes_bitmask.load();
+    snapshot.has_activated_skill_mask_low = g_has_activated_skill_mask_low.load();
+    snapshot.activated_skill_mask_low = g_activated_skill_mask_low.load();
+    snapshot.has_activated_skill_mask_high = g_has_activated_skill_mask_high.load();
+    snapshot.activated_skill_mask_high = g_activated_skill_mask_high.load();
     return snapshot;
 }
 

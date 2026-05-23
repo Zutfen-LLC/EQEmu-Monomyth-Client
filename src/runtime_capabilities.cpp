@@ -108,6 +108,9 @@ Manifest BuildCapabilityManifest(
     manifest.memorize_send_trace_allowed = false;
     manifest.multiclass_spell_usability_allowed = false;
     manifest.multiclass_item_usability_allowed = false;
+    manifest.multiclass_skill_visibility_allowed =
+        manifest.hooks_allowed &&
+        manifest.fingerprint_matched;
     manifest.multiclass_ui_display_allowed = false;
     manifest.ui_hooks_allowed = false;
     manifest.heartbeat_allowed = manifest.hooks_allowed;
@@ -134,6 +137,10 @@ Manifest BuildCapabilityManifest(
         L"default ROF2 multiclass spell usability pending target validation";
     manifest.multiclass_item_usability_reason =
         L"default ROF2 multiclass item usability pending target validation";
+    manifest.multiclass_skill_visibility_reason =
+        manifest.multiclass_skill_visibility_allowed
+            ? L"enabled by default for validated ROF2 activated skill visibility"
+            : L"multiclass activated skill visibility requires validated ROF2 fingerprint and hook allowance";
     manifest.multiclass_ui_display_reason =
         L"default ROF2 multiclass UI display pending target validation";
     return manifest;
@@ -175,6 +182,8 @@ Manifest BuildDisabledCapabilityManifest(
         L"default multiclass spell usability disabled before fingerprint/discovery gates";
     manifest.multiclass_item_usability_reason =
         L"default multiclass item usability disabled before fingerprint/discovery gates";
+    manifest.multiclass_skill_visibility_reason =
+        L"default multiclass activated skill visibility disabled before fingerprint/discovery gates";
     manifest.multiclass_ui_display_reason =
         L"default multiclass UI display disabled before fingerprint/discovery gates";
     return manifest;
@@ -242,6 +251,11 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
         &message,
         L"multiclass_item_usability_allowed=",
         manifest.multiclass_item_usability_allowed);
+    message += L" ";
+    AppendBoolField(
+        &message,
+        L"multiclass_skill_visibility_allowed=",
+        manifest.multiclass_skill_visibility_allowed);
     message += L" ";
     AppendBoolField(
         &message,
@@ -700,6 +714,9 @@ void LogCapabilityManifest(const Manifest& manifest) noexcept {
     message += L"\"";
     message += L" multiclass_item_usability_reason=\"";
     message += NormalizeReason(manifest.multiclass_item_usability_reason.c_str());
+    message += L"\"";
+    message += L" multiclass_skill_visibility_reason=\"";
+    message += NormalizeReason(manifest.multiclass_skill_visibility_reason.c_str());
     message += L"\"";
     message += L" multiclass_ui_display_reason=\"";
     message += NormalizeReason(manifest.multiclass_ui_display_reason.c_str());
