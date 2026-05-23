@@ -3474,9 +3474,10 @@ void LogActivatedSkillVisibilityOverride(
     monomyth::logger::Log(message);
 }
 
-bool MONOMYTH_THISCALL CharacterZoneClientHasSkillVisibilityHook(
+bool MONOMYTH_FASTCALL CharacterZoneClientHasSkillVisibilityHook(
     void* this_context,
-    int skill_id) {
+    void*,
+    int skill_id) noexcept {
     bool native_result = false;
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
 
