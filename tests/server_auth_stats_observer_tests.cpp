@@ -59,23 +59,75 @@ int main() {
     passed &= Expect(single_result.classes_bitmask == 0x00000007, "single class mask value");
 
     std::vector<std::uint8_t> key_scan;
-    AppendU32(&key_scan, 2);
+    AppendU32(&key_scan, 4);
     AppendEntry(&key_scan, 0, 0xffff);
     AppendEntry(&key_scan, 1, 7);
+    AppendEntry(&key_scan, 2, 0x0000000000000400ull);
+    AppendEntry(&key_scan, 3, 0x0000000000000400ull);
     const auto key_scan_result =
         monomyth::server_auth_stats::ParsePayload(key_scan.data(), static_cast<std::uint32_t>(key_scan.size()));
     passed &= Expect(key_scan_result.valid, "key scan packet valid");
     passed &= Expect(key_scan_result.has_classes_bitmask, "key scan has class mask");
     passed &= Expect(key_scan_result.classes_bitmask == 0x00000007, "key scan class mask value");
+    passed &= Expect(key_scan_result.has_activated_skill_mask_low, "key scan has low skill mask");
+    passed &= Expect(
+        key_scan_result.activated_skill_mask_low == 0x0000000000000400ull,
+        "key scan low skill mask value");
+    passed &= Expect(key_scan_result.has_activated_skill_mask_high, "key scan has high skill mask");
+    passed &= Expect(
+        key_scan_result.activated_skill_mask_high == 0x0000000000000400ull,
+        "key scan high skill mask value");
 
     std::vector<std::uint8_t> without_key;
     AppendU32(&without_key, 2);
-    AppendEntry(&without_key, 0, 0);
-    AppendEntry(&without_key, 2, 1234);
+    AppendEntry(&without_key, 99, 0);
+    AppendEntry(&without_key, 100, 1234);
     const auto without_key_result =
         monomyth::server_auth_stats::ParsePayload(without_key.data(), static_cast<std::uint32_t>(without_key.size()));
     passed &= Expect(without_key_result.valid, "without key packet valid");
     passed &= Expect(!without_key_result.has_classes_bitmask, "without key has no class mask");
+    passed &= Expect(
+        !without_key_result.has_activated_skill_mask_low,
+        "without key has no low activated skill mask");
+    passed &= Expect(
+        !without_key_result.has_activated_skill_mask_high,
+        "without key has no high activated skill mask");
+
+    std::vector<std::uint8_t> duplicate_masks;
+    AppendU32(&duplicate_masks, 4);
+    AppendEntry(&duplicate_masks, 2, 0x1);
+    AppendEntry(&duplicate_masks, 2, 0x2);
+    AppendEntry(&duplicate_masks, 3, 0x4);
+    AppendEntry(&duplicate_masks, 3, 0x8);
+    const auto duplicate_masks_result =
+        monomyth::server_auth_stats::ParsePayload(
+            duplicate_masks.data(),
+            static_cast<std::uint32_t>(duplicate_masks.size()));
+    passed &= Expect(duplicate_masks_result.valid, "duplicate mask packet valid");
+    passed &= Expect(
+        duplicate_masks_result.duplicate_activated_skill_mask_low,
+        "duplicate low mask marked");
+    passed &= Expect(
+        duplicate_masks_result.activated_skill_mask_low == 0x2,
+        "duplicate low mask last value wins");
+    passed &= Expect(
+        duplicate_masks_result.duplicate_activated_skill_mask_high,
+        "duplicate high mask marked");
+    passed &= Expect(
+        duplicate_masks_result.activated_skill_mask_high == 0x8,
+        "duplicate high mask last value wins");
+
+    std::vector<std::uint8_t> partial_masks;
+    AppendU32(&partial_masks, 2);
+    AppendEntry(&partial_masks, 1, 7);
+    AppendEntry(&partial_masks, 2, 0x10);
+    const auto partial_masks_result =
+        monomyth::server_auth_stats::ParsePayload(
+            partial_masks.data(),
+            static_cast<std::uint32_t>(partial_masks.size()));
+    passed &= Expect(partial_masks_result.valid, "partial mask packet valid");
+    passed &= Expect(partial_masks_result.has_activated_skill_mask_low, "partial has low mask");
+    passed &= Expect(!partial_masks_result.has_activated_skill_mask_high, "partial missing high mask");
 
     std::vector<std::uint8_t> truncated;
     AppendU32(&truncated, 1);

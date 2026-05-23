@@ -36,6 +36,7 @@ struct Manifest {
     bool multiclass_spell_usability_dev_opt_in = false;
     bool multiclass_spell_usability_allowed = false;
     bool multiclass_item_usability_allowed = false;
+    bool multiclass_skill_visibility_allowed = false;
     bool multiclass_ui_display_allowed = false;
     bool ui_hooks_allowed = false;
     bool heartbeat_allowed = false;
@@ -220,6 +221,8 @@ struct Manifest {
         L"multiclass spell usability unavailable";
     std::wstring multiclass_item_usability_reason =
         L"multiclass item usability unavailable";
+    std::wstring multiclass_skill_visibility_reason =
+        L"multiclass activated skill visibility unavailable";
     std::wstring multiclass_ui_display_reason =
         L"multiclass UI display unavailable";
 };

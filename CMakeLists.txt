@@ -21,6 +21,7 @@ add_library(dinput8 SHARED
     src/hook_manager.cpp
     src/multiclass_cache.cpp
     src/multiclass_identity.cpp
+    src/multiclass_skill_visibility.cpp
     src/opcode_reference.cpp
     src/packet_observer.cpp
     src/receive_dispatch_discovery.cpp
@@ -103,6 +104,16 @@ target_compile_features(multiclass_identity_tests PRIVATE cxx_std_20)
 monomyth_apply_mingw_static_runtime(multiclass_identity_tests)
 
 add_test(NAME multiclass_identity_tests COMMAND multiclass_identity_tests)
+
+add_executable(multiclass_skill_visibility_tests
+    tests/multiclass_skill_visibility_tests.cpp
+    src/multiclass_skill_visibility.cpp
+)
+target_include_directories(multiclass_skill_visibility_tests PRIVATE src)
+target_compile_features(multiclass_skill_visibility_tests PRIVATE cxx_std_20)
+monomyth_apply_mingw_static_runtime(multiclass_skill_visibility_tests)
+
+add_test(NAME multiclass_skill_visibility_tests COMMAND multiclass_skill_visibility_tests)
 
 add_executable(class_display_discovery_tests
     tests/class_display_discovery_tests.cpp
