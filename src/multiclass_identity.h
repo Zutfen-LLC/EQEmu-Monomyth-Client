@@ -37,6 +37,14 @@ bool HasAnyAuthoritativeClientItemClass(
     bool has_class_mask,
     std::uint32_t authoritative_class_mask,
     std::uint32_t client_item_class_mask) noexcept;
+bool HasAnyAuthoritativeDualWieldClass(
+    bool has_class_mask,
+    std::uint32_t authoritative_class_mask) noexcept;
+bool HasAuthoritativeOffhandWeaponClassAndDualWield(
+    bool has_class_mask,
+    std::uint32_t authoritative_class_mask,
+    std::uint32_t client_item_class_mask,
+    bool has_dual_wield_entitlement) noexcept;
 const wchar_t* ClassDisplayToken(
     unsigned int class_id,
     ClassDisplayStyle style) noexcept;
