@@ -69,8 +69,11 @@ constexpr std::uint32_t kScribeGateMaxRelativeLookupOffset = 0x00100000;
 constexpr std::size_t kScribeGateMaxLookupNodes = 256;
 constexpr std::size_t kClientItemClassMaskOffset = 0x68;
 constexpr std::size_t kClientItemInfoEquipSlotsOffset = 0x0f0;
+constexpr std::size_t kClientItemInfoNoRentOffset = 0x10c;
+constexpr std::size_t kClientItemInfoSummonedOffset = 0x121;
 constexpr std::size_t kClientItemInfoClassesOffset = 0x170;
 constexpr std::size_t kClientItemInfoItemClassOffset = 0x1d4;
+constexpr std::size_t kClientItemInfoStackSizeOffset = 0x580;
 constexpr std::uint32_t kClientItemWrapperGetDataThunkRva = 0x003b06e0;
 constexpr std::uint32_t kCharacterZoneClientHasSkillRva = 0x0004a1b0;
 constexpr std::uint32_t kCharacterZoneClientGetAdjustedSkillRva = 0x00049fe0;
@@ -87,7 +90,10 @@ constexpr std::uint32_t kActivatedSkillCombatSendWrapperCallRva = 0x000fb68f;
 constexpr std::int32_t kFirstGeneralInventorySlot = 23;
 constexpr std::int32_t kPrimaryEquipmentSlot = 13;
 constexpr std::int32_t kSecondaryEquipmentSlot = 14;
+constexpr std::int32_t kPowerSourceEquipmentSlot = 21;
 constexpr std::uint32_t kSecondaryEquipmentSlotBit = 1u << kSecondaryEquipmentSlot;
+constexpr std::uint32_t kPowerSourceEquipmentSlotBit = 1u << kPowerSourceEquipmentSlot;
+constexpr std::uint8_t kClientItemClassAugmentation = 54;
 constexpr std::int32_t kFirstEquipmentSlot = 0;
 constexpr std::int32_t kLastEquipmentSlot = 21;
 constexpr std::size_t kLocalPlayerCharacterOffset = 0x02cc;
@@ -1046,6 +1052,7 @@ std::uint64_t g_is_class_usable_predicate_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_equipment_class_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
+std::uint64_t g_invslot_handle_lbutton_core_power_source_override_count = 0;
 std::uint64_t g_auto_equip_class_gate_override_count = 0;
 std::uint64_t g_guild_trainer_class_lookup_override_count = 0;
 std::uint64_t g_guild_trainer_class_lookup_call_count = 0;
@@ -1123,6 +1130,26 @@ struct EquipmentClassPolicySnapshot {
     bool target_slot_is_equipment = false;
     bool target_slot_is_secondary = false;
     bool target_slot_equippable = false;
+    bool item_matches_assigned_class = false;
+    bool eligible = false;
+};
+
+struct PowerSourceSlotPolicySnapshot {
+    std::uintptr_t item_data_like = 0;
+    std::uint32_t item_class_mask = 0;
+    std::uint32_t equip_slots = 0;
+    std::uint32_t stack_size = 0;
+    std::uint8_t item_class = 0xff;
+    bool no_rent = false;
+    bool summoned = false;
+    bool item_class_mask_copied = false;
+    bool equip_slots_copied = false;
+    bool stack_size_copied = false;
+    bool item_class_copied = false;
+    bool no_rent_copied = false;
+    bool summoned_copied = false;
+    bool direct_power_source_slot = false;
+    bool broad_upgrade_shape = false;
     bool item_matches_assigned_class = false;
     bool eligible = false;
 };
@@ -4046,6 +4073,71 @@ EquipmentClassPolicySnapshot CaptureEquipmentClassPolicySnapshot(
         !snapshot.target_slot_is_secondary &&
         snapshot.target_slot_equippable &&
         snapshot.item_matches_assigned_class;
+    return snapshot;
+}
+
+PowerSourceSlotPolicySnapshot CapturePowerSourceSlotPolicySnapshot(
+    std::uintptr_t item_wrapper_like,
+    const monomyth::server_auth_stats::Snapshot& authoritative_snapshot) noexcept {
+    PowerSourceSlotPolicySnapshot snapshot = {};
+    snapshot.item_class_mask_copied =
+        TryReadClientItemClassMaskFromWrapper(
+            item_wrapper_like,
+            &snapshot.item_class_mask,
+            &snapshot.item_data_like);
+    snapshot.equip_slots_copied =
+        TryReadClientItemFieldFromWrapper(
+            item_wrapper_like,
+            kClientItemInfoEquipSlotsOffset,
+            &snapshot.equip_slots,
+            nullptr);
+    snapshot.stack_size_copied =
+        TryReadClientItemFieldFromWrapper(
+            item_wrapper_like,
+            kClientItemInfoStackSizeOffset,
+            &snapshot.stack_size,
+            nullptr);
+    snapshot.item_class_copied =
+        TryReadClientItemFieldFromWrapper(
+            item_wrapper_like,
+            kClientItemInfoItemClassOffset,
+            &snapshot.item_class,
+            nullptr);
+    snapshot.no_rent_copied =
+        TryReadClientItemFieldFromWrapper(
+            item_wrapper_like,
+            kClientItemInfoNoRentOffset,
+            &snapshot.no_rent,
+            nullptr);
+    snapshot.summoned_copied =
+        TryReadClientItemFieldFromWrapper(
+            item_wrapper_like,
+            kClientItemInfoSummonedOffset,
+            &snapshot.summoned,
+            nullptr);
+    snapshot.direct_power_source_slot =
+        snapshot.equip_slots_copied &&
+        (snapshot.equip_slots & kPowerSourceEquipmentSlotBit) != 0;
+    snapshot.broad_upgrade_shape =
+        snapshot.equip_slots_copied &&
+        snapshot.equip_slots != 0 &&
+        snapshot.stack_size_copied &&
+        snapshot.stack_size <= 1 &&
+        snapshot.item_class_copied &&
+        snapshot.item_class != kClientItemClassAugmentation &&
+        snapshot.no_rent_copied &&
+        snapshot.no_rent &&
+        snapshot.summoned_copied &&
+        !snapshot.summoned;
+    snapshot.item_matches_assigned_class =
+        snapshot.item_class_mask_copied &&
+        monomyth::multiclass_identity::HasAnyAuthoritativeClientItemClass(
+            authoritative_snapshot.has_classes_bitmask,
+            authoritative_snapshot.classes_bitmask,
+            snapshot.item_class_mask);
+    snapshot.eligible =
+        (snapshot.direct_power_source_slot ||
+         (snapshot.broad_upgrade_shape && snapshot.item_matches_assigned_class));
     return snapshot;
 }
 
@@ -7807,6 +7899,59 @@ void AppendEquipmentClassPolicyFields(
     message->append(snapshot.eligible ? L"true" : L"false");
 }
 
+void AppendPowerSourceSlotPolicyFields(
+    std::wstring* message,
+    const PowerSourceSlotPolicySnapshot& snapshot) {
+    if (message == nullptr) {
+        return;
+    }
+
+    message->append(L" item_class_mask_status=");
+    message->append(snapshot.item_class_mask_copied ? L"copied" : L"unavailable");
+    if (snapshot.item_class_mask_copied) {
+        message->append(L" item_class_mask_client=");
+        message->append(Hex32(snapshot.item_class_mask));
+    }
+    message->append(L" equip_slots_status=");
+    message->append(snapshot.equip_slots_copied ? L"copied" : L"unavailable");
+    if (snapshot.equip_slots_copied) {
+        message->append(L" equip_slots=");
+        message->append(Hex32(snapshot.equip_slots));
+    }
+    message->append(L" stack_size_status=");
+    message->append(snapshot.stack_size_copied ? L"copied" : L"unavailable");
+    if (snapshot.stack_size_copied) {
+        message->append(L" stack_size=");
+        message->append(std::to_wstring(snapshot.stack_size));
+    }
+    message->append(L" item_class_status=");
+    message->append(snapshot.item_class_copied ? L"copied" : L"unavailable");
+    if (snapshot.item_class_copied) {
+        message->append(L" item_class=");
+        message->append(std::to_wstring(snapshot.item_class));
+    }
+    message->append(L" no_rent_status=");
+    message->append(snapshot.no_rent_copied ? L"copied" : L"unavailable");
+    if (snapshot.no_rent_copied) {
+        message->append(L" no_rent=");
+        message->append(snapshot.no_rent ? L"true" : L"false");
+    }
+    message->append(L" summoned_status=");
+    message->append(snapshot.summoned_copied ? L"copied" : L"unavailable");
+    if (snapshot.summoned_copied) {
+        message->append(L" summoned=");
+        message->append(snapshot.summoned ? L"true" : L"false");
+    }
+    message->append(L" direct_power_source_slot=");
+    message->append(snapshot.direct_power_source_slot ? L"true" : L"false");
+    message->append(L" broad_upgrade_shape=");
+    message->append(snapshot.broad_upgrade_shape ? L"true" : L"false");
+    message->append(L" item_matches_assigned_class=");
+    message->append(snapshot.item_matches_assigned_class ? L"true" : L"false");
+    message->append(L" eligible_power_source_slot_override=");
+    message->append(snapshot.eligible ? L"true" : L"false");
+}
+
 void LogAutoEquipClassGateDecision(
     void* this_context,
     std::uintptr_t caller_return_address,
@@ -11080,6 +11225,73 @@ void LogInvSlotHandleLButtonCoreEquipmentClassPolicy(
     monomyth::logger::Log(message);
 }
 
+void LogInvSlotHandleLButtonCorePowerSourceSlotPolicy(
+    void* this_context,
+    std::int32_t slot_like,
+    void* lookup_result_like,
+    std::uintptr_t caller_return_address,
+    std::uint8_t original_result,
+    std::uint8_t returned_result,
+    std::uint32_t lookup_dword0_before,
+    bool lookup_dword0_before_copied,
+    std::uint32_t lookup_dword0_after,
+    bool lookup_dword0_after_copied,
+    std::uintptr_t item_like,
+    const PowerSourceSlotPolicySnapshot& power_source_policy,
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    bool override_applied) {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message = override_applied
+        ? L"MulticlassItemUsability target=InvSlotHandleLButtonCorePowerSourceSlot"
+        : L"MulticlassItemTrace target=InvSlotHandleLButtonCorePowerSourceSlotObserved";
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" slot_like=";
+    message += std::to_wstring(slot_like);
+    message += L" lookup_result_pointer=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(lookup_result_like));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    message += L" returned_result=";
+    message += std::to_wstring(returned_result);
+    message += L" lookup_dword0_before_status=";
+    message += lookup_dword0_before_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_before_copied) {
+        message += L" lookup_dword0_before=";
+        message += Hex32(lookup_dword0_before);
+    }
+    message += L" lookup_dword0_after_status=";
+    message += lookup_dword0_after_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_after_copied) {
+        message += L" lookup_dword0_after=";
+        message += Hex32(lookup_dword0_after);
+    }
+    message += L" item_like=";
+    message += HexPtr(item_like);
+    message += L" item_data_like=";
+    message += HexPtr(power_source_policy.item_data_like);
+    AppendPowerSourceSlotPolicyFields(&message, power_source_policy);
+    message += L" gate_label=power_source_slot_late_branch_prep";
+    message += L" override_mode=power_source_item_xp_slot21";
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    message += L" has_assigned_mask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    message += L" override_applied=";
+    message += override_applied ? L"true" : L"false";
+    if (override_applied) {
+        message += L" override_count=";
+        message += std::to_wstring(g_invslot_handle_lbutton_core_power_source_override_count);
+    }
+    monomyth::logger::Log(message);
+}
+
 void LogCanEquipObservation(
     void* this_context,
     std::uintptr_t caller_return_address,
@@ -13204,6 +13416,52 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchPrepCallsiteHoo
     std::uint32_t lookup_dword0_after = 0;
     const bool lookup_dword0_after_copied = TryCopyObject(lookup_result_like, &lookup_dword0_after);
     g_invslot_handle_lbutton_core_last_late_branch_slot = slot_like;
+    if (g_multiclass_item_usability_enabled &&
+        original_result == 0 &&
+        slot_like == kPowerSourceEquipmentSlot &&
+        lookup_dword0_before_copied &&
+        lookup_dword0_before != 0) {
+        const monomyth::server_auth_stats::Snapshot snapshot =
+            monomyth::server_auth_stats::GetSnapshot();
+        const std::uintptr_t item_like =
+            g_invslot_handle_lbutton_core_last_late_lookup_item_pointer;
+        const PowerSourceSlotPolicySnapshot power_source_policy =
+            CapturePowerSourceSlotPolicySnapshot(item_like, snapshot);
+        if (power_source_policy.eligible) {
+            ++g_invslot_handle_lbutton_core_power_source_override_count;
+            LogInvSlotHandleLButtonCorePowerSourceSlotPolicy(
+                this_context,
+                slot_like,
+                lookup_result_like,
+                caller_return_address,
+                original_result,
+                1,
+                lookup_dword0_before,
+                lookup_dword0_before_copied,
+                lookup_dword0_after,
+                lookup_dword0_after_copied,
+                item_like,
+                power_source_policy,
+                snapshot,
+                true);
+            return 1;
+        }
+        LogInvSlotHandleLButtonCorePowerSourceSlotPolicy(
+            this_context,
+            slot_like,
+            lookup_result_like,
+            caller_return_address,
+            original_result,
+            original_result,
+            lookup_dword0_before,
+            lookup_dword0_before_copied,
+            lookup_dword0_after,
+            lookup_dword0_after_copied,
+            item_like,
+            power_source_policy,
+            snapshot,
+            false);
+    }
     if (g_multiclass_item_usability_enabled &&
         original_result == 0 &&
         slot_like == kSecondaryEquipmentSlot &&
