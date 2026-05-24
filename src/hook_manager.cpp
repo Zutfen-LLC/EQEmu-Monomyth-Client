@@ -260,6 +260,9 @@ constexpr std::uint32_t kProgressionSelectionClassLookupTargetRva = 0x00042c00;
 constexpr std::uint32_t kCharSelectLateFullNameCallsiteARva = 0x003249ac;
 constexpr std::uint32_t kCharSelectLateFullNameCallsiteBCallsiteRva = 0x00324d84;
 constexpr std::uint32_t kCharSelectLateFullNameCallsiteCCallsiteRva = 0x003252ab;
+constexpr std::uint32_t kAAXpPctResetBelow51GateRva = 0x0020a133;
+constexpr std::uint32_t kAAXpDecreaseEnableBelow51GateRva = 0x0020a1d5;
+constexpr std::uint32_t kAAXpIncreaseEnableBelow51GateRva = 0x0020a230;
 constexpr std::size_t kInventoryClassTitleControlOffset = 0x02cc;
 constexpr std::size_t kCxWndTextFieldOffset = 0x00e8;
 constexpr std::size_t kEqSpawnNameOffset = 0x00a4;
@@ -274,6 +277,18 @@ constexpr std::size_t kEqPlayerDisplayedClassOffset = 0x0fe0;
 constexpr wchar_t kMemorizeSendTraceSliceId[] = L"CLIENT-MEM-SEND-TRACE-001";
 constexpr std::array<std::uint8_t, 5> kGuildTrainerClassLookupCallsiteBytes = {{
     0xe8, 0x6a, 0x3d, 0x2a, 0x00,
+}};
+constexpr std::array<std::uint8_t, 2> kAAXpPctResetBelow51GateExpectedBytes = {{
+    0x77, 0x13,
+}};
+constexpr std::array<std::uint8_t, 2> kAAXpPctResetBelow51GatePatchBytes = {{
+    0xeb, 0x13,
+}};
+constexpr std::array<std::uint8_t, 2> kAAXpAdjustEnableBelow51GateExpectedBytes = {{
+    0x72, 0x1f,
+}};
+constexpr std::array<std::uint8_t, 2> kAAXpAdjustEnableBelow51GatePatchBytes = {{
+    0x90, 0x90,
 }};
 
 using ReceiveDispatchFn = void (MONOMYTH_THISCALL*)(
@@ -604,6 +619,14 @@ struct CallsitePatch {
     bool installed = false;
 };
 
+struct BytePatch {
+    std::uint8_t* address = nullptr;
+    std::array<std::uint8_t, kMaxStolenBytes> original = {};
+    std::array<std::uint8_t, kMaxStolenBytes> patch = {};
+    std::size_t length = 0;
+    bool installed = false;
+};
+
 struct KnownMemorizeFollowupCallsite {
     std::uint32_t return_rva = 0;
     std::uint32_t mode_like = 0;
@@ -879,6 +902,9 @@ CallsitePatch g_equip_local_requirement_lookup_a_callsite_patch = {};
 CallsitePatch g_equip_local_requirement_lookup_b_callsite_patch = {};
 CallsitePatch g_equip_nested_inventory_gate_callsite_patch = {};
 CallsitePatch g_equip_nested_validator_callsite_patch = {};
+BytePatch g_aa_xp_pct_reset_below_51_gate_patch = {};
+BytePatch g_aa_xp_decrease_enable_below_51_gate_patch = {};
+BytePatch g_aa_xp_increase_enable_below_51_gate_patch = {};
 ReceiveDispatchFn g_original_receive_dispatch = nullptr;
 HandleRButtonUpFn g_original_handle_rbutton_up = nullptr;
 GetSpellLevelNeededFn g_original_get_spell_level_needed = nullptr;
@@ -5890,6 +5916,78 @@ bool InstallCallsitePatch(
     return true;
 }
 
+bool InstallBytePatch(
+    void* address,
+    const std::uint8_t* expected,
+    const std::uint8_t* replacement,
+    std::size_t length,
+    BytePatch* patch,
+    const wchar_t* label) noexcept {
+    if (address == nullptr || expected == nullptr || replacement == nullptr || patch == nullptr ||
+        patch->installed || length == 0 || length > kMaxStolenBytes) {
+        return false;
+    }
+
+    auto* target_bytes = reinterpret_cast<std::uint8_t*>(address);
+    std::array<std::uint8_t, kMaxStolenBytes> live = {};
+    if (!TryCopyBytes(target_bytes, length, live.data())) {
+        std::wstring message = L"hook_manager: ";
+        message += label;
+        message += L" byte patch validation read failed; hook disabled";
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    if (std::memcmp(live.data(), expected, length) != 0) {
+        std::wstring message = L"hook_manager: ";
+        message += label;
+        message += L" byte patch validation failed expected=\"";
+        message += HexBytes(expected, length);
+        message += L"\" live=\"";
+        message += HexBytes(live.data(), length);
+        message += L"\" address=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(address));
+        const std::uintptr_t module_base = GetHostModuleBase();
+        if (module_base != 0 && reinterpret_cast<std::uintptr_t>(address) >= module_base) {
+            message += L" target_rva=";
+            message += Hex32(static_cast<std::uint32_t>(
+                reinterpret_cast<std::uintptr_t>(address) - module_base));
+        }
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    patch->address = target_bytes;
+    patch->length = length;
+    std::memcpy(patch->original.data(), expected, length);
+    std::memcpy(patch->patch.data(), replacement, length);
+    if (!TryWriteBytes(target_bytes, replacement, length)) {
+        std::wstring message = L"hook_manager: ";
+        message += label;
+        message += L" byte patch write failed; hook disabled";
+        monomyth::logger::Log(message);
+        *patch = {};
+        return false;
+    }
+
+    patch->installed = true;
+    std::wstring message = L"hook_manager: ";
+    message += label;
+    message += L" byte patch installed address=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(address));
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base != 0 && reinterpret_cast<std::uintptr_t>(address) >= module_base) {
+        message += L" target_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            reinterpret_cast<std::uintptr_t>(address) - module_base));
+    }
+    message += L" replacement=\"";
+    message += HexBytes(replacement, length);
+    message += L"\"";
+    monomyth::logger::Log(message);
+    return true;
+}
+
 bool RemoveInlineDetour(InlineDetour* detour) noexcept {
     if (detour == nullptr || !detour->installed) {
         return true;
@@ -5932,6 +6030,21 @@ bool RemoveCallsitePatch(CallsitePatch* patch) noexcept {
 
     DWORD ignored = 0;
     VirtualProtect(patch->address, kJmpPatchBytes, old_protect, &ignored);
+
+    *patch = {};
+    return true;
+}
+
+bool RemoveBytePatch(BytePatch* patch) noexcept {
+    if (patch == nullptr || !patch->installed) {
+        return true;
+    }
+
+    if (!TryWriteBytes(patch->address, patch->original.data(), patch->length)) {
+        monomyth::logger::Log(
+            L"hook_manager: failed to restore byte patch during uninstall");
+        return false;
+    }
 
     *patch = {};
     return true;
@@ -16702,6 +16815,52 @@ bool MONOMYTH_FASTCALL MoveItemValidationGateHook(
     return original_result;
 }
 
+bool InstallAAXpLowLevelUiPatch() noexcept {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: AA XP low-level UI patch denied because module base was unavailable");
+        return false;
+    }
+
+    if (!InstallBytePatch(
+            reinterpret_cast<void*>(module_base + kAAXpPctResetBelow51GateRva),
+            kAAXpPctResetBelow51GateExpectedBytes.data(),
+            kAAXpPctResetBelow51GatePatchBytes.data(),
+            kAAXpPctResetBelow51GateExpectedBytes.size(),
+            &g_aa_xp_pct_reset_below_51_gate_patch,
+            L"CAAWndAAXpPctResetBelow51Gate")) {
+        return false;
+    }
+
+    if (!InstallBytePatch(
+            reinterpret_cast<void*>(module_base + kAAXpDecreaseEnableBelow51GateRva),
+            kAAXpAdjustEnableBelow51GateExpectedBytes.data(),
+            kAAXpAdjustEnableBelow51GatePatchBytes.data(),
+            kAAXpAdjustEnableBelow51GateExpectedBytes.size(),
+            &g_aa_xp_decrease_enable_below_51_gate_patch,
+            L"CAAWndAAXpDecreaseEnableBelow51Gate")) {
+        RemoveBytePatch(&g_aa_xp_pct_reset_below_51_gate_patch);
+        return false;
+    }
+
+    if (!InstallBytePatch(
+            reinterpret_cast<void*>(module_base + kAAXpIncreaseEnableBelow51GateRva),
+            kAAXpAdjustEnableBelow51GateExpectedBytes.data(),
+            kAAXpAdjustEnableBelow51GatePatchBytes.data(),
+            kAAXpAdjustEnableBelow51GateExpectedBytes.size(),
+            &g_aa_xp_increase_enable_below_51_gate_patch,
+            L"CAAWndAAXpIncreaseEnableBelow51Gate")) {
+        RemoveBytePatch(&g_aa_xp_decrease_enable_below_51_gate_patch);
+        RemoveBytePatch(&g_aa_xp_pct_reset_below_51_gate_patch);
+        return false;
+    }
+
+    monomyth::logger::Log(
+        L"hook_manager: AA XP low-level UI patch installed target=CAAWnd::Update reset_rva=0x0020a133 decrease_rva=0x0020a1d5 increase_rva=0x0020a230");
+    return true;
+}
+
 bool InstallWhoClassNameDisplayHook(const monomyth::runtime::Manifest& manifest) noexcept {
     if (!manifest.multiclass_ui_display_allowed) {
         return false;
@@ -19395,6 +19554,18 @@ bool RemoveWhoClassNameDisplayHook() noexcept {
     return ok;
 }
 
+bool RemoveAAXpLowLevelUiPatch() noexcept {
+    bool ok = true;
+    ok &= RemoveBytePatch(&g_aa_xp_increase_enable_below_51_gate_patch);
+    ok &= RemoveBytePatch(&g_aa_xp_decrease_enable_below_51_gate_patch);
+    ok &= RemoveBytePatch(&g_aa_xp_pct_reset_below_51_gate_patch);
+    if (ok) {
+        monomyth::logger::Log(
+            L"hook_manager: AA XP low-level UI patch removed target=CAAWnd::Update");
+    }
+    return ok;
+}
+
 bool RemoveCharacterListUpdateListHook() noexcept {
     g_character_list_window_pointer.store(0);
     g_character_list_last_forced_refresh_window.store(0);
@@ -20332,6 +20503,7 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     bool ui_display_active = false;
     bool progression_selection_display_active = false;
     bool inventory_class_title_display_active = false;
+    bool aa_xp_ui_active = false;
 
     g_multiclass_ui_display_enabled = manifest.multiclass_ui_display_allowed;
 
@@ -20341,6 +20513,13 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         return false;
     }
     receive_hook_active = g_receive_dispatch_detour.installed;
+
+    if (!InstallAAXpLowLevelUiPatch()) {
+        monomyth::logger::Log(
+            L"hook_manager: AA XP low-level UI patch install failed target=CAAWnd::Update");
+    } else {
+        aa_xp_ui_active = true;
+    }
 
     if (manifest.spell_usability_trace_allowed || manifest.multiclass_spell_usability_allowed) {
         if (InstallGetSpellLevelNeededHook(manifest)) {
@@ -20579,10 +20758,17 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
         memorize_send_trace_active || spell_behavior_active || item_behavior_active ||
         trainer_behavior_active || move_item_trace_active || move_item_send_trace_active ||
         activated_skill_send_trace_active || ui_display_active || progression_selection_display_active ||
-        inventory_class_title_display_active) {
+        inventory_class_title_display_active || aa_xp_ui_active) {
         std::wstring message = L"hook_manager: initialized (";
         bool first = true;
+        if (aa_xp_ui_active) {
+            message += L"AA XP low-level UI patch";
+            first = false;
+        }
         if (receive_hook_active) {
+            if (!first) {
+                message += L", ";
+            }
             message += L"receive dispatcher hook";
             first = false;
         }
@@ -20721,6 +20907,11 @@ void Shutdown() noexcept {
 
     if (!RemoveReceiveDispatchHook()) {
         monomyth::logger::Log(L"hook_manager: shutdown deferred because receive hook removal failed");
+        return;
+    }
+    if (!RemoveAAXpLowLevelUiPatch()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because AA XP low-level UI patch removal failed");
         return;
     }
     if (!RemoveWhoClassNameDisplayHook()) {
