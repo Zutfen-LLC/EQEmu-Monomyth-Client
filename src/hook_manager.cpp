@@ -78,6 +78,16 @@ constexpr std::uint32_t kClientItemWrapperGetDataThunkRva = 0x003b06e0;
 constexpr std::uint32_t kCharacterZoneClientHasSkillRva = 0x0004a1b0;
 constexpr std::uint32_t kCharacterZoneClientGetAdjustedSkillRva = 0x00049fe0;
 constexpr std::uint32_t kCharacterZoneClientUseSkillRva = 0x0005b2d0;
+constexpr std::uint32_t kSkillsWindowSkillValueProducerRva = 0x00184be0;
+constexpr std::uint32_t kSkillsWindowSkillValueCallsiteRva = 0x003577b5;
+constexpr std::uint32_t kSkillsWindowSkillValueReturnRva = 0x003577ba;
+constexpr std::uint32_t kSkillsWindowRowHelperRva = 0x00357710;
+constexpr std::uint32_t kSkillsWindowRowBuilderCallsiteARva = 0x00357c55;
+constexpr std::uint32_t kSkillsWindowRowBuilderReturnARva = 0x00357c5a;
+constexpr std::uint32_t kSkillsWindowRowBuilderCallsiteBRva = 0x00357e6a;
+constexpr std::uint32_t kSkillsWindowRowBuilderReturnBRva = 0x00357e6f;
+constexpr std::uint32_t kSkillsWindowRowBuilderCallsiteCRva = 0x00358146;
+constexpr std::uint32_t kSkillsWindowRowBuilderReturnCRva = 0x0035814b;
 constexpr std::uint32_t kActivatedSkillHasSkillActionCallerRva = 0x00151b5e;
 constexpr std::uint32_t kActivatedSkillHasSkillAbilityCallerRva = 0x00356daa;
 constexpr std::uint32_t kActivatedSkillUseSkillAdjustedSkillCallsiteRva = 0x0005b33e;
@@ -254,6 +264,7 @@ constexpr std::size_t kInventoryClassTitleControlOffset = 0x02cc;
 constexpr std::size_t kCxWndTextFieldOffset = 0x00e8;
 constexpr std::size_t kEqSpawnNameOffset = 0x00a4;
 constexpr std::size_t kEqSpawnNameMaxBytes = 0x40;
+constexpr std::size_t kPcProfileClassOffset = 0x3374;
 constexpr std::size_t kGuildTrainerClassLookupResolvedClassOffset = 0x3374;
 constexpr std::size_t kGuildTrainerCallerClassOffset = 0x0eb8;
 // MacroQuest eqlib's emu/ROF2 layout reads PlayerClient::GetClass() from
@@ -350,6 +361,13 @@ using CharacterZoneClientUseSkillFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     unsigned char skill_id,
     void* target);
+using SkillsWindowSkillValueProducerFn = int (MONOMYTH_THISCALL*)(
+    void* this_context,
+    int skill_id);
+using SkillsWindowRowHelperFn = bool (MONOMYTH_THISCALL*)(
+    void* this_context,
+    int skill_id,
+    void* row_record);
 using EverQuestLMouseUpFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     void* point_like);
@@ -852,6 +870,10 @@ CallsitePatch g_invslot_handle_lbutton_core_late_branch_dispatch_callsite_patch 
 CallsitePatch g_move_item_ctor_site_a_callsite_patch = {};
 CallsitePatch g_move_item_ctor_site_b_callsite_patch = {};
 CallsitePatch g_guild_trainer_class_lookup_callsite_patch = {};
+CallsitePatch g_skills_window_skill_value_callsite_patch = {};
+CallsitePatch g_skills_window_row_helper_callsite_a_patch = {};
+CallsitePatch g_skills_window_row_helper_callsite_b_patch = {};
+CallsitePatch g_skills_window_row_helper_callsite_c_patch = {};
 CallsitePatch g_equip_local_record_lookup_callsite_patch = {};
 CallsitePatch g_equip_local_requirement_lookup_a_callsite_patch = {};
 CallsitePatch g_equip_local_requirement_lookup_b_callsite_patch = {};
@@ -866,6 +888,8 @@ CanEquipFn g_original_can_equip = nullptr;
 CharacterZoneClientHasSkillFn g_original_character_zone_client_has_skill = nullptr;
 CharacterZoneClientGetAdjustedSkillFn g_original_character_zone_client_get_adjusted_skill = nullptr;
 CharacterZoneClientUseSkillFn g_original_character_zone_client_use_skill = nullptr;
+SkillsWindowSkillValueProducerFn g_original_skills_window_skill_value_producer = nullptr;
+SkillsWindowRowHelperFn g_original_skills_window_row_helper = nullptr;
 InvSlotMgrMoveItemFn g_original_inv_slot_mgr_move_item = nullptr;
 EquipRecordLookupFn g_original_equip_record_lookup = nullptr;
 EquipRequirementLookupFn g_original_equip_requirement_lookup = nullptr;
@@ -978,6 +1002,10 @@ std::uint64_t g_progression_selection_trace_count = 0;
 std::uint64_t g_char_select_class_name_func_trace_count = 0;
 std::uint64_t g_char_select_late_full_name_trace_count = 0;
 std::uint64_t g_skill_visibility_override_count = 0;
+std::uint64_t g_skills_window_skill_value_entry_count = 0;
+std::uint64_t g_skills_window_row_helper_entry_count = 0;
+std::uint64_t g_skills_window_skill_value_trace_count = 0;
+std::uint64_t g_skills_window_skill_value_override_count = 0;
 constexpr std::size_t kUiClassHelperCallerCatalogCapacity = 64;
 constexpr std::size_t kUiClassProducerCandidateCatalogCapacity = 24;
 std::array<std::uint32_t, kUiClassHelperCallerCatalogCapacity>
@@ -1185,7 +1213,29 @@ struct GuildTrainerSessionClassOverrideState {
 
 GuildTrainerSessionClassOverrideState g_guild_trainer_session_class_override = {};
 
+struct TemporaryLocalClassOverrideState {
+    bool active = false;
+    std::uintptr_t local_player = 0;
+    bool displayed_original_copied = false;
+    std::uint8_t displayed_original_class_id = 0;
+    std::uintptr_t profile = 0;
+    bool profile_original_copied = false;
+    std::uint32_t profile_original_class_id = 0;
+    std::uintptr_t class_record = 0;
+    bool class_record_original_copied = false;
+    std::uint8_t class_record_original_class_id = 0;
+};
+
+struct SkillsWindowRowRecordLayout {
+    std::uintptr_t name_field_a = 0;
+    std::uintptr_t name_field_b = 0;
+    int rank_skill_value = 0;
+    int displayed_value = 0;
+    int displayed_cap = 0;
+};
+
 std::uintptr_t GetHostModuleBase() noexcept;
+bool TryReadLocalPlayerCharacterPointer(void** character) noexcept;
 
 std::wstring HexPtr(std::uintptr_t value) {
     std::wstringstream stream;
@@ -2802,8 +2852,6 @@ bool TryResolveLocalProfileClassStorage(
 
     constexpr std::size_t kCharInfoCi2Offset = 0x31f0;
     constexpr std::size_t kCi2InfoCharInfo2Offset = 0x0004;
-    constexpr std::size_t kPcProfileClassOffset = 0x3374;
-
     void* ci2 = nullptr;
     if (!TryCopyObject(
             reinterpret_cast<const std::uint8_t*>(local_char_data) + kCharInfoCi2Offset,
@@ -2831,6 +2879,107 @@ bool TryResolveLocalProfileClassStorage(
     *profile_out = profile;
     *class_id_out = profile_class_id;
     return true;
+}
+
+bool TryResolveLookupClassRecord(
+    void* this_context,
+    void** class_record_out,
+    std::uint8_t* class_id_out) noexcept {
+    if (this_context == nullptr || class_record_out == nullptr || class_id_out == nullptr) {
+        return false;
+    }
+
+    *class_record_out = nullptr;
+    *class_id_out = 0;
+
+    std::uintptr_t descriptor_table = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(this_context) +
+                kScribeGateDescriptorTableOffset,
+            &descriptor_table) ||
+        descriptor_table == 0) {
+        return false;
+    }
+
+    std::uint32_t relative_offset = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const void*>(descriptor_table + kScribeGateRelativeOffsetField),
+            &relative_offset) ||
+        relative_offset == 0 ||
+        relative_offset > kScribeGateMaxRelativeLookupOffset) {
+        return false;
+    }
+
+    const std::uintptr_t this_context_address =
+        reinterpret_cast<std::uintptr_t>(this_context);
+    if (this_context_address >
+        (std::numeric_limits<std::uintptr_t>::max() - relative_offset -
+         kScribeGateLookupContextBias)) {
+        return false;
+    }
+
+    const std::uintptr_t lookup_context =
+        this_context_address + relative_offset + kScribeGateLookupContextBias;
+    std::uintptr_t node = 0;
+    std::uint32_t lookup_key = 0;
+    if (!TryCopyObject(reinterpret_cast<const void*>(lookup_context), &node) ||
+        !TryCopyObject(
+            reinterpret_cast<const void*>(lookup_context + kScribeGateLookupKeyOffset),
+            &lookup_key)) {
+        return false;
+    }
+
+    for (std::size_t visited_nodes = 0;
+         node != 0 && visited_nodes < kScribeGateMaxLookupNodes;
+         ++visited_nodes) {
+        std::uint32_t node_key = 0;
+        if (!TryCopyObject(reinterpret_cast<const void*>(node), &node_key)) {
+            return false;
+        }
+
+        if (node_key == lookup_key) {
+            void* class_record = nullptr;
+            std::uint8_t class_id = 0;
+            if (!TryCopyObject(
+                    reinterpret_cast<const void*>(node + kScribeGateNodeRecordOffset),
+                    &class_record) ||
+                class_record == nullptr ||
+                !TryCopyObject(
+                    reinterpret_cast<const std::uint8_t*>(class_record) +
+                        kScribeGateResolvedClassIdOffset,
+                    &class_id) ||
+                !monomyth::multiclass_identity::IsPlayableClassId(class_id)) {
+                return false;
+            }
+
+            *class_record_out = class_record;
+            *class_id_out = class_id;
+            return true;
+        }
+
+        if (!TryCopyObject(
+                reinterpret_cast<const void*>(node + kScribeGateNodeNextOffset),
+                &node)) {
+            return false;
+        }
+    }
+
+    return false;
+}
+
+bool TryResolveLocalCharDataClassRecordStorage(
+    void** class_record_out,
+    std::uint8_t* class_id_out) noexcept {
+    if (class_record_out == nullptr || class_id_out == nullptr) {
+        return false;
+    }
+
+    void* local_char_data = nullptr;
+    if (!TryReadLocalCharDataPointer(&local_char_data) || local_char_data == nullptr) {
+        return false;
+    }
+
+    return TryResolveLookupClassRecord(local_char_data, class_record_out, class_id_out);
 }
 
 bool TryReadInventoryWindowPointer(void** inventory_window) noexcept {
@@ -2894,6 +3043,262 @@ bool TryReadLocalPlayerDisplayedClassId(std::uint8_t* class_id) noexcept {
     return TryReadLocalProfileClassId(class_id);
 }
 
+bool IsLocalPlayerCharacterContext(void* this_context) noexcept {
+    if (this_context == nullptr) {
+        return false;
+    }
+
+    void* local_player = nullptr;
+    if (TryReadLocalPlayerPointer(&local_player) &&
+        local_player != nullptr &&
+        local_player == this_context) {
+        return true;
+    }
+
+    void* local_character = nullptr;
+    return TryReadLocalPlayerCharacterPointer(&local_character) &&
+        local_character != nullptr &&
+        local_character == this_context;
+}
+
+bool IsLocalCharDataContext(void* this_context) noexcept {
+    if (this_context == nullptr) {
+        return false;
+    }
+
+    void* local_char_data = nullptr;
+    return TryReadLocalCharDataPointer(&local_char_data) &&
+        local_char_data != nullptr &&
+        local_char_data == this_context;
+}
+
+bool TryApplyTemporaryLocalClassOverride(
+    std::uint8_t class_id,
+    TemporaryLocalClassOverrideState* state) noexcept {
+    if (state == nullptr || !monomyth::multiclass_identity::IsPlayableClassId(class_id)) {
+        return false;
+    }
+
+    *state = {};
+
+    void* local_player = nullptr;
+    std::uint8_t displayed_class_id = 0;
+    const bool displayed_ok =
+        TryReadLocalPlayerPointer(&local_player) &&
+        local_player != nullptr &&
+        TryReadEqPlayerDisplayedClassId(local_player, &displayed_class_id) &&
+        monomyth::multiclass_identity::IsPlayableClassId(displayed_class_id);
+    if (displayed_ok) {
+        state->local_player = reinterpret_cast<std::uintptr_t>(local_player);
+        state->displayed_original_copied = true;
+        state->displayed_original_class_id = displayed_class_id;
+    }
+
+    void* profile = nullptr;
+    std::uint32_t profile_class_id = 0;
+    const bool profile_ok =
+        TryResolveLocalProfileClassStorage(&profile, &profile_class_id);
+    if (profile_ok) {
+        state->profile = reinterpret_cast<std::uintptr_t>(profile);
+        state->profile_original_copied = true;
+        state->profile_original_class_id = profile_class_id;
+    }
+
+    void* class_record = nullptr;
+    std::uint8_t class_record_class_id = 0;
+    const bool class_record_ok =
+        TryResolveLocalCharDataClassRecordStorage(&class_record, &class_record_class_id);
+    if (class_record_ok) {
+        state->class_record = reinterpret_cast<std::uintptr_t>(class_record);
+        state->class_record_original_copied = true;
+        state->class_record_original_class_id = class_record_class_id;
+    }
+
+    bool displayed_write_ok = false;
+    if (state->displayed_original_copied && state->local_player != 0) {
+        displayed_write_ok = TryWriteObject(
+            reinterpret_cast<void*>(state->local_player + kEqPlayerDisplayedClassOffset),
+            class_id);
+    }
+
+    bool profile_write_ok = false;
+    if (state->profile_original_copied && state->profile != 0) {
+        const std::uint32_t widened_class_id = class_id;
+        profile_write_ok = TryWriteObject(
+            reinterpret_cast<void*>(state->profile + kPcProfileClassOffset),
+            widened_class_id);
+    }
+
+    bool class_record_write_ok = false;
+    if (state->class_record_original_copied && state->class_record != 0) {
+        class_record_write_ok = TryWriteObject(
+            reinterpret_cast<void*>(state->class_record + kScribeGateResolvedClassIdOffset),
+            class_id);
+    }
+
+    state->active = displayed_write_ok || profile_write_ok || class_record_write_ok;
+    if (!state->active) {
+        *state = {};
+    }
+
+    return state->active;
+}
+
+void RestoreTemporaryLocalClassOverride(
+    TemporaryLocalClassOverrideState* state) noexcept {
+    if (state == nullptr || !state->active) {
+        return;
+    }
+
+    if (state->displayed_original_copied && state->local_player != 0) {
+        TryWriteObject(
+            reinterpret_cast<void*>(state->local_player + kEqPlayerDisplayedClassOffset),
+            state->displayed_original_class_id);
+    }
+
+    if (state->profile_original_copied && state->profile != 0) {
+        TryWriteObject(
+            reinterpret_cast<void*>(state->profile + kPcProfileClassOffset),
+            state->profile_original_class_id);
+    }
+
+    if (state->class_record_original_copied && state->class_record != 0) {
+        TryWriteObject(
+            reinterpret_cast<void*>(state->class_record + kScribeGateResolvedClassIdOffset),
+            state->class_record_original_class_id);
+    }
+
+    *state = {};
+}
+
+int EvaluateBestAuthoritativeAdjustedSkill(
+    void* this_context,
+    int skill_id,
+    int native_result,
+    const monomyth::server_auth_stats::Snapshot& snapshot) noexcept {
+    if (native_result > 0 ||
+        g_original_character_zone_client_get_adjusted_skill == nullptr ||
+        !snapshot.has_classes_bitmask ||
+        snapshot.classes_bitmask == 0 ||
+        !monomyth::multiclass_identity::IsPlayableClassMask(snapshot.classes_bitmask) ||
+        !IsLocalPlayerCharacterContext(this_context)) {
+        return native_result;
+    }
+
+    int best_result = native_result;
+    for (unsigned int class_id = monomyth::multiclass_identity::kFirstPlayableClassId;
+         class_id <= monomyth::multiclass_identity::kLastPlayableClassId;
+         ++class_id) {
+        if (!monomyth::multiclass_identity::HasAuthoritativeClass(
+                snapshot.has_classes_bitmask,
+                snapshot.classes_bitmask,
+                class_id)) {
+            continue;
+        }
+
+        TemporaryLocalClassOverrideState override_state = {};
+        if (!TryApplyTemporaryLocalClassOverride(
+                static_cast<std::uint8_t>(class_id),
+                &override_state)) {
+            continue;
+        }
+
+        int candidate_result = 0;
+        bool candidate_ok = false;
+#if defined(_MSC_VER)
+        __try {
+            candidate_result =
+                g_original_character_zone_client_get_adjusted_skill(this_context, skill_id);
+            candidate_ok = true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            candidate_ok = false;
+        }
+#else
+        candidate_result =
+            g_original_character_zone_client_get_adjusted_skill(this_context, skill_id);
+        candidate_ok = true;
+#endif
+
+        RestoreTemporaryLocalClassOverride(&override_state);
+
+        if (candidate_ok && candidate_result > best_result) {
+            best_result = candidate_result;
+        }
+    }
+
+    return best_result;
+}
+
+int EvaluateBestAuthoritativeSkillsWindowSkillValue(
+    void* this_context,
+    int skill_id,
+    int native_result,
+    const monomyth::server_auth_stats::Snapshot& snapshot) noexcept {
+    if (native_result > 0 ||
+        g_original_skills_window_skill_value_producer == nullptr ||
+        !snapshot.has_classes_bitmask ||
+        snapshot.classes_bitmask == 0 ||
+        !monomyth::multiclass_identity::IsPlayableClassMask(snapshot.classes_bitmask) ||
+        !IsLocalCharDataContext(this_context)) {
+        return native_result;
+    }
+
+    int best_result = native_result;
+    for (unsigned int class_id = monomyth::multiclass_identity::kFirstPlayableClassId;
+         class_id <= monomyth::multiclass_identity::kLastPlayableClassId;
+         ++class_id) {
+        if (!monomyth::multiclass_identity::HasAuthoritativeClass(
+                snapshot.has_classes_bitmask,
+                snapshot.classes_bitmask,
+                class_id)) {
+            continue;
+        }
+
+        TemporaryLocalClassOverrideState override_state = {};
+        if (!TryApplyTemporaryLocalClassOverride(
+                static_cast<std::uint8_t>(class_id),
+                &override_state)) {
+            continue;
+        }
+
+        int candidate_result = 0;
+        bool candidate_ok = false;
+#if defined(_MSC_VER)
+        __try {
+            candidate_result =
+                g_original_skills_window_skill_value_producer(this_context, skill_id);
+            candidate_ok = true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            candidate_ok = false;
+        }
+#else
+        candidate_result =
+            g_original_skills_window_skill_value_producer(this_context, skill_id);
+        candidate_ok = true;
+#endif
+
+        RestoreTemporaryLocalClassOverride(&override_state);
+
+        if (candidate_ok && candidate_result > best_result) {
+            best_result = candidate_result;
+        }
+    }
+
+    return best_result;
+}
+
+bool SkillsWindowRowRecordBetter(
+    const SkillsWindowRowRecordLayout& candidate,
+    const SkillsWindowRowRecordLayout& best) noexcept {
+    if (candidate.displayed_value != best.displayed_value) {
+        return candidate.displayed_value > best.displayed_value;
+    }
+    if (candidate.displayed_cap != best.displayed_cap) {
+        return candidate.displayed_cap > best.displayed_cap;
+    }
+    return candidate.rank_skill_value > best.rank_skill_value;
+}
+
 void RestoreGuildTrainerSessionClassOverride(const wchar_t* trigger) noexcept {
     if (!g_guild_trainer_session_class_override.active) {
         return;
@@ -2914,7 +3319,7 @@ void RestoreGuildTrainerSessionClassOverride(const wchar_t* trigger) noexcept {
         g_guild_trainer_session_class_override.profile != 0) {
         profile_restore_ok = TryWriteObject(
             reinterpret_cast<void*>(
-                g_guild_trainer_session_class_override.profile + 0x3374),
+                g_guild_trainer_session_class_override.profile + kPcProfileClassOffset),
             g_guild_trainer_session_class_override.profile_original_class_id);
     }
 
@@ -2987,7 +3392,7 @@ void ApplyGuildTrainerSessionClassOverride(
     if (state.profile_original_copied && state.profile != 0) {
         const std::uint32_t widened_class_id = class_id;
         profile_write_ok = TryWriteObject(
-            reinterpret_cast<void*>(state.profile + 0x3374),
+            reinterpret_cast<void*>(state.profile + kPcProfileClassOffset),
             widened_class_id);
     }
 
@@ -3631,6 +4036,222 @@ bool ValidateActivatedSkillUseTraceSeams(std::uintptr_t module_base) noexcept {
         action_slot_use_skill_call_matches;
 }
 
+bool ValidateSkillsWindowSkillValueSeams(std::uintptr_t module_base) noexcept {
+    constexpr std::array<std::uint8_t, 14> kSkillValueProducerEntryBytes = {
+        0x83, 0xec, 0x28, 0x53, 0x55, 0x56, 0x8b,
+        0xf1, 0x8b, 0x46, 0x08, 0x8b, 0x48, 0x04};
+    constexpr std::array<std::uint8_t, 5> kSkillValueCallsiteBytes = {
+        0xe8, 0x26, 0xd4, 0xe2, 0xff};
+
+    const bool producer_matches = ValidateActivatedSkillUseSeamBytes(
+        L"SkillsWindowSkillValueProducer",
+        module_base + kSkillsWindowSkillValueProducerRva,
+        kSkillsWindowSkillValueProducerRva,
+        kSkillValueProducerEntryBytes.data(),
+        kSkillValueProducerEntryBytes.size());
+    const bool callsite_matches = ValidateActivatedSkillUseSeamBytes(
+        L"SkillsWindowSkillValueCallsite",
+        module_base + kSkillsWindowSkillValueCallsiteRva,
+        kSkillsWindowSkillValueCallsiteRva,
+        kSkillValueCallsiteBytes.data(),
+        kSkillValueCallsiteBytes.size());
+
+    return producer_matches && callsite_matches;
+}
+
+bool ValidateSkillsWindowRowHelperSeams(std::uintptr_t module_base) noexcept {
+    constexpr std::array<std::uint8_t, 16> kRowHelperEntryBytes = {
+        0x64, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x6a, 0xff,
+        0x68, 0x69, 0x60, 0x99, 0x00, 0x50, 0x64, 0x89};
+    constexpr std::array<std::uint8_t, 5> kRowBuilderCallsiteABytes = {
+        0xe8, 0xb6, 0xfa, 0xff, 0xff};
+    constexpr std::array<std::uint8_t, 5> kRowBuilderCallsiteBBytes = {
+        0xe8, 0xa1, 0xf8, 0xff, 0xff};
+    constexpr std::array<std::uint8_t, 5> kRowBuilderCallsiteCBytes = {
+        0xe8, 0xc5, 0xf5, 0xff, 0xff};
+
+    const bool entry_matches = ValidateActivatedSkillUseSeamBytes(
+        L"SkillsWindowRowHelper",
+        module_base + kSkillsWindowRowHelperRva,
+        kSkillsWindowRowHelperRva,
+        kRowHelperEntryBytes.data(),
+        kRowHelperEntryBytes.size());
+    const bool callsite_a_matches = ValidateActivatedSkillUseSeamBytes(
+        L"SkillsWindowRowBuilderCallsiteA",
+        module_base + kSkillsWindowRowBuilderCallsiteARva,
+        kSkillsWindowRowBuilderCallsiteARva,
+        kRowBuilderCallsiteABytes.data(),
+        kRowBuilderCallsiteABytes.size());
+    const bool callsite_b_matches = ValidateActivatedSkillUseSeamBytes(
+        L"SkillsWindowRowBuilderCallsiteB",
+        module_base + kSkillsWindowRowBuilderCallsiteBRva,
+        kSkillsWindowRowBuilderCallsiteBRva,
+        kRowBuilderCallsiteBBytes.data(),
+        kRowBuilderCallsiteBBytes.size());
+    const bool callsite_c_matches = ValidateActivatedSkillUseSeamBytes(
+        L"SkillsWindowRowBuilderCallsiteC",
+        module_base + kSkillsWindowRowBuilderCallsiteCRva,
+        kSkillsWindowRowBuilderCallsiteCRva,
+        kRowBuilderCallsiteCBytes.data(),
+        kRowBuilderCallsiteCBytes.size());
+
+    return entry_matches && callsite_a_matches && callsite_b_matches &&
+        callsite_c_matches;
+}
+
+void LogSkillsWindowSkillValueOverride(
+    int skill_id,
+    int native_result,
+    int authoritative_result,
+    std::uint32_t caller_rva,
+    const monomyth::server_auth_stats::Snapshot& snapshot) noexcept {
+    ++g_skills_window_skill_value_override_count;
+    if (g_skills_window_skill_value_override_count > kSkillVisibilityOverrideInitialLogCount &&
+        (g_skills_window_skill_value_override_count % kSkillVisibilityOverrideLogInterval) != 0) {
+        return;
+    }
+
+    std::wstring message = L"hook_manager: skills window value override";
+    message += L" count=";
+    message += std::to_wstring(g_skills_window_skill_value_override_count);
+    message += L" skill_id=";
+    message += std::to_wstring(skill_id);
+    message += L" native_result=";
+    message += std::to_wstring(native_result);
+    message += L" authoritative_result=";
+    message += std::to_wstring(authoritative_result);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" classes_mask=";
+    message += snapshot.has_classes_bitmask
+        ? Hex32(snapshot.classes_bitmask)
+        : std::wstring(L"unset");
+    monomyth::logger::Log(message);
+}
+
+void LogSkillsWindowSkillValueEntry(
+    int skill_id,
+    std::uint32_t caller_rva,
+    const monomyth::server_auth_stats::Snapshot& snapshot) noexcept {
+    ++g_skills_window_skill_value_entry_count;
+    if (g_skills_window_skill_value_entry_count > kSkillVisibilityOverrideInitialLogCount &&
+        (g_skills_window_skill_value_entry_count % kSkillVisibilityOverrideLogInterval) != 0) {
+        return;
+    }
+
+    std::wstring message = L"hook_manager: skills window value entry";
+    message += L" count=";
+    message += std::to_wstring(g_skills_window_skill_value_entry_count);
+    message += L" skill_id=";
+    message += std::to_wstring(skill_id);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" classes_mask=";
+    message += snapshot.has_classes_bitmask
+        ? Hex32(snapshot.classes_bitmask)
+        : std::wstring(L"unset");
+    monomyth::logger::Log(message);
+}
+
+void LogSkillsWindowSkillValueTrace(
+    int skill_id,
+    int native_result,
+    int authoritative_result,
+    std::uint32_t caller_rva,
+    bool local_char_data_context,
+    const monomyth::server_auth_stats::Snapshot& snapshot) noexcept {
+    ++g_skills_window_skill_value_trace_count;
+    if (g_skills_window_skill_value_trace_count > kSkillVisibilityOverrideInitialLogCount &&
+        (g_skills_window_skill_value_trace_count % kSkillVisibilityOverrideLogInterval) != 0) {
+        return;
+    }
+
+    std::wstring message = L"hook_manager: skills window value trace";
+    message += L" count=";
+    message += std::to_wstring(g_skills_window_skill_value_trace_count);
+    message += L" skill_id=";
+    message += std::to_wstring(skill_id);
+    message += L" native_result=";
+    message += std::to_wstring(native_result);
+    message += L" authoritative_result=";
+    message += std::to_wstring(authoritative_result);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" local_char_data_context=";
+    message += local_char_data_context ? L"true" : L"false";
+    message += L" override_applied=";
+    message += authoritative_result > native_result ? L"true" : L"false";
+    message += L" classes_mask=";
+    message += snapshot.has_classes_bitmask
+        ? Hex32(snapshot.classes_bitmask)
+        : std::wstring(L"unset");
+    monomyth::logger::Log(message);
+}
+
+void LogSkillsWindowRowHelperEntry(
+    int skill_id,
+    std::uint32_t caller_rva,
+    const monomyth::server_auth_stats::Snapshot& snapshot) noexcept {
+    ++g_skills_window_row_helper_entry_count;
+    if (g_skills_window_row_helper_entry_count > kSkillVisibilityOverrideInitialLogCount &&
+        (g_skills_window_row_helper_entry_count % kSkillVisibilityOverrideLogInterval) != 0) {
+        return;
+    }
+
+    std::wstring message = L"hook_manager: skills window row helper entry";
+    message += L" count=";
+    message += std::to_wstring(g_skills_window_row_helper_entry_count);
+    message += L" skill_id=";
+    message += std::to_wstring(skill_id);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" classes_mask=";
+    message += snapshot.has_classes_bitmask
+        ? Hex32(snapshot.classes_bitmask)
+        : std::wstring(L"unset");
+    monomyth::logger::Log(message);
+}
+
+void LogSkillsWindowRowHelperTrace(
+    int skill_id,
+    const SkillsWindowRowRecordLayout& native_row,
+    const SkillsWindowRowRecordLayout& final_row,
+    std::uint32_t caller_rva,
+    const monomyth::server_auth_stats::Snapshot& snapshot) noexcept {
+    ++g_skills_window_skill_value_trace_count;
+    if (g_skills_window_skill_value_trace_count > kSkillVisibilityOverrideInitialLogCount &&
+        (g_skills_window_skill_value_trace_count % kSkillVisibilityOverrideLogInterval) != 0) {
+        return;
+    }
+
+    std::wstring message = L"hook_manager: skills window row helper trace";
+    message += L" count=";
+    message += std::to_wstring(g_skills_window_skill_value_trace_count);
+    message += L" skill_id=";
+    message += std::to_wstring(skill_id);
+    message += L" native_rank_skill_value=";
+    message += std::to_wstring(native_row.rank_skill_value);
+    message += L" native_displayed_value=";
+    message += std::to_wstring(native_row.displayed_value);
+    message += L" native_displayed_cap=";
+    message += std::to_wstring(native_row.displayed_cap);
+    message += L" final_rank_skill_value=";
+    message += std::to_wstring(final_row.rank_skill_value);
+    message += L" final_displayed_value=";
+    message += std::to_wstring(final_row.displayed_value);
+    message += L" final_displayed_cap=";
+    message += std::to_wstring(final_row.displayed_cap);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" override_applied=";
+    message += SkillsWindowRowRecordBetter(final_row, native_row) ? L"true" : L"false";
+    message += L" classes_mask=";
+    message += snapshot.has_classes_bitmask
+        ? Hex32(snapshot.classes_bitmask)
+        : std::wstring(L"unset");
+    monomyth::logger::Log(message);
+}
+
 void LogActivatedSkillVisibilityOverride(
     int skill_id,
     std::uintptr_t caller_return_address,
@@ -3927,6 +4548,15 @@ int MONOMYTH_FASTCALL CharacterZoneClientGetAdjustedSkillHook(
         g_original_character_zone_client_get_adjusted_skill(this_context, skill_id);
 #endif
 
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    const int authoritative_class_result =
+        EvaluateBestAuthoritativeAdjustedSkill(
+            this_context,
+            skill_id,
+            native_result,
+            snapshot);
+
     const std::uintptr_t module_base = GetHostModuleBase();
     const std::uint32_t caller_rva =
         (module_base != 0 && caller_return_address >= module_base)
@@ -3936,17 +4566,20 @@ int MONOMYTH_FASTCALL CharacterZoneClientGetAdjustedSkillHook(
         caller_rva == kActivatedSkillUseSkillAdjustedSkillReturnRva;
     if (!from_use_skill_gate ||
         !monomyth::multiclass_skill_visibility::IsAdvertisedActivatedSkill(skill_id)) {
-        return native_result;
+        return authoritative_class_result;
     }
 
-    const monomyth::server_auth_stats::Snapshot snapshot =
-        monomyth::server_auth_stats::GetSnapshot();
     const bool multiclass_mask_result =
         monomyth::multiclass_skill_visibility::HasAuthoritativeActivatedSkill(
             snapshot,
             skill_id);
-    const bool override_applied = native_result <= 0 && multiclass_mask_result;
-    const int returned_result = override_applied ? 1 : native_result;
+    const bool override_applied =
+        authoritative_class_result > native_result ||
+        (authoritative_class_result <= 0 && multiclass_mask_result);
+    const int returned_result =
+        authoritative_class_result > 0
+            ? authoritative_class_result
+            : (multiclass_mask_result ? 1 : authoritative_class_result);
 
     LogActivatedSkillAdjustedSkillGateTrace(
         skill_id,
@@ -3957,6 +4590,201 @@ int MONOMYTH_FASTCALL CharacterZoneClientGetAdjustedSkillHook(
         multiclass_mask_result,
         override_applied);
     return returned_result;
+}
+
+int InvokeSkillsWindowSkillValueProducerHook(
+    void* this_context,
+    int skill_id,
+    std::uint32_t caller_rva) noexcept {
+    if (g_original_skills_window_skill_value_producer == nullptr) {
+        return 0;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    LogSkillsWindowSkillValueEntry(skill_id, caller_rva, snapshot);
+
+    int native_result = 0;
+#if defined(_MSC_VER)
+    __try {
+        native_result = g_original_skills_window_skill_value_producer(this_context, skill_id);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+#else
+    native_result = g_original_skills_window_skill_value_producer(this_context, skill_id);
+#endif
+
+    const bool local_char_data_context = IsLocalCharDataContext(this_context);
+    const int authoritative_result =
+        EvaluateBestAuthoritativeSkillsWindowSkillValue(
+            this_context,
+            skill_id,
+            native_result,
+            snapshot);
+    if (native_result <= 0 || authoritative_result > native_result) {
+        LogSkillsWindowSkillValueTrace(
+            skill_id,
+            native_result,
+            authoritative_result,
+            caller_rva,
+            local_char_data_context,
+            snapshot);
+    }
+    if (authoritative_result > native_result) {
+        LogSkillsWindowSkillValueOverride(
+            skill_id,
+            native_result,
+            authoritative_result,
+            caller_rva,
+            snapshot);
+    }
+
+    return authoritative_result;
+}
+
+int MONOMYTH_FASTCALL SkillsWindowSkillValueProducerHook(
+    void* this_context,
+    void*,
+    int skill_id) noexcept {
+    return InvokeSkillsWindowSkillValueProducerHook(
+        this_context,
+        skill_id,
+        kSkillsWindowSkillValueReturnRva);
+}
+
+bool InvokeSkillsWindowRowHelperHook(
+    void* this_context,
+    int skill_id,
+    void* row_record_like,
+    std::uint32_t caller_rva) noexcept {
+    if (g_original_skills_window_row_helper == nullptr || row_record_like == nullptr) {
+        return false;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    LogSkillsWindowRowHelperEntry(skill_id, caller_rva, snapshot);
+
+    bool native_ok = false;
+#if defined(_MSC_VER)
+    __try {
+        native_ok = g_original_skills_window_row_helper(this_context, skill_id, row_record_like);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    native_ok = g_original_skills_window_row_helper(this_context, skill_id, row_record_like);
+#endif
+
+    if (!native_ok || skill_id < 0 || skill_id >= 100) {
+        return native_ok;
+    }
+
+    if (!snapshot.has_classes_bitmask ||
+        snapshot.classes_bitmask == 0 ||
+        !monomyth::multiclass_identity::IsPlayableClassMask(snapshot.classes_bitmask)) {
+        return native_ok;
+    }
+
+    auto* row_record =
+        reinterpret_cast<SkillsWindowRowRecordLayout*>(row_record_like);
+    const SkillsWindowRowRecordLayout native_row = *row_record;
+    SkillsWindowRowRecordLayout best_row = native_row;
+
+    for (unsigned int class_id = monomyth::multiclass_identity::kFirstPlayableClassId;
+         class_id <= monomyth::multiclass_identity::kLastPlayableClassId;
+         ++class_id) {
+        if (!monomyth::multiclass_identity::HasAuthoritativeClass(
+                snapshot.has_classes_bitmask,
+                snapshot.classes_bitmask,
+                class_id)) {
+            continue;
+        }
+
+        TemporaryLocalClassOverrideState override_state = {};
+        if (!TryApplyTemporaryLocalClassOverride(
+                static_cast<std::uint8_t>(class_id),
+                &override_state)) {
+            continue;
+        }
+
+        bool candidate_ok = false;
+#if defined(_MSC_VER)
+        __try {
+            candidate_ok =
+                g_original_skills_window_row_helper(this_context, skill_id, row_record_like);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            candidate_ok = false;
+        }
+#else
+        candidate_ok =
+            g_original_skills_window_row_helper(this_context, skill_id, row_record_like);
+#endif
+
+        RestoreTemporaryLocalClassOverride(&override_state);
+        if (!candidate_ok) {
+            continue;
+        }
+
+        const SkillsWindowRowRecordLayout candidate_row = *row_record;
+        if (SkillsWindowRowRecordBetter(candidate_row, best_row)) {
+            best_row = candidate_row;
+        }
+    }
+
+    row_record->rank_skill_value = best_row.rank_skill_value;
+    row_record->displayed_value = best_row.displayed_value;
+    row_record->displayed_cap = best_row.displayed_cap;
+
+    if (native_row.displayed_value <= 0 ||
+        native_row.displayed_cap <= 0 ||
+        SkillsWindowRowRecordBetter(best_row, native_row)) {
+        LogSkillsWindowRowHelperTrace(
+            skill_id,
+            native_row,
+            best_row,
+            caller_rva,
+            snapshot);
+    }
+
+    return native_ok;
+}
+
+bool MONOMYTH_FASTCALL SkillsWindowRowHelperCallsiteAHook(
+    void* this_context,
+    void*,
+    int skill_id,
+    void* row_record_like) noexcept {
+    return InvokeSkillsWindowRowHelperHook(
+        this_context,
+        skill_id,
+        row_record_like,
+        kSkillsWindowRowBuilderReturnARva);
+}
+
+bool MONOMYTH_FASTCALL SkillsWindowRowHelperCallsiteBHook(
+    void* this_context,
+    void*,
+    int skill_id,
+    void* row_record_like) noexcept {
+    return InvokeSkillsWindowRowHelperHook(
+        this_context,
+        skill_id,
+        row_record_like,
+        kSkillsWindowRowBuilderReturnBRva);
+}
+
+bool MONOMYTH_FASTCALL SkillsWindowRowHelperCallsiteCHook(
+    void* this_context,
+    void*,
+    int skill_id,
+    void* row_record_like) noexcept {
+    return InvokeSkillsWindowRowHelperHook(
+        this_context,
+        skill_id,
+        row_record_like,
+        kSkillsWindowRowBuilderReturnCRva);
 }
 
 bool IsNormalEquipmentSlot(std::int32_t slot_like) noexcept;
@@ -17539,6 +18367,107 @@ bool InstallActivatedSkillVisibilityHook(const monomyth::runtime::Manifest& mani
             L"hook_manager: activated skill use hooks denied reason=\"seam_validation_failed\"");
     }
 
+    bool skills_window_skill_value_hook_installed = false;
+    const bool skills_window_skill_value_seams_valid =
+        ValidateSkillsWindowSkillValueSeams(module_base);
+    if (skills_window_skill_value_seams_valid) {
+        g_original_skills_window_skill_value_producer =
+            reinterpret_cast<SkillsWindowSkillValueProducerFn>(
+                module_base + kSkillsWindowSkillValueProducerRva);
+        if (InstallCallsitePatch(
+                reinterpret_cast<void*>(module_base + kSkillsWindowSkillValueCallsiteRva),
+                reinterpret_cast<void*>(&SkillsWindowSkillValueProducerHook),
+                module_base + kSkillsWindowSkillValueProducerRva,
+                &g_skills_window_skill_value_callsite_patch,
+                L"SkillsWindowSkillValueCallsite")) {
+            skills_window_skill_value_hook_installed = true;
+
+            std::wstring skills_message =
+                L"hook_manager: skills window value callsite hook installed callsite_address=";
+            skills_message += HexPtr(module_base + kSkillsWindowSkillValueCallsiteRva);
+            skills_message += L" callsite_rva=";
+            skills_message += Hex32(kSkillsWindowSkillValueCallsiteRva);
+            skills_message += L" target_address=";
+            skills_message += HexPtr(module_base + kSkillsWindowSkillValueProducerRva);
+            skills_message += L" target_rva=";
+            skills_message += Hex32(kSkillsWindowSkillValueProducerRva);
+            skills_message += L" return_rva=";
+            skills_message += Hex32(kSkillsWindowSkillValueReturnRva);
+            monomyth::logger::Log(skills_message);
+        } else {
+            g_original_skills_window_skill_value_producer = nullptr;
+            monomyth::logger::Log(
+                L"hook_manager: skills window value hook denied reason=\"callsite_patch_install_failed\"");
+        }
+    } else {
+        monomyth::logger::Log(
+            L"hook_manager: skills window value hook denied reason=\"seam_validation_failed\"");
+    }
+
+    bool skills_window_row_helper_hook_installed = false;
+    const bool skills_window_row_helper_seams_valid =
+        ValidateSkillsWindowRowHelperSeams(module_base);
+    if (skills_window_row_helper_seams_valid) {
+        g_original_skills_window_row_helper =
+            reinterpret_cast<SkillsWindowRowHelperFn>(module_base + kSkillsWindowRowHelperRva);
+        const bool row_helper_a_installed = InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kSkillsWindowRowBuilderCallsiteARva),
+            reinterpret_cast<void*>(&SkillsWindowRowHelperCallsiteAHook),
+            module_base + kSkillsWindowRowHelperRva,
+            &g_skills_window_row_helper_callsite_a_patch,
+            L"SkillsWindowRowHelperCallsiteA");
+        const bool row_helper_b_installed = InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kSkillsWindowRowBuilderCallsiteBRva),
+            reinterpret_cast<void*>(&SkillsWindowRowHelperCallsiteBHook),
+            module_base + kSkillsWindowRowHelperRva,
+            &g_skills_window_row_helper_callsite_b_patch,
+            L"SkillsWindowRowHelperCallsiteB");
+        const bool row_helper_c_installed = InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kSkillsWindowRowBuilderCallsiteCRva),
+            reinterpret_cast<void*>(&SkillsWindowRowHelperCallsiteCHook),
+            module_base + kSkillsWindowRowHelperRva,
+            &g_skills_window_row_helper_callsite_c_patch,
+            L"SkillsWindowRowHelperCallsiteC");
+        if (row_helper_a_installed && row_helper_b_installed && row_helper_c_installed) {
+            skills_window_row_helper_hook_installed = true;
+
+            std::wstring row_helper_message =
+                L"hook_manager: skills window row helper callsite hooks installed target_address=";
+            row_helper_message += HexPtr(module_base + kSkillsWindowRowHelperRva);
+            row_helper_message += L" target_rva=";
+            row_helper_message += Hex32(kSkillsWindowRowHelperRva);
+            row_helper_message += L" callsite_a_address=";
+            row_helper_message += HexPtr(module_base + kSkillsWindowRowBuilderCallsiteARva);
+            row_helper_message += L" callsite_a_rva=";
+            row_helper_message += Hex32(kSkillsWindowRowBuilderCallsiteARva);
+            row_helper_message += L" return_a_rva=";
+            row_helper_message += Hex32(kSkillsWindowRowBuilderReturnARva);
+            row_helper_message += L" callsite_b_address=";
+            row_helper_message += HexPtr(module_base + kSkillsWindowRowBuilderCallsiteBRva);
+            row_helper_message += L" callsite_b_rva=";
+            row_helper_message += Hex32(kSkillsWindowRowBuilderCallsiteBRva);
+            row_helper_message += L" return_b_rva=";
+            row_helper_message += Hex32(kSkillsWindowRowBuilderReturnBRva);
+            row_helper_message += L" callsite_c_address=";
+            row_helper_message += HexPtr(module_base + kSkillsWindowRowBuilderCallsiteCRva);
+            row_helper_message += L" callsite_c_rva=";
+            row_helper_message += Hex32(kSkillsWindowRowBuilderCallsiteCRva);
+            row_helper_message += L" return_c_rva=";
+            row_helper_message += Hex32(kSkillsWindowRowBuilderReturnCRva);
+            monomyth::logger::Log(row_helper_message);
+        } else {
+            RemoveCallsitePatch(&g_skills_window_row_helper_callsite_a_patch);
+            RemoveCallsitePatch(&g_skills_window_row_helper_callsite_b_patch);
+            RemoveCallsitePatch(&g_skills_window_row_helper_callsite_c_patch);
+            g_original_skills_window_row_helper = nullptr;
+            monomyth::logger::Log(
+                L"hook_manager: skills window row helper hook denied reason=\"callsite_patch_install_failed\"");
+        }
+    } else {
+        monomyth::logger::Log(
+            L"hook_manager: skills window row helper hook denied reason=\"seam_validation_failed\"");
+    }
+
     g_character_zone_client_has_skill_address = target_address;
     g_character_zone_client_has_skill = g_original_character_zone_client_has_skill;
     g_multiclass_skill_visibility_enabled = true;
@@ -17546,6 +18475,10 @@ bool InstallActivatedSkillVisibilityHook(const monomyth::runtime::Manifest& mani
     g_activated_skill_use_skill_trace_count = 0;
     g_activated_skill_adjusted_skill_trace_count = 0;
     g_activated_skill_adjusted_skill_override_count = 0;
+    g_skills_window_skill_value_entry_count = 0;
+    g_skills_window_row_helper_entry_count = 0;
+    g_skills_window_skill_value_trace_count = 0;
+    g_skills_window_skill_value_override_count = 0;
 
     std::wstring message =
         L"hook_manager: activated skill visibility/use hook installed target=CharacterZoneClient::HasSkill address=";
@@ -17560,6 +18493,14 @@ bool InstallActivatedSkillVisibilityHook(const monomyth::runtime::Manifest& mani
     message += activated_skill_use_trace_seams_valid ? L"true" : L"false";
     message += L" activated_skill_use_hooks_installed=";
     message += activated_skill_use_hooks_installed ? L"true" : L"false";
+    message += L" skills_window_value_seams_valid=";
+    message += skills_window_skill_value_seams_valid ? L"true" : L"false";
+    message += L" skills_window_value_hook_installed=";
+    message += skills_window_skill_value_hook_installed ? L"true" : L"false";
+    message += L" skills_window_row_helper_seams_valid=";
+    message += skills_window_row_helper_seams_valid ? L"true" : L"false";
+    message += L" skills_window_row_helper_hook_installed=";
+    message += skills_window_row_helper_hook_installed ? L"true" : L"false";
     monomyth::logger::Log(message);
     return true;
 }
@@ -18447,6 +19388,30 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         g_original_character_zone_client_get_adjusted_skill = nullptr;
     }
 
+    if (RemoveCallsitePatch(&g_skills_window_skill_value_callsite_patch)) {
+        g_original_skills_window_skill_value_producer = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: activated skill use hook removed target=SkillsWindowSkillValueCallsite");
+    } else if (!g_skills_window_skill_value_callsite_patch.installed) {
+        g_original_skills_window_skill_value_producer = nullptr;
+    }
+
+    const bool row_helper_a_removed =
+        RemoveCallsitePatch(&g_skills_window_row_helper_callsite_a_patch);
+    const bool row_helper_b_removed =
+        RemoveCallsitePatch(&g_skills_window_row_helper_callsite_b_patch);
+    const bool row_helper_c_removed =
+        RemoveCallsitePatch(&g_skills_window_row_helper_callsite_c_patch);
+    if (row_helper_a_removed && row_helper_b_removed && row_helper_c_removed) {
+        g_original_skills_window_row_helper = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: activated skill use hook removed target=SkillsWindowRowHelperCallsites");
+    } else if (!g_skills_window_row_helper_callsite_a_patch.installed &&
+               !g_skills_window_row_helper_callsite_b_patch.installed &&
+               !g_skills_window_row_helper_callsite_c_patch.installed) {
+        g_original_skills_window_row_helper = nullptr;
+    }
+
     if (!g_character_zone_client_has_skill_detour.installed) {
         g_original_character_zone_client_has_skill = nullptr;
         if (!g_multiclass_item_usability_enabled) {
@@ -18458,6 +19423,10 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         g_activated_skill_use_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_override_count = 0;
+        g_skills_window_skill_value_entry_count = 0;
+        g_skills_window_row_helper_entry_count = 0;
+        g_skills_window_skill_value_trace_count = 0;
+        g_skills_window_skill_value_override_count = 0;
         return true;
     }
 
@@ -18476,6 +19445,10 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         g_activated_skill_use_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_override_count = 0;
+        g_skills_window_skill_value_entry_count = 0;
+        g_skills_window_row_helper_entry_count = 0;
+        g_skills_window_skill_value_trace_count = 0;
+        g_skills_window_skill_value_override_count = 0;
         monomyth::logger::Log(
             L"hook_manager: activated skill visibility hook removed target=CharacterZoneClient::HasSkill");
         return true;
