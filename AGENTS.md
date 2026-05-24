@@ -61,6 +61,9 @@ When touching the current client tracing work, prefer:
 - live client log review:
   - `/home/zutfen/everquest_rof2/monomyth-client.log`
 
+# Build
+You can cross-build the Windows DLL in build-cross-i686 - when you build, copy the resulting dinput8.dll into /home/zutfen/everquest_rof2/ as well, so it can be immediately tested.
+
 ## Communication
 
 - Be concise.

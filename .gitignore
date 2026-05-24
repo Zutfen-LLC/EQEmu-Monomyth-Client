@@ -60,3 +60,4 @@ monomyth-client.log
 # OS cruft
 .DS_Store
 Thumbs.db
+build-mingw32/Makefile
