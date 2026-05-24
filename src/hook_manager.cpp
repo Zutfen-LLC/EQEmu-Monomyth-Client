@@ -1080,6 +1080,7 @@ std::uint64_t g_is_class_usable_predicate_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_equipment_class_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
+std::uint64_t g_invslot_handle_lbutton_core_late_branch_dispatch_offhand_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_power_source_override_count = 0;
 std::uint64_t g_auto_equip_class_gate_override_count = 0;
 std::uint64_t g_guild_trainer_class_lookup_override_count = 0;
@@ -8780,6 +8781,16 @@ void AppendPowerSourceSlotPolicyFields(
     message->append(snapshot.eligible ? L"true" : L"false");
 }
 
+std::uintptr_t ResolveLateBranchItemLike(
+    std::uint32_t lookup_dword0_like,
+    bool lookup_dword0_copied) noexcept {
+    if (lookup_dword0_copied && lookup_dword0_like != 0) {
+        return static_cast<std::uintptr_t>(lookup_dword0_like);
+    }
+
+    return g_invslot_handle_lbutton_core_last_late_lookup_item_pointer;
+}
+
 void LogAutoEquipClassGateDecision(
     void* this_context,
     std::uintptr_t caller_return_address,
@@ -11982,6 +11993,125 @@ void LogInvSlotHandleLButtonCoreLateBranchPrepObservation(
     monomyth::logger::Log(message);
 }
 
+void LogInvSlotHandleLButtonCoreLateBranchDispatchOffhandOverride(
+    void* this_context,
+    std::int32_t slot_like,
+    void* lookup_result_like,
+    std::uintptr_t caller_return_address,
+    std::uint8_t original_result,
+    std::uint32_t lookup_dword0_before,
+    bool lookup_dword0_before_copied,
+    std::uint32_t lookup_dword0_after,
+    bool lookup_dword0_after_copied,
+    std::uintptr_t item_like,
+    const OffhandWeaponPolicySnapshot& offhand_policy,
+    const monomyth::server_auth_stats::Snapshot& snapshot) {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"MulticlassItemUsability target=InvSlotHandleLButtonCoreLateBranchDispatch";
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" slot_like=";
+    message += std::to_wstring(slot_like);
+    message += L" lookup_result_pointer=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(lookup_result_like));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    message += L" returned_result=1";
+    message += L" lookup_dword0_before_status=";
+    message += lookup_dword0_before_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_before_copied) {
+        message += L" lookup_dword0_before=";
+        message += Hex32(lookup_dword0_before);
+    }
+    message += L" lookup_dword0_after_status=";
+    message += lookup_dword0_after_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_after_copied) {
+        message += L" lookup_dword0_after=";
+        message += Hex32(lookup_dword0_after);
+    }
+    message += L" item_like=";
+    message += HexPtr(item_like);
+    message += L" item_data_like=";
+    message += HexPtr(offhand_policy.item_data_like);
+    AppendOffhandWeaponPolicyFields(&message, offhand_policy);
+    message += L" gate_label=equipment_slot_late_branch_dispatch";
+    message += L" override_mode=secondary_weapon_dual_wield_matrix";
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    message += L" has_assigned_mask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    message += L" override_count=";
+    message += std::to_wstring(
+        g_invslot_handle_lbutton_core_late_branch_dispatch_offhand_override_count);
+    monomyth::logger::Log(message);
+}
+
+void LogInvSlotHandleLButtonCoreLateBranchDispatchOffhandObservation(
+    void* this_context,
+    std::int32_t slot_like,
+    void* lookup_result_like,
+    std::uintptr_t caller_return_address,
+    std::uint8_t original_result,
+    std::uint32_t lookup_dword0_before,
+    bool lookup_dword0_before_copied,
+    std::uint32_t lookup_dword0_after,
+    bool lookup_dword0_after_copied,
+    std::uintptr_t item_like,
+    const OffhandWeaponPolicySnapshot& offhand_policy,
+    const monomyth::server_auth_stats::Snapshot& snapshot) {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"MulticlassItemTrace target=InvSlotHandleLButtonCoreLateBranchDispatchObserved";
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" slot_like=";
+    message += std::to_wstring(slot_like);
+    message += L" lookup_result_pointer=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(lookup_result_like));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    message += L" returned_result=";
+    message += std::to_wstring(original_result);
+    message += L" lookup_dword0_before_status=";
+    message += lookup_dword0_before_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_before_copied) {
+        message += L" lookup_dword0_before=";
+        message += Hex32(lookup_dword0_before);
+    }
+    message += L" lookup_dword0_after_status=";
+    message += lookup_dword0_after_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_after_copied) {
+        message += L" lookup_dword0_after=";
+        message += Hex32(lookup_dword0_after);
+    }
+    message += L" item_like=";
+    message += HexPtr(item_like);
+    message += L" item_data_like=";
+    message += HexPtr(offhand_policy.item_data_like);
+    AppendOffhandWeaponPolicyFields(&message, offhand_policy);
+    message += L" override_candidate=";
+    message += offhand_policy.eligible ? L"true" : L"false";
+    message += L" gate_label=equipment_slot_late_branch_dispatch";
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    message += L" has_assigned_mask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    monomyth::logger::Log(message);
+}
+
 void LogInvSlotHandleLButtonCoreEquipmentClassPolicy(
     const wchar_t* target,
     void* this_context,
@@ -14252,7 +14382,7 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchPrepCallsiteHoo
         const monomyth::server_auth_stats::Snapshot snapshot =
             monomyth::server_auth_stats::GetSnapshot();
         const std::uintptr_t item_like =
-            g_invslot_handle_lbutton_core_last_late_lookup_item_pointer;
+            ResolveLateBranchItemLike(lookup_dword0_before, lookup_dword0_before_copied);
         const PowerSourceSlotPolicySnapshot power_source_policy =
             CapturePowerSourceSlotPolicySnapshot(item_like, snapshot);
         if (power_source_policy.eligible) {
@@ -14298,7 +14428,7 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchPrepCallsiteHoo
         const monomyth::server_auth_stats::Snapshot snapshot =
             monomyth::server_auth_stats::GetSnapshot();
         const std::uintptr_t item_like =
-            g_invslot_handle_lbutton_core_last_late_lookup_item_pointer;
+            ResolveLateBranchItemLike(lookup_dword0_before, lookup_dword0_before_copied);
         const OffhandWeaponPolicySnapshot offhand_policy =
             CaptureOffhandWeaponPolicySnapshot(item_like, snapshot);
         const bool is_offhand_weapon_attempt =
@@ -14459,7 +14589,47 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
         const std::int32_t slot_like =
             g_invslot_handle_lbutton_core_last_late_branch_slot;
         const std::uintptr_t item_like =
-            g_invslot_handle_lbutton_core_last_late_lookup_item_pointer;
+            ResolveLateBranchItemLike(lookup_dword0_before, lookup_dword0_before_copied);
+        if (slot_like == kSecondaryEquipmentSlot) {
+            const OffhandWeaponPolicySnapshot offhand_policy =
+                CaptureOffhandWeaponPolicySnapshot(item_like, snapshot);
+            const bool is_offhand_weapon_attempt =
+                offhand_policy.is_weapon && offhand_policy.can_wear_secondary;
+            // Current live repros can reach late dispatch with prep already green, so keep a
+            // narrow secondary fallback here instead of assuming Prep/GateB always stay hot.
+            if (is_offhand_weapon_attempt && offhand_policy.eligible) {
+                ++g_invslot_handle_lbutton_core_late_branch_dispatch_offhand_override_count;
+                LogInvSlotHandleLButtonCoreLateBranchDispatchOffhandOverride(
+                    this_context,
+                    slot_like,
+                    lookup_result_like,
+                    caller_return_address,
+                    original_result,
+                    lookup_dword0_before,
+                    lookup_dword0_before_copied,
+                    lookup_dword0_after,
+                    lookup_dword0_after_copied,
+                    item_like,
+                    offhand_policy,
+                    snapshot);
+                return 1;
+            }
+            if (is_offhand_weapon_attempt) {
+                LogInvSlotHandleLButtonCoreLateBranchDispatchOffhandObservation(
+                    this_context,
+                    slot_like,
+                    lookup_result_like,
+                    caller_return_address,
+                    original_result,
+                    lookup_dword0_before,
+                    lookup_dword0_before_copied,
+                    lookup_dword0_after,
+                    lookup_dword0_after_copied,
+                    item_like,
+                    offhand_policy,
+                    snapshot);
+            }
+        }
         const EquipmentClassPolicySnapshot equipment_policy =
             CaptureEquipmentClassPolicySnapshot(item_like, slot_like, snapshot);
         if (equipment_policy.eligible) {
