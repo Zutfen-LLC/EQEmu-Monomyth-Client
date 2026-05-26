@@ -143,6 +143,10 @@ constexpr std::uint32_t kInventorySummaryRefreshCandidateARva = 0x00290100;
 constexpr std::uint32_t kInventorySummaryRefreshCandidateBRva = 0x002905f0;
 constexpr std::uint32_t kInventorySummaryRefreshCandidateCRva = 0x00312b00;
 constexpr std::uint32_t kInventorySummaryRefreshCandidateDRva = 0x00292c90;
+constexpr std::uint32_t kMerchantPurchasePageUpdateListRva = 0x002f0bb0;
+constexpr std::uint32_t kMerchantUsableClassMaskCallsiteARva = 0x002f0d9e;
+constexpr std::uint32_t kMerchantUsableClassMaskCallsiteBRva = 0x002f0e00;
+constexpr std::uint32_t kMerchantUsableClassMaskTargetRva = 0x003b4ce0;
 constexpr std::uint32_t kCharSelectClassNameFuncRva = 0x00321210;
 constexpr std::uint32_t kCharacterListWndUpdateListRva = 0x00430760;
 constexpr std::uint32_t kCharSelectNativeClassSubstitutionBudget = 48;
@@ -278,6 +282,12 @@ constexpr wchar_t kMemorizeSendTraceSliceId[] = L"CLIENT-MEM-SEND-TRACE-001";
 constexpr std::array<std::uint8_t, 5> kGuildTrainerClassLookupCallsiteBytes = {{
     0xe8, 0x6a, 0x3d, 0x2a, 0x00,
 }};
+constexpr std::array<std::uint8_t, 5> kMerchantUsableClassMaskCallsiteABytes = {{
+    0xe8, 0x3d, 0x3f, 0x0c, 0x00,
+}};
+constexpr std::array<std::uint8_t, 5> kMerchantUsableClassMaskCallsiteBBytes = {{
+    0xe8, 0xdb, 0x3e, 0x0c, 0x00,
+}};
 constexpr std::array<std::uint8_t, 2> kAAXpPctResetBelow51GateExpectedBytes = {{
     0x77, 0x13,
 }};
@@ -316,6 +326,10 @@ using CanEquipFn = int (MONOMYTH_THISCALL*)(
     unsigned long arg3,
     unsigned long arg4,
     unsigned long arg5);
+using MerchantUsableClassMaskFn = std::uint32_t (MONOMYTH_THISCALL*)(
+    void* this_item,
+    unsigned long arg1,
+    unsigned long arg2);
 using InvSlotMgrMoveItemFn = bool (MONOMYTH_THISCALL*)(
     void* this_context,
     void* move_data_a,
@@ -893,6 +907,8 @@ CallsitePatch g_invslot_handle_lbutton_core_late_branch_dispatch_callsite_patch 
 CallsitePatch g_move_item_ctor_site_a_callsite_patch = {};
 CallsitePatch g_move_item_ctor_site_b_callsite_patch = {};
 CallsitePatch g_guild_trainer_class_lookup_callsite_patch = {};
+CallsitePatch g_merchant_usable_class_mask_callsite_a_patch = {};
+CallsitePatch g_merchant_usable_class_mask_callsite_b_patch = {};
 CallsitePatch g_skills_window_skill_value_callsite_patch = {};
 CallsitePatch g_skills_window_row_helper_callsite_a_patch = {};
 CallsitePatch g_skills_window_row_helper_callsite_b_patch = {};
@@ -911,6 +927,7 @@ GetSpellLevelNeededFn g_original_get_spell_level_needed = nullptr;
 IsClassUsablePredicateFn g_original_is_class_usable_predicate = nullptr;
 GuildTrainerClassLookupFn g_original_guild_trainer_class_lookup = nullptr;
 CanEquipFn g_original_can_equip = nullptr;
+MerchantUsableClassMaskFn g_original_merchant_usable_class_mask = nullptr;
 CharacterZoneClientHasSkillFn g_original_character_zone_client_has_skill = nullptr;
 CharacterZoneClientGetAdjustedSkillFn g_original_character_zone_client_get_adjusted_skill = nullptr;
 CharacterZoneClientUseSkillFn g_original_character_zone_client_use_skill = nullptr;
@@ -1103,6 +1120,7 @@ bool g_multiclass_skill_visibility_enabled = false;
 bool g_multiclass_ui_display_enabled = false;
 thread_local bool g_character_list_manual_refresh_in_progress = false;
 std::uint64_t g_is_class_usable_predicate_override_count = 0;
+std::uint64_t g_merchant_usable_class_mask_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_equipment_class_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
@@ -11900,6 +11918,44 @@ void LogCanEquipOverride(
     monomyth::logger::Log(message);
 }
 
+void LogMerchantUsableClassMaskOverride(
+    void* this_item,
+    std::uintptr_t caller_return_address,
+    unsigned long arg1,
+    unsigned long arg2,
+    std::uint8_t native_class_id,
+    std::uint32_t original_mask,
+    std::uint32_t returned_mask,
+    const monomyth::server_auth_stats::Snapshot& snapshot) {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"MulticlassMerchantUsability target=MerchantUsableClassMask this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_item));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" arg1=";
+    message += std::to_wstring(arg1);
+    message += L" arg2=";
+    message += std::to_wstring(arg2);
+    message += L" native_class_id=";
+    message += std::to_wstring(native_class_id);
+    message += L" original_mask=";
+    message += Hex32(original_mask);
+    message += L" returned_mask=";
+    message += Hex32(returned_mask);
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    message += L" has_assigned_mask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    message += L" override_count=";
+    message += std::to_wstring(g_merchant_usable_class_mask_override_count);
+    monomyth::logger::Log(message);
+}
+
 void LogInvSlotHandleLButtonCoreLateBranchGateBOverride(
     void* slot_record_like,
     std::uintptr_t caller_return_address,
@@ -13587,6 +13643,54 @@ bool MONOMYTH_FASTCALL InvSlotMgrMoveItemHook(
         arg6,
         original_result);
     return original_result;
+}
+
+std::uint32_t MONOMYTH_FASTCALL MerchantUsableClassMaskCallsiteHook(
+    void* this_item,
+    void*,
+    unsigned long arg1,
+    unsigned long arg2) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const std::uint32_t original_mask =
+        g_original_merchant_usable_class_mask != nullptr
+            ? g_original_merchant_usable_class_mask(this_item, arg1, arg2)
+            : 0;
+    if (!g_multiclass_item_usability_enabled) {
+        return original_mask;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    if (!monomyth::multiclass_identity::HasAnyAuthoritativeClientItemClass(
+            snapshot.has_classes_bitmask,
+            snapshot.classes_bitmask,
+            original_mask)) {
+        return original_mask;
+    }
+
+    std::uint8_t native_class_id = 0;
+    if (!TryReadLocalProfileClassId(&native_class_id) || native_class_id == 0) {
+        return original_mask;
+    }
+
+    const std::uint32_t native_class_bit =
+        monomyth::multiclass_identity::ClientItemClassBit(native_class_id);
+    if ((original_mask & native_class_bit) != 0) {
+        return original_mask;
+    }
+
+    const std::uint32_t returned_mask = original_mask | native_class_bit;
+    ++g_merchant_usable_class_mask_override_count;
+    LogMerchantUsableClassMaskOverride(
+        this_item,
+        caller_return_address,
+        arg1,
+        arg2,
+        native_class_id,
+        original_mask,
+        returned_mask,
+        snapshot);
+    return returned_mask;
 }
 
 int MONOMYTH_FASTCALL EquipClickCanEquipCallsiteHook(
@@ -17447,6 +17551,111 @@ bool InstallGuildTrainerHook(const monomyth::runtime::Manifest& manifest) noexce
     return true;
 }
 
+bool InstallMerchantUsabilityCallsites() noexcept {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: merchant usability callsites denied reason=\"module_base_unavailable\"");
+        return false;
+    }
+
+    std::array<std::uint8_t, kMerchantUsableClassMaskCallsiteABytes.size()> live_callsite_a = {};
+    const bool callsite_a_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kMerchantUsableClassMaskCallsiteARva),
+        live_callsite_a.size(),
+        live_callsite_a.data());
+    const bool callsite_a_matches =
+        callsite_a_copied &&
+        std::memcmp(
+            live_callsite_a.data(),
+            kMerchantUsableClassMaskCallsiteABytes.data(),
+            kMerchantUsableClassMaskCallsiteABytes.size()) == 0;
+    if (!callsite_a_matches) {
+        std::wstring message =
+            L"hook_manager: MerchantUsableClassMaskCallsiteA byte validation failed expected=\"";
+        message += HexBytes(
+            kMerchantUsableClassMaskCallsiteABytes.data(),
+            kMerchantUsableClassMaskCallsiteABytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(live_callsite_a.data(), live_callsite_a.size());
+        message += L"\" address=";
+        message += HexPtr(module_base + kMerchantUsableClassMaskCallsiteARva);
+        message += L" target_rva=";
+        message += Hex32(kMerchantUsableClassMaskCallsiteARva);
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    std::array<std::uint8_t, kMerchantUsableClassMaskCallsiteBBytes.size()> live_callsite_b = {};
+    const bool callsite_b_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kMerchantUsableClassMaskCallsiteBRva),
+        live_callsite_b.size(),
+        live_callsite_b.data());
+    const bool callsite_b_matches =
+        callsite_b_copied &&
+        std::memcmp(
+            live_callsite_b.data(),
+            kMerchantUsableClassMaskCallsiteBBytes.data(),
+            kMerchantUsableClassMaskCallsiteBBytes.size()) == 0;
+    if (!callsite_b_matches) {
+        std::wstring message =
+            L"hook_manager: MerchantUsableClassMaskCallsiteB byte validation failed expected=\"";
+        message += HexBytes(
+            kMerchantUsableClassMaskCallsiteBBytes.data(),
+            kMerchantUsableClassMaskCallsiteBBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(live_callsite_b.data(), live_callsite_b.size());
+        message += L"\" address=";
+        message += HexPtr(module_base + kMerchantUsableClassMaskCallsiteBRva);
+        message += L" target_rva=";
+        message += Hex32(kMerchantUsableClassMaskCallsiteBRva);
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    g_original_merchant_usable_class_mask = reinterpret_cast<MerchantUsableClassMaskFn>(
+        module_base + kMerchantUsableClassMaskTargetRva);
+    if (!InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kMerchantUsableClassMaskCallsiteARva),
+            reinterpret_cast<void*>(&MerchantUsableClassMaskCallsiteHook),
+            module_base + kMerchantUsableClassMaskTargetRva,
+            &g_merchant_usable_class_mask_callsite_a_patch,
+            L"MerchantUsableClassMaskCallsiteA")) {
+        g_original_merchant_usable_class_mask = nullptr;
+        return false;
+    }
+
+    if (!InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kMerchantUsableClassMaskCallsiteBRva),
+            reinterpret_cast<void*>(&MerchantUsableClassMaskCallsiteHook),
+            module_base + kMerchantUsableClassMaskTargetRva,
+            &g_merchant_usable_class_mask_callsite_b_patch,
+            L"MerchantUsableClassMaskCallsiteB")) {
+        RemoveCallsitePatch(&g_merchant_usable_class_mask_callsite_a_patch);
+        g_original_merchant_usable_class_mask = nullptr;
+        return false;
+    }
+
+    std::wstring message =
+        L"hook_manager: merchant usable-class callsites installed target=CMerchantWnd::PurchasePageHandler::UpdateList";
+    message += L" update_list_rva=";
+    message += Hex32(kMerchantPurchasePageUpdateListRva);
+    message += L" callsite_a_rva=";
+    message += Hex32(kMerchantUsableClassMaskCallsiteARva);
+    message += L" callsite_b_rva=";
+    message += Hex32(kMerchantUsableClassMaskCallsiteBRva);
+    message += L" original_target_rva=";
+    message += Hex32(kMerchantUsableClassMaskTargetRva);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+void RemoveMerchantUsabilityCallsites() noexcept {
+    RemoveCallsitePatch(&g_merchant_usable_class_mask_callsite_b_patch);
+    RemoveCallsitePatch(&g_merchant_usable_class_mask_callsite_a_patch);
+    g_original_merchant_usable_class_mask = nullptr;
+}
+
 bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
     if (!manifest.multiclass_item_usability_allowed ||
         manifest.can_equip_state !=
@@ -17475,6 +17684,7 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
     }
 
     g_multiclass_item_usability_enabled = true;
+    g_merchant_usable_class_mask_override_count = 0;
     g_invslot_handle_lbutton_core_equipment_class_override_count = 0;
     g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
     g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
@@ -17482,6 +17692,14 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
         L"hook_manager: item usability hook installed target=EQ_Character::CanEquip address=";
     message += HexPtr(manifest.can_equip_address);
     monomyth::logger::Log(message);
+
+    if (!InstallMerchantUsabilityCallsites()) {
+        RemoveInlineDetour(&g_can_equip_detour);
+        g_original_can_equip = nullptr;
+        RemoveMerchantUsabilityCallsites();
+        g_multiclass_item_usability_enabled = false;
+        return false;
+    }
 
     const std::uintptr_t module_base = GetHostModuleBase();
     constexpr std::array<std::uint8_t, 16> kCharacterZoneClientHasSkillEntryBytes = {
@@ -17514,6 +17732,7 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
         has_skill_message += L" target_rva=";
         has_skill_message += Hex32(kCharacterZoneClientHasSkillRva);
         monomyth::logger::Log(has_skill_message);
+        RemoveMerchantUsabilityCallsites();
         RemoveInlineDetour(&g_can_equip_detour);
         g_original_can_equip = nullptr;
         g_multiclass_item_usability_enabled = false;
@@ -17595,6 +17814,7 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
                 L"hook_manager: item usability helper denied target=CInvSlot::HandleLButtonUp validation=entry_bytes_mismatch");
             RemoveInlineDetour(&g_move_item_slot21_lookup_detour);
             g_original_move_item_slot21_lookup = nullptr;
+            RemoveMerchantUsabilityCallsites();
             RemoveInlineDetour(&g_can_equip_detour);
             g_original_can_equip = nullptr;
             g_multiclass_item_usability_enabled = false;
@@ -17608,6 +17828,7 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
                 L"CInvSlot::HandleLButtonUp core trace")) {
             RemoveInlineDetour(&g_move_item_slot21_lookup_detour);
             g_original_move_item_slot21_lookup = nullptr;
+            RemoveMerchantUsabilityCallsites();
             RemoveInlineDetour(&g_can_equip_detour);
             g_original_can_equip = nullptr;
             g_multiclass_item_usability_enabled = false;
@@ -17633,6 +17854,7 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             g_original_invslot_handle_lbutton_core = nullptr;
             RemoveInlineDetour(&g_move_item_slot21_lookup_detour);
             g_original_move_item_slot21_lookup = nullptr;
+            RemoveMerchantUsabilityCallsites();
             RemoveInlineDetour(&g_can_equip_detour);
             g_original_can_equip = nullptr;
             g_multiclass_item_usability_enabled = false;
@@ -19886,6 +20108,7 @@ bool RemoveCanEquipHook() noexcept {
     RemoveCallsitePatch(&g_move_item_from_slot_resolve_callsite_patch);
     RemoveCallsitePatch(&g_drag_drop_silent_precheck_callsite_patch);
     RemoveCallsitePatch(&g_drag_drop_local_reject_message_callsite_patch);
+    RemoveMerchantUsabilityCallsites();
     RemoveCallsitePatch(&g_equip_nested_validator_callsite_patch);
     RemoveCallsitePatch(&g_equip_nested_inventory_gate_callsite_patch);
     RemoveCallsitePatch(&g_equip_local_requirement_lookup_b_callsite_patch);
@@ -19947,6 +20170,7 @@ bool RemoveCanEquipHook() noexcept {
     if (RemoveInlineDetour(&g_can_equip_detour)) {
         g_original_can_equip = nullptr;
         g_multiclass_item_usability_enabled = false;
+        g_merchant_usable_class_mask_override_count = 0;
         g_invslot_handle_lbutton_core_equipment_class_override_count = 0;
         g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
         g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
