@@ -2,7 +2,9 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
+#include <iomanip>
 #include <sstream>
 
 #include "logger.h"
@@ -47,6 +49,8 @@ struct ImageView {
     const std::uint8_t* base = nullptr;
     std::uint32_t image_size = 0;
 };
+
+constexpr std::uintptr_t kExpectedEqgameImageBase = 0x00400000;
 
 bool BuildImageView(ImageView* view) noexcept {
 #if defined(_WIN32)
@@ -105,6 +109,147 @@ bool ResolveRvaAddress(
     return true;
 }
 
+std::uint32_t ReadLe32(const std::uint8_t* bytes) noexcept {
+    std::uint32_t value = 0;
+    std::memcpy(&value, bytes, sizeof(value));
+    return value;
+}
+
+bool RelocatedImmediateMatches(
+    const std::uint8_t* actual,
+    const std::uint8_t* expected,
+    std::size_t offset,
+    std::size_t immediate_offset,
+    std::intptr_t relocation_delta) noexcept {
+    const std::int64_t expected_value =
+        static_cast<std::int64_t>(ReadLe32(expected + offset + immediate_offset));
+    const std::int64_t actual_value =
+        static_cast<std::int64_t>(ReadLe32(actual + offset + immediate_offset));
+    return (actual_value - expected_value) ==
+        static_cast<std::int64_t>(relocation_delta);
+}
+
+bool TryMatchRelocatableInstruction(
+    const std::uint8_t* actual,
+    const std::uint8_t* expected,
+    std::size_t length,
+    std::size_t offset,
+    std::intptr_t relocation_delta,
+    std::size_t* consumed) noexcept {
+    if (actual == nullptr || expected == nullptr || consumed == nullptr ||
+        offset >= length) {
+        return false;
+    }
+
+    *consumed = 0;
+    if (offset + 5 <= length &&
+        actual[offset] == expected[offset] &&
+        (expected[offset] == 0x68 || expected[offset] == 0xA1 ||
+         expected[offset] == 0xA3 ||
+         (expected[offset] >= 0xB8 && expected[offset] <= 0xBF)) &&
+        RelocatedImmediateMatches(actual, expected, offset, 1, relocation_delta)) {
+        *consumed = 5;
+        return true;
+    }
+
+    if (offset + 6 <= length &&
+        actual[offset] == 0x64 && expected[offset] == 0x64 &&
+        actual[offset + 1] == 0xA1 && expected[offset + 1] == 0xA1 &&
+        RelocatedImmediateMatches(actual, expected, offset, 2, relocation_delta)) {
+        *consumed = 6;
+        return true;
+    }
+
+    if (offset + 7 <= length &&
+        actual[offset] == 0x64 && expected[offset] == 0x64 &&
+        actual[offset + 1] == 0x89 && expected[offset + 1] == 0x89 &&
+        actual[offset + 2] == 0x25 && expected[offset + 2] == 0x25 &&
+        RelocatedImmediateMatches(actual, expected, offset, 3, relocation_delta)) {
+        *consumed = 7;
+        return true;
+    }
+
+    if (offset + 6 <= length &&
+        actual[offset] == expected[offset] &&
+        (expected[offset] == 0x8B || expected[offset] == 0x89 ||
+         expected[offset] == 0x8D || expected[offset] == 0xFF) &&
+        actual[offset + 1] == expected[offset + 1] &&
+        (expected[offset + 1] & 0xC7) == 0x05 &&
+        RelocatedImmediateMatches(actual, expected, offset, 2, relocation_delta)) {
+        *consumed = 6;
+        return true;
+    }
+
+    if (offset + 7 <= length &&
+        actual[offset] == expected[offset] &&
+        (expected[offset] == 0x8B || expected[offset] == 0x89 ||
+         expected[offset] == 0x8D || expected[offset] == 0xFF) &&
+        actual[offset + 1] == expected[offset + 1] &&
+        actual[offset + 2] == expected[offset + 2] &&
+        (expected[offset + 1] & 0xC7) == 0x04 &&
+        (expected[offset + 2] & 0x07) == 0x05 &&
+        RelocatedImmediateMatches(actual, expected, offset, 3, relocation_delta)) {
+        *consumed = 7;
+        return true;
+    }
+
+    if (offset + 7 <= length &&
+        actual[offset] == 0x0F && expected[offset] == 0x0F &&
+        actual[offset + 1] == expected[offset + 1] &&
+        (expected[offset + 1] == 0xB6 || expected[offset + 1] == 0xB7 ||
+         expected[offset + 1] == 0xBE || expected[offset + 1] == 0xBF) &&
+        actual[offset + 2] == expected[offset + 2] &&
+        (expected[offset + 2] & 0xC7) == 0x80 &&
+        RelocatedImmediateMatches(actual, expected, offset, 3, relocation_delta)) {
+        *consumed = 7;
+        return true;
+    }
+
+    return false;
+}
+
+bool BytesMatchWithModuleRelocation(
+    const std::uint8_t* actual,
+    const std::uint8_t* expected,
+    std::size_t length,
+    std::uintptr_t module_base) noexcept {
+    if (actual == nullptr || expected == nullptr || length == 0) {
+        return false;
+    }
+
+    if (std::memcmp(actual, expected, length) == 0) {
+        return true;
+    }
+
+    const std::intptr_t relocation_delta =
+        static_cast<std::intptr_t>(module_base) -
+        static_cast<std::intptr_t>(kExpectedEqgameImageBase);
+    if (relocation_delta == 0) {
+        return false;
+    }
+
+    for (std::size_t i = 0; i < length;) {
+        std::size_t consumed = 0;
+        if (TryMatchRelocatableInstruction(
+                actual,
+                expected,
+                length,
+                i,
+                relocation_delta,
+                &consumed)) {
+            i += consumed;
+            continue;
+        }
+
+        if (actual[i] != expected[i]) {
+            return false;
+        }
+        ++i;
+    }
+
+    return true;
+}
+
 bool BytesMatchAtRva(
     const ImageView& image,
     std::uint32_t rva,
@@ -114,7 +259,11 @@ bool BytesMatchAtRva(
         return false;
     }
 
-    return std::memcmp(image.base + rva, expected, length) == 0;
+    return BytesMatchWithModuleRelocation(
+        image.base + rva,
+        expected,
+        length,
+        reinterpret_cast<std::uintptr_t>(image.base));
 }
 
 bool IsExecutableAddress(
@@ -153,6 +302,18 @@ bool IsExecutableAddress(
     (void)address;
     return false;
 #endif
+}
+
+std::wstring HexBytes(const std::uint8_t* bytes, std::size_t length) {
+    std::wstringstream stream;
+    stream << std::hex << std::setfill(L'0');
+    for (std::size_t i = 0; i < length; ++i) {
+        if (i != 0) {
+            stream << L' ';
+        }
+        stream << std::setw(2) << static_cast<unsigned int>(bytes[i]);
+    }
+    return stream.str();
 }
 
 TargetResult DiscoverPinnedEntryBytesTarget(
@@ -248,6 +409,12 @@ TargetResult DiscoverPinnedEntryBytesTarget(
     evidence << L"cleanroom_rva=0x" << std::hex << rva
              << L" entry_bytes=" << (exact_match ? L"matched" : L"mismatch")
              << L" executable=" << (executable ? L"yes" : L"no");
+    if (!exact_match && IsRvaWithinImage(image, rva, expected_length)) {
+        const auto* actual_bytes = image.base + rva;
+        evidence << L" expected_bytes=\"" << HexBytes(expected_bytes, expected_length)
+                 << L"\" actual_bytes=\""
+                 << HexBytes(actual_bytes, expected_length) << L"\"";
+    }
     target.validation_evidence = evidence.str();
 
     if (!executable) {

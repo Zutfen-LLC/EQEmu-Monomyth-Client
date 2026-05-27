@@ -58,6 +58,7 @@ constexpr std::uint32_t kMemorizeSendCorrelationMaxWrapperSends = 8;
 constexpr std::uint32_t kSpellbookScribeCorrelationMaxWrapperSends = 8;
 constexpr std::uint32_t kInventoryClassDisplayCorrelationBudget = 48;
 constexpr std::uint32_t kItemDisplayClassDisplayCorrelationBudget = 64;
+constexpr std::uintptr_t kExpectedEqgameImageBase = 0x00400000;
 constexpr std::size_t kScribeGateDescriptorTableOffset = 0x4;
 constexpr std::size_t kScribeGateRelativeOffsetField = 0x4;
 constexpr std::size_t kScribeGateLookupContextBias = 0x8;
@@ -2699,6 +2700,147 @@ bool TryCopyBytes(
     return true;
 }
 
+std::uint32_t ReadLe32(const std::uint8_t* bytes) noexcept {
+    std::uint32_t value = 0;
+    std::memcpy(&value, bytes, sizeof(value));
+    return value;
+}
+
+bool RelocatedImmediateMatches(
+    const std::uint8_t* actual,
+    const std::uint8_t* expected,
+    std::size_t offset,
+    std::size_t immediate_offset,
+    std::intptr_t relocation_delta) noexcept {
+    const std::int64_t expected_value =
+        static_cast<std::int64_t>(ReadLe32(expected + offset + immediate_offset));
+    const std::int64_t actual_value =
+        static_cast<std::int64_t>(ReadLe32(actual + offset + immediate_offset));
+    return (actual_value - expected_value) ==
+        static_cast<std::int64_t>(relocation_delta);
+}
+
+bool TryMatchRelocatableInstruction(
+    const std::uint8_t* actual,
+    const std::uint8_t* expected,
+    std::size_t length,
+    std::size_t offset,
+    std::intptr_t relocation_delta,
+    std::size_t* consumed) noexcept {
+    if (actual == nullptr || expected == nullptr || consumed == nullptr ||
+        offset >= length) {
+        return false;
+    }
+
+    *consumed = 0;
+    if (offset + 5 <= length &&
+        actual[offset] == expected[offset] &&
+        (expected[offset] == 0x68 || expected[offset] == 0xA1 ||
+         expected[offset] == 0xA3 ||
+         (expected[offset] >= 0xB8 && expected[offset] <= 0xBF)) &&
+        RelocatedImmediateMatches(actual, expected, offset, 1, relocation_delta)) {
+        *consumed = 5;
+        return true;
+    }
+
+    if (offset + 6 <= length &&
+        actual[offset] == 0x64 && expected[offset] == 0x64 &&
+        actual[offset + 1] == 0xA1 && expected[offset + 1] == 0xA1 &&
+        RelocatedImmediateMatches(actual, expected, offset, 2, relocation_delta)) {
+        *consumed = 6;
+        return true;
+    }
+
+    if (offset + 7 <= length &&
+        actual[offset] == 0x64 && expected[offset] == 0x64 &&
+        actual[offset + 1] == 0x89 && expected[offset + 1] == 0x89 &&
+        actual[offset + 2] == 0x25 && expected[offset + 2] == 0x25 &&
+        RelocatedImmediateMatches(actual, expected, offset, 3, relocation_delta)) {
+        *consumed = 7;
+        return true;
+    }
+
+    if (offset + 6 <= length &&
+        actual[offset] == expected[offset] &&
+        (expected[offset] == 0x8B || expected[offset] == 0x89 ||
+         expected[offset] == 0x8D || expected[offset] == 0xFF) &&
+        actual[offset + 1] == expected[offset + 1] &&
+        (expected[offset + 1] & 0xC7) == 0x05 &&
+        RelocatedImmediateMatches(actual, expected, offset, 2, relocation_delta)) {
+        *consumed = 6;
+        return true;
+    }
+
+    if (offset + 7 <= length &&
+        actual[offset] == expected[offset] &&
+        (expected[offset] == 0x8B || expected[offset] == 0x89 ||
+         expected[offset] == 0x8D || expected[offset] == 0xFF) &&
+        actual[offset + 1] == expected[offset + 1] &&
+        actual[offset + 2] == expected[offset + 2] &&
+        (expected[offset + 1] & 0xC7) == 0x04 &&
+        (expected[offset + 2] & 0x07) == 0x05 &&
+        RelocatedImmediateMatches(actual, expected, offset, 3, relocation_delta)) {
+        *consumed = 7;
+        return true;
+    }
+
+    if (offset + 7 <= length &&
+        actual[offset] == 0x0F && expected[offset] == 0x0F &&
+        actual[offset + 1] == expected[offset + 1] &&
+        (expected[offset + 1] == 0xB6 || expected[offset + 1] == 0xB7 ||
+         expected[offset + 1] == 0xBE || expected[offset + 1] == 0xBF) &&
+        actual[offset + 2] == expected[offset + 2] &&
+        (expected[offset + 2] & 0xC7) == 0x80 &&
+        RelocatedImmediateMatches(actual, expected, offset, 3, relocation_delta)) {
+        *consumed = 7;
+        return true;
+    }
+
+    return false;
+}
+
+bool BytesMatchWithModuleRelocation(
+    const std::uint8_t* actual,
+    const std::uint8_t* expected,
+    std::size_t length,
+    std::uintptr_t module_base) noexcept {
+    if (actual == nullptr || expected == nullptr || length == 0) {
+        return false;
+    }
+
+    if (std::memcmp(actual, expected, length) == 0) {
+        return true;
+    }
+
+    const std::intptr_t relocation_delta =
+        static_cast<std::intptr_t>(module_base) -
+        static_cast<std::intptr_t>(kExpectedEqgameImageBase);
+    if (relocation_delta == 0) {
+        return false;
+    }
+
+    for (std::size_t i = 0; i < length;) {
+        std::size_t consumed = 0;
+        if (TryMatchRelocatableInstruction(
+                actual,
+                expected,
+                length,
+                i,
+                relocation_delta,
+                &consumed)) {
+            i += consumed;
+            continue;
+        }
+
+        if (actual[i] != expected[i]) {
+            return false;
+        }
+        ++i;
+    }
+
+    return true;
+}
+
 template <typename T>
 bool TryCopyObject(const void* source, T* destination) noexcept {
     return TryCopyBytes(
@@ -3988,12 +4130,17 @@ bool ValidateActivatedSkillUseSeamBytes(
         return false;
     }
 
+    const std::uintptr_t module_base = address >= rva ? (address - rva) : 0;
     const bool copied = TryCopyBytes(
         reinterpret_cast<const void*>(address),
         expected_length,
         live.data());
     const bool matches =
-        copied && std::memcmp(live.data(), expected, expected_length) == 0;
+        copied && BytesMatchWithModuleRelocation(
+            live.data(),
+            expected,
+            expected_length,
+            module_base);
 
     std::wstring message = L"hook_manager: activated skill use seam ";
     message += matches ? L"validated" : L"denied";
@@ -17344,10 +17491,11 @@ bool InstallProgressionSelectionClassDisplayHook(
         live_char_select_class_name_func_entry.data());
     const bool char_select_class_name_func_entry_matches =
         char_select_class_name_func_entry_copied &&
-        std::memcmp(
+        BytesMatchWithModuleRelocation(
             live_char_select_class_name_func_entry.data(),
             kCharSelectClassNameFuncEntryBytes.data(),
-            kCharSelectClassNameFuncEntryBytes.size()) == 0;
+            kCharSelectClassNameFuncEntryBytes.size(),
+            module_base);
     if (!char_select_class_name_func_entry_matches) {
         std::wstring message =
             L"hook_manager: char select class-name function trace denied target=CharSelectClassNameFunc validation=entry_bytes_mismatch expected=\"";
@@ -17920,10 +18068,11 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             live_invslot_handle_lbutton_core_entry.data());
         const bool invslot_handle_lbutton_core_entry_matches =
             invslot_handle_lbutton_core_entry_copied &&
-            std::memcmp(
+            BytesMatchWithModuleRelocation(
                 live_invslot_handle_lbutton_core_entry.data(),
                 kInvSlotHandleLButtonCoreEntryBytes.data(),
-                kInvSlotHandleLButtonCoreEntryBytes.size()) == 0;
+                kInvSlotHandleLButtonCoreEntryBytes.size(),
+                module_base);
         if (!invslot_handle_lbutton_core_entry_matches) {
             monomyth::logger::Log(
                 L"hook_manager: item usability helper denied target=CInvSlot::HandleLButtonUp validation=entry_bytes_mismatch");
@@ -17997,10 +18146,11 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             live_inventory_wnd_notification_entry.data());
         const bool inventory_wnd_notification_entry_matches =
             inventory_wnd_notification_entry_copied &&
-            std::memcmp(
+            BytesMatchWithModuleRelocation(
                 live_inventory_wnd_notification_entry.data(),
                 kInventoryWindowWndNotificationEntryBytes.data(),
-                kInventoryWindowWndNotificationEntryBytes.size()) == 0;
+                kInventoryWindowWndNotificationEntryBytes.size(),
+                module_base);
         if (!inventory_wnd_notification_entry_matches) {
             std::wstring inventory_wnd_notification_message =
                 L"hook_manager: inventory window wnd notification trace denied target=InventoryWindowWndNotification validation=entry_bytes_mismatch expected=\"";
@@ -18048,10 +18198,11 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             live_inventory_summary_candidate_a_entry.data());
         const bool inventory_summary_candidate_a_entry_matches =
             inventory_summary_candidate_a_entry_copied &&
-            std::memcmp(
+            BytesMatchWithModuleRelocation(
                 live_inventory_summary_candidate_a_entry.data(),
                 kInventorySummaryRefreshCandidateAEntryBytes.data(),
-                kInventorySummaryRefreshCandidateAEntryBytes.size()) == 0;
+                kInventorySummaryRefreshCandidateAEntryBytes.size(),
+                module_base);
         if (!inventory_summary_candidate_a_entry_matches) {
             monomyth::logger::Log(
                 L"hook_manager: inventory summary candidate trace denied target=InventorySummaryRefreshCandidateA validation=entry_bytes_mismatch");
@@ -18083,10 +18234,11 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             live_inventory_summary_candidate_b_entry.data());
         const bool inventory_summary_candidate_b_entry_matches =
             inventory_summary_candidate_b_entry_copied &&
-            std::memcmp(
+            BytesMatchWithModuleRelocation(
                 live_inventory_summary_candidate_b_entry.data(),
                 kInventorySummaryRefreshCandidateBEntryBytes.data(),
-                kInventorySummaryRefreshCandidateBEntryBytes.size()) == 0;
+                kInventorySummaryRefreshCandidateBEntryBytes.size(),
+                module_base);
         if (!inventory_summary_candidate_b_entry_matches) {
             monomyth::logger::Log(
                 L"hook_manager: inventory summary candidate trace denied target=InventorySummaryRefreshCandidateB validation=entry_bytes_mismatch");
@@ -18118,10 +18270,11 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             live_inventory_summary_candidate_c_entry.data());
         const bool inventory_summary_candidate_c_entry_matches =
             inventory_summary_candidate_c_entry_copied &&
-            std::memcmp(
+            BytesMatchWithModuleRelocation(
                 live_inventory_summary_candidate_c_entry.data(),
                 kInventorySummaryRefreshCandidateCEntryBytes.data(),
-                kInventorySummaryRefreshCandidateCEntryBytes.size()) == 0;
+                kInventorySummaryRefreshCandidateCEntryBytes.size(),
+                module_base);
         if (!inventory_summary_candidate_c_entry_matches) {
             std::wstring candidate_message =
                 L"hook_manager: inventory summary candidate trace denied target=InventorySummaryRefreshCandidateC validation=entry_bytes_mismatch expected=\"";
@@ -18165,10 +18318,11 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             live_inventory_summary_candidate_d_entry.data());
         const bool inventory_summary_candidate_d_entry_matches =
             inventory_summary_candidate_d_entry_copied &&
-            std::memcmp(
+            BytesMatchWithModuleRelocation(
                 live_inventory_summary_candidate_d_entry.data(),
                 kInventorySummaryRefreshCandidateDEntryBytes.data(),
-                kInventorySummaryRefreshCandidateDEntryBytes.size()) == 0;
+                kInventorySummaryRefreshCandidateDEntryBytes.size(),
+                module_base);
         if (!inventory_summary_candidate_d_entry_matches) {
             std::wstring candidate_message =
                 L"hook_manager: inventory summary candidate trace denied target=InventorySummaryRefreshCandidateD validation=entry_bytes_mismatch expected=\"";
