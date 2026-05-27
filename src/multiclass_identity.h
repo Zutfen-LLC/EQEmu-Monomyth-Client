@@ -24,6 +24,7 @@ struct OrderedClassIds {
 };
 
 bool IsPlayableClassId(unsigned int class_id) noexcept;
+bool IsCastingClassId(unsigned int class_id) noexcept;
 std::uint32_t ClassBit(unsigned int class_id) noexcept;
 std::uint32_t ClientItemClassBit(unsigned int class_id) noexcept;
 bool IsPlayableClassMask(std::uint32_t class_mask) noexcept;
@@ -37,6 +38,9 @@ bool HasAnyAuthoritativeClientItemClass(
     bool has_class_mask,
     std::uint32_t authoritative_class_mask,
     std::uint32_t client_item_class_mask) noexcept;
+bool HasAnyAuthoritativeCastingClass(
+    bool has_class_mask,
+    std::uint32_t authoritative_class_mask) noexcept;
 bool HasAnyAuthoritativeDualWieldClass(
     bool has_class_mask,
     std::uint32_t authoritative_class_mask) noexcept;
