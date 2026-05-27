@@ -54,7 +54,7 @@ HANDLE OpenLogFileAt(const std::wstring& path) noexcept {
         FILE_APPEND_DATA,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
         nullptr,
-        OPEN_ALWAYS,
+        CREATE_ALWAYS,
         FILE_ATTRIBUTE_NORMAL,
         nullptr);
 }
