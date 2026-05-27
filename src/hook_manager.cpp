@@ -81,8 +81,22 @@ constexpr std::size_t kClientItemInfoItemClassOffset = 0x1d4;
 constexpr std::size_t kClientItemInfoStackSizeOffset = 0x580;
 constexpr std::uint32_t kClientItemWrapperGetDataThunkRva = 0x003b06e0;
 constexpr std::uint32_t kCharacterZoneClientHasSkillRva = 0x0004a1b0;
+constexpr std::uint32_t kCharacterZoneClientCurManaRva = 0x000442e0;
+constexpr std::uint32_t kCharacterZoneClientCurManaTickCallsiteARva = 0x000579f3;
+constexpr std::uint32_t kCharacterZoneClientCurManaTickCallsiteBRva = 0x00057a29;
 constexpr std::uint32_t kCharacterZoneClientGetAdjustedSkillRva = 0x00049fe0;
+constexpr std::uint32_t kCharacterZoneClientGetManaRegenRva = 0x00052df0;
 constexpr std::uint32_t kCharacterZoneClientUseSkillRva = 0x0005b2d0;
+constexpr std::uint32_t kCharacterZoneClientMaxManaRva = 0x00181e60;
+constexpr std::uint32_t kPlayerManaEqTypeResolverRva = 0x00038990;
+constexpr std::uint32_t kCharacterZoneClientCurManaRefreshCallsiteRva = 0x0017a739;
+constexpr std::uint32_t kCharacterZoneClientCurManaGaugeCallsiteRva = 0x00362502;
+constexpr std::uint32_t kCharacterZoneClientCurManaLabelCallsiteARva = 0x0036522a;
+constexpr std::uint32_t kCharacterZoneClientCurManaLabelCallsiteBRva = 0x00365291;
+constexpr std::uint32_t kCharacterZoneClientCurManaLabelCallsiteCRva = 0x0036538c;
+constexpr std::uint32_t kPlayerWndConstructorRva = 0x00319690;
+constexpr int kPlayerManaEqTypeGauge = 0x000f;
+constexpr int kPlayerManaEqTypePercent = 0x01a1;
 constexpr std::uint32_t kSkillsWindowSkillValueProducerRva = 0x00184be0;
 constexpr std::uint32_t kSkillsWindowSkillValueCallsiteRva = 0x003577b5;
 constexpr std::uint32_t kSkillsWindowSkillValueReturnRva = 0x003577ba;
@@ -111,6 +125,9 @@ constexpr std::uint32_t kPowerSourceEquipmentSlotBit = 1u << kPowerSourceEquipme
 constexpr std::uint8_t kClientItemClassAugmentation = 54;
 constexpr std::int32_t kFirstEquipmentSlot = 0;
 constexpr std::int32_t kLastEquipmentSlot = 21;
+constexpr std::size_t kPlayerWndManaGaugeOffset = 0x022c;
+constexpr std::size_t kPlayerWndManaLabelOffset = 0x0238;
+constexpr std::size_t kPlayerWndManaPercentLabelOffset = 0x0244;
 constexpr std::size_t kLocalPlayerCharacterOffset = 0x02cc;
 constexpr std::size_t kLocalPlayerHoldingAnimationOffset = 0x0334;
 constexpr std::uint8_t kHoldingAnimationShield = 2;
@@ -278,6 +295,7 @@ constexpr std::uint32_t kCXWndMinimizeRva = 0x004666d0;
 constexpr std::uint32_t kGetClassDescRva = 0x00114dc0;
 constexpr std::uint32_t kGetClassThreeLetterCodeRva = 0x001153c0;
 constexpr std::uint32_t kGetDeityDescRva = 0x00115f70;
+constexpr std::size_t kPcProfileCurrentManaOffset = 0x338c;
 constexpr std::uint32_t kCXStrAssignTargetRva = 0x00405d90;
 constexpr std::uint32_t kCXWndSetWindowTextATargetRva = 0x00406ec0;
 // eqlib maps 0x136310 to CEverQuest::LeftClickedOnPlayer, not a live /who wrapper.
@@ -431,13 +449,26 @@ using ItemWrapperGetDataThunkFn = void* (MONOMYTH_THISCALL*)(
 using CharacterZoneClientHasSkillFn = bool (MONOMYTH_THISCALL*)(
     void* this_context,
     int skill_id);
+using CharacterZoneClientCurManaFn = int (MONOMYTH_THISCALL*)(
+    void* this_context,
+    int cap_at_max_like);
+using PlayerWndConstructorFn = void* (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* parent_window);
 using CharacterZoneClientGetAdjustedSkillFn = int (MONOMYTH_THISCALL*)(
     void* this_context,
     int skill_id);
+using CharacterZoneClientGetManaRegenFn = int (MONOMYTH_THISCALL*)(
+    void* this_context,
+    int include_items_and_buffs_like,
+    int combat_like);
 using CharacterZoneClientUseSkillFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     unsigned char skill_id,
     void* target);
+using CharacterZoneClientMaxManaFn = int (MONOMYTH_THISCALL*)(
+    void* this_context,
+    int cap_at_max_like);
 using SkillsWindowSkillValueProducerFn = int (MONOMYTH_THISCALL*)(
     void* this_context,
     int skill_id);
@@ -648,6 +679,13 @@ using InventorySummaryRefreshCandidateDFn = int (MONOMYTH_THISCALL*)(
 using CharacterListWndUpdateListFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     bool force_update);
+using PlayerManaEqTypeResolverFn = int (MONOMYTH_THISCALL*)(
+    void* this_context,
+    int eq_type,
+    int arg_a_like,
+    int arg_b_like,
+    int arg_c_like,
+    int arg_d_like);
 using CXWndActivateFn = void (MONOMYTH_THISCALL*)(void* this_context);
 using CXWndBringToTopFn = void (MONOMYTH_THISCALL*)(void* this_context, bool recurse);
 using CXWndMinimizeFn = int (MONOMYTH_THISCALL*)(void* this_context, bool minimized);
@@ -903,7 +941,12 @@ InlineDetour g_inventory_summary_refresh_candidate_b_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_c_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_d_detour = {};
 InlineDetour g_character_zone_client_has_skill_detour = {};
+InlineDetour g_character_zone_client_cur_mana_detour = {};
+InlineDetour g_player_wnd_constructor_detour = {};
+InlineDetour g_player_mana_eqtype_resolver_detour = {};
 InlineDetour g_character_zone_client_get_adjusted_skill_detour = {};
+InlineDetour g_character_zone_client_get_mana_regen_detour = {};
+InlineDetour g_character_zone_client_max_mana_detour = {};
 InlineDetour g_character_zone_client_use_skill_detour = {};
 InlineDetour g_char_select_class_name_func_detour = {};
 InlineDetour g_character_list_update_list_detour = {};
@@ -1000,6 +1043,13 @@ CallsitePatch g_move_item_ctor_site_b_callsite_patch = {};
 CallsitePatch g_guild_trainer_class_lookup_callsite_patch = {};
 CallsitePatch g_merchant_usable_class_mask_callsite_a_patch = {};
 CallsitePatch g_merchant_usable_class_mask_callsite_b_patch = {};
+CallsitePatch g_character_zone_client_cur_mana_tick_callsite_a_patch = {};
+CallsitePatch g_character_zone_client_cur_mana_tick_callsite_b_patch = {};
+CallsitePatch g_character_zone_client_cur_mana_refresh_callsite_patch = {};
+CallsitePatch g_character_zone_client_cur_mana_gauge_callsite_patch = {};
+CallsitePatch g_character_zone_client_cur_mana_label_callsite_a_patch = {};
+CallsitePatch g_character_zone_client_cur_mana_label_callsite_b_patch = {};
+CallsitePatch g_character_zone_client_cur_mana_label_callsite_c_patch = {};
 CallsitePatch g_skills_window_skill_value_callsite_patch = {};
 CallsitePatch g_skills_window_row_helper_callsite_a_patch = {};
 CallsitePatch g_skills_window_row_helper_callsite_b_patch = {};
@@ -1020,7 +1070,12 @@ GuildTrainerClassLookupFn g_original_guild_trainer_class_lookup = nullptr;
 CanEquipFn g_original_can_equip = nullptr;
 MerchantUsableClassMaskFn g_original_merchant_usable_class_mask = nullptr;
 CharacterZoneClientHasSkillFn g_original_character_zone_client_has_skill = nullptr;
+CharacterZoneClientCurManaFn g_original_character_zone_client_cur_mana = nullptr;
+PlayerWndConstructorFn g_original_player_wnd_constructor = nullptr;
+PlayerManaEqTypeResolverFn g_original_player_mana_eqtype_resolver = nullptr;
 CharacterZoneClientGetAdjustedSkillFn g_original_character_zone_client_get_adjusted_skill = nullptr;
+CharacterZoneClientGetManaRegenFn g_original_character_zone_client_get_mana_regen = nullptr;
+CharacterZoneClientMaxManaFn g_original_character_zone_client_max_mana = nullptr;
 CharacterZoneClientUseSkillFn g_original_character_zone_client_use_skill = nullptr;
 SkillsWindowSkillValueProducerFn g_original_skills_window_skill_value_producer = nullptr;
 SkillsWindowRowHelperFn g_original_skills_window_row_helper = nullptr;
@@ -1157,6 +1212,16 @@ std::uint64_t g_skills_window_skill_value_entry_count = 0;
 std::uint64_t g_skills_window_row_helper_entry_count = 0;
 std::uint64_t g_skills_window_skill_value_trace_count = 0;
 std::uint64_t g_skills_window_skill_value_override_count = 0;
+std::uint64_t g_multiclass_mana_regen_trace_count = 0;
+std::uint64_t g_multiclass_mana_regen_override_count = 0;
+std::uint64_t g_multiclass_cur_mana_trace_count = 0;
+std::uint64_t g_multiclass_cur_mana_override_count = 0;
+std::uint64_t g_multiclass_cur_mana_callsite_override_count = 0;
+std::uint64_t g_player_mana_visibility_force_count = 0;
+std::uint64_t g_player_mana_eqtype_trace_count = 0;
+std::uint64_t g_player_mana_eqtype_override_count = 0;
+std::uint64_t g_multiclass_max_mana_trace_count = 0;
+std::uint64_t g_multiclass_max_mana_override_count = 0;
 constexpr std::size_t kUiClassHelperCallerCatalogCapacity = 64;
 constexpr std::size_t kUiClassProducerCandidateCatalogCapacity = 24;
 std::array<std::uint32_t, kUiClassHelperCallerCatalogCapacity>
@@ -1176,6 +1241,7 @@ std::atomic<std::uintptr_t>
 std::atomic<std::uint32_t> g_inventory_class_display_correlation_notification_caller_rva = 0;
 std::atomic<std::uintptr_t> g_inventory_class_display_correlation_sender_window = 0;
 std::atomic<std::uintptr_t> g_inventory_class_display_correlation_payload_like = 0;
+std::atomic<std::uintptr_t> g_player_window_pointer = 0;
 std::atomic<std::uintptr_t> g_character_list_window_pointer = 0;
 std::atomic<std::uintptr_t> g_character_list_last_forced_refresh_window = 0;
 std::atomic<std::uint32_t> g_character_list_last_forced_refresh_mask = 0;
@@ -1389,6 +1455,12 @@ struct TemporaryLocalClassOverrideState {
     std::uint8_t class_record_original_class_id = 0;
 };
 
+struct LocalAuthoritativeCastingContext {
+    bool eligible = false;
+    std::uint8_t primary_class_id = 0;
+    std::uint32_t assigned_mask = 0;
+};
+
 struct SkillsWindowRowRecordLayout {
     std::uintptr_t name_field_a = 0;
     std::uintptr_t name_field_b = 0;
@@ -1402,6 +1474,19 @@ bool TryComputeEqgameCallerReturnRva(
     std::uintptr_t caller_return_address,
     std::uint32_t* caller_return_rva) noexcept;
 bool TryReadLocalPlayerCharacterPointer(void** character) noexcept;
+int MONOMYTH_FASTCALL CharacterZoneClientCurManaHook(
+    void* this_context,
+    void*,
+    int cap_at_max_like) noexcept;
+int MONOMYTH_FASTCALL CharacterZoneClientMaxManaHook(
+    void* this_context,
+    void*,
+    int cap_at_max_like) noexcept;
+int MONOMYTH_FASTCALL CharacterZoneClientGetManaRegenHook(
+    void* this_context,
+    void*,
+    int include_items_and_buffs_like,
+    int combat_like) noexcept;
 
 std::wstring HexPtr(std::uintptr_t value) {
     std::wstringstream stream;
@@ -1565,6 +1650,10 @@ bool ShouldLogSpellUiDerivedWindowTrace(std::uint64_t count) noexcept {
 }
 
 bool ShouldLogSpellUiAboutToShowGateTrace(std::uint64_t count) noexcept {
+    return count <= 20 || (count % 50) == 0;
+}
+
+bool ShouldLogMulticlassManaTrace(std::uint64_t count) noexcept {
     return count <= 20 || (count % 50) == 0;
 }
 
@@ -5207,6 +5296,539 @@ void RestoreTemporaryLocalClassOverride(
     *state = {};
 }
 
+bool TryBuildLocalAuthoritativeCastingContext(
+    void* this_context,
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    LocalAuthoritativeCastingContext* context) noexcept {
+    if (context == nullptr) {
+        return false;
+    }
+
+    *context = {};
+
+    if (!IsLocalPlayerCharacterContext(this_context) ||
+        !snapshot.has_classes_bitmask ||
+        snapshot.classes_bitmask == 0 ||
+        !monomyth::multiclass_identity::IsPlayableClassMask(snapshot.classes_bitmask) ||
+        !monomyth::multiclass_identity::HasAnyAuthoritativeCastingClass(
+            snapshot.has_classes_bitmask,
+            snapshot.classes_bitmask)) {
+        return false;
+    }
+
+    std::uint8_t primary_class_id = 0;
+    if (!TryReadLocalProfileClassId(&primary_class_id) ||
+        !monomyth::multiclass_identity::IsPlayableClassId(primary_class_id) ||
+        monomyth::multiclass_identity::IsCastingClassId(primary_class_id) ||
+        !monomyth::multiclass_identity::HasAuthoritativeClass(
+            snapshot.has_classes_bitmask,
+            snapshot.classes_bitmask,
+            primary_class_id)) {
+        return false;
+    }
+
+    context->eligible = true;
+    context->primary_class_id = primary_class_id;
+    context->assigned_mask = snapshot.classes_bitmask;
+    return true;
+}
+
+int EvaluateBestAuthoritativeMaxMana(
+    void* this_context,
+    int cap_at_max_like,
+    int native_result,
+    const LocalAuthoritativeCastingContext& context,
+    unsigned int* best_class_id_out) noexcept {
+    if (!context.eligible ||
+        g_original_character_zone_client_max_mana == nullptr ||
+        best_class_id_out == nullptr) {
+        return native_result;
+    }
+
+    *best_class_id_out = 0;
+    int best_result = native_result;
+
+    for (unsigned int class_id = monomyth::multiclass_identity::kFirstPlayableClassId;
+         class_id <= monomyth::multiclass_identity::kLastPlayableClassId;
+         ++class_id) {
+        if (!monomyth::multiclass_identity::IsCastingClassId(class_id) ||
+            !monomyth::multiclass_identity::HasAuthoritativeClass(
+                true,
+                context.assigned_mask,
+                class_id)) {
+            continue;
+        }
+
+        TemporaryLocalClassOverrideState override_state = {};
+        if (!TryApplyTemporaryLocalClassOverride(
+                static_cast<std::uint8_t>(class_id),
+                &override_state)) {
+            continue;
+        }
+
+        int candidate_result = native_result;
+        bool candidate_ok = false;
+#if defined(_MSC_VER)
+        __try {
+            candidate_result =
+                g_original_character_zone_client_max_mana(this_context, cap_at_max_like);
+            candidate_ok = true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            candidate_ok = false;
+        }
+#else
+        candidate_result =
+            g_original_character_zone_client_max_mana(this_context, cap_at_max_like);
+        candidate_ok = true;
+#endif
+
+        RestoreTemporaryLocalClassOverride(&override_state);
+
+        if (candidate_ok && candidate_result > best_result) {
+            best_result = candidate_result;
+            *best_class_id_out = class_id;
+        }
+    }
+
+    return best_result;
+}
+
+int EvaluateBestAuthoritativeManaRegen(
+    void* this_context,
+    int include_items_and_buffs_like,
+    int combat_like,
+    int native_result,
+    const LocalAuthoritativeCastingContext& context,
+    unsigned int* best_class_id_out) noexcept {
+    if (!context.eligible ||
+        g_original_character_zone_client_get_mana_regen == nullptr ||
+        best_class_id_out == nullptr) {
+        return native_result;
+    }
+
+    *best_class_id_out = 0;
+    int best_result = native_result;
+
+    for (unsigned int class_id = monomyth::multiclass_identity::kFirstPlayableClassId;
+         class_id <= monomyth::multiclass_identity::kLastPlayableClassId;
+         ++class_id) {
+        if (!monomyth::multiclass_identity::IsCastingClassId(class_id) ||
+            !monomyth::multiclass_identity::HasAuthoritativeClass(
+                true,
+                context.assigned_mask,
+                class_id)) {
+            continue;
+        }
+
+        TemporaryLocalClassOverrideState override_state = {};
+        if (!TryApplyTemporaryLocalClassOverride(
+                static_cast<std::uint8_t>(class_id),
+                &override_state)) {
+            continue;
+        }
+
+        int candidate_result = native_result;
+        bool candidate_ok = false;
+#if defined(_MSC_VER)
+        __try {
+            candidate_result = g_original_character_zone_client_get_mana_regen(
+                this_context,
+                include_items_and_buffs_like,
+                combat_like);
+            candidate_ok = true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            candidate_ok = false;
+        }
+#else
+        candidate_result = g_original_character_zone_client_get_mana_regen(
+            this_context,
+            include_items_and_buffs_like,
+            combat_like);
+        candidate_ok = true;
+#endif
+
+        RestoreTemporaryLocalClassOverride(&override_state);
+
+        if (candidate_ok && candidate_result > best_result) {
+            best_result = candidate_result;
+            *best_class_id_out = class_id;
+        }
+    }
+
+    return best_result;
+}
+
+int EvaluateBestAuthoritativeCurMana(
+    void* this_context,
+    int cap_at_max_like,
+    int native_result,
+    const LocalAuthoritativeCastingContext& context,
+    unsigned int* best_class_id_out) noexcept {
+    if (!context.eligible ||
+        g_original_character_zone_client_cur_mana == nullptr ||
+        best_class_id_out == nullptr) {
+        return native_result;
+    }
+
+    *best_class_id_out = 0;
+    int best_result = native_result;
+
+    for (unsigned int class_id = monomyth::multiclass_identity::kFirstPlayableClassId;
+         class_id <= monomyth::multiclass_identity::kLastPlayableClassId;
+         ++class_id) {
+        if (!monomyth::multiclass_identity::IsCastingClassId(class_id) ||
+            !monomyth::multiclass_identity::HasAuthoritativeClass(
+                true,
+                context.assigned_mask,
+                class_id)) {
+            continue;
+        }
+
+        TemporaryLocalClassOverrideState override_state = {};
+        if (!TryApplyTemporaryLocalClassOverride(
+                static_cast<std::uint8_t>(class_id),
+                &override_state)) {
+            continue;
+        }
+
+        int candidate_result = native_result;
+        bool candidate_ok = false;
+#if defined(_MSC_VER)
+        __try {
+            candidate_result =
+                g_original_character_zone_client_cur_mana(this_context, cap_at_max_like);
+            candidate_ok = true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            candidate_ok = false;
+        }
+#else
+        candidate_result =
+            g_original_character_zone_client_cur_mana(this_context, cap_at_max_like);
+        candidate_ok = true;
+#endif
+
+        RestoreTemporaryLocalClassOverride(&override_state);
+
+        if (candidate_ok && candidate_result > best_result) {
+            best_result = candidate_result;
+            *best_class_id_out = class_id;
+        }
+    }
+
+    return best_result;
+}
+
+bool IsPlayerManaEqTypeVisibilityKind(int eq_type) noexcept {
+    return eq_type == kPlayerManaEqTypeGauge || eq_type == kPlayerManaEqTypePercent;
+}
+
+int EvaluateBestAuthoritativePlayerManaEqTypeValue(
+    void* this_context,
+    int eq_type,
+    int arg_a_like,
+    int arg_b_like,
+    int arg_c_like,
+    int arg_d_like,
+    int native_result,
+    const LocalAuthoritativeCastingContext& context,
+    unsigned int* best_class_id_out) noexcept {
+    if (!context.eligible ||
+        g_original_player_mana_eqtype_resolver == nullptr ||
+        best_class_id_out == nullptr ||
+        !IsPlayerManaEqTypeVisibilityKind(eq_type)) {
+        return native_result;
+    }
+
+    *best_class_id_out = 0;
+    int best_result = native_result;
+
+    for (unsigned int class_id = monomyth::multiclass_identity::kFirstPlayableClassId;
+         class_id <= monomyth::multiclass_identity::kLastPlayableClassId;
+         ++class_id) {
+        if (!monomyth::multiclass_identity::IsCastingClassId(class_id) ||
+            !monomyth::multiclass_identity::HasAuthoritativeClass(
+                true,
+                context.assigned_mask,
+                class_id)) {
+            continue;
+        }
+
+        TemporaryLocalClassOverrideState override_state = {};
+        if (!TryApplyTemporaryLocalClassOverride(
+                static_cast<std::uint8_t>(class_id),
+                &override_state)) {
+            continue;
+        }
+
+        int candidate_result = native_result;
+        bool candidate_ok = false;
+#if defined(_MSC_VER)
+        __try {
+            candidate_result = g_original_player_mana_eqtype_resolver(
+                this_context,
+                eq_type,
+                arg_a_like,
+                arg_b_like,
+                arg_c_like,
+                arg_d_like);
+            candidate_ok = true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            candidate_ok = false;
+        }
+#else
+        candidate_result = g_original_player_mana_eqtype_resolver(
+            this_context,
+            eq_type,
+            arg_a_like,
+            arg_b_like,
+            arg_c_like,
+            arg_d_like);
+        candidate_ok = true;
+#endif
+
+        RestoreTemporaryLocalClassOverride(&override_state);
+
+        if (candidate_ok && candidate_result > best_result) {
+            best_result = candidate_result;
+            *best_class_id_out = class_id;
+        }
+    }
+
+    return best_result;
+}
+
+bool TryWriteLocalCurrentManaValue(int mana_value) noexcept {
+    const int clamped_mana = mana_value < 0 ? 0 : mana_value;
+    bool profile_write_ok = false;
+    bool class_record_write_ok = false;
+
+    void* profile = nullptr;
+    std::uint32_t profile_class_id = 0;
+    if (TryResolveLocalProfileClassStorage(&profile, &profile_class_id) &&
+        profile != nullptr) {
+        profile_write_ok = TryWriteObject(
+            reinterpret_cast<void*>(
+                reinterpret_cast<std::uintptr_t>(profile) + kPcProfileCurrentManaOffset),
+            clamped_mana);
+    }
+
+    void* class_record = nullptr;
+    std::uint8_t class_record_class_id = 0;
+    if (TryResolveLocalCharDataClassRecordStorage(&class_record, &class_record_class_id) &&
+        class_record != nullptr) {
+        class_record_write_ok = TryWriteObject(
+            reinterpret_cast<void*>(
+                reinterpret_cast<std::uintptr_t>(class_record) + kPcProfileCurrentManaOffset),
+            clamped_mana);
+    }
+
+    return profile_write_ok || class_record_write_ok;
+}
+
+std::uint32_t CallerRvaFromReturnAddress(std::uintptr_t caller_return_address) noexcept {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0 || caller_return_address < module_base) {
+        return 0;
+    }
+
+    return static_cast<std::uint32_t>(caller_return_address - module_base);
+}
+
+void TryForcePlayerManaControlsVisible(
+    const LocalAuthoritativeCastingContext& context,
+    const wchar_t* trigger) noexcept {
+    if (!context.eligible) {
+        return;
+    }
+
+    const std::uintptr_t player_window = g_player_window_pointer.load();
+    if (player_window == 0) {
+        return;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return;
+    }
+
+    auto* const show_fn = reinterpret_cast<CXWndShowFn>(module_base + kCXWndShowRva);
+    if (show_fn == nullptr) {
+        return;
+    }
+
+    const std::uintptr_t controls[] = {
+        player_window + kPlayerWndManaGaugeOffset,
+        player_window + kPlayerWndManaLabelOffset,
+        player_window + kPlayerWndManaPercentLabelOffset,
+    };
+
+    std::uintptr_t child_windows[std::size(controls)] = {};
+    bool visible_before[std::size(controls)] = {};
+    std::size_t forced_count = 0;
+
+    for (std::size_t i = 0; i < std::size(controls); ++i) {
+        if (!TryCopyObject(reinterpret_cast<const void*>(controls[i]), &child_windows[i]) ||
+            child_windows[i] == 0) {
+            continue;
+        }
+
+        CxWndStateSnapshot snapshot = {};
+        const bool have_snapshot =
+            TryReadCxWndStateSnapshot(reinterpret_cast<void*>(child_windows[i]), &snapshot);
+        visible_before[i] = have_snapshot && snapshot.visible;
+        if (have_snapshot && snapshot.visible) {
+            continue;
+        }
+
+#if defined(_MSC_VER)
+        __try {
+            show_fn(reinterpret_cast<void*>(child_windows[i]), true, true, true);
+            ++forced_count;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+        }
+#else
+        show_fn(reinterpret_cast<void*>(child_windows[i]), true, true, true);
+        ++forced_count;
+#endif
+    }
+
+    if (forced_count == 0) {
+        return;
+    }
+
+    const std::uint64_t count = ++g_player_mana_visibility_force_count;
+    if (count <= 8 || (count % 25) == 0) {
+        std::wstring message = L"PlayerManaVisibilityForce";
+        message += L" count=";
+        message += std::to_wstring(count);
+        message += L" trigger=\"";
+        message += (trigger == nullptr ? L"" : trigger);
+        message += L"\" player_window=";
+        message += HexPtr(player_window);
+        message += L" assigned_mask=";
+        message += Hex32(context.assigned_mask);
+        message += L" primary_class_id=";
+        message += std::to_wstring(context.primary_class_id);
+        message += L" forced_count=";
+        message += std::to_wstring(forced_count);
+        message += L" mana_gauge=";
+        message += HexPtr(child_windows[0]);
+        message += L" mana_gauge_visible_before=";
+        message += visible_before[0] ? L"true" : L"false";
+        message += L" mana_label=";
+        message += HexPtr(child_windows[1]);
+        message += L" mana_label_visible_before=";
+        message += visible_before[1] ? L"true" : L"false";
+        message += L" mana_pct_label=";
+        message += HexPtr(child_windows[2]);
+        message += L" mana_pct_label_visible_before=";
+        message += visible_before[2] ? L"true" : L"false";
+        monomyth::logger::Log(message);
+    }
+}
+
+int InvokeCharacterZoneClientCurManaOverride(
+    void* this_context,
+    int cap_at_max_like,
+    std::uint32_t caller_rva) noexcept {
+    if (g_original_character_zone_client_cur_mana == nullptr) {
+        return 0;
+    }
+
+    int native_result = 0;
+#if defined(_MSC_VER)
+    __try {
+        native_result = g_original_character_zone_client_cur_mana(this_context, cap_at_max_like);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+#else
+    native_result = g_original_character_zone_client_cur_mana(this_context, cap_at_max_like);
+#endif
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    LocalAuthoritativeCastingContext context = {};
+    const bool eligible =
+        TryBuildLocalAuthoritativeCastingContext(this_context, snapshot, &context);
+
+    unsigned int best_class_id = 0;
+    int authoritative_result =
+        eligible
+            ? EvaluateBestAuthoritativeCurMana(
+                  this_context,
+                  cap_at_max_like,
+                  native_result,
+                  context,
+                  &best_class_id)
+            : native_result;
+
+    int seeded_from_max_result = 0;
+    bool current_mana_seeded = false;
+    if (eligible && authoritative_result <= 0 && native_result <= 0) {
+        unsigned int best_max_class_id = 0;
+        const int authoritative_max = EvaluateBestAuthoritativeMaxMana(
+            this_context,
+            cap_at_max_like,
+            0,
+            context,
+            &best_max_class_id);
+        if (authoritative_max > 0 && TryWriteLocalCurrentManaValue(authoritative_max)) {
+            current_mana_seeded = true;
+            seeded_from_max_result = authoritative_max;
+            if (best_class_id == 0) {
+                best_class_id = best_max_class_id;
+            }
+            authoritative_result = authoritative_max;
+        }
+    }
+
+    if (eligible) {
+        TryForcePlayerManaControlsVisible(context, L"cur_mana");
+    }
+
+    const bool override_applied = authoritative_result > native_result;
+    const std::uint64_t count = ++g_multiclass_cur_mana_trace_count;
+    if (override_applied) {
+        ++g_multiclass_cur_mana_override_count;
+        if (caller_rva != 0) {
+            ++g_multiclass_cur_mana_callsite_override_count;
+        }
+    }
+
+    if (ShouldLogMulticlassManaTrace(count)) {
+        std::wstring message = L"MulticlassManaTrace kind=\"cur_mana\" count=";
+        message += std::to_wstring(count);
+        message += L" this=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+        message += L" native_result=";
+        message += std::to_wstring(native_result);
+        message += L" authoritative_result=";
+        message += std::to_wstring(authoritative_result);
+        message += L" override_applied=";
+        message += override_applied ? L"true" : L"false";
+        message += L" eligible=";
+        message += eligible ? L"true" : L"false";
+        message += L" assigned_mask=";
+        message += Hex32(eligible ? context.assigned_mask : 0);
+        message += L" primary_class_id=";
+        message += std::to_wstring(context.primary_class_id);
+        message += L" best_class_id=";
+        message += std::to_wstring(best_class_id);
+        message += L" cap_at_max=";
+        message += cap_at_max_like != 0 ? L"true" : L"false";
+        message += L" current_mana_seeded=";
+        message += current_mana_seeded ? L"true" : L"false";
+        message += L" seeded_from_max_result=";
+        message += std::to_wstring(seeded_from_max_result);
+        message += L" caller_rva=";
+        message += Hex32(caller_rva);
+        monomyth::logger::Log(message);
+    }
+
+    return authoritative_result;
+}
+
 int EvaluateBestAuthoritativeAdjustedSkill(
     void* this_context,
     int skill_id,
@@ -6732,6 +7354,283 @@ int MONOMYTH_FASTCALL CharacterZoneClientGetAdjustedSkillHook(
         multiclass_mask_result,
         override_applied);
     return returned_result;
+}
+
+void* MONOMYTH_FASTCALL PlayerWndConstructorHook(
+    void* this_context,
+    void*,
+    void* parent_window) noexcept {
+    if (g_original_player_wnd_constructor == nullptr) {
+        return this_context;
+    }
+
+    void* result = this_context;
+#if defined(_MSC_VER)
+    __try {
+        result = g_original_player_wnd_constructor(this_context, parent_window);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return this_context;
+    }
+#else
+    result = g_original_player_wnd_constructor(this_context, parent_window);
+#endif
+
+    g_player_window_pointer.store(reinterpret_cast<std::uintptr_t>(this_context));
+    return result;
+}
+
+int MONOMYTH_FASTCALL CharacterZoneClientCurManaHook(
+    void* this_context,
+    void*,
+    int cap_at_max_like) noexcept {
+    return InvokeCharacterZoneClientCurManaOverride(
+        this_context,
+        cap_at_max_like,
+        CallerRvaFromReturnAddress(GetCallerReturnAddress()));
+}
+
+int MONOMYTH_FASTCALL CharacterZoneClientCurManaCallsiteHook(
+    void* this_context,
+    void*,
+    int cap_at_max_like) noexcept {
+    return InvokeCharacterZoneClientCurManaOverride(
+        this_context,
+        cap_at_max_like,
+        CallerRvaFromReturnAddress(GetCallerReturnAddress()));
+}
+
+int MONOMYTH_FASTCALL CharacterZoneClientMaxManaHook(
+    void* this_context,
+    void*,
+    int cap_at_max_like) noexcept {
+    if (g_original_character_zone_client_max_mana == nullptr) {
+        return 0;
+    }
+
+    int native_result = 0;
+#if defined(_MSC_VER)
+    __try {
+        native_result = g_original_character_zone_client_max_mana(this_context, cap_at_max_like);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+#else
+    native_result = g_original_character_zone_client_max_mana(this_context, cap_at_max_like);
+#endif
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    LocalAuthoritativeCastingContext context = {};
+    const bool eligible =
+        TryBuildLocalAuthoritativeCastingContext(this_context, snapshot, &context);
+    unsigned int best_class_id = 0;
+    const int authoritative_result =
+        eligible
+            ? EvaluateBestAuthoritativeMaxMana(
+                  this_context,
+                  cap_at_max_like,
+                  native_result,
+                  context,
+                  &best_class_id)
+            : native_result;
+    const bool override_applied = authoritative_result > native_result;
+    const std::uint64_t count = ++g_multiclass_max_mana_trace_count;
+
+    if (override_applied) {
+        ++g_multiclass_max_mana_override_count;
+    }
+
+    if (ShouldLogMulticlassManaTrace(count)) {
+        std::wstring message = L"MulticlassManaTrace kind=\"max_mana\" count=";
+        message += std::to_wstring(count);
+        message += L" this=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+        message += L" native_result=";
+        message += std::to_wstring(native_result);
+        message += L" authoritative_result=";
+        message += std::to_wstring(authoritative_result);
+        message += L" override_applied=";
+        message += override_applied ? L"true" : L"false";
+        message += L" eligible=";
+        message += eligible ? L"true" : L"false";
+        message += L" assigned_mask=";
+        message += Hex32(eligible ? context.assigned_mask : 0);
+        message += L" primary_class_id=";
+        message += std::to_wstring(context.primary_class_id);
+        message += L" best_class_id=";
+        message += std::to_wstring(best_class_id);
+        message += L" cap_at_max=";
+        message += cap_at_max_like != 0 ? L"true" : L"false";
+        monomyth::logger::Log(message);
+    }
+
+    return authoritative_result;
+}
+
+int MONOMYTH_FASTCALL CharacterZoneClientGetManaRegenHook(
+    void* this_context,
+    void*,
+    int include_items_and_buffs_like,
+    int combat_like) noexcept {
+    if (g_original_character_zone_client_get_mana_regen == nullptr) {
+        return 0;
+    }
+
+    int native_result = 0;
+#if defined(_MSC_VER)
+    __try {
+        native_result = g_original_character_zone_client_get_mana_regen(
+            this_context,
+            include_items_and_buffs_like,
+            combat_like);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+#else
+    native_result = g_original_character_zone_client_get_mana_regen(
+        this_context,
+        include_items_and_buffs_like,
+        combat_like);
+#endif
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    LocalAuthoritativeCastingContext context = {};
+    const bool eligible =
+        TryBuildLocalAuthoritativeCastingContext(this_context, snapshot, &context);
+    unsigned int best_class_id = 0;
+    const int authoritative_result =
+        eligible
+            ? EvaluateBestAuthoritativeManaRegen(
+                  this_context,
+                  include_items_and_buffs_like,
+                  combat_like,
+                  native_result,
+                  context,
+                  &best_class_id)
+            : native_result;
+    const bool override_applied = authoritative_result > native_result;
+    const std::uint64_t count = ++g_multiclass_mana_regen_trace_count;
+
+    if (override_applied) {
+        ++g_multiclass_mana_regen_override_count;
+    }
+
+    if (ShouldLogMulticlassManaTrace(count)) {
+        std::wstring message = L"MulticlassManaTrace kind=\"mana_regen\" count=";
+        message += std::to_wstring(count);
+        message += L" this=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+        message += L" native_result=";
+        message += std::to_wstring(native_result);
+        message += L" authoritative_result=";
+        message += std::to_wstring(authoritative_result);
+        message += L" override_applied=";
+        message += override_applied ? L"true" : L"false";
+        message += L" eligible=";
+        message += eligible ? L"true" : L"false";
+        message += L" assigned_mask=";
+        message += Hex32(eligible ? context.assigned_mask : 0);
+        message += L" primary_class_id=";
+        message += std::to_wstring(context.primary_class_id);
+        message += L" best_class_id=";
+        message += std::to_wstring(best_class_id);
+        message += L" include_items_and_buffs=";
+        message += include_items_and_buffs_like != 0 ? L"true" : L"false";
+        message += L" combat=";
+        message += combat_like != 0 ? L"true" : L"false";
+        monomyth::logger::Log(message);
+    }
+
+    return authoritative_result;
+}
+
+int MONOMYTH_FASTCALL PlayerManaEqTypeResolverHook(
+    void* this_context,
+    void*,
+    int eq_type,
+    int arg_a_like,
+    int arg_b_like,
+    int arg_c_like,
+    int arg_d_like) noexcept {
+    if (g_original_player_mana_eqtype_resolver == nullptr) {
+        return 0;
+    }
+
+    int native_result = 0;
+#if defined(_MSC_VER)
+    __try {
+        native_result = g_original_player_mana_eqtype_resolver(
+            this_context,
+            eq_type,
+            arg_a_like,
+            arg_b_like,
+            arg_c_like,
+            arg_d_like);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+#else
+    native_result = g_original_player_mana_eqtype_resolver(
+        this_context,
+        eq_type,
+        arg_a_like,
+        arg_b_like,
+        arg_c_like,
+        arg_d_like);
+#endif
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    LocalAuthoritativeCastingContext context = {};
+    const bool eligible =
+        TryBuildLocalAuthoritativeCastingContext(this_context, snapshot, &context);
+    unsigned int best_class_id = 0;
+    const int authoritative_result =
+        eligible
+            ? EvaluateBestAuthoritativePlayerManaEqTypeValue(
+                  this_context,
+                  eq_type,
+                  arg_a_like,
+                  arg_b_like,
+                  arg_c_like,
+                  arg_d_like,
+                  native_result,
+                  context,
+                  &best_class_id)
+            : native_result;
+    const bool override_applied = authoritative_result > native_result;
+    const std::uint64_t count = ++g_player_mana_eqtype_trace_count;
+    if (override_applied) {
+        ++g_player_mana_eqtype_override_count;
+    }
+
+    if ((override_applied || ShouldLogMulticlassManaTrace(count)) &&
+        IsPlayerManaEqTypeVisibilityKind(eq_type)) {
+        std::wstring message = L"MulticlassManaTrace kind=\"ui_eqtype\" count=";
+        message += std::to_wstring(count);
+        message += L" this=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+        message += L" eq_type=";
+        message += Hex32(static_cast<std::uint32_t>(eq_type));
+        message += L" native_result=";
+        message += std::to_wstring(native_result);
+        message += L" authoritative_result=";
+        message += std::to_wstring(authoritative_result);
+        message += L" override_applied=";
+        message += override_applied ? L"true" : L"false";
+        message += L" eligible=";
+        message += eligible ? L"true" : L"false";
+        message += L" assigned_mask=";
+        message += Hex32(eligible ? context.assigned_mask : 0);
+        message += L" primary_class_id=";
+        message += std::to_wstring(context.primary_class_id);
+        message += L" best_class_id=";
+        message += std::to_wstring(best_class_id);
+        monomyth::logger::Log(message);
+    }
+
+    return authoritative_result;
 }
 
 int InvokeSkillsWindowSkillValueProducerHook(
@@ -19640,6 +20539,351 @@ bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest& manifest) noe
     return true;
 }
 
+bool InstallLocalManaHooks(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.multiclass_spell_usability_allowed) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: local mana hooks denied reason=\"module_base_unavailable\"");
+        return false;
+    }
+
+    constexpr std::array<std::uint8_t, 22> kCharacterZoneClientMaxManaEntryBytes = {
+        0x56, 0x8b, 0xf1, 0x8b, 0x86, 0x40, 0xd2, 0xff, 0xff, 0x8b, 0x48,
+        0x04, 0x8d, 0x8c, 0x31, 0x40, 0xd2, 0xff, 0xff, 0x8d, 0x49, 0x04,
+    };
+    constexpr std::array<std::uint8_t, 27> kPlayerManaEqTypeResolverEntryBytes = {
+        0x83, 0xec, 0x30, 0x53, 0x33, 0xdb, 0x55, 0x56, 0x8b, 0xf1, 0xb8,
+        0xe7, 0x03, 0x00, 0x00, 0x89, 0x44, 0x24, 0x30, 0x89, 0x5c, 0x24,
+        0x18, 0x89, 0x5c, 0x24, 0x1c,
+    };
+    constexpr std::array<std::uint8_t, 24> kPlayerWndConstructorEntryBytes = {
+        0x6a, 0xff, 0x68, 0x62, 0x26, 0x99, 0x00, 0x64, 0xa1, 0x00, 0x00, 0x00,
+        0x00, 0x50, 0x64, 0x89, 0x25, 0x00, 0x00, 0x00, 0x00, 0x83, 0xec, 0x08,
+    };
+    constexpr std::array<std::uint8_t, 24> kCharacterZoneClientCurManaEntryBytes = {
+        0x51, 0x80, 0x7c, 0x24, 0x08, 0x00, 0x53, 0x56, 0x57, 0x8b, 0xf1, 0x74,
+        0x0a, 0x80, 0x7e, 0x0d, 0x00, 0x75, 0x04, 0xb3, 0x01, 0xeb, 0x02, 0x32,
+    };
+    constexpr std::array<std::uint8_t, 24> kCharacterZoneClientGetManaRegenEntryBytes = {
+        0x83, 0xec, 0x08, 0x53, 0x56, 0x8b, 0xf1, 0x8b, 0x46, 0x04, 0x8b, 0x48,
+        0x04, 0x8b, 0x54, 0x31, 0x04, 0x8b, 0x42, 0x4c, 0x8d, 0x4c, 0x31, 0x04,
+    };
+
+    const std::uintptr_t cur_mana_address = module_base + kCharacterZoneClientCurManaRva;
+    const std::uintptr_t max_mana_address = module_base + kCharacterZoneClientMaxManaRva;
+    const std::uintptr_t mana_regen_address = module_base + kCharacterZoneClientGetManaRegenRva;
+    const std::uintptr_t player_mana_eqtype_resolver_address =
+        module_base + kPlayerManaEqTypeResolverRva;
+    const std::uintptr_t player_wnd_constructor_address =
+        module_base + kPlayerWndConstructorRva;
+    g_original_character_zone_client_cur_mana =
+        reinterpret_cast<CharacterZoneClientCurManaFn>(cur_mana_address);
+    g_original_player_mana_eqtype_resolver =
+        reinterpret_cast<PlayerManaEqTypeResolverFn>(player_mana_eqtype_resolver_address);
+
+    std::array<std::uint8_t, kPlayerManaEqTypeResolverEntryBytes.size()>
+        live_player_mana_eqtype_resolver = {};
+    std::array<std::uint8_t, kPlayerWndConstructorEntryBytes.size()> live_player_wnd_ctor = {};
+    std::array<std::uint8_t, kCharacterZoneClientCurManaEntryBytes.size()> live_cur_mana = {};
+    std::array<std::uint8_t, kCharacterZoneClientMaxManaEntryBytes.size()> live_max_mana = {};
+    std::array<std::uint8_t, kCharacterZoneClientGetManaRegenEntryBytes.size()> live_mana_regen =
+        {};
+    const bool player_mana_eqtype_resolver_entry_ok =
+        TryCopyBytes(
+            reinterpret_cast<const void*>(player_mana_eqtype_resolver_address),
+            live_player_mana_eqtype_resolver.size(),
+            live_player_mana_eqtype_resolver.data()) &&
+        std::memcmp(
+            live_player_mana_eqtype_resolver.data(),
+            kPlayerManaEqTypeResolverEntryBytes.data(),
+            kPlayerManaEqTypeResolverEntryBytes.size()) == 0;
+    const bool player_wnd_constructor_entry_ok =
+        TryCopyBytes(
+            reinterpret_cast<const void*>(player_wnd_constructor_address),
+            live_player_wnd_ctor.size(),
+            live_player_wnd_ctor.data()) &&
+        std::memcmp(
+            live_player_wnd_ctor.data(),
+            kPlayerWndConstructorEntryBytes.data(),
+            kPlayerWndConstructorEntryBytes.size()) == 0;
+    const bool cur_mana_entry_ok =
+        TryCopyBytes(
+            reinterpret_cast<const void*>(cur_mana_address),
+            live_cur_mana.size(),
+            live_cur_mana.data()) &&
+        std::memcmp(
+            live_cur_mana.data(),
+            kCharacterZoneClientCurManaEntryBytes.data(),
+            kCharacterZoneClientCurManaEntryBytes.size()) == 0;
+    const bool max_mana_entry_ok =
+        TryCopyBytes(
+            reinterpret_cast<const void*>(max_mana_address),
+            live_max_mana.size(),
+            live_max_mana.data()) &&
+        std::memcmp(
+            live_max_mana.data(),
+            kCharacterZoneClientMaxManaEntryBytes.data(),
+            kCharacterZoneClientMaxManaEntryBytes.size()) == 0;
+    const bool mana_regen_entry_ok =
+        TryCopyBytes(
+            reinterpret_cast<const void*>(mana_regen_address),
+            live_mana_regen.size(),
+            live_mana_regen.data()) &&
+        std::memcmp(
+            live_mana_regen.data(),
+            kCharacterZoneClientGetManaRegenEntryBytes.data(),
+            kCharacterZoneClientGetManaRegenEntryBytes.size()) == 0;
+
+    bool player_mana_eqtype_resolver_installed = false;
+    if (!player_mana_eqtype_resolver_entry_ok) {
+        std::wstring message =
+            L"hook_manager: player mana eqtype hook denied target=PlayerManaEqTypeResolver expected=\"";
+        message += HexBytes(
+            kPlayerManaEqTypeResolverEntryBytes.data(),
+            kPlayerManaEqTypeResolverEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(
+            live_player_mana_eqtype_resolver.data(),
+            live_player_mana_eqtype_resolver.size());
+        message += L"\" address=";
+        message += HexPtr(player_mana_eqtype_resolver_address);
+        message += L" target_rva=";
+        message += Hex32(kPlayerManaEqTypeResolverRva);
+        monomyth::logger::Log(message);
+    } else if (InstallInlineDetour(
+                   reinterpret_cast<void*>(player_mana_eqtype_resolver_address),
+                   reinterpret_cast<void*>(&PlayerManaEqTypeResolverHook),
+                   &g_player_mana_eqtype_resolver_detour,
+                   reinterpret_cast<void**>(&g_original_player_mana_eqtype_resolver),
+                   L"Player mana EQType resolver multiclass mana")) {
+        player_mana_eqtype_resolver_installed = true;
+    } else {
+        RemoveInlineDetour(&g_player_mana_eqtype_resolver_detour);
+        g_original_player_mana_eqtype_resolver = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: player mana eqtype hook install failed target=PlayerManaEqTypeResolver");
+    }
+
+    bool player_wnd_constructor_installed = false;
+    if (!player_wnd_constructor_entry_ok) {
+        std::wstring message =
+            L"hook_manager: player mana visibility hook denied target=CPlayerWnd::ctor expected=\"";
+        message += HexBytes(
+            kPlayerWndConstructorEntryBytes.data(),
+            kPlayerWndConstructorEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(live_player_wnd_ctor.data(), live_player_wnd_ctor.size());
+        message += L"\" address=";
+        message += HexPtr(player_wnd_constructor_address);
+        message += L" target_rva=";
+        message += Hex32(kPlayerWndConstructorRva);
+        monomyth::logger::Log(message);
+    } else if (InstallInlineDetour(
+                   reinterpret_cast<void*>(player_wnd_constructor_address),
+                   reinterpret_cast<void*>(&PlayerWndConstructorHook),
+                   &g_player_wnd_constructor_detour,
+                   reinterpret_cast<void**>(&g_original_player_wnd_constructor),
+                   L"CPlayerWnd constructor mana visibility")) {
+        player_wnd_constructor_installed = true;
+    } else {
+        RemoveInlineDetour(&g_player_wnd_constructor_detour);
+        g_original_player_wnd_constructor = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: player mana visibility hook install failed target=CPlayerWnd::ctor");
+    }
+
+    bool cur_mana_inline_installed = false;
+    std::size_t cur_mana_callsites_installed = 0;
+    if (!cur_mana_entry_ok) {
+        std::wstring message =
+            L"hook_manager: local mana hook denied target=CharacterZoneClient::Cur_Mana expected=\"";
+        message += HexBytes(
+            kCharacterZoneClientCurManaEntryBytes.data(),
+            kCharacterZoneClientCurManaEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(live_cur_mana.data(), live_cur_mana.size());
+        message += L"\" address=";
+        message += HexPtr(cur_mana_address);
+        message += L" target_rva=";
+        message += Hex32(kCharacterZoneClientCurManaRva);
+        monomyth::logger::Log(message);
+    } else if (InstallInlineDetour(
+                   reinterpret_cast<void*>(cur_mana_address),
+                   reinterpret_cast<void*>(&CharacterZoneClientCurManaHook),
+                   &g_character_zone_client_cur_mana_detour,
+                   reinterpret_cast<void**>(&g_original_character_zone_client_cur_mana),
+                   L"CharacterZoneClient::Cur_Mana multiclass mana")) {
+        cur_mana_inline_installed = true;
+    } else {
+        RemoveInlineDetour(&g_character_zone_client_cur_mana_detour);
+        monomyth::logger::Log(
+            L"hook_manager: local mana hook install failed target=CharacterZoneClient::Cur_Mana");
+    }
+
+    if (!cur_mana_inline_installed) {
+        struct CurManaCallsiteInstall {
+            std::uint32_t rva = 0;
+            CallsitePatch* patch = nullptr;
+            const wchar_t* label = L"";
+        };
+        const CurManaCallsiteInstall callsites[] = {
+            {kCharacterZoneClientCurManaTickCallsiteARva,
+             &g_character_zone_client_cur_mana_tick_callsite_a_patch,
+             L"CharacterZoneClient::Cur_Mana tick callsite A"},
+            {kCharacterZoneClientCurManaTickCallsiteBRva,
+             &g_character_zone_client_cur_mana_tick_callsite_b_patch,
+             L"CharacterZoneClient::Cur_Mana tick callsite B"},
+            {kCharacterZoneClientCurManaRefreshCallsiteRva,
+             &g_character_zone_client_cur_mana_refresh_callsite_patch,
+             L"CharacterZoneClient::Cur_Mana refresh callsite"},
+            {kCharacterZoneClientCurManaGaugeCallsiteRva,
+             &g_character_zone_client_cur_mana_gauge_callsite_patch,
+             L"CharacterZoneClient::Cur_Mana gauge callsite"},
+            {kCharacterZoneClientCurManaLabelCallsiteARva,
+             &g_character_zone_client_cur_mana_label_callsite_a_patch,
+             L"CharacterZoneClient::Cur_Mana label callsite A"},
+            {kCharacterZoneClientCurManaLabelCallsiteBRva,
+             &g_character_zone_client_cur_mana_label_callsite_b_patch,
+             L"CharacterZoneClient::Cur_Mana label callsite B"},
+            {kCharacterZoneClientCurManaLabelCallsiteCRva,
+             &g_character_zone_client_cur_mana_label_callsite_c_patch,
+             L"CharacterZoneClient::Cur_Mana label callsite C"},
+        };
+
+        for (const CurManaCallsiteInstall& callsite : callsites) {
+            if (InstallCallsitePatch(
+                    reinterpret_cast<void*>(module_base + callsite.rva),
+                    reinterpret_cast<void*>(&CharacterZoneClientCurManaCallsiteHook),
+                    cur_mana_address,
+                    callsite.patch,
+                    callsite.label)) {
+                ++cur_mana_callsites_installed;
+            }
+        }
+    }
+
+    bool max_mana_installed = false;
+    if (!max_mana_entry_ok) {
+        std::wstring message =
+            L"hook_manager: local mana hook denied target=CharacterZoneClient::Max_Mana expected=\"";
+        message += HexBytes(
+            kCharacterZoneClientMaxManaEntryBytes.data(),
+            kCharacterZoneClientMaxManaEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(live_max_mana.data(), live_max_mana.size());
+        message += L"\" address=";
+        message += HexPtr(max_mana_address);
+        message += L" target_rva=";
+        message += Hex32(kCharacterZoneClientMaxManaRva);
+        monomyth::logger::Log(message);
+    } else if (InstallInlineDetour(
+                   reinterpret_cast<void*>(max_mana_address),
+                   reinterpret_cast<void*>(&CharacterZoneClientMaxManaHook),
+                   &g_character_zone_client_max_mana_detour,
+                   reinterpret_cast<void**>(&g_original_character_zone_client_max_mana),
+                   L"CharacterZoneClient::Max_Mana multiclass mana")) {
+        max_mana_installed = true;
+    } else {
+        RemoveInlineDetour(&g_character_zone_client_max_mana_detour);
+        g_original_character_zone_client_max_mana = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: local mana hook install failed target=CharacterZoneClient::Max_Mana");
+    }
+
+    bool mana_regen_installed = false;
+    if (!mana_regen_entry_ok) {
+        std::wstring message =
+            L"hook_manager: local mana hook denied target=CharacterZoneClient::GetManaRegen expected=\"";
+        message += HexBytes(
+            kCharacterZoneClientGetManaRegenEntryBytes.data(),
+            kCharacterZoneClientGetManaRegenEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(live_mana_regen.data(), live_mana_regen.size());
+        message += L"\" address=";
+        message += HexPtr(mana_regen_address);
+        message += L" target_rva=";
+        message += Hex32(kCharacterZoneClientGetManaRegenRva);
+        monomyth::logger::Log(message);
+    } else if (InstallInlineDetour(
+                   reinterpret_cast<void*>(mana_regen_address),
+                   reinterpret_cast<void*>(&CharacterZoneClientGetManaRegenHook),
+                   &g_character_zone_client_get_mana_regen_detour,
+                   reinterpret_cast<void**>(&g_original_character_zone_client_get_mana_regen),
+                   L"CharacterZoneClient::GetManaRegen multiclass mana")) {
+        mana_regen_installed = true;
+    } else {
+        RemoveInlineDetour(&g_character_zone_client_get_mana_regen_detour);
+        g_original_character_zone_client_get_mana_regen = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: local mana hook install failed target=CharacterZoneClient::GetManaRegen");
+    }
+
+    const bool cur_mana_installed =
+        cur_mana_inline_installed || cur_mana_callsites_installed > 0;
+    if (!cur_mana_installed &&
+        !max_mana_installed &&
+        !mana_regen_installed &&
+        !player_mana_eqtype_resolver_installed) {
+        g_original_character_zone_client_cur_mana = nullptr;
+        g_original_player_mana_eqtype_resolver = nullptr;
+        return false;
+    }
+
+    g_multiclass_cur_mana_trace_count = 0;
+    g_multiclass_cur_mana_override_count = 0;
+    g_multiclass_cur_mana_callsite_override_count = 0;
+    g_player_mana_visibility_force_count = 0;
+    g_player_mana_eqtype_trace_count = 0;
+    g_player_mana_eqtype_override_count = 0;
+    g_multiclass_max_mana_trace_count = 0;
+    g_multiclass_max_mana_override_count = 0;
+    g_multiclass_mana_regen_trace_count = 0;
+    g_multiclass_mana_regen_override_count = 0;
+    g_player_window_pointer.store(0);
+
+    std::wstring message =
+        L"hook_manager: local mana hooks installed cur_mana_address=";
+    message += HexPtr(cur_mana_address);
+    message += L" cur_mana_rva=";
+    message += Hex32(kCharacterZoneClientCurManaRva);
+    message += L" cur_mana_installed=";
+    message += cur_mana_installed ? L"true" : L"false";
+    message += L" cur_mana_inline_installed=";
+    message += cur_mana_inline_installed ? L"true" : L"false";
+    message += L" cur_mana_callsites_installed=";
+    message += std::to_wstring(cur_mana_callsites_installed);
+    message += L" player_mana_eqtype_address=";
+    message += HexPtr(player_mana_eqtype_resolver_address);
+    message += L" player_mana_eqtype_rva=";
+    message += Hex32(kPlayerManaEqTypeResolverRva);
+    message += L" player_mana_eqtype_installed=";
+    message += player_mana_eqtype_resolver_installed ? L"true" : L"false";
+    message += L" player_wnd_ctor_address=";
+    message += HexPtr(player_wnd_constructor_address);
+    message += L" player_wnd_ctor_rva=";
+    message += Hex32(kPlayerWndConstructorRva);
+    message += L" player_wnd_ctor_installed=";
+    message += player_wnd_constructor_installed ? L"true" : L"false";
+    message += L" max_mana_address=";
+    message += HexPtr(max_mana_address);
+    message += L" max_mana_rva=";
+    message += Hex32(kCharacterZoneClientMaxManaRva);
+    message += L" max_mana_installed=";
+    message += max_mana_installed ? L"true" : L"false";
+    message += L" mana_regen_address=";
+    message += HexPtr(mana_regen_address);
+    message += L" mana_regen_rva=";
+    message += Hex32(kCharacterZoneClientGetManaRegenRva);
+    message += L" mana_regen_installed=";
+    message += mana_regen_installed ? L"true" : L"false";
+    monomyth::logger::Log(message);
+    return true;
+}
+
 bool InstallGetSpellLevelNeededHook(const monomyth::runtime::Manifest& manifest) noexcept {
     if (!(manifest.spell_usability_trace_allowed ||
             manifest.multiclass_spell_usability_allowed) ||
@@ -19670,6 +20914,7 @@ bool InstallGetSpellLevelNeededHook(const monomyth::runtime::Manifest& manifest)
     }
 
     g_multiclass_spell_usability_enabled = manifest.multiclass_spell_usability_allowed;
+    InstallLocalManaHooks(manifest);
     std::wstring message = L"hook_manager: spell usability hook installed target=GetSpellLevelNeeded address=";
     message += HexPtr(manifest.get_spell_level_needed_address);
     message += L" trace_enabled=";
@@ -22572,15 +23817,90 @@ bool RemoveInventoryClassTitleDisplayHook() noexcept {
 }
 
 bool RemoveGetSpellLevelNeededTrace() noexcept {
+    bool mana_ok = true;
+    bool removed_any_mana_hook = false;
+    if (g_player_mana_eqtype_resolver_detour.installed) {
+        removed_any_mana_hook = true;
+        if (RemoveInlineDetour(&g_player_mana_eqtype_resolver_detour)) {
+            g_original_player_mana_eqtype_resolver = nullptr;
+        } else {
+            mana_ok = false;
+        }
+    }
+    if (g_player_wnd_constructor_detour.installed) {
+        removed_any_mana_hook = true;
+        if (RemoveInlineDetour(&g_player_wnd_constructor_detour)) {
+            g_original_player_wnd_constructor = nullptr;
+        } else {
+            mana_ok = false;
+        }
+    }
+    const auto remove_cur_mana_callsite = [&](CallsitePatch* patch) noexcept {
+        if (patch == nullptr || !patch->installed) {
+            return;
+        }
+        removed_any_mana_hook = true;
+        if (!RemoveCallsitePatch(patch)) {
+            mana_ok = false;
+        }
+    };
+    remove_cur_mana_callsite(&g_character_zone_client_cur_mana_tick_callsite_a_patch);
+    remove_cur_mana_callsite(&g_character_zone_client_cur_mana_tick_callsite_b_patch);
+    remove_cur_mana_callsite(&g_character_zone_client_cur_mana_refresh_callsite_patch);
+    remove_cur_mana_callsite(&g_character_zone_client_cur_mana_gauge_callsite_patch);
+    remove_cur_mana_callsite(&g_character_zone_client_cur_mana_label_callsite_a_patch);
+    remove_cur_mana_callsite(&g_character_zone_client_cur_mana_label_callsite_b_patch);
+    remove_cur_mana_callsite(&g_character_zone_client_cur_mana_label_callsite_c_patch);
+    if (g_character_zone_client_cur_mana_detour.installed) {
+        removed_any_mana_hook = true;
+        if (RemoveInlineDetour(&g_character_zone_client_cur_mana_detour)) {
+        } else {
+            mana_ok = false;
+        }
+    }
+    if (g_character_zone_client_max_mana_detour.installed) {
+        removed_any_mana_hook = true;
+        if (RemoveInlineDetour(&g_character_zone_client_max_mana_detour)) {
+            g_original_character_zone_client_max_mana = nullptr;
+        } else {
+            mana_ok = false;
+        }
+    }
+    if (g_character_zone_client_get_mana_regen_detour.installed) {
+        removed_any_mana_hook = true;
+        if (RemoveInlineDetour(&g_character_zone_client_get_mana_regen_detour)) {
+            g_original_character_zone_client_get_mana_regen = nullptr;
+        } else {
+            mana_ok = false;
+        }
+    }
+    if (mana_ok && removed_any_mana_hook) {
+        g_original_character_zone_client_cur_mana = nullptr;
+        g_original_player_mana_eqtype_resolver = nullptr;
+        g_player_window_pointer.store(0);
+        g_multiclass_cur_mana_trace_count = 0;
+        g_multiclass_cur_mana_override_count = 0;
+        g_multiclass_cur_mana_callsite_override_count = 0;
+        g_player_mana_visibility_force_count = 0;
+        g_player_mana_eqtype_trace_count = 0;
+        g_player_mana_eqtype_override_count = 0;
+        g_multiclass_max_mana_trace_count = 0;
+        g_multiclass_max_mana_override_count = 0;
+        g_multiclass_mana_regen_trace_count = 0;
+        g_multiclass_mana_regen_override_count = 0;
+        monomyth::logger::Log(
+            L"hook_manager: local mana hooks removed target=CharacterZoneClient::Cur_Mana/Max_Mana/GetManaRegen");
+    }
+
     if (!g_get_spell_level_needed_detour.installed) {
-        return true;
+        return mana_ok;
     }
 
     if (RemoveInlineDetour(&g_get_spell_level_needed_detour)) {
         g_original_get_spell_level_needed = nullptr;
         g_multiclass_spell_usability_enabled = false;
         monomyth::logger::Log(L"hook_manager: spell usability hook removed target=GetSpellLevelNeeded");
-        return true;
+        return mana_ok;
     }
 
     return false;
