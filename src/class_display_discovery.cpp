@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <iomanip>
 #include <sstream>
 
 #include "logger.h"
@@ -192,6 +193,18 @@ bool TryMatchRelocatableInstruction(
         return true;
     }
 
+    if (offset + 7 <= length &&
+        actual[offset] == 0x0F && expected[offset] == 0x0F &&
+        actual[offset + 1] == expected[offset + 1] &&
+        (expected[offset + 1] == 0xB6 || expected[offset + 1] == 0xB7 ||
+         expected[offset + 1] == 0xBE || expected[offset + 1] == 0xBF) &&
+        actual[offset + 2] == expected[offset + 2] &&
+        (expected[offset + 2] & 0xC7) == 0x80 &&
+        RelocatedImmediateMatches(actual, expected, offset, 3, relocation_delta)) {
+        *consumed = 7;
+        return true;
+    }
+
     return false;
 }
 
@@ -291,6 +304,18 @@ bool IsExecutableAddress(
 #endif
 }
 
+std::wstring HexBytes(const std::uint8_t* bytes, std::size_t length) {
+    std::wstringstream stream;
+    stream << std::hex << std::setfill(L'0');
+    for (std::size_t i = 0; i < length; ++i) {
+        if (i != 0) {
+            stream << L' ';
+        }
+        stream << std::setw(2) << static_cast<unsigned int>(bytes[i]);
+    }
+    return stream.str();
+}
+
 TargetResult DiscoverPinnedEntryBytesTarget(
     const ImageView& image,
     const wchar_t* target_name,
@@ -384,6 +409,12 @@ TargetResult DiscoverPinnedEntryBytesTarget(
     evidence << L"cleanroom_rva=0x" << std::hex << rva
              << L" entry_bytes=" << (exact_match ? L"matched" : L"mismatch")
              << L" executable=" << (executable ? L"yes" : L"no");
+    if (!exact_match && IsRvaWithinImage(image, rva, expected_length)) {
+        const auto* actual_bytes = image.base + rva;
+        evidence << L" expected_bytes=\"" << HexBytes(expected_bytes, expected_length)
+                 << L"\" actual_bytes=\""
+                 << HexBytes(actual_bytes, expected_length) << L"\"";
+    }
     target.validation_evidence = evidence.str();
 
     if (!executable) {

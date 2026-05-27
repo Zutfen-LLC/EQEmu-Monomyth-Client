@@ -2784,6 +2784,18 @@ bool TryMatchRelocatableInstruction(
         return true;
     }
 
+    if (offset + 7 <= length &&
+        actual[offset] == 0x0F && expected[offset] == 0x0F &&
+        actual[offset + 1] == expected[offset + 1] &&
+        (expected[offset + 1] == 0xB6 || expected[offset + 1] == 0xB7 ||
+         expected[offset + 1] == 0xBE || expected[offset + 1] == 0xBF) &&
+        actual[offset + 2] == expected[offset + 2] &&
+        (expected[offset + 2] & 0xC7) == 0x80 &&
+        RelocatedImmediateMatches(actual, expected, offset, 3, relocation_delta)) {
+        *consumed = 7;
+        return true;
+    }
+
     return false;
 }
 
