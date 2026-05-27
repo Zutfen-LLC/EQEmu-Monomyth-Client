@@ -35,6 +35,11 @@ int main() {
     passed &= Expect(IsPlayableClassId(1), "class id 1 valid");
     passed &= Expect(IsPlayableClassId(16), "class id 16 valid");
     passed &= Expect(!IsPlayableClassId(17), "class id 17 invalid");
+    passed &= Expect(!IsCastingClassId(1), "warrior is not a casting class");
+    passed &= Expect(IsCastingClassId(3), "paladin is a casting class");
+    passed &= Expect(IsCastingClassId(8), "bard is a casting class");
+    passed &= Expect(IsCastingClassId(13), "magician is a casting class");
+    passed &= Expect(!IsCastingClassId(16), "berserker is not a casting class");
 
     passed &= Expect(ClassBit(1) == 0x00000001u, "class bit warrior");
     passed &= Expect(ClassBit(3) == 0x00000004u, "class bit paladin");
@@ -154,6 +159,31 @@ int main() {
             ClassBitForTest(5) | ClassBitForTest(7) | ClassBitForTest(9),
             ClientItemClassBitForTest(13)),
         "shadowknight monk rogue mask rejects non-overlapping item class");
+    passed &= Expect(
+        HasAnyAuthoritativeCastingClass(
+            true,
+            ClassBitForTest(3) | ClassBitForTest(13)),
+        "authoritative mask detects casting subclasses");
+    passed &= Expect(
+        HasAnyAuthoritativeCastingClass(
+            true,
+            ClassBitForTest(8)),
+        "authoritative mask detects bard casting flag");
+    passed &= Expect(
+        !HasAnyAuthoritativeCastingClass(
+            true,
+            ClassBitForTest(1) | ClassBitForTest(7) | ClassBitForTest(16)),
+        "pure melee authoritative mask denies casting access");
+    passed &= Expect(
+        !HasAnyAuthoritativeCastingClass(
+            false,
+            ClassBitForTest(3) | ClassBitForTest(13)),
+        "missing authoritative mask denies casting access");
+    passed &= Expect(
+        !HasAnyAuthoritativeCastingClass(
+            true,
+            0x00010004u),
+        "invalid authoritative mask denies casting access");
     passed &= Expect(
         !HasAuthoritativeOffhandWeaponClassAndDualWield(
             true,

@@ -13,6 +13,7 @@
 #include <limits>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 #include "logger.h"
 #include "multiclass_cache.h"
@@ -54,6 +55,8 @@ constexpr std::uint32_t kDeleteSpellOpcode = 0x3358;
 constexpr std::uint32_t kMoveItemOpcode = 0x32ee;
 constexpr std::uint32_t kGmTrainingOpcode = 0x1966;
 constexpr std::uint32_t kGmEndTrainingOpcode = 0x4d6b;
+constexpr std::uint32_t kMulticlassCasterUiAccessRetryMaxAttempts = 30;
+constexpr std::uint64_t kMulticlassCasterUiAccessRetryCooldownMs = 1000;
 constexpr std::uint32_t kMemorizeSendCorrelationMaxWrapperSends = 8;
 constexpr std::uint32_t kSpellbookScribeCorrelationMaxWrapperSends = 8;
 constexpr std::uint32_t kInventoryClassDisplayCorrelationBudget = 48;
@@ -246,6 +249,32 @@ constexpr std::uint32_t kActiveGuildTrainerGlobalRva = 0x009d2658;
 // authoritative local character object when we need the live PC profile.
 constexpr std::uint32_t kLocalCharDataGlobalRva = 0x009d261c;
 constexpr std::uint32_t kLocalPlayerGlobalRva = 0x009d2630;
+// MQ2 legacy ROF2 exposes pinstCCastSpellWnd/pinstCSpellBookWnd at these same
+// RVAs. Use the direct window globals instead of slash-command aliases so the
+// auth-time multiclass unlock hits the actual spellbar/spellbook surfaces.
+constexpr std::uint32_t kCastSpellWindowGlobalRva = 0x0091fc84;
+constexpr std::uint32_t kSpellBookWindowGlobalRva = 0x0091fc88;
+constexpr std::uint32_t kBindListRva = 0x00acbee8;
+constexpr std::uint32_t kExecuteCmdRva = 0x004d7230;
+constexpr std::uint32_t kCXWndShowRva = 0x00465290;
+constexpr std::uint32_t kCXWndShowTrueWrapperRva = 0x00464100;
+constexpr std::uint32_t kCXWndShowFalseWrapperRva = 0x00464120;
+constexpr std::uint32_t kCastSpellOnShowRva = 0x0045bf50;
+constexpr std::uint32_t kCastSpellAboutToShowRva = 0x00248820;
+constexpr std::uint32_t kSpellBookOnShowRva = 0x0035b6e0;
+constexpr std::uint32_t kSpellBookAboutToShowRva = 0x0035c970;
+constexpr std::uint32_t kSpellUiAboutToShowSharedBoolGateTargetRva = 0x00043f50;
+constexpr std::uint32_t kSpellUiAboutToShowSharedLookupTargetRva = 0x003db210;
+constexpr std::uint32_t kCastSpellAboutToShowSharedLookupCallsiteRva = 0x00248835;
+constexpr std::uint32_t kCastSpellAboutToShowSharedLookupReturnRva = 0x0024883a;
+constexpr std::uint32_t kCastSpellAboutToShowSharedBoolGateCallsiteRva = 0x00248867;
+constexpr std::uint32_t kCastSpellAboutToShowSharedBoolGateReturnRva = 0x0024886c;
+constexpr std::uint32_t kSpellBookAboutToShowSharedBoolGateCallsiteRva = 0x0035c97f;
+constexpr std::uint32_t kSpellBookAboutToShowSharedBoolGateReturnRva = 0x0035c984;
+constexpr std::uint32_t kSpellBookAboutToShowSharedLookupCallsiteRva = 0x0035c99a;
+constexpr std::uint32_t kSpellBookAboutToShowSharedLookupReturnRva = 0x0035c99f;
+constexpr std::uint32_t kCXWndBringToTopRva = 0x00462c50;
+constexpr std::uint32_t kCXWndMinimizeRva = 0x004666d0;
 constexpr std::uint32_t kGetClassDescRva = 0x00114dc0;
 constexpr std::uint32_t kGetClassThreeLetterCodeRva = 0x001153c0;
 constexpr std::uint32_t kGetDeityDescRva = 0x00115f70;
@@ -276,10 +305,22 @@ constexpr std::size_t kEqSpawnNameMaxBytes = 0x40;
 constexpr std::size_t kPcProfileClassOffset = 0x3374;
 constexpr std::size_t kGuildTrainerClassLookupResolvedClassOffset = 0x3374;
 constexpr std::size_t kGuildTrainerCallerClassOffset = 0x0eb8;
+constexpr std::size_t kCxWndOpenOffset = 0x001a;
+constexpr std::size_t kCxWndVisibleOffset = 0x0196;
+constexpr std::size_t kCxWndMinimizedOffset = 0x01ce;
+constexpr std::size_t kCxWndActiveOffset = 0x01d4;
+constexpr std::size_t kCSidlControlsCreatedOffset = 0x01d8;
+constexpr std::size_t kCSidlInitVisibilityOffset = 0x01f4;
+constexpr std::size_t kCSidlVisibleBeforeResizeOffset = 0x01f5;
+constexpr std::size_t kEqMappableCommandCount = 500;
+constexpr std::size_t kMaxEqMappableCommandNameBytes = 64;
+constexpr std::size_t kCommandLookupLogEntryCap = 12;
 // MacroQuest eqlib's emu/ROF2 layout reads PlayerClient::GetClass() from
 // mActorClient.Class. With mActorClient at 0x0ea4 and Class at +0x13c inside
 // ActorClient, the effective in-world class field is PlayerClient + 0x0fe0.
 constexpr std::size_t kEqPlayerDisplayedClassOffset = 0x0fe0;
+constexpr char kToggleSpellsWindowCommandName[] = "TOGGLE_SPELLSWIN";
+constexpr char kSpellbookCommandName[] = "SPELLBOOK";
 constexpr wchar_t kMemorizeSendTraceSliceId[] = L"CLIENT-MEM-SEND-TRACE-001";
 constexpr std::array<std::uint8_t, 5> kGuildTrainerClassLookupCallsiteBytes = {{
     0xe8, 0x6a, 0x3d, 0x2a, 0x00,
@@ -328,6 +369,11 @@ using CanEquipFn = int (MONOMYTH_THISCALL*)(
     unsigned long arg3,
     unsigned long arg4,
     unsigned long arg5);
+using EQExecuteCmdFn = bool (CDECL*)(
+    unsigned int command,
+    bool key_down,
+    void* data,
+    const void* combo);
 using MerchantUsableClassMaskFn = std::uint32_t (MONOMYTH_THISCALL*)(
     void* this_item,
     unsigned long arg1,
@@ -602,6 +648,16 @@ using InventorySummaryRefreshCandidateDFn = int (MONOMYTH_THISCALL*)(
 using CharacterListWndUpdateListFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     bool force_update);
+using CXWndActivateFn = void (MONOMYTH_THISCALL*)(void* this_context);
+using CXWndBringToTopFn = void (MONOMYTH_THISCALL*)(void* this_context, bool recurse);
+using CXWndMinimizeFn = int (MONOMYTH_THISCALL*)(void* this_context, bool minimized);
+using CXWndShowFn = int (MONOMYTH_THISCALL*)(void* this_context, bool show, bool recurse, bool unknown);
+using CXWndShowTraceFn = int (MONOMYTH_THISCALL*)(void* this_context, int show_like, int recurse_like, int unknown_like);
+using CXWndShowWrapperFn = int (MONOMYTH_THISCALL*)(void* this_context);
+using SpellUiOnShowFn = int (MONOMYTH_THISCALL*)(void* this_context);
+using SpellUiAboutToShowFn = bool (MONOMYTH_THISCALL*)(void* this_context);
+using SpellUiAboutToShowSharedBoolGateFn = int (MONOMYTH_THISCALL*)(void* this_context);
+using SpellUiAboutToShowSharedLookupFn = void* (MONOMYTH_THISCALL*)(void* this_context);
 using CharSelectClassNameFuncFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     unsigned int selected_index);
@@ -633,6 +689,28 @@ struct CallsitePatch {
     std::array<std::uint8_t, kJmpPatchBytes> original = {};
     std::array<std::uint8_t, kJmpPatchBytes> patch = {};
     bool installed = false;
+};
+
+struct CxWndStateSnapshot {
+    bool enabled = false;
+    bool visible = false;
+    bool minimized = false;
+    bool active = false;
+    bool controls_created = false;
+    bool init_visibility = false;
+    bool visible_before_resize = false;
+    bool valid = false;
+};
+
+struct EqCommandLookupDiagnostics {
+    bool bind_list_address_valid = false;
+    std::uintptr_t bind_list_address = 0;
+    std::uint32_t scan_limit = 0;
+    std::uint32_t non_empty_count = 0;
+    std::uint32_t spell_related_count = 0;
+    bool exact_match_found = false;
+    std::uint32_t exact_match_command_id = 0;
+    std::string spell_related_entries;
 };
 
 struct BytePatch {
@@ -858,6 +936,17 @@ InlineDetour g_who_class_name_detour = {};
 InlineDetour g_who_class_name_class_lookup_detour = {};
 InlineDetour g_cxstr_assign_detour = {};
 InlineDetour g_cxwnd_set_window_text_a_detour = {};
+InlineDetour g_cxwnd_show_trace_detour = {};
+InlineDetour g_cxwnd_show_true_wrapper_trace_detour = {};
+InlineDetour g_cxwnd_show_false_wrapper_trace_detour = {};
+InlineDetour g_cast_spell_on_show_trace_detour = {};
+InlineDetour g_cast_spell_about_to_show_trace_detour = {};
+InlineDetour g_spellbook_on_show_trace_detour = {};
+InlineDetour g_spellbook_about_to_show_trace_detour = {};
+CallsitePatch g_cast_spell_about_to_show_shared_lookup_callsite_patch = {};
+CallsitePatch g_cast_spell_about_to_show_shared_bool_gate_callsite_patch = {};
+CallsitePatch g_spellbook_about_to_show_shared_bool_gate_callsite_patch = {};
+CallsitePatch g_spellbook_about_to_show_shared_lookup_callsite_patch = {};
 CallsitePatch g_progression_selection_class_lookup_callsite_patch = {};
 CallsitePatch g_char_select_late_full_name_callsite_a_patch = {};
 CallsitePatch g_char_select_late_full_name_callsite_b_patch = {};
@@ -1030,6 +1119,15 @@ CharSelectClassNameFuncFn g_original_char_select_class_name_func = nullptr;
 WhoClassNameFn g_original_who_class_name = nullptr;
 CXStrAssignFn g_original_cxstr_assign = nullptr;
 CXWndSetWindowTextAFn g_original_cxwnd_set_window_text_a = nullptr;
+CXWndShowTraceFn g_original_cxwnd_show_trace = nullptr;
+CXWndShowWrapperFn g_original_cxwnd_show_true_wrapper_trace = nullptr;
+CXWndShowWrapperFn g_original_cxwnd_show_false_wrapper_trace = nullptr;
+SpellUiOnShowFn g_original_cast_spell_on_show_trace = nullptr;
+SpellUiAboutToShowFn g_original_cast_spell_about_to_show_trace = nullptr;
+SpellUiOnShowFn g_original_spellbook_on_show_trace = nullptr;
+SpellUiAboutToShowFn g_original_spellbook_about_to_show_trace = nullptr;
+SpellUiAboutToShowSharedBoolGateFn g_original_spell_ui_about_to_show_shared_bool_gate = nullptr;
+SpellUiAboutToShowSharedLookupFn g_original_spell_ui_about_to_show_shared_lookup = nullptr;
 ProgressionSelectionClassLookupFn g_original_progression_selection_class_lookup = nullptr;
 WhoClassNameClassLookupFn g_original_who_class_name_class_lookup = nullptr;
 std::uint64_t g_get_spell_level_needed_trace_count = 0;
@@ -1039,6 +1137,14 @@ std::uint64_t g_scroll_scribe_event_count = 0;
 std::uint64_t g_ui_class_helper_trace_count = 0;
 std::uint64_t g_inventory_class_title_trace_count = 0;
 std::uint64_t g_inventory_on_process_frame_trace_count = 0;
+std::uint64_t g_spell_ui_show_trace_count = 0;
+std::uint64_t g_spell_ui_show_wrapper_trace_count = 0;
+std::uint64_t g_cast_spell_on_show_trace_count = 0;
+std::uint64_t g_cast_spell_about_to_show_trace_count = 0;
+std::uint64_t g_spellbook_on_show_trace_count = 0;
+std::uint64_t g_spellbook_about_to_show_trace_count = 0;
+std::uint64_t g_spell_ui_about_to_show_shared_bool_gate_trace_count = 0;
+std::uint64_t g_spell_ui_about_to_show_shared_lookup_trace_count = 0;
 std::uint64_t g_item_display_refresh_worker_entry_trace_count = 0;
 std::uint64_t g_character_list_update_list_trace_count = 0;
 std::uint64_t g_character_list_forced_refresh_count = 0;
@@ -1077,6 +1183,13 @@ std::atomic<std::uint32_t> g_char_select_native_class_substitution_remaining = 0
 std::atomic<std::uint64_t> g_char_select_native_class_substitution_activation = 0;
 std::atomic<bool> g_multiclass_cache_persist_pending = false;
 std::atomic<std::uint32_t> g_multiclass_cache_persist_pending_mask = 0;
+std::atomic<bool> g_multiclass_caster_ui_access_ensured = false;
+std::atomic<std::uint32_t> g_multiclass_caster_ui_access_mask = 0;
+std::atomic<std::uint32_t> g_multiclass_caster_ui_access_primary_class = 0;
+std::atomic<bool> g_multiclass_caster_ui_access_retry_pending = false;
+std::atomic<std::uint32_t> g_multiclass_caster_ui_access_retry_mask = 0;
+std::atomic<std::uint32_t> g_multiclass_caster_ui_access_retry_attempt_count = 0;
+std::atomic<std::uint64_t> g_multiclass_caster_ui_access_retry_next_tick_ms = 0;
 std::atomic<std::uint32_t> g_item_display_class_display_correlation_remaining = 0;
 std::atomic<std::uint64_t> g_item_display_class_display_correlation_activation = 0;
 std::atomic<std::uintptr_t> g_item_display_class_display_correlation_refresh_caller_return = 0;
@@ -1285,6 +1398,9 @@ struct SkillsWindowRowRecordLayout {
 };
 
 std::uintptr_t GetHostModuleBase() noexcept;
+bool TryComputeEqgameCallerReturnRva(
+    std::uintptr_t caller_return_address,
+    std::uint32_t* caller_return_rva) noexcept;
 bool TryReadLocalPlayerCharacterPointer(void** character) noexcept;
 
 std::wstring HexPtr(std::uintptr_t value) {
@@ -1441,6 +1557,14 @@ bool ShouldLogItemDisplayRefreshWorkerEntryTrace(std::uint64_t count) noexcept {
 }
 
 bool ShouldLogInventoryOnProcessFrameTrace(std::uint64_t count) noexcept {
+    return count <= 20 || (count % 50) == 0;
+}
+
+bool ShouldLogSpellUiDerivedWindowTrace(std::uint64_t count) noexcept {
+    return count <= 20 || (count % 50) == 0;
+}
+
+bool ShouldLogSpellUiAboutToShowGateTrace(std::uint64_t count) noexcept {
     return count <= 20 || (count % 50) == 0;
 }
 
@@ -2938,6 +3062,1193 @@ bool TryReadLocalPlayerPointer(void** local_player) noexcept {
         local_player);
 }
 
+bool TryReadEqWindowPointer(std::uint32_t global_rva, void** window) noexcept {
+    if (window == nullptr) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return false;
+    }
+
+    return TryCopyObject(
+        reinterpret_cast<const void*>(module_base + global_rva),
+        window);
+}
+
+bool TryGetEqBindListAddress(std::uintptr_t* bind_list_address) noexcept {
+    if (bind_list_address == nullptr) {
+        return false;
+    }
+
+    *bind_list_address = 0;
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return false;
+    }
+
+    *bind_list_address = module_base + kBindListRva;
+    return true;
+}
+
+bool ContainsAsciiCaseInsensitive(
+    std::string_view haystack,
+    std::string_view needle) noexcept {
+    if (needle.empty() || haystack.size() < needle.size()) {
+        return false;
+    }
+
+    for (std::size_t start = 0; start + needle.size() <= haystack.size(); ++start) {
+        bool matched = true;
+        for (std::size_t i = 0; i < needle.size(); ++i) {
+            const unsigned char lhs =
+                static_cast<unsigned char>(haystack[start + i]);
+            const unsigned char rhs =
+                static_cast<unsigned char>(needle[i]);
+            if (std::toupper(lhs) != std::toupper(rhs)) {
+                matched = false;
+                break;
+            }
+        }
+
+        if (matched) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool IsSpellUiRelatedCommandName(std::string_view command_name) noexcept {
+    return ContainsAsciiCaseInsensitive(command_name, "SPELL") ||
+        ContainsAsciiCaseInsensitive(command_name, "BOOK") ||
+        ContainsAsciiCaseInsensitive(command_name, "CAST") ||
+        ContainsAsciiCaseInsensitive(command_name, "GEM");
+}
+
+bool TryReadEqMappableCommandName(
+    std::uint32_t command_id,
+    char* buffer,
+    std::size_t buffer_size) noexcept {
+    if (buffer == nullptr || buffer_size == 0 ||
+        command_id >= kEqMappableCommandCount) {
+        return false;
+    }
+
+    buffer[0] = '\0';
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return false;
+    }
+
+    const auto bind_list = reinterpret_cast<const char* const*>(
+        module_base + kBindListRva);
+    const char* command_name = nullptr;
+    if (!TryCopyObject(bind_list + command_id, &command_name) || command_name == nullptr) {
+        return false;
+    }
+
+    for (std::size_t i = 0; i + 1 < buffer_size; ++i) {
+        char character = '\0';
+        if (!TryCopyObject(command_name + i, &character)) {
+            buffer[0] = '\0';
+            return false;
+        }
+
+        buffer[i] = character;
+        if (character == '\0') {
+            return true;
+        }
+    }
+
+    buffer[buffer_size - 1] = '\0';
+    return false;
+}
+
+bool TryResolveEqMappableCommandId(
+    const char* command_name,
+    std::uint32_t* command_id) noexcept {
+    if (command_name == nullptr || command_name[0] == '\0' || command_id == nullptr) {
+        return false;
+    }
+
+    *command_id = 0;
+
+    char candidate_name[kMaxEqMappableCommandNameBytes] = {};
+    for (std::uint32_t i = 0; i < kEqMappableCommandCount; ++i) {
+        if (!TryReadEqMappableCommandName(i, candidate_name, sizeof(candidate_name))) {
+            continue;
+        }
+
+        if (std::strcmp(candidate_name, command_name) == 0) {
+            *command_id = i;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool TryCollectEqCommandLookupDiagnostics(
+    const char* requested_name,
+    EqCommandLookupDiagnostics* diagnostics) noexcept {
+    if (diagnostics == nullptr || requested_name == nullptr || requested_name[0] == '\0') {
+        return false;
+    }
+
+    *diagnostics = {};
+    diagnostics->scan_limit = kEqMappableCommandCount;
+
+    std::uintptr_t bind_list_address = 0;
+    if (!TryGetEqBindListAddress(&bind_list_address) || bind_list_address == 0) {
+        return false;
+    }
+
+    diagnostics->bind_list_address_valid = true;
+    diagnostics->bind_list_address = bind_list_address;
+
+    char candidate_name[kMaxEqMappableCommandNameBytes] = {};
+    for (std::uint32_t i = 0; i < kEqMappableCommandCount; ++i) {
+        if (!TryReadEqMappableCommandName(i, candidate_name, sizeof(candidate_name))) {
+            continue;
+        }
+
+        if (candidate_name[0] == '\0') {
+            continue;
+        }
+
+        ++diagnostics->non_empty_count;
+
+        const std::string_view candidate_view(candidate_name);
+        if (std::strcmp(candidate_name, requested_name) == 0) {
+            diagnostics->exact_match_found = true;
+            diagnostics->exact_match_command_id = i;
+        }
+
+        if (!IsSpellUiRelatedCommandName(candidate_view)) {
+            continue;
+        }
+
+        ++diagnostics->spell_related_count;
+        if (diagnostics->spell_related_count > kCommandLookupLogEntryCap) {
+            continue;
+        }
+
+        if (!diagnostics->spell_related_entries.empty()) {
+            diagnostics->spell_related_entries += " | ";
+        }
+        diagnostics->spell_related_entries += std::to_string(i);
+        diagnostics->spell_related_entries += ":";
+        diagnostics->spell_related_entries += candidate_name;
+    }
+
+    return true;
+}
+
+bool IsExecutableCodeAddress(std::uintptr_t address) noexcept {
+    if (address == 0) {
+        return false;
+    }
+
+    MEMORY_BASIC_INFORMATION info = {};
+    if (VirtualQuery(
+            reinterpret_cast<const void*>(address),
+            &info,
+            sizeof(info)) != sizeof(info)) {
+        return false;
+    }
+
+    if ((info.State & MEM_COMMIT) == 0 || (info.Protect & PAGE_GUARD) != 0) {
+        return false;
+    }
+
+    const DWORD protect = info.Protect & 0xff;
+    return protect == PAGE_EXECUTE ||
+        protect == PAGE_EXECUTE_READ ||
+        protect == PAGE_EXECUTE_READWRITE ||
+        protect == PAGE_EXECUTE_WRITECOPY;
+}
+
+bool TryResolveWindowVirtualTarget(
+    void* window,
+    std::size_t vftable_offset,
+    std::uintptr_t* target_address) noexcept {
+    if (target_address == nullptr) {
+        return false;
+    }
+
+    *target_address = 0;
+    if (window == nullptr) {
+        return false;
+    }
+
+    void** vftable = nullptr;
+    if (!TryCopyObject(window, &vftable) || vftable == nullptr) {
+        return false;
+    }
+
+    void* target = nullptr;
+    const std::size_t vftable_index = vftable_offset / sizeof(void*);
+    if (!TryCopyObject(vftable + vftable_index, &target) || target == nullptr) {
+        return false;
+    }
+
+    const std::uintptr_t resolved_target = reinterpret_cast<std::uintptr_t>(target);
+    if (!IsExecutableCodeAddress(resolved_target)) {
+        return false;
+    }
+
+    *target_address = resolved_target;
+    return true;
+}
+
+bool TryInvokeWindowActivate(
+    void* window,
+    std::uintptr_t* activate_target_address) noexcept {
+    std::uintptr_t activate_address = 0;
+    if (activate_target_address != nullptr) {
+        *activate_target_address = 0;
+    }
+    if (!TryResolveWindowVirtualTarget(window, 0x90, &activate_address)) {
+        return false;
+    }
+
+    if (activate_target_address != nullptr) {
+        *activate_target_address = activate_address;
+    }
+
+    const auto activate = reinterpret_cast<CXWndActivateFn>(activate_address);
+#if defined(_MSC_VER)
+    __try {
+        activate(window);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    activate(window);
+    return true;
+#endif
+}
+
+bool TryInvokeWindowShow(
+    void* window,
+    bool show,
+    bool recurse,
+    bool unknown,
+    std::uintptr_t* show_target_address,
+    bool* show_result) noexcept {
+    std::uintptr_t show_address = 0;
+    if (show_target_address != nullptr) {
+        *show_target_address = 0;
+    }
+    if (show_result != nullptr) {
+        *show_result = false;
+    }
+    if (!TryResolveWindowVirtualTarget(window, 0xd8, &show_address)) {
+        return false;
+    }
+
+    if (show_target_address != nullptr) {
+        *show_target_address = show_address;
+    }
+
+    const auto show_fn = reinterpret_cast<CXWndShowFn>(show_address);
+#if defined(_MSC_VER)
+    __try {
+        const int result = show_fn(window, show, recurse, unknown);
+        if (show_result != nullptr) {
+            *show_result = result != 0;
+        }
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    const int result = show_fn(window, show, recurse, unknown);
+    if (show_result != nullptr) {
+        *show_result = result != 0;
+    }
+    return true;
+#endif
+}
+
+bool TryInvokeWindowMinimize(
+    void* window,
+    bool minimized,
+    std::uintptr_t* minimize_target_address) noexcept {
+    if (minimize_target_address != nullptr) {
+        *minimize_target_address = 0;
+    }
+    if (window == nullptr) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return false;
+    }
+
+    const std::uintptr_t minimize_address = module_base + kCXWndMinimizeRva;
+    if (!IsExecutableCodeAddress(minimize_address)) {
+        return false;
+    }
+
+    if (minimize_target_address != nullptr) {
+        *minimize_target_address = minimize_address;
+    }
+
+    const auto minimize = reinterpret_cast<CXWndMinimizeFn>(minimize_address);
+#if defined(_MSC_VER)
+    __try {
+        minimize(window, minimized);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    minimize(window, minimized);
+    return true;
+#endif
+}
+
+bool TryInvokeWindowBringToTop(
+    void* window,
+    bool recurse,
+    std::uintptr_t* bring_to_top_target_address) noexcept {
+    if (bring_to_top_target_address != nullptr) {
+        *bring_to_top_target_address = 0;
+    }
+    if (window == nullptr) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return false;
+    }
+
+    const std::uintptr_t bring_to_top_address = module_base + kCXWndBringToTopRva;
+    if (!IsExecutableCodeAddress(bring_to_top_address)) {
+        return false;
+    }
+
+    if (bring_to_top_target_address != nullptr) {
+        *bring_to_top_target_address = bring_to_top_address;
+    }
+
+    const auto bring_to_top = reinterpret_cast<CXWndBringToTopFn>(bring_to_top_address);
+#if defined(_MSC_VER)
+    __try {
+        bring_to_top(window, recurse);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    bring_to_top(window, recurse);
+    return true;
+#endif
+}
+
+bool TryInvokeEqExecuteCmd(
+    std::uint32_t command_id,
+    bool key_down,
+    std::uintptr_t* execute_cmd_target_address,
+    bool* command_result) noexcept {
+    if (execute_cmd_target_address != nullptr) {
+        *execute_cmd_target_address = 0;
+    }
+    if (command_result != nullptr) {
+        *command_result = false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return false;
+    }
+
+    const std::uintptr_t execute_cmd_address = module_base + kExecuteCmdRva;
+    if (!IsExecutableCodeAddress(execute_cmd_address)) {
+        return false;
+    }
+
+    if (execute_cmd_target_address != nullptr) {
+        *execute_cmd_target_address = execute_cmd_address;
+    }
+
+    const auto execute_cmd = reinterpret_cast<EQExecuteCmdFn>(execute_cmd_address);
+#if defined(_MSC_VER)
+    __try {
+        const bool result = execute_cmd(command_id, key_down, nullptr, nullptr);
+        if (command_result != nullptr) {
+            *command_result = result;
+        }
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    const bool result = execute_cmd(command_id, key_down, nullptr, nullptr);
+    if (command_result != nullptr) {
+        *command_result = result;
+    }
+    return true;
+#endif
+}
+
+bool TryReadCastSpellWindowPointer(void** cast_spell_window) noexcept {
+    return TryReadEqWindowPointer(kCastSpellWindowGlobalRva, cast_spell_window);
+}
+
+bool TryReadSpellBookWindowPointer(void** spellbook_window) noexcept {
+    return TryReadEqWindowPointer(kSpellBookWindowGlobalRva, spellbook_window);
+}
+
+bool TryClassifyTrackedSpellUiWindow(
+    void* window,
+    const wchar_t** window_name) noexcept {
+    if (window_name != nullptr) {
+        *window_name = L"unknown";
+    }
+    if (window == nullptr) {
+        return false;
+    }
+
+    void* cast_spell_window = nullptr;
+    if (TryReadCastSpellWindowPointer(&cast_spell_window) &&
+        cast_spell_window != nullptr &&
+        cast_spell_window == window) {
+        if (window_name != nullptr) {
+            *window_name = L"CastSpellWnd";
+        }
+        return true;
+    }
+
+    void* spellbook_window = nullptr;
+    if (TryReadSpellBookWindowPointer(&spellbook_window) &&
+        spellbook_window != nullptr &&
+        spellbook_window == window) {
+        if (window_name != nullptr) {
+            *window_name = L"SpellBookWnd";
+        }
+        return true;
+    }
+
+    return false;
+}
+
+bool TryReadCxWndStateSnapshot(
+    void* window,
+    CxWndStateSnapshot* snapshot) noexcept {
+    if (snapshot == nullptr) {
+        return false;
+    }
+
+    *snapshot = {};
+    if (window == nullptr) {
+        return false;
+    }
+
+    bool enabled = false;
+    bool visible = false;
+    bool minimized = false;
+    bool active = false;
+    bool controls_created = false;
+    bool init_visibility = false;
+    bool visible_before_resize = false;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(window) + kCxWndOpenOffset,
+            &enabled) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(window) + kCxWndVisibleOffset,
+            &visible) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(window) + kCxWndMinimizedOffset,
+            &minimized) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(window) + kCxWndActiveOffset,
+            &active) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(window) + kCSidlControlsCreatedOffset,
+            &controls_created) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(window) + kCSidlInitVisibilityOffset,
+            &init_visibility) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(window) + kCSidlVisibleBeforeResizeOffset,
+            &visible_before_resize)) {
+        return false;
+    }
+
+    snapshot->enabled = enabled;
+    snapshot->visible = visible;
+    snapshot->minimized = minimized;
+    snapshot->active = active;
+    snapshot->controls_created = controls_created;
+    snapshot->init_visibility = init_visibility;
+    snapshot->visible_before_resize = visible_before_resize;
+    snapshot->valid = true;
+    return true;
+}
+
+void AppendCxWndStateSnapshot(
+    std::wstring* message,
+    const wchar_t* prefix,
+    const CxWndStateSnapshot& snapshot) noexcept {
+    if (message == nullptr || prefix == nullptr) {
+        return;
+    }
+
+    *message += L" ";
+    *message += prefix;
+    *message += L"_state_valid=";
+    *message += snapshot.valid ? L"true" : L"false";
+    if (!snapshot.valid) {
+        return;
+    }
+
+    *message += L" ";
+    *message += prefix;
+    *message += L"_enabled=";
+    *message += snapshot.enabled ? L"true" : L"false";
+    *message += L" ";
+    *message += prefix;
+    *message += L"_visible=";
+    *message += snapshot.visible ? L"true" : L"false";
+    *message += L" ";
+    *message += prefix;
+    *message += L"_minimized=";
+    *message += snapshot.minimized ? L"true" : L"false";
+    *message += L" ";
+    *message += prefix;
+    *message += L"_active=";
+    *message += snapshot.active ? L"true" : L"false";
+    *message += L" ";
+    *message += prefix;
+    *message += L"_controls_created=";
+    *message += snapshot.controls_created ? L"true" : L"false";
+    *message += L" ";
+    *message += prefix;
+    *message += L"_init_visibility=";
+    *message += snapshot.init_visibility ? L"true" : L"false";
+    *message += L" ";
+    *message += prefix;
+    *message += L"_visible_before_resize=";
+    *message += snapshot.visible_before_resize ? L"true" : L"false";
+}
+
+void AppendSpellUiDerivedWindowTracePrefix(
+    std::wstring* message,
+    const wchar_t* seam_name,
+    std::uint32_t target_rva,
+    std::uint64_t count,
+    const wchar_t* window_name,
+    void* this_window,
+    std::uintptr_t caller_return_address,
+    std::uint32_t caller_return_rva,
+    bool caller_in_eqgame) noexcept {
+    if (message == nullptr) {
+        return;
+    }
+
+    *message = L"SpellUiDerivedWindowTrace";
+    *message += L" count=";
+    *message += std::to_wstring(count);
+    *message += L" seam=\"";
+    *message += (seam_name == nullptr ? L"unknown" : seam_name);
+    *message += L"\" target_rva=";
+    *message += Hex32(target_rva);
+    *message += L" window=\"";
+    *message += (window_name == nullptr ? L"unknown" : window_name);
+    *message += L"\" this=";
+    *message += HexPtr(reinterpret_cast<std::uintptr_t>(this_window));
+    *message += L" caller_return=";
+    *message += HexPtr(caller_return_address);
+    *message += L" caller_return_rva=";
+    *message += Hex32(caller_return_rva);
+    *message += L" caller_in_eqgame=";
+    *message += caller_in_eqgame ? L"true" : L"false";
+}
+
+int MONOMYTH_FASTCALL CastSpellOnShowTraceHook(
+    void* this_window,
+    void*) noexcept {
+    const wchar_t* window_name = L"unknown";
+    const bool tracked_window =
+        TryClassifyTrackedSpellUiWindow(this_window, &window_name);
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    std::uint32_t caller_return_rva = 0;
+    const bool caller_in_eqgame =
+        TryComputeEqgameCallerReturnRva(caller_return_address, &caller_return_rva);
+    std::uintptr_t delegated_on_show_target = 0;
+
+    CxWndStateSnapshot before = {};
+    if (tracked_window) {
+        TryReadCxWndStateSnapshot(this_window, &before);
+        TryResolveWindowVirtualTarget(this_window, 0x170, &delegated_on_show_target);
+    }
+
+    const int original_result = g_original_cast_spell_on_show_trace(this_window);
+    if (!tracked_window) {
+        return original_result;
+    }
+
+    CxWndStateSnapshot after = {};
+    TryReadCxWndStateSnapshot(this_window, &after);
+
+    const std::uint64_t count = ++g_cast_spell_on_show_trace_count;
+    if (!ShouldLogSpellUiDerivedWindowTrace(count)) {
+        return original_result;
+    }
+
+    std::wstring message;
+    AppendSpellUiDerivedWindowTracePrefix(
+        &message,
+        L"CastSpellWnd::OnShow",
+        kCastSpellOnShowRva,
+        count,
+        window_name,
+        this_window,
+        caller_return_address,
+        caller_return_rva,
+        caller_in_eqgame);
+    message += L" delegated_on_show_target=";
+    message += HexPtr(delegated_on_show_target);
+    message += L" result_raw=";
+    message += std::to_wstring(original_result);
+    message += L" result_bool=";
+    message += original_result != 0 ? L"true" : L"false";
+    AppendCxWndStateSnapshot(&message, L"before", before);
+    AppendCxWndStateSnapshot(&message, L"after", after);
+    monomyth::logger::Log(message);
+    return original_result;
+}
+
+bool MONOMYTH_FASTCALL CastSpellAboutToShowTraceHook(
+    void* this_window,
+    void*) noexcept {
+    const wchar_t* window_name = L"unknown";
+    const bool tracked_window =
+        TryClassifyTrackedSpellUiWindow(this_window, &window_name);
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    std::uint32_t caller_return_rva = 0;
+    const bool caller_in_eqgame =
+        TryComputeEqgameCallerReturnRva(caller_return_address, &caller_return_rva);
+
+    CxWndStateSnapshot before = {};
+    if (tracked_window) {
+        TryReadCxWndStateSnapshot(this_window, &before);
+    }
+
+    const bool original_result = g_original_cast_spell_about_to_show_trace(this_window);
+    if (!tracked_window) {
+        return original_result;
+    }
+
+    CxWndStateSnapshot after = {};
+    TryReadCxWndStateSnapshot(this_window, &after);
+
+    const std::uint64_t count = ++g_cast_spell_about_to_show_trace_count;
+    if (!ShouldLogSpellUiDerivedWindowTrace(count)) {
+        return original_result;
+    }
+
+    std::wstring message;
+    AppendSpellUiDerivedWindowTracePrefix(
+        &message,
+        L"CastSpellWnd::AboutToShow",
+        kCastSpellAboutToShowRva,
+        count,
+        window_name,
+        this_window,
+        caller_return_address,
+        caller_return_rva,
+        caller_in_eqgame);
+    message += L" result=";
+    message += original_result ? L"true" : L"false";
+    AppendCxWndStateSnapshot(&message, L"before", before);
+    AppendCxWndStateSnapshot(&message, L"after", after);
+    monomyth::logger::Log(message);
+    return original_result;
+}
+
+int MONOMYTH_FASTCALL SpellBookOnShowTraceHook(
+    void* this_window,
+    void*) noexcept {
+    const wchar_t* window_name = L"unknown";
+    const bool tracked_window =
+        TryClassifyTrackedSpellUiWindow(this_window, &window_name);
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    std::uint32_t caller_return_rva = 0;
+    const bool caller_in_eqgame =
+        TryComputeEqgameCallerReturnRva(caller_return_address, &caller_return_rva);
+
+    CxWndStateSnapshot before = {};
+    if (tracked_window) {
+        TryReadCxWndStateSnapshot(this_window, &before);
+    }
+
+    const int original_result = g_original_spellbook_on_show_trace(this_window);
+    if (!tracked_window) {
+        return original_result;
+    }
+
+    CxWndStateSnapshot after = {};
+    TryReadCxWndStateSnapshot(this_window, &after);
+
+    const std::uint64_t count = ++g_spellbook_on_show_trace_count;
+    if (!ShouldLogSpellUiDerivedWindowTrace(count)) {
+        return original_result;
+    }
+
+    std::wstring message;
+    AppendSpellUiDerivedWindowTracePrefix(
+        &message,
+        L"SpellBookWnd::OnShow",
+        kSpellBookOnShowRva,
+        count,
+        window_name,
+        this_window,
+        caller_return_address,
+        caller_return_rva,
+        caller_in_eqgame);
+    message += L" result_raw=";
+    message += std::to_wstring(original_result);
+    message += L" result_bool=";
+    message += original_result != 0 ? L"true" : L"false";
+    AppendCxWndStateSnapshot(&message, L"before", before);
+    AppendCxWndStateSnapshot(&message, L"after", after);
+    monomyth::logger::Log(message);
+    return original_result;
+}
+
+bool MONOMYTH_FASTCALL SpellBookAboutToShowTraceHook(
+    void* this_window,
+    void*) noexcept {
+    const wchar_t* window_name = L"unknown";
+    const bool tracked_window =
+        TryClassifyTrackedSpellUiWindow(this_window, &window_name);
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    std::uint32_t caller_return_rva = 0;
+    const bool caller_in_eqgame =
+        TryComputeEqgameCallerReturnRva(caller_return_address, &caller_return_rva);
+
+    CxWndStateSnapshot before = {};
+    if (tracked_window) {
+        TryReadCxWndStateSnapshot(this_window, &before);
+    }
+
+    const bool original_result = g_original_spellbook_about_to_show_trace(this_window);
+    if (!tracked_window) {
+        return original_result;
+    }
+
+    CxWndStateSnapshot after = {};
+    TryReadCxWndStateSnapshot(this_window, &after);
+
+    const std::uint64_t count = ++g_spellbook_about_to_show_trace_count;
+    if (!ShouldLogSpellUiDerivedWindowTrace(count)) {
+        return original_result;
+    }
+
+    std::wstring message;
+    AppendSpellUiDerivedWindowTracePrefix(
+        &message,
+        L"SpellBookWnd::AboutToShow",
+        kSpellBookAboutToShowRva,
+        count,
+        window_name,
+        this_window,
+        caller_return_address,
+        caller_return_rva,
+        caller_in_eqgame);
+    message += L" result=";
+    message += original_result ? L"true" : L"false";
+    AppendCxWndStateSnapshot(&message, L"before", before);
+    AppendCxWndStateSnapshot(&message, L"after", after);
+    monomyth::logger::Log(message);
+    return original_result;
+}
+
+const wchar_t* DescribeSpellUiAboutToShowSharedBoolGateSeam(
+    std::uint32_t caller_return_rva) noexcept {
+    switch (caller_return_rva) {
+        case kCastSpellAboutToShowSharedBoolGateReturnRva:
+            return L"CastSpellWnd::AboutToShow shared_bool_gate";
+        case kSpellBookAboutToShowSharedBoolGateReturnRva:
+            return L"SpellBookWnd::AboutToShow shared_bool_gate";
+        default:
+            return L"unknown_shared_bool_gate";
+    }
+}
+
+const wchar_t* DescribeSpellUiAboutToShowSharedLookupSeam(
+    std::uint32_t caller_return_rva) noexcept {
+    switch (caller_return_rva) {
+        case kCastSpellAboutToShowSharedLookupReturnRva:
+            return L"CastSpellWnd::AboutToShow shared_lookup";
+        case kSpellBookAboutToShowSharedLookupReturnRva:
+            return L"SpellBookWnd::AboutToShow shared_lookup";
+        default:
+            return L"unknown_shared_lookup";
+    }
+}
+
+bool TryResolveSpellUiAboutToShowSharedBoolGateClassRecord(
+    void* this_context,
+    void** class_record_out,
+    std::uint8_t* class_id_out) noexcept {
+    if (class_record_out == nullptr || class_id_out == nullptr) {
+        return false;
+    }
+
+    *class_record_out = nullptr;
+    *class_id_out = 0;
+    if (this_context == nullptr || g_original_spell_ui_about_to_show_shared_lookup == nullptr) {
+        return false;
+    }
+
+    void* descriptor_base = nullptr;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(this_context) + 0x4,
+            &descriptor_base) ||
+        descriptor_base == nullptr) {
+        return false;
+    }
+
+    void* descriptor_table = nullptr;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(descriptor_base) + 0x4,
+            &descriptor_table) ||
+        descriptor_table == nullptr) {
+        return false;
+    }
+
+    const std::uintptr_t lookup_context =
+        reinterpret_cast<std::uintptr_t>(descriptor_table) +
+        reinterpret_cast<std::uintptr_t>(this_context) + 0x8;
+    if (lookup_context < reinterpret_cast<std::uintptr_t>(descriptor_table)) {
+        return false;
+    }
+
+    void* class_record =
+        g_original_spell_ui_about_to_show_shared_lookup(reinterpret_cast<void*>(lookup_context));
+    if (class_record == nullptr) {
+        return false;
+    }
+
+    std::uint8_t class_id = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(class_record) + kPcProfileClassOffset,
+            &class_id) ||
+        !monomyth::multiclass_identity::IsPlayableClassId(class_id)) {
+        return false;
+    }
+
+    *class_record_out = class_record;
+    *class_id_out = class_id;
+    return true;
+}
+
+int MONOMYTH_FASTCALL SpellUiAboutToShowSharedBoolGateCallsiteHook(
+    void* this_context,
+    void*) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    std::uint32_t caller_return_rva = 0;
+    const bool caller_in_eqgame =
+        TryComputeEqgameCallerReturnRva(caller_return_address, &caller_return_rva);
+
+    void* resolved_class_record = nullptr;
+    std::uint8_t resolved_class_id = 0;
+    const bool resolved_class_id_read =
+        TryResolveSpellUiAboutToShowSharedBoolGateClassRecord(
+            this_context,
+            &resolved_class_record,
+            &resolved_class_id);
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    std::uint8_t primary_class_id = 0;
+    const bool primary_class_read = TryReadLocalProfileClassId(&primary_class_id);
+    const bool has_authoritative_caster =
+        monomyth::multiclass_identity::HasAnyAuthoritativeCastingClass(
+            snapshot.has_classes_bitmask,
+            snapshot.classes_bitmask);
+    const bool primary_class_playable =
+        primary_class_read &&
+        monomyth::multiclass_identity::IsPlayableClassId(primary_class_id);
+    const bool primary_class_is_caster =
+        primary_class_playable &&
+        monomyth::multiclass_identity::IsCastingClassId(primary_class_id);
+    const bool primary_class_in_assigned_mask =
+        primary_class_playable &&
+        monomyth::multiclass_identity::HasAuthoritativeClass(
+            snapshot.has_classes_bitmask,
+            snapshot.classes_bitmask,
+            primary_class_id);
+    const int original_result =
+        g_original_spell_ui_about_to_show_shared_bool_gate(this_context);
+    const bool override_applied =
+        original_result == 0 &&
+        has_authoritative_caster &&
+        primary_class_playable &&
+        !primary_class_is_caster &&
+        primary_class_in_assigned_mask &&
+        resolved_class_id_read &&
+        primary_class_id == resolved_class_id;
+
+    const std::uint64_t count = ++g_spell_ui_about_to_show_shared_bool_gate_trace_count;
+    if (!ShouldLogSpellUiAboutToShowGateTrace(count)) {
+        return override_applied ? 1 : original_result;
+    }
+
+    std::wstring message = L"SpellUiAboutToShowGateTrace";
+    message += L" count=";
+    message += std::to_wstring(count);
+    message += L" seam=\"";
+    message += DescribeSpellUiAboutToShowSharedBoolGateSeam(caller_return_rva);
+    message += L"\" kind=\"shared_bool_gate\"";
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_return_rva=";
+    message += Hex32(caller_return_rva);
+    message += L" caller_in_eqgame=";
+    message += caller_in_eqgame ? L"true" : L"false";
+    message += L" this_context=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" resolved_class_record=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(resolved_class_record));
+    message += L" resolved_class_id_read=";
+    message += resolved_class_id_read ? L"true" : L"false";
+    message += L" resolved_class_id=";
+    message += std::to_wstring(resolved_class_id);
+    if (resolved_class_id_read) {
+        const char* class_name = monomyth::multiclass_identity::ClassDisplayTokenAscii(
+            resolved_class_id,
+            monomyth::multiclass_identity::ClassDisplayStyle::kFullName);
+        if (class_name != nullptr && class_name[0] != '\0') {
+            message += L" resolved_class_name=\"";
+            message += WidenAsciiLossy(class_name);
+            message += L"\"";
+        }
+    }
+    message += L" primary_class_read=";
+    message += primary_class_read ? L"true" : L"false";
+    message += L" primary_class_id=";
+    message += std::to_wstring(primary_class_id);
+    message += L" assigned_mask=";
+    message += Hex32(snapshot.has_classes_bitmask ? snapshot.classes_bitmask : 0);
+    message += L" has_authoritative_caster=";
+    message += has_authoritative_caster ? L"true" : L"false";
+    message += L" primary_class_playable=";
+    message += primary_class_playable ? L"true" : L"false";
+    message += L" primary_class_is_caster=";
+    message += primary_class_is_caster ? L"true" : L"false";
+    message += L" primary_class_in_assigned_mask=";
+    message += primary_class_in_assigned_mask ? L"true" : L"false";
+    message += L" result_raw=";
+    message += std::to_wstring(original_result);
+    message += L" result_bool=";
+    message += original_result != 0 ? L"true" : L"false";
+    message += L" override_applied=";
+    message += override_applied ? L"true" : L"false";
+    message += L" override_result_bool=";
+    message += (override_applied || original_result != 0) ? L"true" : L"false";
+    monomyth::logger::Log(message);
+    return override_applied ? 1 : original_result;
+}
+
+void* MONOMYTH_FASTCALL SpellUiAboutToShowSharedLookupCallsiteHook(
+    void* this_context,
+    void*) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    std::uint32_t caller_return_rva = 0;
+    const bool caller_in_eqgame =
+        TryComputeEqgameCallerReturnRva(caller_return_address, &caller_return_rva);
+    void* const original_result =
+        g_original_spell_ui_about_to_show_shared_lookup(this_context);
+
+    const std::uint64_t count = ++g_spell_ui_about_to_show_shared_lookup_trace_count;
+    if (!ShouldLogSpellUiAboutToShowGateTrace(count)) {
+        return original_result;
+    }
+
+    bool result_340c_read = false;
+    std::uint32_t result_340c = 0;
+    if (original_result != nullptr) {
+        result_340c_read = TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(original_result) + 0x340c,
+            &result_340c);
+    }
+
+    std::wstring message = L"SpellUiAboutToShowGateTrace";
+    message += L" count=";
+    message += std::to_wstring(count);
+    message += L" seam=\"";
+    message += DescribeSpellUiAboutToShowSharedLookupSeam(caller_return_rva);
+    message += L"\" kind=\"shared_lookup\"";
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_return_rva=";
+    message += Hex32(caller_return_rva);
+    message += L" caller_in_eqgame=";
+    message += caller_in_eqgame ? L"true" : L"false";
+    message += L" this_context=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" result=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(original_result));
+    message += L" result_null=";
+    message += original_result == nullptr ? L"true" : L"false";
+    message += L" result_340c_read=";
+    message += result_340c_read ? L"true" : L"false";
+    message += L" result_340c=";
+    message += Hex32(result_340c);
+    message += L" result_340c_zero=";
+    message += (result_340c_read && result_340c == 0) ? L"true" : L"false";
+    monomyth::logger::Log(message);
+    return original_result;
+}
+
+int MONOMYTH_FASTCALL CXWndShowTraceHook(
+    void* this_window,
+    void*,
+    int show_like,
+    int recurse_like,
+    int unknown_like) noexcept {
+    const wchar_t* window_name = L"unknown";
+    const bool tracked_window =
+        TryClassifyTrackedSpellUiWindow(this_window, &window_name);
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    std::uint32_t caller_return_rva = 0;
+    const bool caller_in_eqgame =
+        TryComputeEqgameCallerReturnRva(caller_return_address, &caller_return_rva);
+
+    CxWndStateSnapshot before = {};
+    if (tracked_window) {
+        TryReadCxWndStateSnapshot(this_window, &before);
+    }
+
+    const int original_result = g_original_cxwnd_show_trace(
+        this_window,
+        show_like,
+        recurse_like,
+        unknown_like);
+
+    if (!tracked_window) {
+        return original_result;
+    }
+
+    CxWndStateSnapshot after = {};
+    TryReadCxWndStateSnapshot(this_window, &after);
+
+    ++g_spell_ui_show_trace_count;
+    std::wstring message = L"SpellUiShowTrace";
+    message += L" count=";
+    message += std::to_wstring(g_spell_ui_show_trace_count);
+    message += L" window=\"";
+    message += window_name;
+    message += L"\" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_window));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_return_rva=";
+    message += Hex32(caller_return_rva);
+    message += L" caller_in_eqgame=";
+    message += caller_in_eqgame ? L"true" : L"false";
+    message += L" show=";
+    message += show_like != 0 ? L"true" : L"false";
+    message += L" recurse=";
+    message += recurse_like != 0 ? L"true" : L"false";
+    message += L" unknown=";
+    message += unknown_like != 0 ? L"true" : L"false";
+    message += L" result=";
+    message += original_result != 0 ? L"true" : L"false";
+    AppendCxWndStateSnapshot(&message, L"before", before);
+    AppendCxWndStateSnapshot(&message, L"after", after);
+    monomyth::logger::Log(message);
+    return original_result;
+}
+
+int TraceSpellUiShowWrapperCommon(
+    const wchar_t* wrapper_name,
+    std::uint32_t wrapper_rva,
+    void* this_window,
+    CXWndShowWrapperFn original_wrapper) noexcept {
+    if (original_wrapper == nullptr) {
+        return 0;
+    }
+
+    const wchar_t* window_name = L"unknown";
+    const bool tracked_window =
+        TryClassifyTrackedSpellUiWindow(this_window, &window_name);
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    std::uint32_t caller_return_rva = 0;
+    const bool caller_in_eqgame =
+        TryComputeEqgameCallerReturnRva(caller_return_address, &caller_return_rva);
+
+    CxWndStateSnapshot before = {};
+    if (tracked_window) {
+        TryReadCxWndStateSnapshot(this_window, &before);
+    }
+
+    const int original_result = original_wrapper(this_window);
+    if (!tracked_window) {
+        return original_result;
+    }
+
+    CxWndStateSnapshot after = {};
+    TryReadCxWndStateSnapshot(this_window, &after);
+
+    ++g_spell_ui_show_wrapper_trace_count;
+    std::wstring message = L"SpellUiShowWrapperTrace";
+    message += L" count=";
+    message += std::to_wstring(g_spell_ui_show_wrapper_trace_count);
+    message += L" wrapper=\"";
+    message += (wrapper_name == nullptr ? L"unknown" : wrapper_name);
+    message += L"\" wrapper_rva=";
+    message += Hex32(wrapper_rva);
+    message += L" window=\"";
+    message += window_name;
+    message += L"\" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_window));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_return_rva=";
+    message += Hex32(caller_return_rva);
+    message += L" caller_in_eqgame=";
+    message += caller_in_eqgame ? L"true" : L"false";
+    message += L" result=";
+    message += original_result != 0 ? L"true" : L"false";
+    AppendCxWndStateSnapshot(&message, L"before", before);
+    AppendCxWndStateSnapshot(&message, L"after", after);
+    monomyth::logger::Log(message);
+    return original_result;
+}
+
+int MONOMYTH_FASTCALL CXWndShowTrueWrapperTraceHook(
+    void* this_window,
+    void*) noexcept {
+    return TraceSpellUiShowWrapperCommon(
+        L"ShowTrueTrueTrueWrapper",
+        kCXWndShowTrueWrapperRva,
+        this_window,
+        g_original_cxwnd_show_true_wrapper_trace);
+}
+
+int MONOMYTH_FASTCALL CXWndShowFalseWrapperTraceHook(
+    void* this_window,
+    void*) noexcept {
+    return TraceSpellUiShowWrapperCommon(
+        L"ShowFalseTrueTrueWrapper",
+        kCXWndShowFalseWrapperRva,
+        this_window,
+        g_original_cxwnd_show_false_wrapper_trace);
+}
+
 void TryPersistPendingMulticlassCache(const wchar_t* trigger) noexcept {
     if (!g_multiclass_cache_persist_pending.load()) {
         return;
@@ -3009,6 +4320,33 @@ void TryPersistPendingMulticlassCache(const wchar_t* trigger) noexcept {
         g_multiclass_cache_persist_pending.store(false);
         g_multiclass_cache_persist_pending_mask.store(0);
     }
+}
+
+bool ShouldArmDeferredMulticlassCasterUiAccessRetry(
+    std::uint32_t assigned_mask) noexcept {
+    if (!monomyth::multiclass_identity::HasAnyAuthoritativeCastingClass(true, assigned_mask)) {
+        return false;
+    }
+
+    std::uint8_t primary_class_id = 0;
+    if (!TryReadLocalProfileClassId(&primary_class_id) ||
+        !monomyth::multiclass_identity::IsPlayableClassId(primary_class_id) ||
+        monomyth::multiclass_identity::IsCastingClassId(primary_class_id) ||
+        !monomyth::multiclass_identity::HasAuthoritativeClass(
+            true,
+            assigned_mask,
+            primary_class_id)) {
+        return false;
+    }
+
+    return true;
+}
+
+void ClearDeferredMulticlassCasterUiAccessRetryState() noexcept {
+    g_multiclass_caster_ui_access_retry_pending.store(false);
+    g_multiclass_caster_ui_access_retry_mask.store(0);
+    g_multiclass_caster_ui_access_retry_attempt_count.store(0);
+    g_multiclass_caster_ui_access_retry_next_tick_ms.store(0);
 }
 
 bool TryReadLocalCharDataPointer(void** local_char_data) noexcept {
@@ -3232,6 +4570,513 @@ bool TryReadLocalPlayerDisplayedClassId(std::uint8_t* class_id) noexcept {
     }
 
     return TryReadLocalProfileClassId(class_id);
+}
+
+bool TryEnsureMulticlassCasterUiAccessForAssignedMask(std::uint32_t assigned_mask) noexcept {
+    std::uint8_t primary_class_id = 0;
+    std::uint32_t widened_primary_class_id = 0;
+    const bool has_authoritative_caster =
+        monomyth::multiclass_identity::HasAnyAuthoritativeCastingClass(
+            true,
+            assigned_mask);
+    const bool primary_class_read = TryReadLocalProfileClassId(&primary_class_id);
+    const bool primary_class_playable =
+        primary_class_read &&
+        monomyth::multiclass_identity::IsPlayableClassId(primary_class_id);
+    const bool primary_class_is_caster =
+        primary_class_playable &&
+        monomyth::multiclass_identity::IsCastingClassId(primary_class_id);
+    const bool primary_class_in_assigned_mask =
+        primary_class_playable &&
+        monomyth::multiclass_identity::HasAuthoritativeClass(
+            true,
+            assigned_mask,
+            primary_class_id);
+    if (primary_class_read) {
+        widened_primary_class_id = primary_class_id;
+    }
+    const bool dedupe_hit =
+        primary_class_playable &&
+        g_multiclass_caster_ui_access_ensured.load() &&
+        g_multiclass_caster_ui_access_mask.load() == assigned_mask &&
+        g_multiclass_caster_ui_access_primary_class.load() == widened_primary_class_id;
+
+    void* cast_spell_window = nullptr;
+    void* spellbook_window = nullptr;
+    const bool cast_spell_window_available =
+        TryReadCastSpellWindowPointer(&cast_spell_window) &&
+        cast_spell_window != nullptr;
+    const bool spellbook_window_available =
+        TryReadSpellBookWindowPointer(&spellbook_window) &&
+        spellbook_window != nullptr;
+
+    std::uintptr_t cast_spell_activate_target = 0;
+    std::uintptr_t spellbook_activate_target = 0;
+    std::uintptr_t cast_spell_show_target = 0;
+    std::uintptr_t spellbook_show_target = 0;
+    std::uintptr_t cast_spell_minimize_target = 0;
+    std::uintptr_t spellbook_minimize_target = 0;
+    std::uintptr_t cast_spell_bring_to_top_target = 0;
+    std::uintptr_t spellbook_bring_to_top_target = 0;
+    std::uintptr_t cast_spell_on_show_target = 0;
+    std::uintptr_t spellbook_on_show_target = 0;
+    std::uintptr_t cast_spell_about_to_show_target = 0;
+    std::uintptr_t spellbook_about_to_show_target = 0;
+    std::uintptr_t cast_spell_wnd_notification_target = 0;
+    std::uintptr_t spellbook_wnd_notification_target = 0;
+    std::uintptr_t cast_spell_on_process_frame_target = 0;
+    std::uintptr_t spellbook_on_process_frame_target = 0;
+    std::uint32_t cast_spell_command_id = 0;
+    std::uint32_t spellbook_command_id = 0;
+    std::uintptr_t cast_spell_execute_cmd_target = 0;
+    std::uintptr_t spellbook_execute_cmd_target = 0;
+    bool cast_spell_command_resolved = false;
+    bool spellbook_command_resolved = false;
+    EqCommandLookupDiagnostics cast_spell_command_diagnostics = {};
+    EqCommandLookupDiagnostics spellbook_command_diagnostics = {};
+    bool cast_spell_command_key_down_invoked = false;
+    bool cast_spell_command_key_up_invoked = false;
+    bool spellbook_command_key_down_invoked = false;
+    bool spellbook_command_key_up_invoked = false;
+    bool cast_spell_command_key_down_result = false;
+    bool cast_spell_command_key_up_result = false;
+    bool spellbook_command_key_down_result = false;
+    bool spellbook_command_key_up_result = false;
+    CxWndStateSnapshot cast_spell_before = {};
+    CxWndStateSnapshot cast_spell_after_command = {};
+    CxWndStateSnapshot cast_spell_after = {};
+    CxWndStateSnapshot spellbook_before = {};
+    CxWndStateSnapshot spellbook_after_command = {};
+    CxWndStateSnapshot spellbook_after = {};
+    bool opened_cast_spell_window = false;
+    bool cast_spell_window_visible_before = false;
+    bool opened_spellbook = false;
+    bool spellbook_window_visible_before = false;
+    bool cast_spell_show_invoked = false;
+    bool spellbook_show_invoked = false;
+    bool cast_spell_show_result = false;
+    bool spellbook_show_result = false;
+    bool any_ui_attempt = false;
+    const wchar_t* result_reason = L"";
+    bool return_value = false;
+
+    if (!has_authoritative_caster) {
+        result_reason = L"assigned_mask_has_no_caster";
+        goto finalize;
+    }
+
+    if (!primary_class_read) {
+        result_reason = L"primary_class_unavailable";
+        goto finalize;
+    }
+
+    if (!primary_class_playable) {
+        result_reason = L"primary_class_not_playable";
+        goto finalize;
+    }
+
+    if (primary_class_is_caster) {
+        result_reason = L"primary_class_already_caster";
+        goto finalize;
+    }
+
+    if (!primary_class_in_assigned_mask) {
+        result_reason = L"primary_class_missing_from_assigned_mask";
+        goto finalize;
+    }
+
+    if (dedupe_hit) {
+        result_reason = L"deduped_same_primary_and_mask";
+        goto finalize;
+    }
+
+    // For native-melee characters with an authoritative casting class, use the
+    // live keybind command names the client exposes for these windows rather than
+    // the unrelated `/gems` mini-game alias or a blind generic CXWnd promote.
+    TryReadCxWndStateSnapshot(cast_spell_window, &cast_spell_before);
+    cast_spell_window_visible_before =
+        cast_spell_before.valid && cast_spell_before.visible;
+    TryResolveWindowVirtualTarget(
+        cast_spell_window,
+        0x98,
+        &cast_spell_on_show_target);
+    TryResolveWindowVirtualTarget(
+        cast_spell_window,
+        0xdc,
+        &cast_spell_about_to_show_target);
+    TryResolveWindowVirtualTarget(
+        cast_spell_window,
+        0x88,
+        &cast_spell_wnd_notification_target);
+    TryResolveWindowVirtualTarget(
+        cast_spell_window,
+        0xc4,
+        &cast_spell_on_process_frame_target);
+    TryCollectEqCommandLookupDiagnostics(
+        kToggleSpellsWindowCommandName,
+        &cast_spell_command_diagnostics);
+    if (!cast_spell_window_visible_before &&
+        TryResolveEqMappableCommandId(
+            kToggleSpellsWindowCommandName,
+            &cast_spell_command_id)) {
+        cast_spell_command_resolved = true;
+        cast_spell_command_key_down_invoked =
+            TryInvokeEqExecuteCmd(
+                cast_spell_command_id,
+                true,
+                &cast_spell_execute_cmd_target,
+                &cast_spell_command_key_down_result);
+        cast_spell_command_key_up_invoked =
+            TryInvokeEqExecuteCmd(
+                cast_spell_command_id,
+                false,
+                &cast_spell_execute_cmd_target,
+                &cast_spell_command_key_up_result);
+    }
+
+    if (TryReadCastSpellWindowPointer(&cast_spell_window) && cast_spell_window != nullptr) {
+        TryReadCxWndStateSnapshot(cast_spell_window, &cast_spell_after_command);
+    }
+
+    if (cast_spell_window != nullptr) {
+        TryInvokeWindowMinimize(
+            cast_spell_window,
+            false,
+            &cast_spell_minimize_target);
+        cast_spell_show_invoked =
+            TryInvokeWindowShow(
+                cast_spell_window,
+                true,
+                true,
+                true,
+                &cast_spell_show_target,
+                &cast_spell_show_result);
+        const bool activated =
+            TryInvokeWindowActivate(cast_spell_window, &cast_spell_activate_target);
+        const bool brought_to_top =
+            TryInvokeWindowBringToTop(
+                cast_spell_window,
+                true,
+                &cast_spell_bring_to_top_target);
+        opened_cast_spell_window =
+            cast_spell_command_key_down_result ||
+            cast_spell_command_key_up_result ||
+            cast_spell_show_result ||
+            activated ||
+            brought_to_top;
+        TryReadCxWndStateSnapshot(cast_spell_window, &cast_spell_after);
+    }
+
+    TryReadCxWndStateSnapshot(spellbook_window, &spellbook_before);
+    spellbook_window_visible_before =
+        spellbook_before.valid && spellbook_before.visible;
+    TryResolveWindowVirtualTarget(
+        spellbook_window,
+        0x98,
+        &spellbook_on_show_target);
+    TryResolveWindowVirtualTarget(
+        spellbook_window,
+        0xdc,
+        &spellbook_about_to_show_target);
+    TryResolveWindowVirtualTarget(
+        spellbook_window,
+        0x88,
+        &spellbook_wnd_notification_target);
+    TryResolveWindowVirtualTarget(
+        spellbook_window,
+        0xc4,
+        &spellbook_on_process_frame_target);
+    TryCollectEqCommandLookupDiagnostics(
+        kSpellbookCommandName,
+        &spellbook_command_diagnostics);
+
+    if (TryReadSpellBookWindowPointer(&spellbook_window) && spellbook_window != nullptr) {
+        TryReadCxWndStateSnapshot(spellbook_window, &spellbook_after_command);
+    }
+
+    if (spellbook_window != nullptr) {
+        TryReadCxWndStateSnapshot(spellbook_window, &spellbook_after);
+    }
+    any_ui_attempt =
+        cast_spell_command_resolved ||
+        spellbook_command_resolved ||
+        cast_spell_window != nullptr ||
+        spellbook_window != nullptr;
+    if (!any_ui_attempt) {
+        result_reason = L"no_ui_attempt_available";
+        goto finalize;
+    }
+
+    g_multiclass_caster_ui_access_ensured.store(true);
+    g_multiclass_caster_ui_access_mask.store(assigned_mask);
+    g_multiclass_caster_ui_access_primary_class.store(widened_primary_class_id);
+    result_reason = L"ui_attempted";
+    return_value = true;
+
+finalize:
+    std::wstring message = L"MulticlassCasterUiAccess";
+    message += L" result=";
+    message += return_value ? L"true" : L"false";
+    message += L" reason=\"";
+    message += result_reason;
+    message += L"\"";
+    message += L" has_authoritative_caster=";
+    message += has_authoritative_caster ? L"true" : L"false";
+    message += L" primary_class_read=";
+    message += primary_class_read ? L"true" : L"false";
+    message += L" primary_class_playable=";
+    message += primary_class_playable ? L"true" : L"false";
+    message += L" primary_class_is_caster=";
+    message += primary_class_is_caster ? L"true" : L"false";
+    message += L" primary_class_in_assigned_mask=";
+    message += primary_class_in_assigned_mask ? L"true" : L"false";
+    message += L" dedupe_hit=";
+    message += dedupe_hit ? L"true" : L"false";
+    message += L" primary_class_id=";
+    message += std::to_wstring(widened_primary_class_id);
+    message += L" assigned_mask=";
+    message += Hex32(assigned_mask);
+    message += L" any_ui_attempt=";
+    message += any_ui_attempt ? L"true" : L"false";
+    message += L" cast_spell_window=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(cast_spell_window));
+    message += L" cast_spell_window_available=";
+    message += cast_spell_window_available ? L"true" : L"false";
+    message += L" cast_spell_command_name=\"";
+    message += WidenAsciiLossy(kToggleSpellsWindowCommandName);
+    message += L"\"";
+    message += L" cast_spell_bind_list_address_valid=";
+    message += cast_spell_command_diagnostics.bind_list_address_valid ? L"true" : L"false";
+    message += L" cast_spell_bind_list_address=";
+    message += HexPtr(cast_spell_command_diagnostics.bind_list_address);
+    message += L" cast_spell_command_scan_limit=";
+    message += std::to_wstring(cast_spell_command_diagnostics.scan_limit);
+    message += L" cast_spell_command_non_empty_count=";
+    message += std::to_wstring(cast_spell_command_diagnostics.non_empty_count);
+    message += L" cast_spell_command_spell_related_count=";
+    message += std::to_wstring(cast_spell_command_diagnostics.spell_related_count);
+    message += L" cast_spell_command_resolved=";
+    message += cast_spell_command_resolved ? L"true" : L"false";
+    message += L" cast_spell_command_id=";
+    message += std::to_wstring(cast_spell_command_id);
+    message += L" cast_spell_command_exact_match_found=";
+    message += cast_spell_command_diagnostics.exact_match_found ? L"true" : L"false";
+    message += L" cast_spell_command_exact_match_id=";
+    message += std::to_wstring(cast_spell_command_diagnostics.exact_match_command_id);
+    if (!cast_spell_command_diagnostics.spell_related_entries.empty()) {
+        message += L" cast_spell_command_spell_related_entries=\"";
+        message += WidenAsciiLossy(cast_spell_command_diagnostics.spell_related_entries);
+        message += L"\"";
+    }
+    message += L" cast_spell_execute_cmd_target=";
+    message += HexPtr(cast_spell_execute_cmd_target);
+    message += L" cast_spell_command_key_down_invoked=";
+    message += cast_spell_command_key_down_invoked ? L"true" : L"false";
+    message += L" cast_spell_command_key_down_result=";
+    message += cast_spell_command_key_down_result ? L"true" : L"false";
+    message += L" cast_spell_command_key_up_invoked=";
+    message += cast_spell_command_key_up_invoked ? L"true" : L"false";
+    message += L" cast_spell_command_key_up_result=";
+    message += cast_spell_command_key_up_result ? L"true" : L"false";
+    message += L" cast_spell_minimize_target=";
+    message += HexPtr(cast_spell_minimize_target);
+    message += L" cast_spell_show_target=";
+    message += HexPtr(cast_spell_show_target);
+    message += L" cast_spell_on_show_target=";
+    message += HexPtr(cast_spell_on_show_target);
+    message += L" cast_spell_about_to_show_target=";
+    message += HexPtr(cast_spell_about_to_show_target);
+    message += L" cast_spell_wnd_notification_target=";
+    message += HexPtr(cast_spell_wnd_notification_target);
+    message += L" cast_spell_on_process_frame_target=";
+    message += HexPtr(cast_spell_on_process_frame_target);
+    message += L" cast_spell_show_invoked=";
+    message += cast_spell_show_invoked ? L"true" : L"false";
+    message += L" cast_spell_show_result=";
+    message += cast_spell_show_result ? L"true" : L"false";
+    message += L" cast_spell_activate_target=";
+    message += HexPtr(cast_spell_activate_target);
+    message += L" cast_spell_bring_to_top_target=";
+    message += HexPtr(cast_spell_bring_to_top_target);
+    message += L" opened_cast_spell_window=";
+    message += opened_cast_spell_window ? L"true" : L"false";
+    AppendCxWndStateSnapshot(&message, L"cast_spell_before", cast_spell_before);
+    AppendCxWndStateSnapshot(&message, L"cast_spell_after_command", cast_spell_after_command);
+    AppendCxWndStateSnapshot(&message, L"cast_spell_after", cast_spell_after);
+    message += L" spellbook_window=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(spellbook_window));
+    message += L" spellbook_window_available=";
+    message += spellbook_window_available ? L"true" : L"false";
+    message += L" spellbook_command_name=\"";
+    message += WidenAsciiLossy(kSpellbookCommandName);
+    message += L"\"";
+    message += L" spellbook_bind_list_address_valid=";
+    message += spellbook_command_diagnostics.bind_list_address_valid ? L"true" : L"false";
+    message += L" spellbook_bind_list_address=";
+    message += HexPtr(spellbook_command_diagnostics.bind_list_address);
+    message += L" spellbook_command_scan_limit=";
+    message += std::to_wstring(spellbook_command_diagnostics.scan_limit);
+    message += L" spellbook_command_non_empty_count=";
+    message += std::to_wstring(spellbook_command_diagnostics.non_empty_count);
+    message += L" spellbook_command_spell_related_count=";
+    message += std::to_wstring(spellbook_command_diagnostics.spell_related_count);
+    message += L" spellbook_command_resolved=";
+    message += spellbook_command_resolved ? L"true" : L"false";
+    message += L" spellbook_command_id=";
+    message += std::to_wstring(spellbook_command_id);
+    message += L" spellbook_command_exact_match_found=";
+    message += spellbook_command_diagnostics.exact_match_found ? L"true" : L"false";
+    message += L" spellbook_command_exact_match_id=";
+    message += std::to_wstring(spellbook_command_diagnostics.exact_match_command_id);
+    if (!spellbook_command_diagnostics.spell_related_entries.empty()) {
+        message += L" spellbook_command_spell_related_entries=\"";
+        message += WidenAsciiLossy(spellbook_command_diagnostics.spell_related_entries);
+        message += L"\"";
+    }
+    message += L" spellbook_execute_cmd_target=";
+    message += HexPtr(spellbook_execute_cmd_target);
+    message += L" spellbook_command_key_down_invoked=";
+    message += spellbook_command_key_down_invoked ? L"true" : L"false";
+    message += L" spellbook_command_key_down_result=";
+    message += spellbook_command_key_down_result ? L"true" : L"false";
+    message += L" spellbook_command_key_up_invoked=";
+    message += spellbook_command_key_up_invoked ? L"true" : L"false";
+    message += L" spellbook_command_key_up_result=";
+    message += spellbook_command_key_up_result ? L"true" : L"false";
+    message += L" spellbook_minimize_target=";
+    message += HexPtr(spellbook_minimize_target);
+    message += L" spellbook_show_target=";
+    message += HexPtr(spellbook_show_target);
+    message += L" spellbook_on_show_target=";
+    message += HexPtr(spellbook_on_show_target);
+    message += L" spellbook_about_to_show_target=";
+    message += HexPtr(spellbook_about_to_show_target);
+    message += L" spellbook_wnd_notification_target=";
+    message += HexPtr(spellbook_wnd_notification_target);
+    message += L" spellbook_on_process_frame_target=";
+    message += HexPtr(spellbook_on_process_frame_target);
+    message += L" spellbook_show_invoked=";
+    message += spellbook_show_invoked ? L"true" : L"false";
+    message += L" spellbook_show_result=";
+    message += spellbook_show_result ? L"true" : L"false";
+    message += L" spellbook_activate_target=";
+    message += HexPtr(spellbook_activate_target);
+    message += L" spellbook_bring_to_top_target=";
+    message += HexPtr(spellbook_bring_to_top_target);
+    message += L" opened_spellbook=";
+    message += opened_spellbook ? L"true" : L"false";
+    AppendCxWndStateSnapshot(&message, L"spellbook_before", spellbook_before);
+    AppendCxWndStateSnapshot(&message, L"spellbook_after_command", spellbook_after_command);
+    AppendCxWndStateSnapshot(&message, L"spellbook_after", spellbook_after);
+    monomyth::logger::Log(message);
+    return return_value;
+}
+
+void TryRetryPendingMulticlassCasterUiAccess(const wchar_t* trigger) noexcept {
+    if (!g_multiclass_caster_ui_access_retry_pending.load()) {
+        return;
+    }
+
+    const std::uint32_t retry_mask = g_multiclass_caster_ui_access_retry_mask.load();
+    if (retry_mask == 0) {
+        ClearDeferredMulticlassCasterUiAccessRetryState();
+        return;
+    }
+
+    const std::uint64_t current_tick_ms = static_cast<std::uint64_t>(GetTickCount64());
+    const std::uint64_t next_retry_tick_ms =
+        g_multiclass_caster_ui_access_retry_next_tick_ms.load();
+    if (next_retry_tick_ms != 0 && current_tick_ms < next_retry_tick_ms) {
+        return;
+    }
+
+    const std::uint32_t attempts_already_made =
+        g_multiclass_caster_ui_access_retry_attempt_count.load();
+    if (attempts_already_made >= kMulticlassCasterUiAccessRetryMaxAttempts) {
+        ClearDeferredMulticlassCasterUiAccessRetryState();
+
+        std::wstring message = L"MulticlassCasterUiAccessDeferredRetry";
+        message += L" trigger=\"";
+        message += (trigger == nullptr ? L"" : trigger);
+        message += L"\" mask=";
+        message += Hex32(retry_mask);
+        message += L" attempt_number=";
+        message += std::to_wstring(attempts_already_made);
+        message += L" max_attempts=";
+        message += std::to_wstring(kMulticlassCasterUiAccessRetryMaxAttempts);
+        message += L" remaining_attempts=0";
+        message += L" success=false exhausted=true";
+        monomyth::logger::Log(message);
+        return;
+    }
+
+    void* local_player = nullptr;
+    std::string local_player_name;
+    const bool local_player_ok =
+        TryReadLocalPlayerPointer(&local_player) && local_player != nullptr;
+    const bool local_name_ok =
+        local_player_ok && TryReadEqSpawnName(local_player, &local_player_name);
+    if (!local_player_ok) {
+        g_multiclass_caster_ui_access_retry_next_tick_ms.store(
+            current_tick_ms + kMulticlassCasterUiAccessRetryCooldownMs);
+        return;
+    }
+
+    const std::uint32_t attempt_number =
+        g_multiclass_caster_ui_access_retry_attempt_count.fetch_add(1) + 1;
+    const bool success = TryEnsureMulticlassCasterUiAccessForAssignedMask(retry_mask);
+    const bool still_eligible =
+        !success && ShouldArmDeferredMulticlassCasterUiAccessRetry(retry_mask);
+    bool exhausted = false;
+    if (success || !still_eligible) {
+        ClearDeferredMulticlassCasterUiAccessRetryState();
+    } else if (attempt_number >= kMulticlassCasterUiAccessRetryMaxAttempts) {
+        exhausted = true;
+        ClearDeferredMulticlassCasterUiAccessRetryState();
+    } else {
+        g_multiclass_caster_ui_access_retry_next_tick_ms.store(
+            current_tick_ms + kMulticlassCasterUiAccessRetryCooldownMs);
+    }
+
+    const std::uint32_t remaining_attempts =
+        success || !still_eligible || exhausted
+            ? 0
+            : (kMulticlassCasterUiAccessRetryMaxAttempts - attempt_number);
+    if (success) {
+        exhausted = false;
+    }
+
+    std::wstring message = L"MulticlassCasterUiAccessDeferredRetry";
+    message += L" trigger=\"";
+    message += (trigger == nullptr ? L"" : trigger);
+    message += L"\" mask=";
+    message += Hex32(retry_mask);
+    message += L" attempt_number=";
+    message += std::to_wstring(attempt_number);
+    message += L" max_attempts=";
+    message += std::to_wstring(kMulticlassCasterUiAccessRetryMaxAttempts);
+    message += L" remaining_attempts=";
+    message += std::to_wstring(remaining_attempts);
+    message += L" local_player_ok=";
+    message += local_player_ok ? L"true" : L"false";
+    message += L" local_name_ok=";
+    message += local_name_ok ? L"true" : L"false";
+    if (local_name_ok) {
+        message += L" name=\"";
+        message += WidenAsciiLossy(local_player_name);
+        message += L"\"";
+    }
+    message += L" still_eligible=";
+    message += still_eligible ? L"true" : L"false";
+    message += L" success=";
+    message += success ? L"true" : L"false";
+    message += L" exhausted=";
+    message += exhausted ? L"true" : L"false";
+    message += L" next_retry_in_ms=";
+    message += std::to_wstring(
+        success || !still_eligible || exhausted ? 0
+                                                : kMulticlassCasterUiAccessRetryCooldownMs);
+    monomyth::logger::Log(message);
 }
 
 bool IsLocalPlayerCharacterContext(void* this_context) noexcept {
@@ -3663,6 +5508,7 @@ const char* BuildLocalPlayerClassDisplayAscii(
     monomyth::multiclass_identity::ClassDisplayStyle style,
     const wchar_t* surface) noexcept {
     TryPersistPendingMulticlassCache(surface);
+    TryRetryPendingMulticlassCasterUiAccess(surface);
 
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
@@ -3743,6 +5589,7 @@ const char* BuildPreferredLocalPlayerClassDisplayAscii(
     monomyth::multiclass_identity::ClassDisplayStyle style,
     const wchar_t* surface) noexcept {
     TryPersistPendingMulticlassCache(surface);
+    TryRetryPendingMulticlassCasterUiAccess(surface);
 
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
@@ -3826,6 +5673,7 @@ const char* BuildLocalSubjectClassDisplayAscii(
     monomyth::multiclass_identity::ClassDisplayStyle style,
     const wchar_t* surface) noexcept {
     TryPersistPendingMulticlassCache(surface);
+    TryRetryPendingMulticlassCasterUiAccess(surface);
 
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
@@ -4253,6 +6101,104 @@ bool ValidateSkillsWindowSkillValueSeams(std::uintptr_t module_base) noexcept {
         kSkillValueCallsiteBytes.size());
 
     return producer_matches && callsite_matches;
+}
+
+constexpr std::array<std::uint8_t, 18> kCXWndShowTraceEntryBytes = {
+    0x83, 0xec, 0x10, 0x53, 0x8b, 0x5c, 0x24, 0x18, 0x56,
+    0x8b, 0xf1, 0x8a, 0x86, 0x96, 0x01, 0x00, 0x00, 0x57};
+constexpr std::array<std::uint8_t, 17> kCXWndShowTrueWrapperEntryBytes = {
+    0x8b, 0x01, 0x8b, 0x90, 0xd8, 0x00, 0x00, 0x00, 0x6a,
+    0x01, 0x6a, 0x01, 0x6a, 0x01, 0xff, 0xd2, 0xc3};
+constexpr std::array<std::uint8_t, 17> kCXWndShowFalseWrapperEntryBytes = {
+    0x8b, 0x01, 0x8b, 0x90, 0xd8, 0x00, 0x00, 0x00, 0x6a,
+    0x01, 0x6a, 0x01, 0x6a, 0x00, 0xff, 0xd2, 0xc3};
+constexpr std::array<std::uint8_t, 11> kCastSpellOnShowEntryBytes = {
+    0x56, 0x8b, 0xf1, 0x8b, 0x06, 0x8b, 0x90, 0x70, 0x01, 0x00, 0x00};
+constexpr std::array<std::uint8_t, 16> kCastSpellAboutToShowEntryBytes = {
+    0xa1, 0x1c, 0x26, 0xdd, 0x00, 0x56, 0x8b, 0xf1,
+    0x8b, 0x48, 0x08, 0x8b, 0x51, 0x04, 0x8d, 0x4c};
+constexpr std::array<std::uint8_t, 12> kSpellBookOnShowEntryBytes = {
+    0x56, 0x8b, 0xf1, 0x80, 0xbe, 0x96, 0x01, 0x00, 0x00, 0x00, 0x74, 0x26};
+constexpr std::array<std::uint8_t, 15> kSpellBookAboutToShowEntryBytes = {
+    0x56, 0x8b, 0xf1, 0x8b, 0x0d, 0x1c, 0x26, 0xdd,
+    0x00, 0x81, 0xc1, 0xc8, 0x2d, 0x00, 0x00};
+
+bool SpellUiShowTraceEntryBytesMatch(
+    std::uintptr_t module_base,
+    std::array<std::uint8_t, kCXWndShowTraceEntryBytes.size()>* live_bytes) noexcept {
+    if (module_base == 0) {
+        return false;
+    }
+
+    std::array<std::uint8_t, kCXWndShowTraceEntryBytes.size()> local_live = {};
+    const bool copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kCXWndShowRva),
+        local_live.size(),
+        local_live.data());
+    if (live_bytes != nullptr) {
+        *live_bytes = local_live;
+    }
+
+    return copied &&
+        BytesMatchWithModuleRelocation(
+            local_live.data(),
+            kCXWndShowTraceEntryBytes.data(),
+            kCXWndShowTraceEntryBytes.size(),
+            module_base);
+}
+
+template <std::size_t N>
+bool SpellUiWrapperEntryBytesMatch(
+    std::uintptr_t module_base,
+    std::uint32_t target_rva,
+    const std::array<std::uint8_t, N>& expected_bytes,
+    std::array<std::uint8_t, N>* live_bytes) noexcept {
+    if (module_base == 0) {
+        return false;
+    }
+
+    std::array<std::uint8_t, N> local_live = {};
+    const bool copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + target_rva),
+        local_live.size(),
+        local_live.data());
+    if (live_bytes != nullptr) {
+        *live_bytes = local_live;
+    }
+
+    return copied &&
+        BytesMatchWithModuleRelocation(
+            local_live.data(),
+            expected_bytes.data(),
+            expected_bytes.size(),
+            module_base);
+}
+
+template <std::size_t N>
+bool SpellUiDerivedEntryBytesMatch(
+    std::uintptr_t module_base,
+    std::uint32_t target_rva,
+    const std::array<std::uint8_t, N>& expected_bytes,
+    std::array<std::uint8_t, N>* live_bytes) noexcept {
+    if (module_base == 0) {
+        return false;
+    }
+
+    std::array<std::uint8_t, N> local_live = {};
+    const bool copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + target_rva),
+        local_live.size(),
+        local_live.data());
+    if (live_bytes != nullptr) {
+        *live_bytes = local_live;
+    }
+
+    return copied &&
+        BytesMatchWithModuleRelocation(
+            local_live.data(),
+            expected_bytes.data(),
+            expected_bytes.size(),
+            module_base);
 }
 
 bool ValidateSkillsWindowRowHelperSeams(std::uintptr_t module_base) noexcept {
@@ -5627,6 +7573,71 @@ void AppendResolvedCallFields(
 
 std::uintptr_t GetHostModuleBase() noexcept {
     return reinterpret_cast<std::uintptr_t>(GetModuleHandleW(nullptr));
+}
+
+std::uint32_t GetHostModuleImageSize() noexcept {
+    const auto module_base =
+        reinterpret_cast<const std::uint8_t*>(GetModuleHandleW(nullptr));
+    if (module_base == nullptr) {
+        return 0;
+    }
+
+    IMAGE_DOS_HEADER dos_header = {};
+#if defined(_MSC_VER)
+    __try {
+        std::memcpy(&dos_header, module_base, sizeof(dos_header));
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+#else
+    std::memcpy(&dos_header, module_base, sizeof(dos_header));
+#endif
+    if (dos_header.e_magic != IMAGE_DOS_SIGNATURE || dos_header.e_lfanew <= 0) {
+        return 0;
+    }
+
+    IMAGE_NT_HEADERS32 nt_headers = {};
+#if defined(_MSC_VER)
+    __try {
+        std::memcpy(
+            &nt_headers,
+            module_base + dos_header.e_lfanew,
+            sizeof(nt_headers));
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+#else
+    std::memcpy(
+        &nt_headers,
+        module_base + dos_header.e_lfanew,
+        sizeof(nt_headers));
+#endif
+    if (nt_headers.Signature != IMAGE_NT_SIGNATURE) {
+        return 0;
+    }
+
+    return nt_headers.OptionalHeader.SizeOfImage;
+}
+
+bool TryComputeEqgameCallerReturnRva(
+    std::uintptr_t caller_return_address,
+    std::uint32_t* caller_return_rva) noexcept {
+    if (caller_return_rva == nullptr) {
+        return false;
+    }
+
+    *caller_return_rva = 0;
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uint32_t image_size = GetHostModuleImageSize();
+    if (module_base == 0 || image_size == 0 ||
+        caller_return_address < module_base ||
+        caller_return_address >= module_base + image_size) {
+        return false;
+    }
+
+    *caller_return_rva =
+        static_cast<std::uint32_t>(caller_return_address - module_base);
+    return true;
 }
 
 bool TryReadPacketOpcode(
@@ -7239,6 +9250,7 @@ void MONOMYTH_FASTCALL ReceiveDispatchHook(
         reinterpret_cast<std::uintptr_t>(source_context));
 
     g_original_receive_dispatch(this_context, source_context, opcode, payload, payload_length);
+    TryRetryPendingMulticlassCasterUiAccess(L"ReceiveDispatch");
 }
 
 bool ShouldLogSpellTrace(std::uint64_t count) noexcept {
@@ -19360,6 +21372,430 @@ bool InstallInvSlotMgrMoveItemTrace(const monomyth::runtime::Manifest& manifest)
     return true;
 }
 
+bool InstallSpellUiShowTrace(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.multiclass_ui_display_allowed) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: spell UI show trace denied target=CXWnd::Show reason=module_base_unavailable");
+        return false;
+    }
+
+    std::array<std::uint8_t, kCXWndShowTraceEntryBytes.size()> live_entry_bytes = {};
+    if (!SpellUiShowTraceEntryBytesMatch(module_base, &live_entry_bytes)) {
+        std::wstring message =
+            L"hook_manager: spell UI show trace denied target=CXWnd::Show reason=entry_bytes_mismatch expected=\"";
+        message += HexBytes(
+            kCXWndShowTraceEntryBytes.data(),
+            kCXWndShowTraceEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(live_entry_bytes.data(), live_entry_bytes.size());
+        message += L"\" address=";
+        message += HexPtr(module_base + kCXWndShowRva);
+        message += L" target_rva=";
+        message += Hex32(kCXWndShowRva);
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    const std::uintptr_t target_address = module_base + kCXWndShowRva;
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(target_address),
+            reinterpret_cast<void*>(&CXWndShowTraceHook),
+            &g_cxwnd_show_trace_detour,
+            reinterpret_cast<void**>(&g_original_cxwnd_show_trace),
+            L"CXWnd::Show trace")) {
+        RemoveInlineDetour(&g_cxwnd_show_trace_detour);
+        g_original_cxwnd_show_trace = nullptr;
+        std::wstring message =
+            L"hook_manager: spell UI show trace denied target=CXWnd::Show reason=inline_detour_failed address=";
+        message += HexPtr(target_address);
+        message += L" target_rva=";
+        message += Hex32(kCXWndShowRva);
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    g_spell_ui_show_trace_count = 0;
+    std::wstring message =
+        L"hook_manager: spell UI show trace installed target=CXWnd::Show address=";
+    message += HexPtr(target_address);
+    message += L" target_rva=";
+    message += Hex32(kCXWndShowRva);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool InstallSpellUiShowWrapperTrace(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.multiclass_ui_display_allowed) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: spell UI show wrapper trace denied target=CXWnd::Show wrappers reason=module_base_unavailable");
+        return false;
+    }
+
+    bool installed_any = false;
+
+    {
+        std::array<std::uint8_t, kCXWndShowTrueWrapperEntryBytes.size()> live_entry_bytes = {};
+        if (!SpellUiWrapperEntryBytesMatch(
+                module_base,
+                kCXWndShowTrueWrapperRva,
+                kCXWndShowTrueWrapperEntryBytes,
+                &live_entry_bytes)) {
+            std::wstring message =
+                L"hook_manager: spell UI show wrapper trace denied target=ShowTrueTrueTrueWrapper reason=entry_bytes_mismatch expected=\"";
+            message += HexBytes(
+                kCXWndShowTrueWrapperEntryBytes.data(),
+                kCXWndShowTrueWrapperEntryBytes.size());
+            message += L"\" live=\"";
+            message += HexBytes(live_entry_bytes.data(), live_entry_bytes.size());
+            message += L"\" address=";
+            message += HexPtr(module_base + kCXWndShowTrueWrapperRva);
+            message += L" target_rva=";
+            message += Hex32(kCXWndShowTrueWrapperRva);
+            monomyth::logger::Log(message);
+        } else if (!InstallInlineDetour(
+                       reinterpret_cast<void*>(module_base + kCXWndShowTrueWrapperRva),
+                       reinterpret_cast<void*>(&CXWndShowTrueWrapperTraceHook),
+                       &g_cxwnd_show_true_wrapper_trace_detour,
+                       reinterpret_cast<void**>(&g_original_cxwnd_show_true_wrapper_trace),
+                       L"CXWnd::Show(true,true,true) wrapper trace")) {
+            RemoveInlineDetour(&g_cxwnd_show_true_wrapper_trace_detour);
+            g_original_cxwnd_show_true_wrapper_trace = nullptr;
+            std::wstring message =
+                L"hook_manager: spell UI show wrapper trace denied target=ShowTrueTrueTrueWrapper reason=inline_detour_failed address=";
+            message += HexPtr(module_base + kCXWndShowTrueWrapperRva);
+            message += L" target_rva=";
+            message += Hex32(kCXWndShowTrueWrapperRva);
+            monomyth::logger::Log(message);
+        } else {
+            std::wstring message =
+                L"hook_manager: spell UI show wrapper trace installed target=ShowTrueTrueTrueWrapper address=";
+            message += HexPtr(module_base + kCXWndShowTrueWrapperRva);
+            message += L" target_rva=";
+            message += Hex32(kCXWndShowTrueWrapperRva);
+            monomyth::logger::Log(message);
+            installed_any = true;
+        }
+    }
+
+    {
+        std::array<std::uint8_t, kCXWndShowFalseWrapperEntryBytes.size()> live_entry_bytes = {};
+        if (!SpellUiWrapperEntryBytesMatch(
+                module_base,
+                kCXWndShowFalseWrapperRva,
+                kCXWndShowFalseWrapperEntryBytes,
+                &live_entry_bytes)) {
+            std::wstring message =
+                L"hook_manager: spell UI show wrapper trace denied target=ShowFalseTrueTrueWrapper reason=entry_bytes_mismatch expected=\"";
+            message += HexBytes(
+                kCXWndShowFalseWrapperEntryBytes.data(),
+                kCXWndShowFalseWrapperEntryBytes.size());
+            message += L"\" live=\"";
+            message += HexBytes(live_entry_bytes.data(), live_entry_bytes.size());
+            message += L"\" address=";
+            message += HexPtr(module_base + kCXWndShowFalseWrapperRva);
+            message += L" target_rva=";
+            message += Hex32(kCXWndShowFalseWrapperRva);
+            monomyth::logger::Log(message);
+        } else if (!InstallInlineDetour(
+                       reinterpret_cast<void*>(module_base + kCXWndShowFalseWrapperRva),
+                       reinterpret_cast<void*>(&CXWndShowFalseWrapperTraceHook),
+                       &g_cxwnd_show_false_wrapper_trace_detour,
+                       reinterpret_cast<void**>(&g_original_cxwnd_show_false_wrapper_trace),
+                       L"CXWnd::Show(false,true,true) wrapper trace")) {
+            RemoveInlineDetour(&g_cxwnd_show_false_wrapper_trace_detour);
+            g_original_cxwnd_show_false_wrapper_trace = nullptr;
+            std::wstring message =
+                L"hook_manager: spell UI show wrapper trace denied target=ShowFalseTrueTrueWrapper reason=inline_detour_failed address=";
+            message += HexPtr(module_base + kCXWndShowFalseWrapperRva);
+            message += L" target_rva=";
+            message += Hex32(kCXWndShowFalseWrapperRva);
+            monomyth::logger::Log(message);
+        } else {
+            std::wstring message =
+                L"hook_manager: spell UI show wrapper trace installed target=ShowFalseTrueTrueWrapper address=";
+            message += HexPtr(module_base + kCXWndShowFalseWrapperRva);
+            message += L" target_rva=";
+            message += Hex32(kCXWndShowFalseWrapperRva);
+            monomyth::logger::Log(message);
+            installed_any = true;
+        }
+    }
+
+    if (!installed_any) {
+        return false;
+    }
+
+    g_spell_ui_show_wrapper_trace_count = 0;
+    return true;
+}
+
+bool InstallSpellUiDerivedWindowTrace(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.multiclass_ui_display_allowed) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: spell UI derived window trace denied reason=module_base_unavailable");
+        return false;
+    }
+
+    bool installed_any = false;
+
+    {
+        std::array<std::uint8_t, kCastSpellOnShowEntryBytes.size()> live_entry_bytes = {};
+        if (!SpellUiDerivedEntryBytesMatch(
+                module_base,
+                kCastSpellOnShowRva,
+                kCastSpellOnShowEntryBytes,
+                &live_entry_bytes)) {
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace denied target=CastSpellWnd::OnShow reason=entry_bytes_mismatch expected=\"";
+            message += HexBytes(
+                kCastSpellOnShowEntryBytes.data(),
+                kCastSpellOnShowEntryBytes.size());
+            message += L"\" live=\"";
+            message += HexBytes(live_entry_bytes.data(), live_entry_bytes.size());
+            message += L"\" address=";
+            message += HexPtr(module_base + kCastSpellOnShowRva);
+            message += L" target_rva=";
+            message += Hex32(kCastSpellOnShowRva);
+            monomyth::logger::Log(message);
+        } else if (!InstallInlineDetour(
+                       reinterpret_cast<void*>(module_base + kCastSpellOnShowRva),
+                       reinterpret_cast<void*>(&CastSpellOnShowTraceHook),
+                       &g_cast_spell_on_show_trace_detour,
+                       reinterpret_cast<void**>(&g_original_cast_spell_on_show_trace),
+                       L"CastSpellWnd::OnShow trace")) {
+            RemoveInlineDetour(&g_cast_spell_on_show_trace_detour);
+            g_original_cast_spell_on_show_trace = nullptr;
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace denied target=CastSpellWnd::OnShow reason=inline_detour_failed address=";
+            message += HexPtr(module_base + kCastSpellOnShowRva);
+            message += L" target_rva=";
+            message += Hex32(kCastSpellOnShowRva);
+            monomyth::logger::Log(message);
+        } else {
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace installed target=CastSpellWnd::OnShow address=";
+            message += HexPtr(module_base + kCastSpellOnShowRva);
+            message += L" target_rva=";
+            message += Hex32(kCastSpellOnShowRva);
+            monomyth::logger::Log(message);
+            installed_any = true;
+        }
+    }
+
+    {
+        std::array<std::uint8_t, kCastSpellAboutToShowEntryBytes.size()> live_entry_bytes = {};
+        if (!SpellUiDerivedEntryBytesMatch(
+                module_base,
+                kCastSpellAboutToShowRva,
+                kCastSpellAboutToShowEntryBytes,
+                &live_entry_bytes)) {
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace denied target=CastSpellWnd::AboutToShow reason=entry_bytes_mismatch expected=\"";
+            message += HexBytes(
+                kCastSpellAboutToShowEntryBytes.data(),
+                kCastSpellAboutToShowEntryBytes.size());
+            message += L"\" live=\"";
+            message += HexBytes(live_entry_bytes.data(), live_entry_bytes.size());
+            message += L"\" address=";
+            message += HexPtr(module_base + kCastSpellAboutToShowRva);
+            message += L" target_rva=";
+            message += Hex32(kCastSpellAboutToShowRva);
+            monomyth::logger::Log(message);
+        } else if (!InstallInlineDetour(
+                       reinterpret_cast<void*>(module_base + kCastSpellAboutToShowRva),
+                       reinterpret_cast<void*>(&CastSpellAboutToShowTraceHook),
+                       &g_cast_spell_about_to_show_trace_detour,
+                       reinterpret_cast<void**>(&g_original_cast_spell_about_to_show_trace),
+                       L"CastSpellWnd::AboutToShow trace")) {
+            RemoveInlineDetour(&g_cast_spell_about_to_show_trace_detour);
+            g_original_cast_spell_about_to_show_trace = nullptr;
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace denied target=CastSpellWnd::AboutToShow reason=inline_detour_failed address=";
+            message += HexPtr(module_base + kCastSpellAboutToShowRva);
+            message += L" target_rva=";
+            message += Hex32(kCastSpellAboutToShowRva);
+            monomyth::logger::Log(message);
+        } else {
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace installed target=CastSpellWnd::AboutToShow address=";
+            message += HexPtr(module_base + kCastSpellAboutToShowRva);
+            message += L" target_rva=";
+            message += Hex32(kCastSpellAboutToShowRva);
+            monomyth::logger::Log(message);
+            installed_any = true;
+        }
+    }
+
+    {
+        std::array<std::uint8_t, kSpellBookOnShowEntryBytes.size()> live_entry_bytes = {};
+        if (!SpellUiDerivedEntryBytesMatch(
+                module_base,
+                kSpellBookOnShowRva,
+                kSpellBookOnShowEntryBytes,
+                &live_entry_bytes)) {
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace denied target=SpellBookWnd::OnShow reason=entry_bytes_mismatch expected=\"";
+            message += HexBytes(
+                kSpellBookOnShowEntryBytes.data(),
+                kSpellBookOnShowEntryBytes.size());
+            message += L"\" live=\"";
+            message += HexBytes(live_entry_bytes.data(), live_entry_bytes.size());
+            message += L"\" address=";
+            message += HexPtr(module_base + kSpellBookOnShowRva);
+            message += L" target_rva=";
+            message += Hex32(kSpellBookOnShowRva);
+            monomyth::logger::Log(message);
+        } else if (!InstallInlineDetour(
+                       reinterpret_cast<void*>(module_base + kSpellBookOnShowRva),
+                       reinterpret_cast<void*>(&SpellBookOnShowTraceHook),
+                       &g_spellbook_on_show_trace_detour,
+                       reinterpret_cast<void**>(&g_original_spellbook_on_show_trace),
+                       L"SpellBookWnd::OnShow trace")) {
+            RemoveInlineDetour(&g_spellbook_on_show_trace_detour);
+            g_original_spellbook_on_show_trace = nullptr;
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace denied target=SpellBookWnd::OnShow reason=inline_detour_failed address=";
+            message += HexPtr(module_base + kSpellBookOnShowRva);
+            message += L" target_rva=";
+            message += Hex32(kSpellBookOnShowRva);
+            monomyth::logger::Log(message);
+        } else {
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace installed target=SpellBookWnd::OnShow address=";
+            message += HexPtr(module_base + kSpellBookOnShowRva);
+            message += L" target_rva=";
+            message += Hex32(kSpellBookOnShowRva);
+            monomyth::logger::Log(message);
+            installed_any = true;
+        }
+    }
+
+    {
+        std::array<std::uint8_t, kSpellBookAboutToShowEntryBytes.size()> live_entry_bytes = {};
+        if (!SpellUiDerivedEntryBytesMatch(
+                module_base,
+                kSpellBookAboutToShowRva,
+                kSpellBookAboutToShowEntryBytes,
+                &live_entry_bytes)) {
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace denied target=SpellBookWnd::AboutToShow reason=entry_bytes_mismatch expected=\"";
+            message += HexBytes(
+                kSpellBookAboutToShowEntryBytes.data(),
+                kSpellBookAboutToShowEntryBytes.size());
+            message += L"\" live=\"";
+            message += HexBytes(live_entry_bytes.data(), live_entry_bytes.size());
+            message += L"\" address=";
+            message += HexPtr(module_base + kSpellBookAboutToShowRva);
+            message += L" target_rva=";
+            message += Hex32(kSpellBookAboutToShowRva);
+            monomyth::logger::Log(message);
+        } else if (!InstallInlineDetour(
+                       reinterpret_cast<void*>(module_base + kSpellBookAboutToShowRva),
+                       reinterpret_cast<void*>(&SpellBookAboutToShowTraceHook),
+                       &g_spellbook_about_to_show_trace_detour,
+                       reinterpret_cast<void**>(&g_original_spellbook_about_to_show_trace),
+                       L"SpellBookWnd::AboutToShow trace")) {
+            RemoveInlineDetour(&g_spellbook_about_to_show_trace_detour);
+            g_original_spellbook_about_to_show_trace = nullptr;
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace denied target=SpellBookWnd::AboutToShow reason=inline_detour_failed address=";
+            message += HexPtr(module_base + kSpellBookAboutToShowRva);
+            message += L" target_rva=";
+            message += Hex32(kSpellBookAboutToShowRva);
+            monomyth::logger::Log(message);
+        } else {
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace installed target=SpellBookWnd::AboutToShow address=";
+            message += HexPtr(module_base + kSpellBookAboutToShowRva);
+            message += L" target_rva=";
+            message += Hex32(kSpellBookAboutToShowRva);
+            monomyth::logger::Log(message);
+            installed_any = true;
+        }
+    }
+
+    if (!installed_any) {
+        return false;
+    }
+
+    g_cast_spell_on_show_trace_count = 0;
+    g_cast_spell_about_to_show_trace_count = 0;
+    g_spellbook_on_show_trace_count = 0;
+    g_spellbook_about_to_show_trace_count = 0;
+    return true;
+}
+
+bool InstallSpellUiAboutToShowGateTrace(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!manifest.multiclass_ui_display_allowed) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: spell UI AboutToShow gate trace denied reason=module_base_unavailable");
+        return false;
+    }
+
+    g_original_spell_ui_about_to_show_shared_bool_gate =
+        reinterpret_cast<SpellUiAboutToShowSharedBoolGateFn>(
+            module_base + kSpellUiAboutToShowSharedBoolGateTargetRva);
+    g_original_spell_ui_about_to_show_shared_lookup =
+        reinterpret_cast<SpellUiAboutToShowSharedLookupFn>(
+            module_base + kSpellUiAboutToShowSharedLookupTargetRva);
+
+    bool installed_any = false;
+    installed_any |= InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kCastSpellAboutToShowSharedBoolGateCallsiteRva),
+        reinterpret_cast<void*>(&SpellUiAboutToShowSharedBoolGateCallsiteHook),
+        module_base + kSpellUiAboutToShowSharedBoolGateTargetRva,
+        &g_cast_spell_about_to_show_shared_bool_gate_callsite_patch,
+        L"CastSpellAboutToShowSharedBoolGateCallsite");
+    installed_any |= InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kSpellBookAboutToShowSharedBoolGateCallsiteRva),
+        reinterpret_cast<void*>(&SpellUiAboutToShowSharedBoolGateCallsiteHook),
+        module_base + kSpellUiAboutToShowSharedBoolGateTargetRva,
+        &g_spellbook_about_to_show_shared_bool_gate_callsite_patch,
+        L"SpellBookAboutToShowSharedBoolGateCallsite");
+    installed_any |= InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kCastSpellAboutToShowSharedLookupCallsiteRva),
+        reinterpret_cast<void*>(&SpellUiAboutToShowSharedLookupCallsiteHook),
+        module_base + kSpellUiAboutToShowSharedLookupTargetRva,
+        &g_cast_spell_about_to_show_shared_lookup_callsite_patch,
+        L"CastSpellAboutToShowSharedLookupCallsite");
+    installed_any |= InstallCallsitePatch(
+        reinterpret_cast<void*>(module_base + kSpellBookAboutToShowSharedLookupCallsiteRva),
+        reinterpret_cast<void*>(&SpellUiAboutToShowSharedLookupCallsiteHook),
+        module_base + kSpellUiAboutToShowSharedLookupTargetRva,
+        &g_spellbook_about_to_show_shared_lookup_callsite_patch,
+        L"SpellBookAboutToShowSharedLookupCallsite");
+
+    if (!installed_any) {
+        g_original_spell_ui_about_to_show_shared_bool_gate = nullptr;
+        g_original_spell_ui_about_to_show_shared_lookup = nullptr;
+        return false;
+    }
+
+    g_spell_ui_about_to_show_shared_bool_gate_trace_count = 0;
+    g_spell_ui_about_to_show_shared_lookup_trace_count = 0;
+    return true;
+}
+
 bool InstallCanStartMemmingTrace(const monomyth::runtime::Manifest& manifest) noexcept {
     if (!manifest.spell_usability_trace_allowed ||
         manifest.can_start_memming_state !=
@@ -20484,6 +22920,132 @@ bool RemoveCanStartMemmingTrace() noexcept {
     return false;
 }
 
+bool RemoveSpellUiShowTrace() noexcept {
+    if (!g_cxwnd_show_trace_detour.installed) {
+        return true;
+    }
+
+    if (RemoveInlineDetour(&g_cxwnd_show_trace_detour)) {
+        g_original_cxwnd_show_trace = nullptr;
+        g_spell_ui_show_trace_count = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell UI show trace removed target=CXWnd::Show");
+        return true;
+    }
+
+    return false;
+}
+
+bool RemoveSpellUiShowWrapperTrace() noexcept {
+    const bool had_any =
+        g_cxwnd_show_true_wrapper_trace_detour.installed ||
+        g_cxwnd_show_false_wrapper_trace_detour.installed;
+    bool ok = true;
+    if (g_cxwnd_show_true_wrapper_trace_detour.installed &&
+        RemoveInlineDetour(&g_cxwnd_show_true_wrapper_trace_detour)) {
+        g_original_cxwnd_show_true_wrapper_trace = nullptr;
+    } else if (g_cxwnd_show_true_wrapper_trace_detour.installed) {
+        ok = false;
+    }
+
+    if (g_cxwnd_show_false_wrapper_trace_detour.installed &&
+        RemoveInlineDetour(&g_cxwnd_show_false_wrapper_trace_detour)) {
+        g_original_cxwnd_show_false_wrapper_trace = nullptr;
+    } else if (g_cxwnd_show_false_wrapper_trace_detour.installed) {
+        ok = false;
+    }
+
+    if (ok && had_any) {
+        g_spell_ui_show_wrapper_trace_count = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell UI show wrapper trace removed target=CXWnd::Show wrappers");
+    }
+    return ok;
+}
+
+bool RemoveSpellUiDerivedWindowTrace() noexcept {
+    const bool had_any =
+        g_cast_spell_on_show_trace_detour.installed ||
+        g_cast_spell_about_to_show_trace_detour.installed ||
+        g_spellbook_on_show_trace_detour.installed ||
+        g_spellbook_about_to_show_trace_detour.installed;
+    bool ok = true;
+
+    if (g_cast_spell_on_show_trace_detour.installed &&
+        RemoveInlineDetour(&g_cast_spell_on_show_trace_detour)) {
+        g_original_cast_spell_on_show_trace = nullptr;
+    } else if (g_cast_spell_on_show_trace_detour.installed) {
+        ok = false;
+    }
+
+    if (g_cast_spell_about_to_show_trace_detour.installed &&
+        RemoveInlineDetour(&g_cast_spell_about_to_show_trace_detour)) {
+        g_original_cast_spell_about_to_show_trace = nullptr;
+    } else if (g_cast_spell_about_to_show_trace_detour.installed) {
+        ok = false;
+    }
+
+    if (g_spellbook_on_show_trace_detour.installed &&
+        RemoveInlineDetour(&g_spellbook_on_show_trace_detour)) {
+        g_original_spellbook_on_show_trace = nullptr;
+    } else if (g_spellbook_on_show_trace_detour.installed) {
+        ok = false;
+    }
+
+    if (g_spellbook_about_to_show_trace_detour.installed &&
+        RemoveInlineDetour(&g_spellbook_about_to_show_trace_detour)) {
+        g_original_spellbook_about_to_show_trace = nullptr;
+    } else if (g_spellbook_about_to_show_trace_detour.installed) {
+        ok = false;
+    }
+
+    if (ok && had_any) {
+        g_cast_spell_on_show_trace_count = 0;
+        g_cast_spell_about_to_show_trace_count = 0;
+        g_spellbook_on_show_trace_count = 0;
+        g_spellbook_about_to_show_trace_count = 0;
+        monomyth::logger::Log(
+            L"hook_manager: spell UI derived window trace removed target=OnShow/AboutToShow");
+    }
+    return ok;
+}
+
+bool RemoveSpellUiAboutToShowGateTrace() noexcept {
+    const bool had_any =
+        g_cast_spell_about_to_show_shared_bool_gate_callsite_patch.installed ||
+        g_spellbook_about_to_show_shared_bool_gate_callsite_patch.installed ||
+        g_cast_spell_about_to_show_shared_lookup_callsite_patch.installed ||
+        g_spellbook_about_to_show_shared_lookup_callsite_patch.installed;
+
+    const bool cast_bool_removed =
+        RemoveCallsitePatch(&g_cast_spell_about_to_show_shared_bool_gate_callsite_patch);
+    const bool spellbook_bool_removed =
+        RemoveCallsitePatch(&g_spellbook_about_to_show_shared_bool_gate_callsite_patch);
+    const bool cast_lookup_removed =
+        RemoveCallsitePatch(&g_cast_spell_about_to_show_shared_lookup_callsite_patch);
+    const bool spellbook_lookup_removed =
+        RemoveCallsitePatch(&g_spellbook_about_to_show_shared_lookup_callsite_patch);
+
+    const bool ok =
+        cast_bool_removed &&
+        spellbook_bool_removed &&
+        cast_lookup_removed &&
+        spellbook_lookup_removed;
+
+    if (ok) {
+        g_original_spell_ui_about_to_show_shared_bool_gate = nullptr;
+        g_original_spell_ui_about_to_show_shared_lookup = nullptr;
+        if (had_any) {
+            g_spell_ui_about_to_show_shared_bool_gate_trace_count = 0;
+            g_spell_ui_about_to_show_shared_lookup_trace_count = 0;
+            monomyth::logger::Log(
+                L"hook_manager: spell UI AboutToShow gate trace removed target=shared_bool_gate/shared_lookup");
+        }
+    }
+
+    return ok;
+}
+
 bool RemoveSpellbookDispatcherTrace() noexcept {
     if (!g_spellbook_dispatcher_detour.installed) {
         return true;
@@ -20976,6 +23538,20 @@ void NotifyServerAuthStatsUpdated() noexcept {
     TryPersistPendingMulticlassCache(L"ServerAuthStats");
 
     TryForceCharacterListRefreshForAssignedMask(snapshot.classes_bitmask);
+    const bool caster_ui_ensured =
+        TryEnsureMulticlassCasterUiAccessForAssignedMask(snapshot.classes_bitmask);
+    if (caster_ui_ensured) {
+        ClearDeferredMulticlassCasterUiAccessRetryState();
+    } else if (ShouldArmDeferredMulticlassCasterUiAccessRetry(snapshot.classes_bitmask)) {
+        g_multiclass_caster_ui_access_retry_mask.store(snapshot.classes_bitmask);
+        g_multiclass_caster_ui_access_retry_pending.store(true);
+        g_multiclass_caster_ui_access_retry_attempt_count.store(0);
+        g_multiclass_caster_ui_access_retry_next_tick_ms.store(
+            static_cast<std::uint64_t>(GetTickCount64()) +
+            kMulticlassCasterUiAccessRetryCooldownMs);
+    } else {
+        ClearDeferredMulticlassCasterUiAccessRetryState();
+    }
 #endif
 }
 
@@ -21230,6 +23806,30 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
             monomyth::logger::Log(
                 L"hook_manager: multiclass UI display install failed target=LeftClickedOnPlayerSurrogate/GetClassDesc/GetClassThreeLetterCode local/self path");
         }
+        if (!InstallSpellUiShowTrace(manifest)) {
+            monomyth::logger::Log(
+                L"hook_manager: spell UI show trace install failed target=CXWnd::Show");
+        } else {
+            ui_display_active = true;
+        }
+        if (!InstallSpellUiShowWrapperTrace(manifest)) {
+            monomyth::logger::Log(
+                L"hook_manager: spell UI show wrapper trace install failed target=CXWnd::Show wrappers");
+        } else {
+            ui_display_active = true;
+        }
+        if (!InstallSpellUiDerivedWindowTrace(manifest)) {
+            monomyth::logger::Log(
+                L"hook_manager: spell UI derived window trace install failed target=OnShow/AboutToShow");
+        } else {
+            ui_display_active = true;
+        }
+        if (!InstallSpellUiAboutToShowGateTrace(manifest)) {
+            monomyth::logger::Log(
+                L"hook_manager: spell UI AboutToShow gate trace install failed target=shared_bool_gate/shared_lookup");
+        } else {
+            ui_display_active = true;
+        }
         if (InstallCharacterListUpdateListHook()) {
             ui_display_active = true;
         }
@@ -21428,6 +24028,26 @@ void Shutdown() noexcept {
             L"hook_manager: shutdown deferred because item display class text trace removal failed");
         return;
     }
+    if (!RemoveSpellUiShowTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because spell UI show trace removal failed");
+        return;
+    }
+    if (!RemoveSpellUiShowWrapperTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because spell UI show wrapper trace removal failed");
+        return;
+    }
+    if (!RemoveSpellUiDerivedWindowTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because spell UI derived window trace removal failed");
+        return;
+    }
+    if (!RemoveSpellUiAboutToShowGateTrace()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because spell UI AboutToShow gate trace removal failed");
+        return;
+    }
     if (!RemoveGetSpellLevelNeededTrace()) {
         monomyth::logger::Log(
             L"hook_manager: shutdown deferred because GetSpellLevelNeeded trace removal failed");
@@ -21545,6 +24165,10 @@ void Shutdown() noexcept {
         return;
     }
 
+    g_multiclass_caster_ui_access_ensured.store(false);
+    g_multiclass_caster_ui_access_mask.store(0);
+    g_multiclass_caster_ui_access_primary_class.store(0);
+    ClearDeferredMulticlassCasterUiAccessRetryState();
     g_initialized = false;
     monomyth::logger::Log(L"hook_manager: shutdown");
 }
