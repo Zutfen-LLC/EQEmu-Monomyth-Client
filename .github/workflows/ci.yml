@@ -159,9 +159,7 @@ jobs:
         github.event_name != 'pull_request' ||
         needs.ai-adversarial-review.result == 'success'
       )
-    runs-on:
-      group: Windows
-      labels: windows
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -173,72 +171,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up MSVC developer environment
-        shell: powershell
+      - name: Install cross-build dependencies
         run: |
-          $ErrorActionPreference = 'Stop'
-          $vsDevCmd = $null
-          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-
-          if (Test-Path $vswhere) {
-            $installPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-            if ($installPath) {
-              $candidate = Join-Path $installPath 'Common7\Tools\VsDevCmd.bat'
-              if (Test-Path $candidate) {
-                $vsDevCmd = $candidate
-              }
-            }
-          }
-
-          if (-not $vsDevCmd) {
-            $roots = @(
-              Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio',
-              Join-Path $env:ProgramFiles 'Microsoft Visual Studio'
-            ) | Where-Object { $_ -and (Test-Path $_) }
-
-            foreach ($root in $roots) {
-              $candidate = Get-ChildItem -Path $root -Filter VsDevCmd.bat -Recurse -File -ErrorAction SilentlyContinue |
-                Select-Object -First 1 -ExpandProperty FullName
-              if ($candidate) {
-                $vsDevCmd = $candidate
-                break
-              }
-            }
-          }
-
-          if (-not $vsDevCmd) {
-            throw 'Visual Studio with C++ build tools was not found on this Windows runner.'
-          }
-
-          $envDump = Join-Path $env:RUNNER_TEMP 'msvc-env.txt'
-          cmd /c "`"$vsDevCmd`" -arch=x86 -host_arch=x64 >nul && set" | Out-File -FilePath $envDump -Encoding ascii
-          Get-Content $envDump | Add-Content -Path $env:GITHUB_ENV -Encoding ascii
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-i686 g++-mingw-w64-i686 wine
 
       - name: Verify local build tools
-        shell: powershell
         run: |
-          $ErrorActionPreference = 'Stop'
-          if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) {
-            throw "cmake is not available on this Windows runner. Install CMake and add it to PATH."
-          }
           cmake --version
-          cl
+          i686-w64-mingw32-gcc --version
+          i686-w64-mingw32-g++ --version
+          wine --version
 
       - name: Configure
-        run: cmake -S . -B build -A Win32
+        run: >
+          cmake -S . -B build-${{ matrix.config }}
+          -DCMAKE_SYSTEM_NAME=Windows
+          -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc
+          -DCMAKE_CXX_COMPILER=i686-w64-mingw32-g++
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+          -DCMAKE_CROSSCOMPILING_EMULATOR=wine
 
       - name: Build
-        run: cmake --build build --config ${{ matrix.config }} --parallel
+        run: cmake --build build-${{ matrix.config }} --parallel
 
       - name: Test
-        run: ctest --test-dir build -C ${{ matrix.config }} --output-on-failure
+        run: ctest --test-dir build-${{ matrix.config }} --output-on-failure
 
       - name: Upload DLL artifact
         if: success()
         uses: actions/upload-artifact@v7
         with:
           name: dinput8-${{ matrix.config }}
-          path: build/${{ matrix.config }}/dinput8.dll
+          path: build-${{ matrix.config }}/dinput8.dll
           if-no-files-found: error
 
   release:
