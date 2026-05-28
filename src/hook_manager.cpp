@@ -353,7 +353,9 @@ constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnCRva = 0x00136606;
 constexpr std::uint32_t kWhoAllClassLabelLookupCallerMinRva = 0x00047789;
 constexpr std::uint32_t kWhoAllClassLabelLookupCallerMaxRva = 0x00047a26;
 constexpr std::uint32_t kWhoAllClassLabelLookupStringIdMin = 0x000005de;
-constexpr std::uint32_t kWhoAllClassLabelLookupStringIdMax = 0x00000616;
+constexpr std::uint32_t kWhoAllClassLabelLookupStringIdMax = 0x0000061a;
+constexpr std::uint32_t kWhoAllClassLabelLookupBerserkerCallerRva = 0x00047a56;
+constexpr std::uint32_t kWhoAllClassLabelLookupBerserkerStringId = 0x0000169f;
 constexpr std::uint32_t kCharSelectCachedFullNameCallerRva = 0x0018e554;
 constexpr std::uint32_t kGuildManagerRosterClassLookupCallsiteRva = 0x002843fa;
 constexpr std::uint32_t kGuildManagerRosterClassLookupCallerRva = 0x002843ff;
@@ -2084,6 +2086,10 @@ bool ShouldBypassLocalPlayerClassOverrideForCaller(
 bool IsWhoAllClassLabelLookupCaller(
     std::uint32_t caller_return_rva,
     std::uint32_t string_id) noexcept {
+    if (caller_return_rva == kWhoAllClassLabelLookupBerserkerCallerRva &&
+        string_id == kWhoAllClassLabelLookupBerserkerStringId) {
+        return true;
+    }
     if (caller_return_rva < kWhoAllClassLabelLookupCallerMinRva ||
         caller_return_rva > kWhoAllClassLabelLookupCallerMaxRva) {
         return false;
