@@ -5776,6 +5776,274 @@ bool TryEvaluateLocalPlayerManaPercent(
     return true;
 }
 
+MONOMYTH_NOINLINE bool TryInvokePlayerWndManaVisibilityRefreshWorker(
+    PlayerWndManaVisibilityRefreshFn refresh_worker,
+    void* player_window) noexcept {
+    if (refresh_worker == nullptr || player_window == nullptr) {
+        return false;
+    }
+#if defined(_MSC_VER)
+    __try {
+        refresh_worker(player_window);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    refresh_worker(player_window);
+    return true;
+#endif
+}
+
+MONOMYTH_NOINLINE bool TryInvokePlayerWndManaProducer(
+    PlayerWndManaProducerFn producer,
+    void* this_context) noexcept {
+    if (producer == nullptr || this_context == nullptr) {
+        return false;
+    }
+#if defined(_MSC_VER)
+    __try {
+        producer(this_context);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    producer(this_context);
+    return true;
+#endif
+}
+
+MONOMYTH_NOINLINE bool TryInvokePlayerWndManaSelectionRefresh(
+    PlayerWndManaSelectionRefreshFn refresh,
+    void* this_context) noexcept {
+    if (refresh == nullptr || this_context == nullptr) {
+        return false;
+    }
+#if defined(_MSC_VER)
+    __try {
+        refresh(this_context);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    refresh(this_context);
+    return true;
+#endif
+}
+
+MONOMYTH_NOINLINE bool TryInvokePlayerWndManaSelectionWriter(
+    PlayerWndManaSelectionWriterFn writer,
+    void* this_context) noexcept {
+    if (writer == nullptr || this_context == nullptr) {
+        return false;
+    }
+#if defined(_MSC_VER)
+    __try {
+        writer(this_context);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    writer(this_context);
+    return true;
+#endif
+}
+
+MONOMYTH_NOINLINE bool TryInvokePlayerWndManaRefreshHelper(
+    PlayerWndManaRefreshHelperFn refresh_helper,
+    void* this_context,
+    void* output_like,
+    void** result_out) noexcept {
+    if (refresh_helper == nullptr || result_out == nullptr) {
+        return false;
+    }
+
+    *result_out = output_like;
+#if defined(_MSC_VER)
+    __try {
+        *result_out = refresh_helper(this_context, output_like);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    *result_out = refresh_helper(this_context, output_like);
+    return true;
+#endif
+}
+
+MONOMYTH_NOINLINE bool TryInvokePlayerWndManaStateSelectionIndex(
+    PlayerWndManaStateSelectionIndexFn selection_index_fn,
+    void* direct_state,
+    int* repaired_index_out) noexcept {
+    if (selection_index_fn == nullptr || direct_state == nullptr || repaired_index_out == nullptr) {
+        return false;
+    }
+
+    *repaired_index_out = -1;
+#if defined(_MSC_VER)
+    __try {
+        *repaired_index_out = selection_index_fn(direct_state);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    *repaired_index_out = selection_index_fn(direct_state);
+    return true;
+#endif
+}
+
+MONOMYTH_NOINLINE bool TryInvokePlayerWndManaStateEntryByIndex(
+    PlayerWndManaStateEntryByIndexFn entry_by_index_fn,
+    void* direct_state,
+    int index,
+    std::uintptr_t* repaired_entry_out) noexcept {
+    if (entry_by_index_fn == nullptr || direct_state == nullptr || repaired_entry_out == nullptr) {
+        return false;
+    }
+
+    *repaired_entry_out = 0;
+#if defined(_MSC_VER)
+    __try {
+        *repaired_entry_out =
+            reinterpret_cast<std::uintptr_t>(entry_by_index_fn(direct_state, index));
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    *repaired_entry_out =
+        reinterpret_cast<std::uintptr_t>(entry_by_index_fn(direct_state, index));
+    return true;
+#endif
+}
+
+MONOMYTH_NOINLINE bool TryInvokePlayerManaVisibilityTarget(
+    CXWndVisibilityTwoArgFn target,
+    void* window,
+    int visible_like,
+    int recurse_like) noexcept {
+    if (target == nullptr || window == nullptr) {
+        return false;
+    }
+#if defined(_MSC_VER)
+    __try {
+        target(window, visible_like, recurse_like);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    target(window, visible_like, recurse_like);
+    return true;
+#endif
+}
+
+MONOMYTH_NOINLINE bool TryInvokeCharacterZoneClientCurMana(
+    CharacterZoneClientCurManaFn cur_mana,
+    void* this_context,
+    int cap_at_max_like,
+    int* native_result_out) noexcept {
+    if (cur_mana == nullptr || native_result_out == nullptr) {
+        return false;
+    }
+
+    *native_result_out = 0;
+#if defined(_MSC_VER)
+    __try {
+        *native_result_out = cur_mana(this_context, cap_at_max_like);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    *native_result_out = cur_mana(this_context, cap_at_max_like);
+    return true;
+#endif
+}
+
+MONOMYTH_NOINLINE bool TryInvokeCharacterZoneClientMaxMana(
+    CharacterZoneClientMaxManaFn max_mana,
+    void* this_context,
+    int cap_at_max_like,
+    int* native_result_out) noexcept {
+    if (max_mana == nullptr || native_result_out == nullptr) {
+        return false;
+    }
+
+    *native_result_out = 0;
+#if defined(_MSC_VER)
+    __try {
+        *native_result_out = max_mana(this_context, cap_at_max_like);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    *native_result_out = max_mana(this_context, cap_at_max_like);
+    return true;
+#endif
+}
+
+MONOMYTH_NOINLINE bool TryInvokeCharacterZoneClientGetManaRegen(
+    CharacterZoneClientGetManaRegenFn get_mana_regen,
+    void* this_context,
+    int include_items_and_buffs_like,
+    int combat_like,
+    int* native_result_out) noexcept {
+    if (get_mana_regen == nullptr || native_result_out == nullptr) {
+        return false;
+    }
+
+    *native_result_out = 0;
+#if defined(_MSC_VER)
+    __try {
+        *native_result_out =
+            get_mana_regen(this_context, include_items_and_buffs_like, combat_like);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    *native_result_out =
+        get_mana_regen(this_context, include_items_and_buffs_like, combat_like);
+    return true;
+#endif
+}
+
+MONOMYTH_NOINLINE bool TryInvokePlayerManaEqTypeResolver(
+    PlayerManaEqTypeResolverFn resolver,
+    void* this_context,
+    int eq_type,
+    int arg_a_like,
+    int arg_b_like,
+    int arg_c_like,
+    int arg_d_like,
+    int* native_result_out) noexcept {
+    if (resolver == nullptr || native_result_out == nullptr) {
+        return false;
+    }
+
+    *native_result_out = 0;
+#if defined(_MSC_VER)
+    __try {
+        *native_result_out =
+            resolver(this_context, eq_type, arg_a_like, arg_b_like, arg_c_like, arg_d_like);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    *native_result_out =
+        resolver(this_context, eq_type, arg_a_like, arg_b_like, arg_c_like, arg_d_like);
+    return true;
+#endif
+}
+
 int EvaluateBestAuthoritativePlayerManaEqTypeValue(
     void* this_context,
     int eq_type,
@@ -6252,18 +6520,9 @@ bool TryReplayPlayerManaRefreshWorker(
         }
     } reset_guard;
 
-    bool replay_ok = false;
-#if defined(_MSC_VER)
-    __try {
-        refresh_worker(reinterpret_cast<void*>(player_window));
-        replay_ok = true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        replay_ok = false;
-    }
-#else
-    refresh_worker(reinterpret_cast<void*>(player_window));
-    replay_ok = true;
-#endif
+    const bool replay_ok = TryInvokePlayerWndManaVisibilityRefreshWorker(
+        refresh_worker,
+        reinterpret_cast<void*>(player_window));
 
     if (!replay_ok) {
         return false;
@@ -6388,18 +6647,7 @@ bool TryReplayPlayerManaProducerWithAuthoritativeClass(
         }
     } reset_guard;
 
-    bool replay_ok = false;
-#if defined(_MSC_VER)
-    __try {
-        producer(this_context);
-        replay_ok = true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        replay_ok = false;
-    }
-#else
-    producer(this_context);
-    replay_ok = true;
-#endif
+    const bool replay_ok = TryInvokePlayerWndManaProducer(producer, this_context);
 
     RestoreTemporaryLocalClassOverride(&override_state);
 
@@ -6532,37 +6780,20 @@ bool TryRepairPlayerManaSelectionState(
         &last_selected_entry_before,
         &current_index_before);
 
-    bool index_invoked = false;
     int repaired_index = -1;
-#if defined(_MSC_VER)
-    __try {
-        repaired_index = selection_index_fn(reinterpret_cast<void*>(direct_state));
-        index_invoked = true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        index_invoked = false;
-    }
-#else
-    repaired_index = selection_index_fn(reinterpret_cast<void*>(direct_state));
-    index_invoked = true;
-#endif
+    const bool index_invoked = TryInvokePlayerWndManaStateSelectionIndex(
+        selection_index_fn,
+        reinterpret_cast<void*>(direct_state),
+        &repaired_index);
 
     bool entry_invoked = false;
     std::uintptr_t repaired_entry = 0;
     if (index_invoked && repaired_index >= 0 && repaired_index < direct_max) {
-#if defined(_MSC_VER)
-        __try {
-            repaired_entry = reinterpret_cast<std::uintptr_t>(
-                entry_by_index_fn(reinterpret_cast<void*>(direct_state), repaired_index));
-            entry_invoked = true;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            entry_invoked = false;
-            repaired_entry = 0;
-        }
-#else
-        repaired_entry = reinterpret_cast<std::uintptr_t>(
-            entry_by_index_fn(reinterpret_cast<void*>(direct_state), repaired_index));
-        entry_invoked = true;
-#endif
+        entry_invoked = TryInvokePlayerWndManaStateEntryByIndex(
+            entry_by_index_fn,
+            reinterpret_cast<void*>(direct_state),
+            repaired_index,
+            &repaired_entry);
     }
 
     const bool wrote_index =
@@ -7001,13 +7232,12 @@ void TryForcePlayerManaControlsVisible(
         }
 
 #if defined(_MSC_VER)
-        __try {
-            g_original_player_wnd_mana_visibility_target(
+        if (TryInvokePlayerManaVisibilityTarget(
+                g_original_player_wnd_mana_visibility_target,
                 reinterpret_cast<void*>(child_windows[i]),
                 1,
-                0);
+                0)) {
             ++forced_count;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
         }
 #else
         g_original_player_wnd_mana_visibility_target(
@@ -7321,9 +7551,11 @@ int InvokeCharacterZoneClientCurManaOverride(
 
     int native_result = 0;
 #if defined(_MSC_VER)
-    __try {
-        native_result = g_original_character_zone_client_cur_mana(this_context, cap_at_max_like);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!TryInvokeCharacterZoneClientCurMana(
+            g_original_character_zone_client_cur_mana,
+            this_context,
+            cap_at_max_like,
+            &native_result)) {
         return 0;
     }
 #else
@@ -9375,10 +9607,9 @@ void MONOMYTH_FASTCALL PlayerWndManaVisibilityRefreshHook(
 
     if (g_player_wnd_mana_visibility_refresh_in_progress) {
 #if defined(_MSC_VER)
-        __try {
-            g_original_player_wnd_mana_visibility_refresh(this_context);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-        }
+        TryInvokePlayerWndManaVisibilityRefreshWorker(
+            g_original_player_wnd_mana_visibility_refresh,
+            this_context);
 #else
         g_original_player_wnd_mana_visibility_refresh(this_context);
 #endif
@@ -9393,9 +9624,9 @@ void MONOMYTH_FASTCALL PlayerWndManaVisibilityRefreshHook(
     } reset_guard;
 
 #if defined(_MSC_VER)
-    __try {
-        g_original_player_wnd_mana_visibility_refresh(this_context);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!TryInvokePlayerWndManaVisibilityRefreshWorker(
+            g_original_player_wnd_mana_visibility_refresh,
+            this_context)) {
         return;
     }
 #else
@@ -9501,9 +9732,11 @@ void* MONOMYTH_FASTCALL PlayerWndManaRefreshHelperCallsiteHook(
     void* result = output_like;
     if (g_player_wnd_mana_refresh_helper != nullptr) {
 #if defined(_MSC_VER)
-        __try {
-            result = g_player_wnd_mana_refresh_helper(this_context, output_like);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
+        if (!TryInvokePlayerWndManaRefreshHelper(
+                g_player_wnd_mana_refresh_helper,
+                this_context,
+                output_like,
+                &result)) {
             return result;
         }
 #else
@@ -9660,15 +9893,15 @@ void* MONOMYTH_FASTCALL PlayerWndManaRefreshHelperCallsiteHook(
     return result;
 }
 
-void MONOMYTH_THISCALL PlayerWndManaProducerAHook(void* this_context) noexcept {
+void MONOMYTH_FASTCALL PlayerWndManaProducerAHook(
+    void* this_context,
+    void*) noexcept {
     if (g_original_player_wnd_mana_producer_a == nullptr) {
         return;
     }
 
 #if defined(_MSC_VER)
-    __try {
-        g_original_player_wnd_mana_producer_a(this_context);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!TryInvokePlayerWndManaProducer(g_original_player_wnd_mana_producer_a, this_context)) {
         return;
     }
 #else
@@ -9681,15 +9914,15 @@ void MONOMYTH_THISCALL PlayerWndManaProducerAHook(void* this_context) noexcept {
         L"player_mana_producer_a");
 }
 
-void MONOMYTH_THISCALL PlayerWndManaProducerBHook(void* this_context) noexcept {
+void MONOMYTH_FASTCALL PlayerWndManaProducerBHook(
+    void* this_context,
+    void*) noexcept {
     if (g_original_player_wnd_mana_producer_b == nullptr) {
         return;
     }
 
 #if defined(_MSC_VER)
-    __try {
-        g_original_player_wnd_mana_producer_b(this_context);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!TryInvokePlayerWndManaProducer(g_original_player_wnd_mana_producer_b, this_context)) {
         return;
     }
 #else
@@ -9722,9 +9955,9 @@ void MONOMYTH_FASTCALL PlayerWndManaSelectionWriterCallsiteHook(
         &current_index_before);
 
 #if defined(_MSC_VER)
-    __try {
-        g_original_player_wnd_mana_selection_writer(this_context);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!TryInvokePlayerWndManaSelectionWriter(
+            g_original_player_wnd_mana_selection_writer,
+            this_context)) {
         return;
     }
 #else
@@ -9833,9 +10066,9 @@ void MONOMYTH_FASTCALL PlayerWndManaSelectionRefreshCallsiteHook(
         &current_index_before);
 
 #if defined(_MSC_VER)
-    __try {
-        g_original_player_wnd_mana_selection_refresh(this_context);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!TryInvokePlayerWndManaSelectionRefresh(
+            g_original_player_wnd_mana_selection_refresh,
+            this_context)) {
         return;
     }
 #else
@@ -9960,9 +10193,11 @@ int MONOMYTH_FASTCALL CharacterZoneClientMaxManaHook(
 
     int native_result = 0;
 #if defined(_MSC_VER)
-    __try {
-        native_result = g_original_character_zone_client_max_mana(this_context, cap_at_max_like);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!TryInvokeCharacterZoneClientMaxMana(
+            g_original_character_zone_client_max_mana,
+            this_context,
+            cap_at_max_like,
+            &native_result)) {
         return 0;
     }
 #else
@@ -10029,12 +10264,12 @@ int MONOMYTH_FASTCALL CharacterZoneClientGetManaRegenHook(
 
     int native_result = 0;
 #if defined(_MSC_VER)
-    __try {
-        native_result = g_original_character_zone_client_get_mana_regen(
+    if (!TryInvokeCharacterZoneClientGetManaRegen(
+            g_original_character_zone_client_get_mana_regen,
             this_context,
             include_items_and_buffs_like,
-            combat_like);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+            combat_like,
+            &native_result)) {
         return 0;
     }
 #else
@@ -10110,15 +10345,15 @@ int MONOMYTH_FASTCALL PlayerManaEqTypeResolverHook(
 
     int native_result = 0;
 #if defined(_MSC_VER)
-    __try {
-        native_result = g_original_player_mana_eqtype_resolver(
+    if (!TryInvokePlayerManaEqTypeResolver(
+            g_original_player_mana_eqtype_resolver,
             this_context,
             eq_type,
             arg_a_like,
             arg_b_like,
             arg_c_like,
-            arg_d_like);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+            arg_d_like,
+            &native_result)) {
         return 0;
     }
 #else
