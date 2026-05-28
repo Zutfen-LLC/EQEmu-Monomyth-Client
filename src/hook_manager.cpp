@@ -54,6 +54,8 @@ constexpr std::uint64_t kSkillVisibilityOverrideLogInterval = 100;
 constexpr std::uint32_t kMemorizeSpellOpcode = 0x217c;
 constexpr std::uint32_t kDeleteSpellOpcode = 0x3358;
 constexpr std::uint32_t kMoveItemOpcode = 0x32ee;
+constexpr std::uint32_t kNewZoneOpcode = 0x1795;
+constexpr std::uint32_t kZoneChangeOpcode = 0x2d18;
 constexpr std::uint32_t kGmTrainingOpcode = 0x1966;
 constexpr std::uint32_t kGmEndTrainingOpcode = 0x4d6b;
 constexpr std::uint32_t kMulticlassCasterUiAccessRetryMaxAttempts = 30;
@@ -4565,11 +4567,58 @@ bool ShouldArmDeferredMulticlassCasterUiAccessRetry(
     return true;
 }
 
+bool IsMulticlassCasterUiAccessZoneOpcode(std::uint32_t opcode) noexcept {
+    return opcode == kNewZoneOpcode || opcode == kZoneChangeOpcode;
+}
+
+void ClearEnsuredMulticlassCasterUiAccessState() noexcept {
+    g_multiclass_caster_ui_access_ensured.store(false);
+    g_multiclass_caster_ui_access_mask.store(0);
+    g_multiclass_caster_ui_access_primary_class.store(0);
+}
+
+void ArmDeferredMulticlassCasterUiAccessRetry(
+    std::uint32_t assigned_mask,
+    std::uint64_t next_retry_tick_ms) noexcept {
+    g_multiclass_caster_ui_access_retry_mask.store(assigned_mask);
+    g_multiclass_caster_ui_access_retry_pending.store(true);
+    g_multiclass_caster_ui_access_retry_attempt_count.store(0);
+    g_multiclass_caster_ui_access_retry_next_tick_ms.store(next_retry_tick_ms);
+}
+
 void ClearDeferredMulticlassCasterUiAccessRetryState() noexcept {
     g_multiclass_caster_ui_access_retry_pending.store(false);
     g_multiclass_caster_ui_access_retry_mask.store(0);
     g_multiclass_caster_ui_access_retry_attempt_count.store(0);
     g_multiclass_caster_ui_access_retry_next_tick_ms.store(0);
+}
+
+void TryRearmMulticlassCasterUiAccessForZoneTransition(std::uint32_t opcode) noexcept {
+    if (!IsMulticlassCasterUiAccessZoneOpcode(opcode)) {
+        return;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    if (!snapshot.has_classes_bitmask || snapshot.classes_bitmask == 0 ||
+        !ShouldArmDeferredMulticlassCasterUiAccessRetry(snapshot.classes_bitmask)) {
+        return;
+    }
+
+    ClearEnsuredMulticlassCasterUiAccessState();
+    ArmDeferredMulticlassCasterUiAccessRetry(
+        snapshot.classes_bitmask,
+        static_cast<std::uint64_t>(GetTickCount64()) +
+            kMulticlassCasterUiAccessRetryCooldownMs);
+
+    std::wstring message = L"MulticlassCasterUiAccessZoneRearm";
+    message += L" opcode=";
+    message += Hex32(opcode);
+    message += L" mask=";
+    message += Hex32(snapshot.classes_bitmask);
+    message += L" retry_cooldown_ms=";
+    message += std::to_wstring(kMulticlassCasterUiAccessRetryCooldownMs);
+    monomyth::logger::Log(message);
 }
 
 bool TryReadLocalCharDataPointer(void** local_char_data) noexcept {
@@ -4818,7 +4867,7 @@ bool TryEnsureMulticlassCasterUiAccessForAssignedMask(std::uint32_t assigned_mas
     if (primary_class_read) {
         widened_primary_class_id = primary_class_id;
     }
-    const bool dedupe_hit =
+    const bool same_primary_and_mask =
         primary_class_playable &&
         g_multiclass_caster_ui_access_ensured.load() &&
         g_multiclass_caster_ui_access_mask.load() == assigned_mask &&
@@ -4880,6 +4929,7 @@ bool TryEnsureMulticlassCasterUiAccessForAssignedMask(std::uint32_t assigned_mas
     bool cast_spell_show_result = false;
     bool spellbook_show_result = false;
     bool any_ui_attempt = false;
+    bool dedupe_hit = false;
     const wchar_t* result_reason = L"";
     bool return_value = false;
 
@@ -4919,6 +4969,7 @@ bool TryEnsureMulticlassCasterUiAccessForAssignedMask(std::uint32_t assigned_mas
     TryReadCxWndStateSnapshot(cast_spell_window, &cast_spell_before);
     cast_spell_window_visible_before =
         cast_spell_before.valid && cast_spell_before.visible;
+    dedupe_hit = same_primary_and_mask && cast_spell_window_visible_before;
     TryResolveWindowVirtualTarget(
         cast_spell_window,
         0x98,
@@ -12986,6 +13037,7 @@ void MONOMYTH_FASTCALL ReceiveDispatchHook(
         reinterpret_cast<std::uintptr_t>(source_context));
 
     g_original_receive_dispatch(this_context, source_context, opcode, payload, payload_length);
+    TryRearmMulticlassCasterUiAccessForZoneTransition(opcode);
     TryRetryPendingMulticlassCasterUiAccess(L"ReceiveDispatch");
 }
 
@@ -28150,12 +28202,10 @@ void NotifyServerAuthStatsUpdated() noexcept {
     if (caster_ui_ensured) {
         ClearDeferredMulticlassCasterUiAccessRetryState();
     } else if (ShouldArmDeferredMulticlassCasterUiAccessRetry(snapshot.classes_bitmask)) {
-        g_multiclass_caster_ui_access_retry_mask.store(snapshot.classes_bitmask);
-        g_multiclass_caster_ui_access_retry_pending.store(true);
-        g_multiclass_caster_ui_access_retry_attempt_count.store(0);
-        g_multiclass_caster_ui_access_retry_next_tick_ms.store(
+        ArmDeferredMulticlassCasterUiAccessRetry(
+            snapshot.classes_bitmask,
             static_cast<std::uint64_t>(GetTickCount64()) +
-            kMulticlassCasterUiAccessRetryCooldownMs);
+                kMulticlassCasterUiAccessRetryCooldownMs);
     } else {
         ClearDeferredMulticlassCasterUiAccessRetryState();
     }
@@ -28774,9 +28824,7 @@ void Shutdown() noexcept {
         return;
     }
 
-    g_multiclass_caster_ui_access_ensured.store(false);
-    g_multiclass_caster_ui_access_mask.store(0);
-    g_multiclass_caster_ui_access_primary_class.store(0);
+    ClearEnsuredMulticlassCasterUiAccessState();
     ClearDeferredMulticlassCasterUiAccessRetryState();
     g_initialized = false;
     monomyth::logger::Log(L"hook_manager: shutdown");
