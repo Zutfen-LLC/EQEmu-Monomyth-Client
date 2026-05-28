@@ -192,6 +192,12 @@ def call_openai_review(base_url, api_key, model, prompt):
                     "role": "system",
                     "content": (
                         "You are a strict code reviewer. Review only the supplied diff. "
+                        "Focus on concrete bugs, regressions, unsafe assumptions, missing guards, "
+                        "or broken behavior introduced by the diff itself. "
+                        "Do not block on repository-wide architectural traits such as low-level hooking, "
+                        "RVA offsets, pointer arithmetic, global state, or version-coupled seams unless "
+                        "the diff introduces a specific defect in how those patterns are used. "
+                        "Do not escalate based on generic maintainability concerns alone. "
                         "Return compact JSON with keys verdict, summary, and findings. "
                         "verdict must be PASS, WARN, or BLOCK. findings must be an array. "
                         "Each finding must contain severity, title, path, line, summary, and recommendation. "
@@ -340,6 +346,12 @@ def main():
     raw_response = call_openai_review(base_url, api_key, model, prompt)
     payload = extract_json_block(raw_response)
     verdict, summary, findings = normalize_review(payload, changed_files, changed_line_ranges)
+    if truncated and verdict == "BLOCK":
+        verdict = "WARN"
+        summary = (
+            "The model returned BLOCK, but the diff submitted for review was truncated before submission. "
+            "Blocking verdicts require complete review input, so this result was downgraded to WARN."
+        )
     comment = render_comment(model, verdict, summary, findings, truncated, changed_files)
     upsert_pr_comment(repo, pr_number, gh_token, comment)
 
