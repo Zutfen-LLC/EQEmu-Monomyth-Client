@@ -25,6 +25,7 @@ add_library(dinput8 SHARED
     src/opcode_reference.cpp
     src/packet_observer.cpp
     src/receive_dispatch_discovery.cpp
+    src/remote_multiclass_identity.cpp
     src/runtime_capabilities.cpp
     src/server_auth_stats_observer.cpp
     src/spell_level_selection.cpp
@@ -82,6 +83,18 @@ endif()
 monomyth_apply_mingw_static_runtime(server_auth_stats_observer_tests)
 
 add_test(NAME server_auth_stats_observer_tests COMMAND server_auth_stats_observer_tests)
+
+add_executable(remote_multiclass_identity_tests
+    tests/remote_multiclass_identity_tests.cpp
+    src/multiclass_identity.cpp
+    src/opcode_reference.cpp
+    src/remote_multiclass_identity.cpp
+)
+target_include_directories(remote_multiclass_identity_tests PRIVATE src)
+target_compile_features(remote_multiclass_identity_tests PRIVATE cxx_std_20)
+monomyth_apply_mingw_static_runtime(remote_multiclass_identity_tests)
+
+add_test(NAME remote_multiclass_identity_tests COMMAND remote_multiclass_identity_tests)
 
 add_executable(spell_level_selection_tests
     tests/spell_level_selection_tests.cpp

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 
 #include "runtime_capabilities.h"
@@ -13,6 +14,17 @@ struct WhoAllClassDisplayCorrelationWindow {
     std::uint64_t response_index = 0;
     std::uint32_t remaining_before = 0;
     std::uint32_t remaining_after = 0;
+};
+
+struct WhoAllClassDisplayEntry {
+    bool active = false;
+    bool name_truncated = false;
+    std::uint64_t activation = 0;
+    std::uint64_t receive_sequence = 0;
+    std::uint64_t response_index = 0;
+    std::uint32_t entry_index = 0;
+    std::uint32_t native_class_id = 0;
+    std::array<char, 64> name = {};
 };
 
 enum class State {
@@ -49,6 +61,8 @@ void ArmActivatedSkillSendCorrelation(
     std::uint32_t caller_rva) noexcept;
 bool TryConsumeWhoAllClassDisplayCorrelation(
     WhoAllClassDisplayCorrelationWindow* window) noexcept;
+bool TryConsumeWhoAllClassDisplayEntry(
+    WhoAllClassDisplayEntry* entry) noexcept;
 void Shutdown() noexcept;
 State GetState() noexcept;
 
