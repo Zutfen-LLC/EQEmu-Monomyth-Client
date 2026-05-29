@@ -15,6 +15,7 @@ If the task is about multiclass client behavior, also inspect:
 - Stay clean-room.
 - Do not copy or port THJ code into this repo.
 - THJ DLL decompilation, Ghidra notes, `eqlib`, and `MacroQuest` may be used as references to choose seams and validate assumptions.
+- Macroquest and eqlib code may be reused verbatim, as they are open source and trusted.
 - Prefer runtime proof and binary-backed evidence over guesswork.
 
 ## Current Priority
