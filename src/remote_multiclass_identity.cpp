@@ -12,6 +12,9 @@
 namespace monomyth::remote_multiclass_identity {
 namespace {
 
+constexpr std::uint32_t kRemoteIdentityHeaderBytes = sizeof(std::uint32_t);
+constexpr std::uint32_t kRemoteIdentityMinimumEntryBytes = 9;
+
 struct StoredEntry {
     std::string normalized_server_name;
     std::string normalized_character_name;
@@ -92,11 +95,21 @@ bool IsAcceptableRemoteIdentityEntry(
     return true;
 }
 
+std::uint32_t MaxPossibleEntriesForPayloadLength(
+    std::uint32_t payload_length) noexcept {
+    if (payload_length <= kRemoteIdentityHeaderBytes) {
+        return 0;
+    }
+
+    const std::uint32_t remaining_bytes = payload_length - kRemoteIdentityHeaderBytes;
+    return remaining_bytes / kRemoteIdentityMinimumEntryBytes;
+}
+
 }  // namespace
 
 ParseResult ParsePayload(const void* payload, std::uint32_t payload_length) noexcept {
     ParseResult result = {};
-    if (payload == nullptr || payload_length < sizeof(std::uint32_t)) {
+    if (payload == nullptr || payload_length < kRemoteIdentityHeaderBytes) {
         return result;
     }
 
@@ -107,7 +120,13 @@ ParseResult ParsePayload(const void* payload, std::uint32_t payload_length) noex
     }
 
     result.declared_entry_count = entry_count;
-    std::uint32_t cursor = sizeof(std::uint32_t);
+    const std::uint32_t max_possible_entries =
+        MaxPossibleEntriesForPayloadLength(payload_length);
+    if (entry_count > max_possible_entries) {
+        return result;
+    }
+
+    std::uint32_t cursor = kRemoteIdentityHeaderBytes;
     result.entries.reserve(entry_count);
     for (std::uint32_t entry_index = 0; entry_index < entry_count; ++entry_index) {
         ParsedEntry entry = {};

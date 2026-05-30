@@ -53,6 +53,8 @@ constexpr std::uint32_t kPayloadSafetyCeiling = 4096;
 constexpr std::uint32_t kAuthStatsCandidatePayloadCeiling = 512;
 constexpr std::uint64_t kAuthStatsCandidateLogLimit = 16;
 constexpr std::size_t kPrefixByteCap = 16;
+constexpr std::uint32_t kRemoteIdentityHeaderBytes = sizeof(std::uint32_t);
+constexpr std::uint32_t kRemoteIdentityMinimumEntryBytes = 9;
 constexpr std::uint32_t kServerAuthStatsOpcode = 0x1338;
 constexpr std::uint32_t kMoveItemOpcode = 0x32ee;
 constexpr std::uint32_t kGmTrainingOpcode = 0x1966;
@@ -553,6 +555,36 @@ std::wstring ExtractAsciiStringsSummary(
     return summary;
 }
 
+std::uint32_t MaxPossibleRemoteIdentityEntriesForPayloadLength(
+    std::uint32_t payload_length) noexcept {
+    if (payload_length <= kRemoteIdentityHeaderBytes) {
+        return 0;
+    }
+
+    const std::uint32_t remaining_bytes = payload_length - kRemoteIdentityHeaderBytes;
+    return remaining_bytes / kRemoteIdentityMinimumEntryBytes;
+}
+
+std::wstring BuildAsciiPreview(
+    const std::uint8_t* bytes,
+    std::size_t length) {
+    if (bytes == nullptr || length == 0) {
+        return L"";
+    }
+
+    std::wstring preview;
+    preview.reserve(length);
+    for (std::size_t i = 0; i < length; ++i) {
+        const unsigned char ch = bytes[i];
+        if (ch >= 32 && ch <= 126) {
+            preview.push_back(static_cast<wchar_t>(ch));
+        } else {
+            preview.push_back(L'.');
+        }
+    }
+    return preview;
+}
+
 bool TryReadU32FromPrefix(
     const std::array<std::uint8_t, kPrefixByteCap>& prefix,
     std::size_t prefix_length,
@@ -944,12 +976,38 @@ void MaybeHandleRemoteMulticlassIdentity(
     const auto parsed =
         monomyth::remote_multiclass_identity::ParsePayload(payload, payload_length);
     if (!parsed.valid) {
+        const std::size_t prefix_length = static_cast<std::size_t>(
+            (payload_length < kPrefixByteCap) ? payload_length : kPrefixByteCap);
+        std::array<std::uint8_t, kPrefixByteCap> prefix = {};
+        const bool prefix_copied =
+            TryCopyPayloadBytes(payload, prefix_length, prefix.data());
+        std::uint32_t first_u32 = 0;
+        const bool first_u32_available =
+            prefix_copied &&
+            TryReadU32FromPrefix(prefix, prefix_length, 0, &first_u32);
+        const std::uint32_t max_possible_entries =
+            MaxPossibleRemoteIdentityEntriesForPayloadLength(payload_length);
         std::wstringstream message;
         message << L"PacketObserverRemoteMulticlassIdentity"
                 << L" packet_index=" << packet_index
                 << L" seq=" << sequence
                 << L" payload_length=" << payload_length
                 << L" parse_status=invalid";
+        if (first_u32_available) {
+            message << L" first_u32=" << first_u32
+                    << L" first_u32_hex=" << Hex32(first_u32);
+        } else {
+            message << L" first_u32_unavailable=true";
+        }
+        message << L" max_possible_entries=" << max_possible_entries;
+        if (prefix_copied) {
+            message << L" prefix_hex=\"" << FormatPrefixHex(prefix.data(), prefix_length)
+                    << L"\""
+                    << L" ascii_preview=\"" << BuildAsciiPreview(prefix.data(), prefix_length)
+                    << L"\"";
+        } else {
+            message << L" prefix_read_failed=true";
+        }
         monomyth::logger::Log(message.str());
         return;
     }
