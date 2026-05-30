@@ -12923,11 +12923,13 @@ const char* MONOMYTH_FASTCALL WhoClassNameClassLookupHook(
         (who_all_class_label_caller || caller_matches) &&
         TryConsumeInventoryClassDisplayCorrelation(&inventory_correlation);
     if (who_all_class_label_caller) {
+        // The proved /who caller family maps class shared-string ids (0x5de..0x616).
+        // THJ's clean-room reference path returns slash-joined class codes here, not full names.
         const char* display = who_all_entry_available
             ? TryBuildRemoteCharacterClassDisplayAscii(
                 who_all_entry.name.data(),
                 who_all_entry.native_class_id,
-                monomyth::multiclass_identity::ClassDisplayStyle::kFullName,
+                monomyth::multiclass_identity::ClassDisplayStyle::kThreeLetterCode,
                 L"WhoClassNameClassLookup")
             : nullptr;
         if (display != nullptr) {
