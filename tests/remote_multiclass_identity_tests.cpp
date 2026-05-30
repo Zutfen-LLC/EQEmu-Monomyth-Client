@@ -20,6 +20,12 @@ void AppendCString(std::vector<std::uint8_t>* bytes, std::string_view value) {
     bytes->push_back(0);
 }
 
+void AppendBytes(
+    std::vector<std::uint8_t>* bytes,
+    std::initializer_list<std::uint8_t> value) {
+    bytes->insert(bytes->end(), value.begin(), value.end());
+}
+
 bool Expect(bool condition, std::string_view name) {
     if (condition) {
         return true;
@@ -120,6 +126,42 @@ int main() {
             truncated_payload.data(),
             static_cast<std::uint32_t>(truncated_payload.size()));
     passed &= Expect(!truncated_result.valid, "truncated payload rejected");
+
+    std::vector<std::uint8_t> impossible_count_payload;
+    AppendU32(&impossible_count_payload, 5);
+    AppendCString(&impossible_count_payload, "");
+    const auto impossible_count_result =
+        monomyth::remote_multiclass_identity::ParsePayload(
+            impossible_count_payload.data(),
+            static_cast<std::uint32_t>(impossible_count_payload.size()));
+    passed &= Expect(!impossible_count_result.valid, "impossible entry count rejected");
+    passed &= Expect(
+        impossible_count_result.declared_entry_count == 5,
+        "impossible entry count declared count preserved");
+    passed &= Expect(
+        impossible_count_result.parsed_entry_count == 0,
+        "impossible entry count parsed count remains zero");
+    passed &= Expect(
+        impossible_count_result.entries.empty(),
+        "impossible entry count yields no entries");
+
+    std::vector<std::uint8_t> ascii_header_payload;
+    AppendBytes(&ascii_header_payload, {0x53, 0x55, 0x52, 0x46});
+    AppendCString(&ascii_header_payload, "surface");
+    const auto ascii_header_result =
+        monomyth::remote_multiclass_identity::ParsePayload(
+            ascii_header_payload.data(),
+            static_cast<std::uint32_t>(ascii_header_payload.size()));
+    passed &= Expect(!ascii_header_result.valid, "ascii header payload rejected");
+    passed &= Expect(
+        ascii_header_result.declared_entry_count == 0x46525553u,
+        "ascii header first dword captured as declared count");
+    passed &= Expect(
+        ascii_header_result.parsed_entry_count == 0,
+        "ascii header parsed count remains zero");
+    passed &= Expect(
+        ascii_header_result.entries.empty(),
+        "ascii header yields no entries");
 
     monomyth::remote_multiclass_identity::Clear();
     passed &= Expect(
