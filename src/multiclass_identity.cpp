@@ -87,6 +87,10 @@ constexpr std::array<std::string_view, kPlayableClassCount + 1> kThreeLetterClas
 
 constexpr std::uint32_t kDualWieldClassMask = 0x000041c9u;
 constexpr std::uint32_t kCastingClassMask = 0x00007ebeu;
+constexpr std::uint32_t kClientBaseManaIntClassMask = 0x00003c90u;
+constexpr std::uint32_t kClientBaseManaWisClassMask = 0x0000423eu;
+constexpr std::uint32_t kHeroicIntManaClassMask = 0x00003c10u;
+constexpr std::uint32_t kHeroicWisManaClassMask = 0x0000422au;
 
 void AppendClassIfMissing(
     OrderedClassIds* ordered_ids,
@@ -119,6 +123,22 @@ bool IsCastingClassId(unsigned int class_id) noexcept {
     return HasClass(kCastingClassMask, class_id);
 }
 
+bool IsClientBaseManaIntClassId(unsigned int class_id) noexcept {
+    return HasClass(kClientBaseManaIntClassMask, class_id);
+}
+
+bool IsClientBaseManaWisClassId(unsigned int class_id) noexcept {
+    return HasClass(kClientBaseManaWisClassMask, class_id);
+}
+
+bool IsHeroicIntManaClassId(unsigned int class_id) noexcept {
+    return HasClass(kHeroicIntManaClassMask, class_id);
+}
+
+bool IsHeroicWisManaClassId(unsigned int class_id) noexcept {
+    return HasClass(kHeroicWisManaClassMask, class_id);
+}
+
 std::uint32_t ClassBit(unsigned int class_id) noexcept {
     if (!IsPlayableClassId(class_id)) {
         return 0;
@@ -147,6 +167,19 @@ bool HasClass(std::uint32_t class_mask, unsigned int class_id) noexcept {
 bool HasClientItemClass(std::uint32_t class_mask, unsigned int class_id) noexcept {
     const std::uint32_t class_bit = ClientItemClassBit(class_id);
     return class_bit != 0 && (class_mask & class_bit) != 0;
+}
+
+bool ClassMaskUsesClientBaseMana(std::uint32_t class_mask) noexcept {
+    return IsPlayableClassMask(class_mask) &&
+        (class_mask & (kClientBaseManaIntClassMask | kClientBaseManaWisClassMask)) != 0;
+}
+
+bool ClassMaskUsesClientHeroicIntMana(std::uint32_t class_mask) noexcept {
+    return IsPlayableClassMask(class_mask) && (class_mask & kHeroicIntManaClassMask) != 0;
+}
+
+bool ClassMaskUsesClientHeroicWisMana(std::uint32_t class_mask) noexcept {
+    return IsPlayableClassMask(class_mask) && (class_mask & kHeroicWisManaClassMask) != 0;
 }
 
 bool HasAuthoritativeClass(

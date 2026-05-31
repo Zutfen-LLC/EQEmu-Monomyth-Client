@@ -25,11 +25,18 @@ struct OrderedClassIds {
 
 bool IsPlayableClassId(unsigned int class_id) noexcept;
 bool IsCastingClassId(unsigned int class_id) noexcept;
+bool IsClientBaseManaIntClassId(unsigned int class_id) noexcept;
+bool IsClientBaseManaWisClassId(unsigned int class_id) noexcept;
+bool IsHeroicIntManaClassId(unsigned int class_id) noexcept;
+bool IsHeroicWisManaClassId(unsigned int class_id) noexcept;
 std::uint32_t ClassBit(unsigned int class_id) noexcept;
 std::uint32_t ClientItemClassBit(unsigned int class_id) noexcept;
 bool IsPlayableClassMask(std::uint32_t class_mask) noexcept;
 bool HasClass(std::uint32_t class_mask, unsigned int class_id) noexcept;
 bool HasClientItemClass(std::uint32_t class_mask, unsigned int class_id) noexcept;
+bool ClassMaskUsesClientBaseMana(std::uint32_t class_mask) noexcept;
+bool ClassMaskUsesClientHeroicIntMana(std::uint32_t class_mask) noexcept;
+bool ClassMaskUsesClientHeroicWisMana(std::uint32_t class_mask) noexcept;
 bool HasAuthoritativeClass(
     bool has_class_mask,
     std::uint32_t class_mask,

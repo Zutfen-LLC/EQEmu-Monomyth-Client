@@ -40,6 +40,18 @@ int main() {
     passed &= Expect(IsCastingClassId(8), "bard is a casting class");
     passed &= Expect(IsCastingClassId(13), "magician is a casting class");
     passed &= Expect(!IsCastingClassId(16), "berserker is not a casting class");
+    passed &= Expect(IsClientBaseManaIntClassId(5), "shadowknight uses int base mana");
+    passed &= Expect(IsClientBaseManaIntClassId(8), "bard uses int base mana");
+    passed &= Expect(!IsClientBaseManaIntClassId(10), "shaman does not use int base mana");
+    passed &= Expect(IsClientBaseManaWisClassId(10), "shaman uses wis base mana");
+    passed &= Expect(IsClientBaseManaWisClassId(15), "beastlord uses wis base mana");
+    passed &= Expect(!IsClientBaseManaWisClassId(8), "bard does not use wis base mana");
+    passed &= Expect(IsHeroicIntManaClassId(5), "shadowknight gets heroic int mana");
+    passed &= Expect(IsHeroicIntManaClassId(14), "enchanter gets heroic int mana");
+    passed &= Expect(!IsHeroicIntManaClassId(8), "bard does not get heroic int mana");
+    passed &= Expect(IsHeroicWisManaClassId(3), "paladin gets heroic wis mana");
+    passed &= Expect(IsHeroicWisManaClassId(10), "shaman gets heroic wis mana");
+    passed &= Expect(!IsHeroicWisManaClassId(13), "magician does not get heroic wis mana");
 
     passed &= Expect(ClassBit(1) == 0x00000001u, "class bit warrior");
     passed &= Expect(ClassBit(3) == 0x00000004u, "class bit paladin");
@@ -86,6 +98,24 @@ int main() {
             ClientItemClassBitForTest(3) | ClientItemClassBitForTest(13),
             16),
         "client item mask omits berserker");
+    passed &= Expect(
+        ClassMaskUsesClientBaseMana(ClassBitForTest(5) | ClassBitForTest(10)),
+        "shadowknight shaman mask uses client base mana");
+    passed &= Expect(
+        !ClassMaskUsesClientBaseMana(ClassBitForTest(1) | ClassBitForTest(7) | ClassBitForTest(16)),
+        "pure melee mask does not use client base mana");
+    passed &= Expect(
+        ClassMaskUsesClientHeroicIntMana(ClassBitForTest(5) | ClassBitForTest(12)),
+        "shadowknight wizard mask uses heroic int mana");
+    passed &= Expect(
+        !ClassMaskUsesClientHeroicIntMana(ClassBitForTest(1) | ClassBitForTest(8)),
+        "warrior bard mask does not use heroic int mana");
+    passed &= Expect(
+        ClassMaskUsesClientHeroicWisMana(ClassBitForTest(4) | ClassBitForTest(10)),
+        "ranger shaman mask uses heroic wis mana");
+    passed &= Expect(
+        !ClassMaskUsesClientHeroicWisMana(ClassBitForTest(1) | ClassBitForTest(12)),
+        "warrior wizard mask does not use heroic wis mana");
 
     passed &= Expect(
         HasAuthoritativeClass(true, ClassBitForTest(3) | ClassBitForTest(13), 3),
