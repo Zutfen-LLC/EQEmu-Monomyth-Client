@@ -142,6 +142,8 @@ constexpr std::uint32_t kActivatedSkillActionSlotDispatcherRva = 0x0028c8b0;
 constexpr std::uint32_t kActivatedSkillActionSlotUseSkillCallsiteRva = 0x0028ca21;
 constexpr std::uint32_t kBackstabPrimaryWeaponClassifierCallsiteRva = 0x001a55ea;
 constexpr std::uint32_t kBackstabPrimaryWeaponClassifierTargetRva = 0x003affa0;
+constexpr std::uint32_t kHideWhileSneakingClassLookupCallsiteRva = 0x0005ea03;
+constexpr std::uint32_t kHideWhileSneakingClassLookupTargetRva = 0x003db210;
 constexpr std::uint32_t kActivatedSkillCombatProducerRva = 0x000fb3d0;
 constexpr std::uint32_t kActivatedSkillCombatSendOpcodeRva = 0x000fb65e;
 constexpr std::uint32_t kActivatedSkillCombatSendWrapperCallRva = 0x000fb68f;
@@ -165,6 +167,7 @@ constexpr std::size_t kPlayerWndManaSelectedEntryOffset = 0x0220;
 constexpr std::size_t kPlayerWndManaLastSelectedEntryOffset = 0x0224;
 constexpr std::size_t kPlayerWndManaStateOffset = 0x024c;
 constexpr std::size_t kPlayerWndManaCurrentIndexOffset = 0x0254;
+constexpr std::size_t kHideWhileSneakingResolvedClassIdOffset = 0x3374;
 constexpr std::size_t kUiGaugeStatePointerOffset = 0x01d8;
 constexpr std::size_t kUiGaugeStateMaxValueOffset = 0x01d8;
 constexpr std::size_t kUiGaugeStateAltMaxValueOffset = 0x01e8;
@@ -1176,6 +1179,7 @@ CallsitePatch g_skills_window_row_helper_callsite_a_patch = {};
 CallsitePatch g_skills_window_row_helper_callsite_b_patch = {};
 CallsitePatch g_skills_window_row_helper_callsite_c_patch = {};
 CallsitePatch g_backstab_primary_weapon_classifier_callsite_patch = {};
+CallsitePatch g_hide_while_sneaking_class_lookup_callsite_patch = {};
 CallsitePatch g_equip_local_record_lookup_callsite_patch = {};
 CallsitePatch g_equip_local_requirement_lookup_a_callsite_patch = {};
 CallsitePatch g_equip_local_requirement_lookup_b_callsite_patch = {};
@@ -1209,6 +1213,7 @@ CharacterZoneClientUseSkillFn g_original_character_zone_client_use_skill = nullp
 SkillsWindowSkillValueProducerFn g_original_skills_window_skill_value_producer = nullptr;
 SkillsWindowRowHelperFn g_original_skills_window_row_helper = nullptr;
 BackstabPrimaryWeaponClassifierFn g_original_backstab_primary_weapon_classifier = nullptr;
+SpellUiAboutToShowSharedLookupFn g_original_hide_while_sneaking_class_lookup = nullptr;
 InvSlotMgrMoveItemFn g_original_inv_slot_mgr_move_item = nullptr;
 EquipRecordLookupFn g_original_equip_record_lookup = nullptr;
 EquipRequirementLookupFn g_original_equip_requirement_lookup = nullptr;
@@ -1457,6 +1462,8 @@ thread_local bool g_player_mana_visibility_force_in_progress = false;
 thread_local bool g_player_wnd_mana_visibility_refresh_in_progress = false;
 thread_local bool g_player_mana_producer_replay_in_progress = false;
 thread_local bool g_player_mana_selection_repair_in_progress = false;
+thread_local std::array<std::uint8_t, kHideWhileSneakingResolvedClassIdOffset + 1>
+    g_hide_while_sneaking_lookup_shadow = {};
 std::uintptr_t g_player_mana_full_refresh_warmup_window = 0;
 std::uint32_t g_player_mana_full_refresh_warmup_count = 0;
 std::uint64_t g_is_class_usable_predicate_override_count = 0;
@@ -1476,6 +1483,7 @@ std::uint64_t g_activated_skill_use_skill_trace_count = 0;
 std::uint64_t g_activated_skill_adjusted_skill_trace_count = 0;
 std::uint64_t g_activated_skill_adjusted_skill_override_count = 0;
 std::uint64_t g_backstab_primary_weapon_override_count = 0;
+std::uint64_t g_hide_while_sneaking_override_count = 0;
 thread_local const void* g_active_who_class_name_subject = nullptr;
 std::uint64_t g_ui_class_display_trace_count = 0;
 std::uint32_t g_active_equip_nested_validation_id = 0;
@@ -9249,6 +9257,13 @@ bool ShouldAllowBackstabPrimaryWeaponOverride(
     return authoritative_backstab || (local_backstab_checked && local_backstab);
 }
 
+bool ShouldTreatAssignedClassMaskAsRogueForHideWhileSneaking(
+    const monomyth::server_auth_stats::Snapshot& snapshot) noexcept {
+    return snapshot.has_classes_bitmask &&
+           snapshot.classes_bitmask != 0 &&
+           monomyth::multiclass_identity::HasClass(snapshot.classes_bitmask, 9u);
+}
+
 const wchar_t* ActivatedSkillCallerSurface(std::uint32_t caller_rva) noexcept {
     switch (caller_rva) {
     case kActivatedSkillHasSkillActionCallerRva:
@@ -10073,6 +10088,73 @@ int MONOMYTH_FASTCALL BackstabPrimaryWeaponClassifierCallsiteHook(
     }
 
     return 2;
+}
+
+void* MONOMYTH_FASTCALL HideWhileSneakingClassLookupCallsiteHook(
+    void* this_context,
+    void*) noexcept {
+    void* original_result =
+        g_original_hide_while_sneaking_class_lookup != nullptr
+            ? g_original_hide_while_sneaking_class_lookup(this_context)
+            : nullptr;
+    if (original_result == nullptr) {
+        return original_result;
+    }
+
+    std::uint8_t native_class_id = 0;
+    const bool native_class_id_read = TryCopyObject(
+        reinterpret_cast<const std::uint8_t*>(original_result) +
+            kHideWhileSneakingResolvedClassIdOffset,
+        &native_class_id);
+    if (native_class_id_read && native_class_id == 9u) {
+        return original_result;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    if (!ShouldTreatAssignedClassMaskAsRogueForHideWhileSneaking(snapshot)) {
+        return original_result;
+    }
+
+    g_hide_while_sneaking_lookup_shadow.fill(0);
+    g_hide_while_sneaking_lookup_shadow[kHideWhileSneakingResolvedClassIdOffset] = 9u;
+
+    ++g_hide_while_sneaking_override_count;
+    if (g_hide_while_sneaking_override_count <= kSkillVisibilityOverrideInitialLogCount ||
+        (g_hide_while_sneaking_override_count % kSkillVisibilityOverrideLogInterval) == 0) {
+        const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+        const std::uintptr_t module_base = GetHostModuleBase();
+        const std::uint32_t caller_rva =
+            (module_base != 0 && caller_return_address >= module_base)
+                ? static_cast<std::uint32_t>(caller_return_address - module_base)
+                : 0;
+
+        std::wstring message = L"hook_manager: hide while sneaking rogue override";
+        message += L" count=";
+        message += std::to_wstring(g_hide_while_sneaking_override_count);
+        message += L" this_context=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+        message += L" original_result=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(original_result));
+        message += L" native_class_id_read=";
+        message += native_class_id_read ? L"true" : L"false";
+        message += L" native_class_id=";
+        message += std::to_wstring(native_class_id);
+        message += L" returned_class_id=9";
+        message += L" assigned_mask=";
+        message += Hex32(snapshot.classes_bitmask);
+        message += L" caller_return=";
+        message += HexPtr(caller_return_address);
+        message += L" caller_rva=";
+        message += Hex32(caller_rva);
+        message += L" callsite_rva=";
+        message += Hex32(kHideWhileSneakingClassLookupCallsiteRva);
+        message += L" target_rva=";
+        message += Hex32(kHideWhileSneakingClassLookupTargetRva);
+        monomyth::logger::Log(message);
+    }
+
+    return g_hide_while_sneaking_lookup_shadow.data();
 }
 
 void* MONOMYTH_FASTCALL PlayerWndConstructorHook(
@@ -26361,6 +26443,62 @@ bool InstallActivatedSkillVisibilityHook(const monomyth::runtime::Manifest& mani
         }
     }
 
+    constexpr std::array<std::uint8_t, 5> kHideWhileSneakingClassLookupCallsiteBytes = {
+        0xe8, 0x08, 0xc8, 0x37, 0x00};
+    std::array<std::uint8_t, kHideWhileSneakingClassLookupCallsiteBytes.size()>
+        live_hide_while_sneaking_class_lookup_callsite = {};
+    const bool hide_while_sneaking_class_lookup_callsite_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kHideWhileSneakingClassLookupCallsiteRva),
+        live_hide_while_sneaking_class_lookup_callsite.size(),
+        live_hide_while_sneaking_class_lookup_callsite.data());
+    const bool hide_while_sneaking_class_lookup_callsite_matches =
+        hide_while_sneaking_class_lookup_callsite_copied &&
+        std::memcmp(
+            live_hide_while_sneaking_class_lookup_callsite.data(),
+            kHideWhileSneakingClassLookupCallsiteBytes.data(),
+            kHideWhileSneakingClassLookupCallsiteBytes.size()) == 0;
+    if (!hide_while_sneaking_class_lookup_callsite_matches) {
+        std::wstring message =
+            L"hook_manager: HideWhileSneakingClassLookupCallsite byte validation failed expected=\"";
+        message += HexBytes(
+            kHideWhileSneakingClassLookupCallsiteBytes.data(),
+            kHideWhileSneakingClassLookupCallsiteBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(
+            live_hide_while_sneaking_class_lookup_callsite.data(),
+            live_hide_while_sneaking_class_lookup_callsite.size());
+        message += L"\" address=";
+        message += HexPtr(module_base + kHideWhileSneakingClassLookupCallsiteRva);
+        message += L" target_rva=";
+        message += Hex32(kHideWhileSneakingClassLookupCallsiteRva);
+        monomyth::logger::Log(message);
+    } else {
+        g_original_hide_while_sneaking_class_lookup =
+            reinterpret_cast<SpellUiAboutToShowSharedLookupFn>(
+                module_base + kHideWhileSneakingClassLookupTargetRva);
+        if (InstallCallsitePatch(
+                reinterpret_cast<void*>(module_base + kHideWhileSneakingClassLookupCallsiteRva),
+                reinterpret_cast<void*>(&HideWhileSneakingClassLookupCallsiteHook),
+                module_base + kHideWhileSneakingClassLookupTargetRva,
+                &g_hide_while_sneaking_class_lookup_callsite_patch,
+                L"HideWhileSneakingClassLookupCallsite")) {
+            std::wstring message =
+                L"hook_manager: hide while sneaking class lookup hook installed callsite_address=";
+            message += HexPtr(module_base + kHideWhileSneakingClassLookupCallsiteRva);
+            message += L" callsite_rva=";
+            message += Hex32(kHideWhileSneakingClassLookupCallsiteRva);
+            message += L" target_address=";
+            message += HexPtr(module_base + kHideWhileSneakingClassLookupTargetRva);
+            message += L" target_rva=";
+            message += Hex32(kHideWhileSneakingClassLookupTargetRva);
+            monomyth::logger::Log(message);
+        } else {
+            g_original_hide_while_sneaking_class_lookup = nullptr;
+            monomyth::logger::Log(
+                L"hook_manager: hide while sneaking class lookup hook denied reason=\"callsite_patch_install_failed\"");
+        }
+    }
+
     bool skills_window_skill_value_hook_installed = false;
     const bool skills_window_skill_value_seams_valid =
         ValidateSkillsWindowSkillValueSeams(module_base);
@@ -26470,6 +26608,7 @@ bool InstallActivatedSkillVisibilityHook(const monomyth::runtime::Manifest& mani
     g_activated_skill_adjusted_skill_trace_count = 0;
     g_activated_skill_adjusted_skill_override_count = 0;
     g_backstab_primary_weapon_override_count = 0;
+    g_hide_while_sneaking_override_count = 0;
     g_skills_window_skill_value_entry_count = 0;
     g_skills_window_row_helper_entry_count = 0;
     g_skills_window_skill_value_trace_count = 0;
@@ -26488,6 +26627,8 @@ bool InstallActivatedSkillVisibilityHook(const monomyth::runtime::Manifest& mani
     message += activated_skill_use_trace_seams_valid ? L"true" : L"false";
     message += L" activated_skill_use_hooks_installed=";
     message += activated_skill_use_hooks_installed ? L"true" : L"false";
+    message += L" hide_while_sneaking_callsite_installed=";
+    message += g_hide_while_sneaking_class_lookup_callsite_patch.installed ? L"true" : L"false";
     message += L" skills_window_value_seams_valid=";
     message += skills_window_skill_value_seams_valid ? L"true" : L"false";
     message += L" skills_window_value_hook_installed=";
@@ -27983,6 +28124,14 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         g_original_backstab_primary_weapon_classifier = nullptr;
     }
 
+    if (RemoveCallsitePatch(&g_hide_while_sneaking_class_lookup_callsite_patch)) {
+        g_original_hide_while_sneaking_class_lookup = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: activated skill use hook removed target=HideWhileSneakingClassLookupCallsite");
+    } else if (!g_hide_while_sneaking_class_lookup_callsite_patch.installed) {
+        g_original_hide_while_sneaking_class_lookup = nullptr;
+    }
+
     if (RemoveCallsitePatch(&g_skills_window_skill_value_callsite_patch)) {
         g_original_skills_window_skill_value_producer = nullptr;
         monomyth::logger::Log(
@@ -28019,6 +28168,7 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         g_activated_skill_adjusted_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_override_count = 0;
         g_backstab_primary_weapon_override_count = 0;
+        g_hide_while_sneaking_override_count = 0;
         g_skills_window_skill_value_entry_count = 0;
         g_skills_window_row_helper_entry_count = 0;
         g_skills_window_skill_value_trace_count = 0;
@@ -28042,6 +28192,7 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         g_activated_skill_adjusted_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_override_count = 0;
         g_backstab_primary_weapon_override_count = 0;
+        g_hide_while_sneaking_override_count = 0;
         g_skills_window_skill_value_entry_count = 0;
         g_skills_window_row_helper_entry_count = 0;
         g_skills_window_skill_value_trace_count = 0;
