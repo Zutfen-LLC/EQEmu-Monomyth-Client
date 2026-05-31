@@ -140,6 +140,8 @@ constexpr std::uint32_t kActivatedSkillUseSkillAdjustedSkillCallsiteRva = 0x0005
 constexpr std::uint32_t kActivatedSkillUseSkillAdjustedSkillReturnRva = 0x0005b343;
 constexpr std::uint32_t kActivatedSkillActionSlotDispatcherRva = 0x0028c8b0;
 constexpr std::uint32_t kActivatedSkillActionSlotUseSkillCallsiteRva = 0x0028ca21;
+constexpr std::uint32_t kBackstabPrimaryWeaponClassifierCallsiteRva = 0x001a55ea;
+constexpr std::uint32_t kBackstabPrimaryWeaponClassifierTargetRva = 0x003affa0;
 constexpr std::uint32_t kActivatedSkillCombatProducerRva = 0x000fb3d0;
 constexpr std::uint32_t kActivatedSkillCombatSendOpcodeRva = 0x000fb65e;
 constexpr std::uint32_t kActivatedSkillCombatSendWrapperCallRva = 0x000fb68f;
@@ -653,6 +655,8 @@ using MoveItemSlot21LookupFn = void* (MONOMYTH_THISCALL*)(
     void* this_context,
     void* output_like,
     std::uint32_t slot_like);
+using BackstabPrimaryWeaponClassifierFn = int (MONOMYTH_THISCALL*)(
+    void* this_context);
 using MoveItemDescriptorBuildFn = void* (MONOMYTH_THISCALL*)(
     void* this_context,
     void* output_words,
@@ -1171,6 +1175,7 @@ CallsitePatch g_skills_window_skill_value_callsite_patch = {};
 CallsitePatch g_skills_window_row_helper_callsite_a_patch = {};
 CallsitePatch g_skills_window_row_helper_callsite_b_patch = {};
 CallsitePatch g_skills_window_row_helper_callsite_c_patch = {};
+CallsitePatch g_backstab_primary_weapon_classifier_callsite_patch = {};
 CallsitePatch g_equip_local_record_lookup_callsite_patch = {};
 CallsitePatch g_equip_local_requirement_lookup_a_callsite_patch = {};
 CallsitePatch g_equip_local_requirement_lookup_b_callsite_patch = {};
@@ -1203,6 +1208,7 @@ CharacterZoneClientMaxManaFn g_original_character_zone_client_max_mana = nullptr
 CharacterZoneClientUseSkillFn g_original_character_zone_client_use_skill = nullptr;
 SkillsWindowSkillValueProducerFn g_original_skills_window_skill_value_producer = nullptr;
 SkillsWindowRowHelperFn g_original_skills_window_row_helper = nullptr;
+BackstabPrimaryWeaponClassifierFn g_original_backstab_primary_weapon_classifier = nullptr;
 InvSlotMgrMoveItemFn g_original_inv_slot_mgr_move_item = nullptr;
 EquipRecordLookupFn g_original_equip_record_lookup = nullptr;
 EquipRequirementLookupFn g_original_equip_requirement_lookup = nullptr;
@@ -1469,6 +1475,7 @@ std::uint64_t g_who_class_name_entry_trace_count = 0;
 std::uint64_t g_activated_skill_use_skill_trace_count = 0;
 std::uint64_t g_activated_skill_adjusted_skill_trace_count = 0;
 std::uint64_t g_activated_skill_adjusted_skill_override_count = 0;
+std::uint64_t g_backstab_primary_weapon_override_count = 0;
 thread_local const void* g_active_who_class_name_subject = nullptr;
 std::uint64_t g_ui_class_display_trace_count = 0;
 std::uint32_t g_active_equip_nested_validation_id = 0;
@@ -9210,6 +9217,38 @@ bool TryHasLocalPlayerSkill(int skill_id, bool* has_skill) noexcept {
     return true;
 }
 
+bool ShouldAllowBackstabPrimaryWeaponOverride(
+    std::uintptr_t item_wrapper_like,
+    std::uint8_t* item_class) noexcept {
+    if (item_wrapper_like == 0) {
+        return false;
+    }
+
+    std::uint8_t resolved_item_class = 0;
+    const bool item_class_copied =
+        TryReadClientItemFieldFromWrapper(
+            item_wrapper_like,
+            kClientItemInfoItemClassOffset,
+            &resolved_item_class,
+            nullptr);
+    if (item_class != nullptr) {
+        *item_class = item_class_copied ? resolved_item_class : 0;
+    }
+    if (!item_class_copied || !IsWeaponItemClass(resolved_item_class)) {
+        return false;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    const bool authoritative_backstab =
+        monomyth::multiclass_skill_visibility::HasAuthoritativeActivatedSkill(
+            snapshot,
+            8);
+    bool local_backstab = false;
+    const bool local_backstab_checked = TryHasLocalPlayerSkill(8, &local_backstab);
+    return authoritative_backstab || (local_backstab_checked && local_backstab);
+}
+
 const wchar_t* ActivatedSkillCallerSurface(std::uint32_t caller_rva) noexcept {
     switch (caller_rva) {
     case kActivatedSkillHasSkillActionCallerRva:
@@ -9992,6 +10031,48 @@ int MONOMYTH_FASTCALL CharacterZoneClientGetAdjustedSkillHook(
         multiclass_mask_result,
         override_applied);
     return returned_result;
+}
+
+int MONOMYTH_FASTCALL BackstabPrimaryWeaponClassifierCallsiteHook(
+    void* this_context,
+    void*) noexcept {
+    const int original_result =
+        g_original_backstab_primary_weapon_classifier != nullptr
+            ? g_original_backstab_primary_weapon_classifier(this_context)
+            : 0;
+    if (original_result == 2 || this_context == nullptr) {
+        return original_result;
+    }
+
+    std::uint8_t item_class = 0;
+    if (!ShouldAllowBackstabPrimaryWeaponOverride(
+            reinterpret_cast<std::uintptr_t>(this_context),
+            &item_class)) {
+        return original_result;
+    }
+
+    ++g_backstab_primary_weapon_override_count;
+    if (g_backstab_primary_weapon_override_count <= kSkillVisibilityOverrideInitialLogCount ||
+        (g_backstab_primary_weapon_override_count % kSkillVisibilityOverrideLogInterval) == 0) {
+        std::wstring message =
+            L"hook_manager: backstab primary weapon classifier override";
+        message += L" item_wrapper=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+        message += L" item_class=";
+        message += std::to_wstring(item_class);
+        message += L" original_result=";
+        message += std::to_wstring(original_result);
+        message += L" returned_result=2";
+        message += L" count=";
+        message += std::to_wstring(g_backstab_primary_weapon_override_count);
+        message += L" callsite_rva=";
+        message += Hex32(kBackstabPrimaryWeaponClassifierCallsiteRva);
+        message += L" target_rva=";
+        message += Hex32(kBackstabPrimaryWeaponClassifierTargetRva);
+        monomyth::logger::Log(message);
+    }
+
+    return 2;
 }
 
 void* MONOMYTH_FASTCALL PlayerWndConstructorHook(
@@ -26224,6 +26305,62 @@ bool InstallActivatedSkillVisibilityHook(const monomyth::runtime::Manifest& mani
             L"hook_manager: activated skill use hooks denied reason=\"seam_validation_failed\"");
     }
 
+    constexpr std::array<std::uint8_t, 5> kBackstabPrimaryWeaponClassifierCallsiteBytes = {
+        0xe8, 0xb1, 0xa9, 0x20, 0x00};
+    std::array<std::uint8_t, kBackstabPrimaryWeaponClassifierCallsiteBytes.size()>
+        live_backstab_primary_weapon_classifier_callsite = {};
+    const bool backstab_classifier_callsite_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kBackstabPrimaryWeaponClassifierCallsiteRva),
+        live_backstab_primary_weapon_classifier_callsite.size(),
+        live_backstab_primary_weapon_classifier_callsite.data());
+    const bool backstab_classifier_callsite_matches =
+        backstab_classifier_callsite_copied &&
+        std::memcmp(
+            live_backstab_primary_weapon_classifier_callsite.data(),
+            kBackstabPrimaryWeaponClassifierCallsiteBytes.data(),
+            kBackstabPrimaryWeaponClassifierCallsiteBytes.size()) == 0;
+    if (!backstab_classifier_callsite_matches) {
+        std::wstring message =
+            L"hook_manager: BackstabPrimaryWeaponClassifierCallsite byte validation failed expected=\"";
+        message += HexBytes(
+            kBackstabPrimaryWeaponClassifierCallsiteBytes.data(),
+            kBackstabPrimaryWeaponClassifierCallsiteBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(
+            live_backstab_primary_weapon_classifier_callsite.data(),
+            live_backstab_primary_weapon_classifier_callsite.size());
+        message += L"\" address=";
+        message += HexPtr(module_base + kBackstabPrimaryWeaponClassifierCallsiteRva);
+        message += L" target_rva=";
+        message += Hex32(kBackstabPrimaryWeaponClassifierCallsiteRva);
+        monomyth::logger::Log(message);
+    } else {
+        g_original_backstab_primary_weapon_classifier =
+            reinterpret_cast<BackstabPrimaryWeaponClassifierFn>(
+                module_base + kBackstabPrimaryWeaponClassifierTargetRva);
+        if (InstallCallsitePatch(
+                reinterpret_cast<void*>(module_base + kBackstabPrimaryWeaponClassifierCallsiteRva),
+                reinterpret_cast<void*>(&BackstabPrimaryWeaponClassifierCallsiteHook),
+                module_base + kBackstabPrimaryWeaponClassifierTargetRva,
+                &g_backstab_primary_weapon_classifier_callsite_patch,
+                L"BackstabPrimaryWeaponClassifierCallsite")) {
+            std::wstring message =
+                L"hook_manager: backstab primary weapon classifier hook installed callsite_address=";
+            message += HexPtr(module_base + kBackstabPrimaryWeaponClassifierCallsiteRva);
+            message += L" callsite_rva=";
+            message += Hex32(kBackstabPrimaryWeaponClassifierCallsiteRva);
+            message += L" target_address=";
+            message += HexPtr(module_base + kBackstabPrimaryWeaponClassifierTargetRva);
+            message += L" target_rva=";
+            message += Hex32(kBackstabPrimaryWeaponClassifierTargetRva);
+            monomyth::logger::Log(message);
+        } else {
+            g_original_backstab_primary_weapon_classifier = nullptr;
+            monomyth::logger::Log(
+                L"hook_manager: backstab primary weapon classifier hook denied reason=\"callsite_patch_install_failed\"");
+        }
+    }
+
     bool skills_window_skill_value_hook_installed = false;
     const bool skills_window_skill_value_seams_valid =
         ValidateSkillsWindowSkillValueSeams(module_base);
@@ -26332,6 +26469,7 @@ bool InstallActivatedSkillVisibilityHook(const monomyth::runtime::Manifest& mani
     g_activated_skill_use_skill_trace_count = 0;
     g_activated_skill_adjusted_skill_trace_count = 0;
     g_activated_skill_adjusted_skill_override_count = 0;
+    g_backstab_primary_weapon_override_count = 0;
     g_skills_window_skill_value_entry_count = 0;
     g_skills_window_row_helper_entry_count = 0;
     g_skills_window_skill_value_trace_count = 0;
@@ -27837,6 +27975,14 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         g_original_character_zone_client_get_adjusted_skill = nullptr;
     }
 
+    if (RemoveCallsitePatch(&g_backstab_primary_weapon_classifier_callsite_patch)) {
+        g_original_backstab_primary_weapon_classifier = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: activated skill use hook removed target=BackstabPrimaryWeaponClassifierCallsite");
+    } else if (!g_backstab_primary_weapon_classifier_callsite_patch.installed) {
+        g_original_backstab_primary_weapon_classifier = nullptr;
+    }
+
     if (RemoveCallsitePatch(&g_skills_window_skill_value_callsite_patch)) {
         g_original_skills_window_skill_value_producer = nullptr;
         monomyth::logger::Log(
@@ -27872,6 +28018,7 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         g_activated_skill_use_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_override_count = 0;
+        g_backstab_primary_weapon_override_count = 0;
         g_skills_window_skill_value_entry_count = 0;
         g_skills_window_row_helper_entry_count = 0;
         g_skills_window_skill_value_trace_count = 0;
@@ -27894,6 +28041,7 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         g_activated_skill_use_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_override_count = 0;
+        g_backstab_primary_weapon_override_count = 0;
         g_skills_window_skill_value_entry_count = 0;
         g_skills_window_row_helper_entry_count = 0;
         g_skills_window_skill_value_trace_count = 0;
