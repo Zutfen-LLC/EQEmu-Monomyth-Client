@@ -381,6 +381,8 @@ constexpr std::size_t kCxWndParentWindowOffset = 0x0174;
 constexpr std::size_t kEqSpawnNameOffset = 0x00a4;
 constexpr std::size_t kEqSpawnNameMaxBytes = 0x40;
 constexpr std::size_t kPcProfileClassOffset = 0x3374;
+constexpr std::size_t kLocalCharDataHeroicIntBonusOffset = 0x2e98;
+constexpr std::size_t kLocalCharDataHeroicWisBonusOffset = 0x2e9c;
 constexpr std::size_t kGuildTrainerClassLookupResolvedClassOffset = 0x3374;
 constexpr std::size_t kGuildTrainerCallerClassOffset = 0x0eb8;
 constexpr std::size_t kCxWndOpenOffset = 0x001a;
@@ -1610,6 +1612,18 @@ struct LocalAuthoritativeCastingContext {
     bool eligible = false;
     std::uint8_t primary_class_id = 0;
     std::uint32_t assigned_mask = 0;
+};
+
+struct HeroicManaAdjustment {
+    bool valid = false;
+    int heroic_int = 0;
+    int heroic_wis = 0;
+    bool assigned_heroic_int = false;
+    bool assigned_heroic_wis = false;
+    bool selected_heroic_int = false;
+    bool selected_heroic_wis = false;
+    int max_delta = 0;
+    int regen_delta = 0;
 };
 
 struct SkillsWindowRowRecordLayout {
@@ -5731,6 +5745,120 @@ bool TryBuildLocalAuthoritativeCastingContextForLocalPlayer(
         TryBuildLocalAuthoritativeCastingContext(local_character, snapshot, context);
 }
 
+bool TryReadLocalHeroicManaBonuses(
+    int* heroic_int_out,
+    int* heroic_wis_out) noexcept {
+    if (heroic_int_out == nullptr || heroic_wis_out == nullptr) {
+        return false;
+    }
+
+    *heroic_int_out = 0;
+    *heroic_wis_out = 0;
+
+    void* local_char_data = nullptr;
+    if (!TryReadLocalCharDataPointer(&local_char_data) || local_char_data == nullptr) {
+        return false;
+    }
+
+    int heroic_int = 0;
+    int heroic_wis = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(local_char_data) +
+                kLocalCharDataHeroicIntBonusOffset,
+            &heroic_int) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(local_char_data) +
+                kLocalCharDataHeroicWisBonusOffset,
+            &heroic_wis)) {
+        return false;
+    }
+
+    // The local MQ2CharacterType-backed members are exposed as Heroic*Bonus values,
+    // while the server heroic mana formula keys off the raw heroic stat amount.
+    // On the live WAR/SHM/WIZ repro this field reports double the server-facing
+    // heroic INT/WIS stat, so normalize before using it for mana eligibility deltas.
+    *heroic_int_out = heroic_int > 0 ? heroic_int / 2 : 0;
+    *heroic_wis_out = heroic_wis > 0 ? heroic_wis / 2 : 0;
+    return true;
+}
+
+bool TryBuildHeroicManaAdjustment(
+    const LocalAuthoritativeCastingContext& context,
+    unsigned int selected_class_id,
+    HeroicManaAdjustment* adjustment) noexcept {
+    if (adjustment == nullptr) {
+        return false;
+    }
+
+    *adjustment = {};
+    if (!context.eligible ||
+        !monomyth::multiclass_identity::IsPlayableClassMask(context.assigned_mask) ||
+        !monomyth::multiclass_identity::ClassMaskUsesClientBaseMana(context.assigned_mask) ||
+        !monomyth::multiclass_identity::IsPlayableClassId(selected_class_id)) {
+        return false;
+    }
+
+    int heroic_int = 0;
+    int heroic_wis = 0;
+    if (!TryReadLocalHeroicManaBonuses(&heroic_int, &heroic_wis)) {
+        return false;
+    }
+
+    adjustment->valid = true;
+    adjustment->heroic_int = heroic_int;
+    adjustment->heroic_wis = heroic_wis;
+    adjustment->assigned_heroic_int =
+        monomyth::multiclass_identity::ClassMaskUsesClientHeroicIntMana(context.assigned_mask);
+    adjustment->assigned_heroic_wis =
+        monomyth::multiclass_identity::ClassMaskUsesClientHeroicWisMana(context.assigned_mask);
+    adjustment->selected_heroic_int =
+        monomyth::multiclass_identity::IsHeroicIntManaClassId(selected_class_id);
+    adjustment->selected_heroic_wis =
+        monomyth::multiclass_identity::IsHeroicWisManaClassId(selected_class_id);
+
+    if (adjustment->assigned_heroic_int &&
+        !adjustment->selected_heroic_int &&
+        heroic_int > 0) {
+        adjustment->max_delta += heroic_int * 10;
+        adjustment->regen_delta += heroic_int / 25;
+    }
+
+    if (adjustment->assigned_heroic_wis &&
+        !adjustment->selected_heroic_wis &&
+        heroic_wis > 0) {
+        adjustment->max_delta += heroic_wis * 10;
+        adjustment->regen_delta += heroic_wis / 25;
+    }
+
+    return true;
+}
+
+bool TryReadLocalStoredCurrentManaValue(int* mana_value_out) noexcept {
+    if (mana_value_out == nullptr) {
+        return false;
+    }
+
+    *mana_value_out = 0;
+
+    void* profile = nullptr;
+    std::uint32_t profile_class_id = 0;
+    if (TryResolveLocalProfileClassStorage(&profile, &profile_class_id) &&
+        profile != nullptr &&
+        TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(profile) + kPcProfileCurrentManaOffset,
+            mana_value_out)) {
+        return true;
+    }
+
+    void* class_record = nullptr;
+    std::uint8_t class_record_class_id = 0;
+    return TryResolveLocalCharDataClassRecordStorage(&class_record, &class_record_class_id) &&
+        class_record != nullptr &&
+        TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(class_record) + kPcProfileCurrentManaOffset,
+            mana_value_out);
+}
+
 int EvaluateBestAuthoritativeMaxMana(
     void* this_context,
     int cap_at_max_like,
@@ -5786,6 +5914,12 @@ int EvaluateBestAuthoritativeMaxMana(
             best_result = candidate_result;
             *best_class_id_out = class_id;
         }
+    }
+
+    HeroicManaAdjustment heroic_adjustment = {};
+    if (TryBuildHeroicManaAdjustment(context, *best_class_id_out, &heroic_adjustment) &&
+        heroic_adjustment.max_delta > 0) {
+        best_result += heroic_adjustment.max_delta;
     }
 
     return best_result;
@@ -5853,6 +5987,12 @@ int EvaluateBestAuthoritativeManaRegen(
         }
     }
 
+    HeroicManaAdjustment heroic_adjustment = {};
+    if (TryBuildHeroicManaAdjustment(context, *best_class_id_out, &heroic_adjustment) &&
+        heroic_adjustment.regen_delta > 0) {
+        best_result += heroic_adjustment.regen_delta;
+    }
+
     return best_result;
 }
 
@@ -5910,6 +6050,30 @@ int EvaluateBestAuthoritativeCurMana(
         if (candidate_ok && candidate_result > best_result) {
             best_result = candidate_result;
             *best_class_id_out = class_id;
+        }
+    }
+
+    unsigned int corrected_max_class_id = 0;
+    const int corrected_max = EvaluateBestAuthoritativeMaxMana(
+        this_context,
+        cap_at_max_like,
+        0,
+        context,
+        &corrected_max_class_id);
+    if (*best_class_id_out == 0 && corrected_max_class_id != 0) {
+        *best_class_id_out = corrected_max_class_id;
+    }
+
+    int stored_current = 0;
+    if (TryReadLocalStoredCurrentManaValue(&stored_current)) {
+        if (stored_current < 0) {
+            stored_current = 0;
+        }
+        if (cap_at_max_like != 0 && corrected_max > 0 && stored_current > corrected_max) {
+            stored_current = corrected_max;
+        }
+        if (stored_current > best_result) {
+            best_result = stored_current;
         }
     }
 
