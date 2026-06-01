@@ -1641,6 +1641,56 @@ struct HeroicManaAdjustment {
     int regen_delta = 0;
 };
 
+constexpr std::size_t kPlayerManaCurrentCandidateTraceCapacity = 8;
+
+struct PlayerManaCurrentCandidateDebug {
+    unsigned int class_id = 0;
+    bool override_applied = false;
+    bool candidate_ok = false;
+    int candidate_result = 0;
+};
+
+struct PlayerManaCurrentResolutionDebug {
+    int class_best_result = 0;
+    unsigned int class_best_class_id = 0;
+    int corrected_max = 0;
+    unsigned int corrected_max_class_id = 0;
+    bool stored_current_copied = false;
+    int stored_current_raw = 0;
+    int stored_current_capped = 0;
+    bool stored_current_used = false;
+    std::size_t candidate_count = 0;
+    std::array<PlayerManaCurrentCandidateDebug, kPlayerManaCurrentCandidateTraceCapacity>
+        candidates = {};
+};
+
+struct PlayerManaResolutionDebugSnapshot {
+    bool authoritative_context_used = false;
+    std::uint8_t primary_class_id = 0;
+    std::uint32_t assigned_mask = 0;
+    int native_current = 0;
+    int native_max = 0;
+    int resolved_current = 0;
+    int resolved_max = 0;
+    unsigned int current_best_class_id = 0;
+    unsigned int max_best_class_id = 0;
+    PlayerManaCurrentResolutionDebug current_resolution = {};
+    HeroicManaAdjustment heroic_adjustment = {};
+};
+
+struct LocalCurrentManaStorageSnapshot {
+    bool combined_copied = false;
+    int combined_value = 0;
+    bool profile_copied = false;
+    std::uintptr_t profile = 0;
+    std::uint32_t profile_class_id = 0;
+    int profile_value = 0;
+    bool class_record_copied = false;
+    std::uintptr_t class_record = 0;
+    std::uint8_t class_record_class_id = 0;
+    int class_record_value = 0;
+};
+
 struct SkillsWindowRowRecordLayout {
     std::uintptr_t name_field_a = 0;
     std::uintptr_t name_field_b = 0;
@@ -1654,6 +1704,11 @@ bool TryComputeEqgameCallerReturnRva(
     std::uintptr_t caller_return_address,
     std::uint32_t* caller_return_rva) noexcept;
 bool TryReadLocalPlayerCharacterPointer(void** character) noexcept;
+MONOMYTH_NOINLINE bool TryInvokeCharacterZoneClientCurMana(
+    CharacterZoneClientCurManaFn cur_mana,
+    void* this_context,
+    int cap_at_max_like,
+    int* native_result_out) noexcept;
 int MONOMYTH_FASTCALL CharacterZoneClientCurManaHook(
     void* this_context,
     void*,
@@ -1667,6 +1722,50 @@ int MONOMYTH_FASTCALL CharacterZoneClientGetManaRegenHook(
     void*,
     int include_items_and_buffs_like,
     int combat_like) noexcept;
+
+const wchar_t* DescribePlayerManaCurrentSource(
+    const PlayerManaResolutionDebugSnapshot& snapshot) noexcept {
+    if (!snapshot.authoritative_context_used) {
+        return L"native_only";
+    }
+
+    if (snapshot.current_resolution.stored_current_used) {
+        return L"stored_profile_current_mana";
+    }
+
+    if (snapshot.current_best_class_id != 0 &&
+        snapshot.current_resolution.class_best_result > snapshot.native_current) {
+        return L"authoritative_class_override";
+    }
+
+    return L"native_cur_mana";
+}
+
+void AppendPlayerManaCurrentCandidates(
+    std::wstring* message,
+    const PlayerManaCurrentResolutionDebug& debug) {
+    if (message == nullptr) {
+        return;
+    }
+
+    message->append(L" current_candidates=\"");
+    const std::size_t candidate_count =
+        std::min(debug.candidate_count, debug.candidates.size());
+    for (std::size_t i = 0; i < candidate_count; ++i) {
+        const PlayerManaCurrentCandidateDebug& candidate = debug.candidates[i];
+        if (i != 0) {
+            message->append(L";");
+        }
+        message->append(std::to_wstring(candidate.class_id));
+        message->append(L":override=");
+        message->append(candidate.override_applied ? L"true" : L"false");
+        message->append(L",ok=");
+        message->append(candidate.candidate_ok ? L"true" : L"false");
+        message->append(L",result=");
+        message->append(std::to_wstring(candidate.candidate_result));
+    }
+    message->append(L"\"");
+}
 
 std::wstring HexPtr(std::uintptr_t value) {
     std::wstringstream stream;
@@ -5874,6 +5973,103 @@ bool TryReadLocalStoredCurrentManaValue(int* mana_value_out) noexcept {
             mana_value_out);
 }
 
+bool TryReadLocalCurrentManaStorageSnapshot(
+    LocalCurrentManaStorageSnapshot* snapshot_out) noexcept {
+    if (snapshot_out == nullptr) {
+        return false;
+    }
+
+    *snapshot_out = {};
+
+    void* profile = nullptr;
+    std::uint32_t profile_class_id = 0;
+    if (TryResolveLocalProfileClassStorage(&profile, &profile_class_id) &&
+        profile != nullptr) {
+        int profile_value = 0;
+        if (TryCopyObject(
+                reinterpret_cast<const std::uint8_t*>(profile) + kPcProfileCurrentManaOffset,
+                &profile_value)) {
+            snapshot_out->profile_copied = true;
+            snapshot_out->profile = reinterpret_cast<std::uintptr_t>(profile);
+            snapshot_out->profile_class_id = profile_class_id;
+            snapshot_out->profile_value = profile_value;
+            snapshot_out->combined_copied = true;
+            snapshot_out->combined_value = profile_value;
+        }
+    }
+
+    void* class_record = nullptr;
+    std::uint8_t class_record_class_id = 0;
+    if (TryResolveLocalCharDataClassRecordStorage(&class_record, &class_record_class_id) &&
+        class_record != nullptr) {
+        int class_record_value = 0;
+        if (TryCopyObject(
+                reinterpret_cast<const std::uint8_t*>(class_record) + kPcProfileCurrentManaOffset,
+                &class_record_value)) {
+            snapshot_out->class_record_copied = true;
+            snapshot_out->class_record = reinterpret_cast<std::uintptr_t>(class_record);
+            snapshot_out->class_record_class_id = class_record_class_id;
+            snapshot_out->class_record_value = class_record_value;
+            if (!snapshot_out->combined_copied) {
+                snapshot_out->combined_copied = true;
+                snapshot_out->combined_value = class_record_value;
+            }
+        }
+    }
+
+    return snapshot_out->combined_copied ||
+        snapshot_out->profile_copied ||
+        snapshot_out->class_record_copied;
+}
+
+bool DidLocalCurrentManaStorageSnapshotChange(
+    const LocalCurrentManaStorageSnapshot& before,
+    const LocalCurrentManaStorageSnapshot& after) noexcept {
+    return before.combined_copied != after.combined_copied ||
+        before.combined_value != after.combined_value ||
+        before.profile_copied != after.profile_copied ||
+        before.profile != after.profile ||
+        before.profile_class_id != after.profile_class_id ||
+        before.profile_value != after.profile_value ||
+        before.class_record_copied != after.class_record_copied ||
+        before.class_record != after.class_record ||
+        before.class_record_class_id != after.class_record_class_id ||
+        before.class_record_value != after.class_record_value;
+}
+
+bool TryInvokeCharacterZoneClientCurManaPreservingStorage(
+    CharacterZoneClientCurManaFn cur_mana,
+    void* this_context,
+    int cap_at_max_like,
+    int* native_result_out) noexcept {
+    LocalCurrentManaStorageSnapshot before = {};
+    TryReadLocalCurrentManaStorageSnapshot(&before);
+    if (!TryInvokeCharacterZoneClientCurMana(
+            cur_mana,
+            this_context,
+            cap_at_max_like,
+            native_result_out)) {
+        return false;
+    }
+
+    LocalCurrentManaStorageSnapshot after = {};
+    TryReadLocalCurrentManaStorageSnapshot(&after);
+    const bool storage_changed = DidLocalCurrentManaStorageSnapshotChange(before, after);
+    if (storage_changed) {
+        if (before.profile_copied && before.profile != 0) {
+            TryWriteObject(
+                reinterpret_cast<void*>(before.profile + kPcProfileCurrentManaOffset),
+                before.profile_value);
+        }
+        if (before.class_record_copied && before.class_record != 0) {
+            TryWriteObject(
+                reinterpret_cast<void*>(before.class_record + kPcProfileCurrentManaOffset),
+                before.class_record_value);
+        }
+    }
+    return true;
+}
+
 int EvaluateBestAuthoritativeMaxMana(
     void* this_context,
     int cap_at_max_like,
@@ -6016,7 +6212,8 @@ int EvaluateBestAuthoritativeCurMana(
     int cap_at_max_like,
     int native_result,
     const LocalAuthoritativeCastingContext& context,
-    unsigned int* best_class_id_out) noexcept {
+    unsigned int* best_class_id_out,
+    PlayerManaCurrentResolutionDebug* debug_out) noexcept {
     if (!context.eligible ||
         g_original_character_zone_client_cur_mana == nullptr ||
         best_class_id_out == nullptr) {
@@ -6024,6 +6221,10 @@ int EvaluateBestAuthoritativeCurMana(
     }
 
     *best_class_id_out = 0;
+    if (debug_out != nullptr) {
+        *debug_out = {};
+        debug_out->class_best_result = native_result;
+    }
     int best_result = native_result;
 
     for (unsigned int class_id = monomyth::multiclass_identity::kFirstPlayableClassId;
@@ -6037,34 +6238,45 @@ int EvaluateBestAuthoritativeCurMana(
             continue;
         }
 
+        PlayerManaCurrentCandidateDebug candidate_debug = {};
+        candidate_debug.class_id = class_id;
+        candidate_debug.candidate_result = native_result;
+
         TemporaryLocalClassOverrideState override_state = {};
         if (!TryApplyTemporaryLocalClassOverride(
                 static_cast<std::uint8_t>(class_id),
                 &override_state)) {
+            if (debug_out != nullptr &&
+                debug_out->candidate_count < debug_out->candidates.size()) {
+                debug_out->candidates[debug_out->candidate_count++] = candidate_debug;
+            }
             continue;
         }
+        candidate_debug.override_applied = true;
 
         int candidate_result = native_result;
         bool candidate_ok = false;
-#if defined(_MSC_VER)
-        __try {
-            candidate_result =
-                g_original_character_zone_client_cur_mana(this_context, cap_at_max_like);
-            candidate_ok = true;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            candidate_ok = false;
-        }
-#else
-        candidate_result =
-            g_original_character_zone_client_cur_mana(this_context, cap_at_max_like);
-        candidate_ok = true;
-#endif
+        candidate_ok = TryInvokeCharacterZoneClientCurManaPreservingStorage(
+            g_original_character_zone_client_cur_mana,
+            this_context,
+            cap_at_max_like,
+            &candidate_result);
 
         RestoreTemporaryLocalClassOverride(&override_state);
+        candidate_debug.candidate_ok = candidate_ok;
+        candidate_debug.candidate_result = candidate_result;
+        if (debug_out != nullptr &&
+            debug_out->candidate_count < debug_out->candidates.size()) {
+            debug_out->candidates[debug_out->candidate_count++] = candidate_debug;
+        }
 
         if (candidate_ok && candidate_result > best_result) {
             best_result = candidate_result;
             *best_class_id_out = class_id;
+            if (debug_out != nullptr) {
+                debug_out->class_best_result = candidate_result;
+                debug_out->class_best_class_id = class_id;
+            }
         }
     }
 
@@ -6075,20 +6287,34 @@ int EvaluateBestAuthoritativeCurMana(
         0,
         context,
         &corrected_max_class_id);
+    if (debug_out != nullptr) {
+        debug_out->corrected_max = corrected_max;
+        debug_out->corrected_max_class_id = corrected_max_class_id;
+    }
     if (*best_class_id_out == 0 && corrected_max_class_id != 0) {
         *best_class_id_out = corrected_max_class_id;
     }
 
     int stored_current = 0;
     if (TryReadLocalStoredCurrentManaValue(&stored_current)) {
+        if (debug_out != nullptr) {
+            debug_out->stored_current_copied = true;
+            debug_out->stored_current_raw = stored_current;
+        }
         if (stored_current < 0) {
             stored_current = 0;
         }
         if (cap_at_max_like != 0 && corrected_max > 0 && stored_current > corrected_max) {
             stored_current = corrected_max;
         }
+        if (debug_out != nullptr) {
+            debug_out->stored_current_capped = stored_current;
+        }
         if (stored_current > best_result) {
             best_result = stored_current;
+            if (debug_out != nullptr) {
+                debug_out->stored_current_used = true;
+            }
         }
     }
 
@@ -6113,7 +6339,8 @@ bool TryEvaluateLocalPlayerManaPercent(
     int* current_out,
     int* max_out,
     bool* authoritative_context_used_out,
-    unsigned int* best_class_id_out) noexcept {
+    unsigned int* best_class_id_out,
+    PlayerManaResolutionDebugSnapshot* debug_out) noexcept {
     if (percent_out == nullptr) {
         return false;
     }
@@ -6131,6 +6358,9 @@ bool TryEvaluateLocalPlayerManaPercent(
     if (best_class_id_out != nullptr) {
         *best_class_id_out = 0;
     }
+    if (debug_out != nullptr) {
+        *debug_out = {};
+    }
 
     void* local_character = nullptr;
     if (!TryReadLocalPlayerCharacterPointer(&local_character) || local_character == nullptr) {
@@ -6145,16 +6375,32 @@ bool TryEvaluateLocalPlayerManaPercent(
     int native_current = 0;
     int native_max = 0;
 #if defined(_MSC_VER)
+    if (!TryInvokeCharacterZoneClientCurMana(
+            g_original_character_zone_client_cur_mana,
+            local_character,
+            1,
+            &native_current)) {
+        return false;
+    }
     __try {
-        native_current = g_original_character_zone_client_cur_mana(local_character, 1);
         native_max = g_original_character_zone_client_max_mana(local_character, 1);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
     }
 #else
-    native_current = g_original_character_zone_client_cur_mana(local_character, 1);
+    if (!TryInvokeCharacterZoneClientCurMana(
+            g_original_character_zone_client_cur_mana,
+            local_character,
+            1,
+            &native_current)) {
+        return false;
+    }
     native_max = g_original_character_zone_client_max_mana(local_character, 1);
 #endif
+    if (debug_out != nullptr) {
+        debug_out->native_current = native_current;
+        debug_out->native_max = native_max;
+    }
 
     int resolved_current = native_current;
     int resolved_max = native_max;
@@ -6164,21 +6410,43 @@ bool TryEvaluateLocalPlayerManaPercent(
     LocalAuthoritativeCastingContext context = {};
     const bool authoritative_context_used =
         TryBuildLocalAuthoritativeCastingContextForLocalPlayer(snapshot, &context);
+    if (debug_out != nullptr) {
+        debug_out->authoritative_context_used = authoritative_context_used;
+        if (authoritative_context_used) {
+            debug_out->primary_class_id = context.primary_class_id;
+            debug_out->assigned_mask = context.assigned_mask;
+        }
+    }
     if (authoritative_context_used) {
         unsigned int best_current_class_id = 0;
         unsigned int best_max_class_id = 0;
+        PlayerManaCurrentResolutionDebug current_resolution = {};
         resolved_current = EvaluateBestAuthoritativeCurMana(
             local_character,
             1,
             native_current,
             context,
-            &best_current_class_id);
+            &best_current_class_id,
+            &current_resolution);
         resolved_max = EvaluateBestAuthoritativeMaxMana(
             local_character,
             1,
             native_max,
             context,
             &best_max_class_id);
+        if (debug_out != nullptr) {
+            debug_out->current_best_class_id = best_current_class_id;
+            debug_out->max_best_class_id = best_max_class_id;
+            debug_out->current_resolution = current_resolution;
+            const unsigned int heroic_class_id =
+                best_max_class_id != 0 ? best_max_class_id : best_current_class_id;
+            if (heroic_class_id != 0) {
+                TryBuildHeroicManaAdjustment(
+                    context,
+                    heroic_class_id,
+                    &debug_out->heroic_adjustment);
+            }
+        }
         best_class_id = best_max_class_id != 0 ? best_max_class_id : best_current_class_id;
     }
 
@@ -6195,6 +6463,10 @@ bool TryEvaluateLocalPlayerManaPercent(
     const int percent =
         resolved_max <= 0 ? 0 : ((resolved_current * 100) + (resolved_max / 2)) / resolved_max;
     *percent_out = std::clamp(percent, 0, 100);
+    if (debug_out != nullptr) {
+        debug_out->resolved_current = resolved_current;
+        debug_out->resolved_max = resolved_max;
+    }
     if (current_out != nullptr) {
         *current_out = resolved_current;
     }
@@ -7062,7 +7334,8 @@ bool TryReplayPlayerManaProducerWithAuthoritativeClass(
         1,
         0,
         context,
-        &best_cur_class_id);
+        &best_cur_class_id,
+        nullptr);
     if (authoritative_current <= 0) {
         authoritative_current = authoritative_max;
     }
@@ -7993,7 +8266,13 @@ int InvokeCharacterZoneClientCurManaOverride(
         return 0;
     }
 #else
-    native_result = g_original_character_zone_client_cur_mana(this_context, cap_at_max_like);
+    if (!TryInvokeCharacterZoneClientCurMana(
+            g_original_character_zone_client_cur_mana,
+            this_context,
+            cap_at_max_like,
+            &native_result)) {
+        return 0;
+    }
 #endif
 
     const monomyth::server_auth_stats::Snapshot snapshot =
@@ -8010,7 +8289,8 @@ int InvokeCharacterZoneClientCurManaOverride(
                   cap_at_max_like,
                   native_result,
                   context,
-                  &best_class_id)
+                  &best_class_id,
+                  nullptr)
             : native_result;
 
     int seeded_from_max_result = 0;
@@ -8878,7 +9158,8 @@ bool CDECL GetLabelFromEQHook(
             &current,
             &max,
             &authoritative_context_used,
-            &best_class_id);
+            &best_class_id,
+            nullptr);
         const std::string display = std::to_string(resolved ? percent : 0);
         const wchar_t* failure_reason = nullptr;
         if (TryAssignCxStrFromAscii(text_cxstr, display.c_str(), &failure_reason)) {
@@ -10954,12 +11235,14 @@ int MONOMYTH_FASTCALL PlayerManaEqTypeResolverHook(
         int max = 0;
         bool authoritative_context_used = false;
         unsigned int best_class_id = 0;
+        PlayerManaResolutionDebugSnapshot debug = {};
         const bool resolved = TryEvaluateLocalPlayerManaPercent(
             &percent,
             &current,
             &max,
             &authoritative_context_used,
-            &best_class_id);
+            &best_class_id,
+            &debug);
         const int authoritative_result = resolved ? percent : native_result;
         const std::uint64_t count = ++g_player_mana_eqtype_trace_count;
         if (resolved) {
@@ -10989,8 +11272,48 @@ int MONOMYTH_FASTCALL PlayerManaEqTypeResolverHook(
             message += std::to_wstring(current);
             message += L" max=";
             message += std::to_wstring(max);
+            message += L" current_source=\"";
+            message += DescribePlayerManaCurrentSource(debug);
+            message += L"\"";
+            message += L" native_current=";
+            message += std::to_wstring(debug.native_current);
+            message += L" native_max=";
+            message += std::to_wstring(debug.native_max);
+            message += L" primary_class_id=";
+            message += std::to_wstring(debug.primary_class_id);
+            message += L" assigned_mask=";
+            message += Hex32(debug.assigned_mask);
             message += L" best_class_id=";
             message += std::to_wstring(best_class_id);
+            message += L" current_best_class_id=";
+            message += std::to_wstring(debug.current_best_class_id);
+            message += L" max_best_class_id=";
+            message += std::to_wstring(debug.max_best_class_id);
+            message += L" current_class_best_result=";
+            message += std::to_wstring(debug.current_resolution.class_best_result);
+            message += L" corrected_current_max=";
+            message += std::to_wstring(debug.current_resolution.corrected_max);
+            message += L" corrected_current_max_best_class_id=";
+            message += std::to_wstring(debug.current_resolution.corrected_max_class_id);
+            message += L" stored_current_copied=";
+            message += debug.current_resolution.stored_current_copied ? L"true" : L"false";
+            message += L" stored_current_raw=";
+            message += std::to_wstring(debug.current_resolution.stored_current_raw);
+            message += L" stored_current_capped=";
+            message += std::to_wstring(debug.current_resolution.stored_current_capped);
+            message += L" stored_current_used=";
+            message += debug.current_resolution.stored_current_used ? L"true" : L"false";
+            AppendPlayerManaCurrentCandidates(&message, debug.current_resolution);
+            message += L" heroic_adjustment_valid=";
+            message += debug.heroic_adjustment.valid ? L"true" : L"false";
+            message += L" heroic_int=";
+            message += std::to_wstring(debug.heroic_adjustment.heroic_int);
+            message += L" heroic_wis=";
+            message += std::to_wstring(debug.heroic_adjustment.heroic_wis);
+            message += L" heroic_max_delta=";
+            message += std::to_wstring(debug.heroic_adjustment.max_delta);
+            message += L" heroic_regen_delta=";
+            message += std::to_wstring(debug.heroic_adjustment.regen_delta);
             monomyth::logger::Log(message);
         }
 
@@ -13667,6 +13990,7 @@ void MONOMYTH_FASTCALL ReceiveDispatchHook(
         reinterpret_cast<std::uintptr_t>(source_context));
 
     g_original_receive_dispatch(this_context, source_context, opcode, payload, payload_length);
+
     TryRearmMulticlassCasterUiAccessForZoneTransition(opcode);
     TryRetryPendingMulticlassCasterUiAccess(L"ReceiveDispatch");
 }
