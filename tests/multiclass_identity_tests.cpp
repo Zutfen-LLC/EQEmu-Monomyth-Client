@@ -286,6 +286,72 @@ int main() {
             ClientItemClassBitForTest(7),
             true),
         "non-playable authoritative bits deny offhand weapon entitlement");
+    passed &= Expect(
+        IsTwoHandedWeaponItemClass(1),
+        "2h slashing detected as two-handed weapon");
+    passed &= Expect(
+        IsTwoHandedWeaponItemClass(4),
+        "2h blunt detected as two-handed weapon");
+    passed &= Expect(
+        IsTwoHandedWeaponItemClass(35),
+        "2h piercing detected as two-handed weapon");
+    passed &= Expect(
+        !IsTwoHandedWeaponItemClass(0),
+        "1h slashing rejected as two-handed weapon");
+    passed &= Expect(
+        EvaluateHandEquipConflict(
+            true,
+            false,
+            true,
+            true,
+            false,
+            true) == HandEquipConflict::kPrimaryTwoHandedBlockedByOccupiedSecondary,
+        "2h primary candidate blocked by occupied secondary");
+    passed &= Expect(
+        EvaluateHandEquipConflict(
+            true,
+            false,
+            true,
+            true,
+            false,
+            false) == HandEquipConflict::kNone,
+        "2h primary candidate allowed when secondary empty");
+    passed &= Expect(
+        EvaluateHandEquipConflict(
+            false,
+            true,
+            true,
+            false,
+            true,
+            false) == HandEquipConflict::kSecondaryBlockedByPrimaryTwoHanded,
+        "secondary candidate blocked by two-handed primary");
+    passed &= Expect(
+        EvaluateHandEquipConflict(
+            false,
+            true,
+            true,
+            false,
+            false,
+            false) == HandEquipConflict::kNone,
+        "secondary candidate allowed when primary is not two-handed");
+    passed &= Expect(
+        EvaluateHandEquipConflict(
+            true,
+            false,
+            false,
+            true,
+            false,
+            true) == HandEquipConflict::kNone,
+        "non-weapon primary candidate never trips two-handed conflict");
+    passed &= Expect(
+        EvaluateHandEquipConflict(
+            true,
+            false,
+            true,
+            true,
+            false,
+            true) == HandEquipConflict::kPrimaryTwoHandedBlockedByOccupiedSecondary,
+        "occupied non-weapon secondary still blocks two-handed primary");
 
     const OrderedClassIds ordered_primary_only =
         BuildOrderedClassIdList(3, true, ClassBitForTest(3));
