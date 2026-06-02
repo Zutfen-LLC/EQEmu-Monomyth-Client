@@ -90,7 +90,7 @@ constexpr std::uint32_t kCastingClassMask = 0x00007ebeu;
 constexpr std::uint32_t kClientBaseManaIntClassMask = 0x00003c90u;
 constexpr std::uint32_t kClientBaseManaWisClassMask = 0x0000423eu;
 constexpr std::uint32_t kHeroicIntManaClassMask = 0x00003c10u;
-constexpr std::uint32_t kHeroicWisManaClassMask = 0x0000422au;
+constexpr std::uint32_t kHeroicWisManaClassMask = 0x0000422eu;
 
 void AppendClassIfMissing(
     OrderedClassIds* ordered_ids,
