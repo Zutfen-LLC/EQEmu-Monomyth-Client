@@ -18,6 +18,12 @@ enum class ClassDisplayStyle {
     kThreeLetterCode,
 };
 
+enum class HandEquipConflict {
+    kNone,
+    kPrimaryTwoHandedBlockedByOccupiedSecondary,
+    kSecondaryBlockedByPrimaryTwoHanded,
+};
+
 struct OrderedClassIds {
     std::array<unsigned int, kPlayableClassCount> class_ids = {};
     std::size_t count = 0;
@@ -56,6 +62,14 @@ bool HasAuthoritativeOffhandWeaponClassAndDualWield(
     std::uint32_t authoritative_class_mask,
     std::uint32_t client_item_class_mask,
     bool has_dual_wield_entitlement) noexcept;
+bool IsTwoHandedWeaponItemClass(std::uint8_t item_class) noexcept;
+HandEquipConflict EvaluateHandEquipConflict(
+    bool target_is_primary,
+    bool target_is_secondary,
+    bool candidate_is_weapon,
+    bool candidate_is_two_handed_weapon,
+    bool current_primary_blocks_secondary,
+    bool current_secondary_occupied) noexcept;
 const wchar_t* ClassDisplayToken(
     unsigned int class_id,
     ClassDisplayStyle style) noexcept;

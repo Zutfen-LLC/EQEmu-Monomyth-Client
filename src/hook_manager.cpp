@@ -1540,9 +1540,58 @@ struct OffhandWeaponPolicySnapshot {
     bool dual_wield_entitlement_fallback_used = false;
     bool dual_wield_matrix_matched = false;
     bool has_dual_wield_entitlement = false;
+    bool primary_blocks_secondary_weapon_copied = false;
+    bool primary_blocks_secondary_weapon_from_cache = false;
     bool primary_blocks_secondary_weapon = false;
     bool eligible = false;
 };
+
+struct HandEquipConflictSnapshot {
+    std::uintptr_t item_data_like = 0;
+    std::uintptr_t current_secondary_item_like = 0;
+    std::uint8_t item_class = 0xff;
+    std::uint8_t holding_animation = 0;
+    monomyth::multiclass_identity::HandEquipConflict hand_conflict =
+        monomyth::multiclass_identity::HandEquipConflict::kNone;
+    bool item_class_copied = false;
+    bool holding_animation_copied = false;
+    bool current_primary_blocks_secondary_copied = false;
+    bool current_primary_blocks_secondary_from_cache = false;
+    bool current_secondary_occupied = false;
+    bool current_secondary_occupied_copied = false;
+    bool target_is_primary = false;
+    bool target_is_secondary = false;
+    bool candidate_is_weapon = false;
+    bool candidate_is_two_handed_weapon = false;
+    bool current_primary_blocks_secondary = false;
+    bool hand_conflict_evaluated = false;
+    bool hand_conflict_blocks_equip = false;
+};
+
+struct CachedHandEquipmentState {
+    std::uint8_t primary_item_class = 0xff;
+    std::uint8_t secondary_item_class = 0xff;
+    bool primary_item_class_copied = false;
+    bool secondary_item_class_copied = false;
+    bool primary_blocks_secondary = false;
+    bool primary_blocks_secondary_copied = false;
+    bool secondary_occupied = false;
+    bool secondary_occupied_copied = false;
+};
+
+struct PendingHandEquipmentMoveState {
+    std::int32_t target_slot = -1;
+    std::uint8_t item_class = 0xff;
+    bool active = false;
+    bool item_class_copied = false;
+    bool candidate_blocks_secondary = false;
+};
+
+extern CachedHandEquipmentState g_cached_hand_equipment_state;
+extern PendingHandEquipmentMoveState g_pending_hand_equipment_move_state;
+
+CachedHandEquipmentState g_cached_hand_equipment_state = {};
+PendingHandEquipmentMoveState g_pending_hand_equipment_move_state = {};
 
 struct EquipmentClassPolicySnapshot {
     std::uintptr_t item_data_like = 0;
@@ -9476,9 +9525,164 @@ bool IsWeaponItemClass(std::uint8_t item_class) noexcept {
     }
 }
 
+bool ItemClassBlocksSecondaryWeapon(std::uint8_t item_class) noexcept {
+    return monomyth::multiclass_identity::IsTwoHandedWeaponItemClass(item_class) ||
+        item_class == 5;  // bow
+}
+
 bool HoldingAnimationBlocksSecondaryWeapon(std::uint8_t holding_animation) noexcept {
     return holding_animation == kHoldingAnimationTwoHandedWeapon ||
         holding_animation == kHoldingAnimationBow;
+}
+
+void ClearPendingHandEquipmentMoveState() noexcept {
+    g_pending_hand_equipment_move_state = {};
+}
+
+void RememberPendingHandEquipmentMoveState(
+    std::int32_t target_slot,
+    const HandEquipConflictSnapshot& snapshot,
+    std::uint8_t returned_result) noexcept {
+    if (target_slot != kPrimaryEquipmentSlot && target_slot != kSecondaryEquipmentSlot) {
+        return;
+    }
+
+    if (returned_result == 0) {
+        if (g_pending_hand_equipment_move_state.active &&
+            g_pending_hand_equipment_move_state.target_slot == target_slot) {
+            ClearPendingHandEquipmentMoveState();
+        }
+        return;
+    }
+
+    PendingHandEquipmentMoveState pending = {};
+    pending.active = true;
+    pending.target_slot = target_slot;
+    pending.item_class = snapshot.item_class;
+    pending.item_class_copied = snapshot.item_class_copied;
+    pending.candidate_blocks_secondary =
+        snapshot.item_class_copied && ItemClassBlocksSecondaryWeapon(snapshot.item_class);
+    g_pending_hand_equipment_move_state = pending;
+}
+
+bool TryResolveCurrentPrimaryBlocksSecondaryState(
+    std::uint8_t holding_animation,
+    bool holding_animation_copied,
+    bool* current_primary_blocks_secondary,
+    bool* resolved_from_cache) noexcept {
+    if (current_primary_blocks_secondary == nullptr || resolved_from_cache == nullptr) {
+        return false;
+    }
+
+    *current_primary_blocks_secondary = false;
+    *resolved_from_cache = false;
+
+    if (g_cached_hand_equipment_state.primary_blocks_secondary_copied) {
+        *current_primary_blocks_secondary = g_cached_hand_equipment_state.primary_blocks_secondary;
+        *resolved_from_cache = true;
+        return true;
+    }
+
+    if (holding_animation_copied && HoldingAnimationBlocksSecondaryWeapon(holding_animation)) {
+        *current_primary_blocks_secondary = true;
+        return true;
+    }
+
+    return false;
+}
+
+bool TryResolveCurrentSecondaryOccupiedState(bool* current_secondary_occupied) noexcept {
+    if (current_secondary_occupied == nullptr ||
+        !g_cached_hand_equipment_state.secondary_occupied_copied) {
+        return false;
+    }
+
+    *current_secondary_occupied = g_cached_hand_equipment_state.secondary_occupied;
+    return true;
+}
+
+bool IsDirectInventoryMoveSlot(const ClientInventorySlotWire& slot) noexcept {
+    return slot.type == 0 && slot.unknown02 == 0 && slot.subindex == -1;
+}
+
+void ObserveHandEquipmentMoveSend(
+    const ClientMoveItemWire& move_item,
+    bool payload_copied,
+    bool original_result) noexcept {
+    if (!payload_copied || !original_result) {
+        return;
+    }
+
+    const bool from_slot_valid = IsDirectInventoryMoveSlot(move_item.from_slot);
+    const bool to_slot_valid = IsDirectInventoryMoveSlot(move_item.to_slot);
+
+    if (from_slot_valid &&
+        move_item.from_slot.slot == kPrimaryEquipmentSlot &&
+        (!to_slot_valid || move_item.to_slot.slot != kPrimaryEquipmentSlot)) {
+        g_cached_hand_equipment_state.primary_item_class = 0xff;
+        g_cached_hand_equipment_state.primary_item_class_copied = false;
+        g_cached_hand_equipment_state.primary_blocks_secondary = false;
+        g_cached_hand_equipment_state.primary_blocks_secondary_copied = true;
+    }
+
+    if (from_slot_valid &&
+        move_item.from_slot.slot == kSecondaryEquipmentSlot &&
+        (!to_slot_valid || move_item.to_slot.slot != kSecondaryEquipmentSlot)) {
+        g_cached_hand_equipment_state.secondary_item_class = 0xff;
+        g_cached_hand_equipment_state.secondary_item_class_copied = false;
+        g_cached_hand_equipment_state.secondary_occupied = false;
+        g_cached_hand_equipment_state.secondary_occupied_copied = true;
+    }
+
+    if (to_slot_valid && move_item.to_slot.slot == kPrimaryEquipmentSlot) {
+        if (g_pending_hand_equipment_move_state.active &&
+            g_pending_hand_equipment_move_state.target_slot == kPrimaryEquipmentSlot &&
+            g_pending_hand_equipment_move_state.item_class_copied) {
+            g_cached_hand_equipment_state.primary_item_class =
+                g_pending_hand_equipment_move_state.item_class;
+            g_cached_hand_equipment_state.primary_item_class_copied = true;
+            g_cached_hand_equipment_state.primary_blocks_secondary =
+                g_pending_hand_equipment_move_state.candidate_blocks_secondary;
+            g_cached_hand_equipment_state.primary_blocks_secondary_copied = true;
+        } else {
+            g_cached_hand_equipment_state.primary_item_class = 0xff;
+            g_cached_hand_equipment_state.primary_item_class_copied = false;
+            g_cached_hand_equipment_state.primary_blocks_secondary = false;
+            g_cached_hand_equipment_state.primary_blocks_secondary_copied = false;
+        }
+    }
+
+    if (to_slot_valid && move_item.to_slot.slot == kSecondaryEquipmentSlot) {
+        g_cached_hand_equipment_state.secondary_occupied = true;
+        g_cached_hand_equipment_state.secondary_occupied_copied = true;
+        if (g_pending_hand_equipment_move_state.active &&
+            g_pending_hand_equipment_move_state.target_slot == kSecondaryEquipmentSlot &&
+            g_pending_hand_equipment_move_state.item_class_copied) {
+            g_cached_hand_equipment_state.secondary_item_class =
+                g_pending_hand_equipment_move_state.item_class;
+            g_cached_hand_equipment_state.secondary_item_class_copied = true;
+        } else {
+            g_cached_hand_equipment_state.secondary_item_class = 0xff;
+            g_cached_hand_equipment_state.secondary_item_class_copied = false;
+        }
+    }
+
+    ClearPendingHandEquipmentMoveState();
+}
+
+const wchar_t* HandEquipConflictLabel(
+    monomyth::multiclass_identity::HandEquipConflict hand_conflict) noexcept {
+    using monomyth::multiclass_identity::HandEquipConflict;
+
+    switch (hand_conflict) {
+    case HandEquipConflict::kPrimaryTwoHandedBlockedByOccupiedSecondary:
+        return L"primary_two_handed_blocked_by_secondary_occupied";
+    case HandEquipConflict::kSecondaryBlockedByPrimaryTwoHanded:
+        return L"secondary_blocked_by_primary_two_handed";
+    case HandEquipConflict::kNone:
+    default:
+        return L"none";
+    }
 }
 
 bool TryHasLocalPlayerSkill(int skill_id, bool* has_skill) noexcept {
@@ -11632,13 +11836,17 @@ OffhandWeaponPolicySnapshot CaptureOffhandWeaponPolicySnapshot(
          snapshot.dual_wield_matrix_matched);
     snapshot.dual_wield_entitlement_fallback_used =
         snapshot.has_dual_wield_entitlement && !snapshot.has_dual_wield_skill;
-    snapshot.primary_blocks_secondary_weapon =
-        snapshot.holding_animation_copied &&
-        HoldingAnimationBlocksSecondaryWeapon(snapshot.holding_animation);
+    snapshot.primary_blocks_secondary_weapon_copied =
+        TryResolveCurrentPrimaryBlocksSecondaryState(
+            snapshot.holding_animation,
+            snapshot.holding_animation_copied,
+            &snapshot.primary_blocks_secondary_weapon,
+            &snapshot.primary_blocks_secondary_weapon_from_cache);
     snapshot.eligible =
         snapshot.is_weapon &&
         snapshot.can_wear_secondary &&
         (snapshot.dual_wield_skill_checked || snapshot.dual_wield_matrix_matched) &&
+        snapshot.primary_blocks_secondary_weapon_copied &&
         !snapshot.primary_blocks_secondary_weapon &&
         monomyth::multiclass_identity::HasAuthoritativeOffhandWeaponClassAndDualWield(
             authoritative_snapshot.has_classes_bitmask,
@@ -11682,6 +11890,58 @@ EquipmentClassPolicySnapshot CaptureEquipmentClassPolicySnapshot(
         !snapshot.target_slot_is_secondary &&
         snapshot.target_slot_equippable &&
         snapshot.item_matches_assigned_class;
+    return snapshot;
+}
+
+HandEquipConflictSnapshot CaptureHandEquipConflictSnapshot(
+    void*,
+    std::uintptr_t item_wrapper_like,
+    std::int32_t target_slot) noexcept {
+    HandEquipConflictSnapshot snapshot = {};
+    snapshot.target_is_primary = target_slot == kPrimaryEquipmentSlot;
+    snapshot.target_is_secondary = target_slot == kSecondaryEquipmentSlot;
+    snapshot.item_class_copied =
+        TryReadClientItemFieldFromWrapper(
+            item_wrapper_like,
+            kClientItemInfoItemClassOffset,
+            &snapshot.item_class,
+            &snapshot.item_data_like);
+    snapshot.candidate_is_weapon =
+        snapshot.item_class_copied && IsWeaponItemClass(snapshot.item_class);
+    snapshot.candidate_is_two_handed_weapon =
+        snapshot.item_class_copied &&
+        monomyth::multiclass_identity::IsTwoHandedWeaponItemClass(snapshot.item_class);
+    snapshot.holding_animation_copied =
+        TryReadLocalPlayerHoldingAnimation(&snapshot.holding_animation);
+    snapshot.current_primary_blocks_secondary_copied =
+        TryResolveCurrentPrimaryBlocksSecondaryState(
+            snapshot.holding_animation,
+            snapshot.holding_animation_copied,
+            &snapshot.current_primary_blocks_secondary,
+            &snapshot.current_primary_blocks_secondary_from_cache);
+    snapshot.current_secondary_occupied_copied =
+        TryResolveCurrentSecondaryOccupiedState(&snapshot.current_secondary_occupied);
+
+    if (snapshot.target_is_secondary) {
+        snapshot.hand_conflict_evaluated = snapshot.current_primary_blocks_secondary_copied;
+    } else if (snapshot.target_is_primary) {
+        snapshot.hand_conflict_evaluated = snapshot.current_secondary_occupied_copied;
+    }
+
+    if (snapshot.hand_conflict_evaluated) {
+        snapshot.hand_conflict =
+            monomyth::multiclass_identity::EvaluateHandEquipConflict(
+                snapshot.target_is_primary,
+                snapshot.target_is_secondary,
+                snapshot.candidate_is_weapon,
+                snapshot.candidate_is_two_handed_weapon,
+                snapshot.current_primary_blocks_secondary,
+                snapshot.current_secondary_occupied);
+        snapshot.hand_conflict_blocks_equip =
+            snapshot.hand_conflict !=
+            monomyth::multiclass_identity::HandEquipConflict::kNone;
+    }
+
     return snapshot;
 }
 
@@ -15601,12 +15861,14 @@ void LogMoveItemSendObserved(
     message += original_result ? L"true" : L"false";
 
     ClientMoveItemWire move_item = {};
-    if (payload_length >= sizeof(move_item) &&
+    const bool move_item_payload_copied =
+        payload_length >= sizeof(move_item) &&
         total_length >= (kPacketOpcodeBytes + sizeof(move_item)) &&
         TryCopyBytes(
             static_cast<const std::uint8_t*>(packet) + kPacketOpcodeBytes,
             sizeof(move_item),
-            reinterpret_cast<std::uint8_t*>(&move_item))) {
+            reinterpret_cast<std::uint8_t*>(&move_item));
+    if (move_item_payload_copied) {
         message += L" move_item_payload_status=copied";
         message += L" from_type=";
         message += std::to_wstring(move_item.from_slot.type);
@@ -15628,6 +15890,23 @@ void LogMoveItemSendObserved(
         message += std::to_wstring(move_item.number_in_stack);
     } else {
         message += L" move_item_payload_status=unavailable";
+    }
+
+    message += L" cached_primary_blocks_secondary_status=";
+    message += g_cached_hand_equipment_state.primary_blocks_secondary_copied
+        ? L"copied"
+        : L"unavailable";
+    if (g_cached_hand_equipment_state.primary_blocks_secondary_copied) {
+        message += L" cached_primary_blocks_secondary=";
+        message += g_cached_hand_equipment_state.primary_blocks_secondary ? L"true" : L"false";
+    }
+    message += L" cached_secondary_occupied_status=";
+    message += g_cached_hand_equipment_state.secondary_occupied_copied
+        ? L"copied"
+        : L"unavailable";
+    if (g_cached_hand_equipment_state.secondary_occupied_copied) {
+        message += L" cached_secondary_occupied=";
+        message += g_cached_hand_equipment_state.secondary_occupied ? L"true" : L"false";
     }
     monomyth::logger::Log(message);
 }
@@ -15732,6 +16011,13 @@ void AppendOffhandWeaponPolicyFields(
     message->append(snapshot.dual_wield_entitlement_fallback_used ? L"true" : L"false");
     message->append(L" has_dual_wield_entitlement=");
     message->append(snapshot.has_dual_wield_entitlement ? L"true" : L"false");
+    message->append(L" primary_blocks_secondary_weapon_status=");
+    message->append(snapshot.primary_blocks_secondary_weapon_copied ? L"copied" : L"unavailable");
+    if (snapshot.primary_blocks_secondary_weapon_copied) {
+        message->append(L" primary_blocks_secondary_weapon_source=");
+        message->append(
+            snapshot.primary_blocks_secondary_weapon_from_cache ? L"cached" : L"holding_animation");
+    }
     message->append(L" primary_blocks_secondary_weapon=");
     message->append(snapshot.primary_blocks_secondary_weapon ? L"true" : L"false");
     message->append(L" eligible_secondary_weapon_override=");
@@ -15767,6 +16053,57 @@ void AppendEquipmentClassPolicyFields(
     message->append(snapshot.item_matches_assigned_class ? L"true" : L"false");
     message->append(L" eligible_equipment_class_override=");
     message->append(snapshot.eligible ? L"true" : L"false");
+}
+
+void AppendHandEquipConflictFields(
+    std::wstring* message,
+    const HandEquipConflictSnapshot& snapshot) {
+    if (message == nullptr) {
+        return;
+    }
+
+    message->append(L" target_is_primary=");
+    message->append(snapshot.target_is_primary ? L"true" : L"false");
+    message->append(L" target_is_secondary=");
+    message->append(snapshot.target_is_secondary ? L"true" : L"false");
+    message->append(L" item_class_status=");
+    message->append(snapshot.item_class_copied ? L"copied" : L"unavailable");
+    if (snapshot.item_class_copied) {
+        message->append(L" item_class=");
+        message->append(std::to_wstring(snapshot.item_class));
+    }
+    message->append(L" candidate_is_weapon=");
+    message->append(snapshot.candidate_is_weapon ? L"true" : L"false");
+    message->append(L" candidate_is_two_handed_weapon=");
+    message->append(snapshot.candidate_is_two_handed_weapon ? L"true" : L"false");
+    message->append(L" holding_animation_status=");
+    message->append(snapshot.holding_animation_copied ? L"copied" : L"unavailable");
+    if (snapshot.holding_animation_copied) {
+        message->append(L" holding_animation=");
+        message->append(std::to_wstring(snapshot.holding_animation));
+    }
+    message->append(L" current_primary_blocks_secondary_status=");
+    message->append(
+        snapshot.current_primary_blocks_secondary_copied ? L"copied" : L"unavailable");
+    if (snapshot.current_primary_blocks_secondary_copied) {
+        message->append(L" current_primary_blocks_secondary_source=");
+        message->append(
+            snapshot.current_primary_blocks_secondary_from_cache ? L"cached" : L"holding_animation");
+    }
+    message->append(L" current_primary_blocks_secondary=");
+    message->append(snapshot.current_primary_blocks_secondary ? L"true" : L"false");
+    message->append(L" current_secondary_occupied_status=");
+    message->append(snapshot.current_secondary_occupied_copied ? L"copied" : L"unavailable");
+    if (snapshot.current_secondary_occupied_copied) {
+        message->append(L" current_secondary_occupied=");
+        message->append(snapshot.current_secondary_occupied ? L"true" : L"false");
+    }
+    message->append(L" hand_conflict_evaluated=");
+    message->append(snapshot.hand_conflict_evaluated ? L"true" : L"false");
+    message->append(L" hand_conflict=");
+    message->append(HandEquipConflictLabel(snapshot.hand_conflict));
+    message->append(L" hand_conflict_blocks_equip=");
+    message->append(snapshot.hand_conflict_blocks_equip ? L"true" : L"false");
 }
 
 void AppendPowerSourceSlotPolicyFields(
@@ -19275,6 +19612,70 @@ void LogInvSlotHandleLButtonCoreLateBranchDispatchPowerSourceOverride(
     monomyth::logger::Log(message);
 }
 
+void LogInvSlotHandleLButtonCoreHandEquipConflictPolicy(
+    const wchar_t* target,
+    void* this_context,
+    std::int32_t slot_like,
+    void* lookup_result_like,
+    std::uintptr_t caller_return_address,
+    std::uint8_t original_result,
+    std::uint8_t returned_result,
+    std::uint32_t lookup_dword0_before,
+    bool lookup_dword0_before_copied,
+    std::uint32_t lookup_dword0_after,
+    bool lookup_dword0_after_copied,
+    std::uintptr_t item_like,
+    const HandEquipConflictSnapshot& hand_policy,
+    const monomyth::server_auth_stats::Snapshot& snapshot) {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        returned_result != original_result
+            ? L"MulticlassItemUsability target="
+            : L"MulticlassItemTrace target=";
+    message += target == nullptr ? L"InvSlotHandleLButtonCoreHandEquipConflict" : target;
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" slot_like=";
+    message += std::to_wstring(slot_like);
+    message += L" lookup_result_pointer=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(lookup_result_like));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    message += L" returned_result=";
+    message += std::to_wstring(returned_result);
+    message += L" lookup_dword0_before_status=";
+    message += lookup_dword0_before_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_before_copied) {
+        message += L" lookup_dword0_before=";
+        message += Hex32(lookup_dword0_before);
+    }
+    message += L" lookup_dword0_after_status=";
+    message += lookup_dword0_after_copied ? L"copied" : L"unavailable";
+    if (lookup_dword0_after_copied) {
+        message += L" lookup_dword0_after=";
+        message += Hex32(lookup_dword0_after);
+    }
+    message += L" item_like=";
+    message += HexPtr(item_like);
+    message += L" item_data_like=";
+    message += HexPtr(hand_policy.item_data_like);
+    AppendHandEquipConflictFields(&message, hand_policy);
+    message += L" override_mode=hand_equip_mutual_exclusion";
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    message += L" has_assigned_mask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    message += L" override_applied=";
+    message += returned_result != original_result ? L"true" : L"false";
+    monomyth::logger::Log(message);
+}
+
 void LogInvSlotHandleLButtonCoreEquipmentClassPolicy(
     const wchar_t* target,
     void* this_context,
@@ -19289,6 +19690,7 @@ void LogInvSlotHandleLButtonCoreEquipmentClassPolicy(
     bool lookup_dword0_after_copied,
     std::uintptr_t item_like,
     const EquipmentClassPolicySnapshot& equipment_policy,
+    const HandEquipConflictSnapshot* hand_policy,
     const monomyth::server_auth_stats::Snapshot& snapshot,
     bool override_applied) {
     const std::uintptr_t module_base = GetHostModuleBase();
@@ -19331,6 +19733,9 @@ void LogInvSlotHandleLButtonCoreEquipmentClassPolicy(
     message += L" item_data_like=";
     message += HexPtr(equipment_policy.item_data_like);
     AppendEquipmentClassPolicyFields(&message, equipment_policy);
+    if (hand_policy != nullptr) {
+        AppendHandEquipConflictFields(&message, *hand_policy);
+    }
     message += L" gate_label=equipment_slot_late_branch_prep";
     message += L" override_mode=equipment_item_class_mask_intersection";
     message += L" assigned_mask=";
@@ -20403,6 +20808,15 @@ bool MONOMYTH_FASTCALL MemorizeSendPacketWrapperHook(
     if (opcode_decoded) {
         const std::uint32_t opcode32 = static_cast<std::uint32_t>(opcode);
         if (opcode32 == kMoveItemOpcode) {
+            ClientMoveItemWire move_item = {};
+            const bool move_item_payload_copied =
+                payload_length >= sizeof(move_item) &&
+                total_length >= (kPacketOpcodeBytes + sizeof(move_item)) &&
+                TryCopyBytes(
+                    static_cast<const std::uint8_t*>(packet) + kPacketOpcodeBytes,
+                    sizeof(move_item),
+                    reinterpret_cast<std::uint8_t*>(&move_item));
+            ObserveHandEquipmentMoveSend(move_item, move_item_payload_copied, original_result);
             LogMoveItemSendObserved(
                 mode_like,
                 total_length,
@@ -21585,6 +21999,51 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchPrepCallsiteHoo
     std::uint32_t lookup_dword0_after = 0;
     const bool lookup_dword0_after_copied = TryCopyObject(lookup_result_like, &lookup_dword0_after);
     g_invslot_handle_lbutton_core_last_late_branch_slot = slot_like;
+    HandEquipConflictSnapshot hand_policy = {};
+    monomyth::server_auth_stats::Snapshot hand_snapshot = {};
+    std::uintptr_t hand_item_like = 0;
+    bool hand_policy_active = false;
+    if (g_multiclass_item_usability_enabled &&
+        ((slot_like == kPrimaryEquipmentSlot &&
+          lookup_dword0_before_copied &&
+          lookup_dword0_before != 0) ||
+         slot_like == kSecondaryEquipmentSlot)) {
+        hand_snapshot = monomyth::server_auth_stats::GetSnapshot();
+        hand_item_like = lookup_dword0_before_copied && lookup_dword0_before != 0
+            ? ResolveLateBranchItemLike(lookup_dword0_before, lookup_dword0_before_copied)
+            : 0;
+        hand_policy =
+            CaptureHandEquipConflictSnapshot(this_context, hand_item_like, slot_like);
+        hand_policy_active = true;
+        const std::uint8_t hand_returned_result =
+            original_result != 0 && hand_policy.hand_conflict_blocks_equip ? 0 : original_result;
+        const bool should_log_hand_policy =
+            hand_policy.hand_conflict_evaluated ||
+            hand_policy.target_is_secondary ||
+            hand_policy.candidate_is_weapon ||
+            hand_returned_result != original_result;
+        if (should_log_hand_policy) {
+            LogInvSlotHandleLButtonCoreHandEquipConflictPolicy(
+                L"InvSlotHandleLButtonCoreLateBranchPrepHandConflict",
+                this_context,
+                slot_like,
+                lookup_result_like,
+                caller_return_address,
+                original_result,
+                hand_returned_result,
+                lookup_dword0_before,
+                lookup_dword0_before_copied,
+                lookup_dword0_after,
+                lookup_dword0_after_copied,
+                hand_item_like,
+                hand_policy,
+                hand_snapshot);
+        }
+        RememberPendingHandEquipmentMoveState(slot_like, hand_policy, hand_returned_result);
+        if (hand_returned_result != original_result) {
+            return hand_returned_result;
+        }
+    }
     if (g_multiclass_item_usability_enabled &&
         original_result == 0 &&
         slot_like == kPowerSourceEquipmentSlot &&
@@ -21637,14 +22096,21 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchPrepCallsiteHoo
         lookup_dword0_before_copied &&
         lookup_dword0_before != 0) {
         const monomyth::server_auth_stats::Snapshot snapshot =
-            monomyth::server_auth_stats::GetSnapshot();
-        const std::uintptr_t item_like =
-            ResolveLateBranchItemLike(lookup_dword0_before, lookup_dword0_before_copied);
+            hand_policy_active
+                ? hand_snapshot
+                : monomyth::server_auth_stats::GetSnapshot();
+        const std::uintptr_t item_like = hand_policy_active
+            ? hand_item_like
+            : ResolveLateBranchItemLike(lookup_dword0_before, lookup_dword0_before_copied);
         const OffhandWeaponPolicySnapshot offhand_policy =
             CaptureOffhandWeaponPolicySnapshot(item_like, snapshot);
         const bool is_offhand_weapon_attempt =
             offhand_policy.is_weapon && offhand_policy.can_wear_secondary;
-        if (is_offhand_weapon_attempt && offhand_policy.eligible) {
+        const bool hand_conflict_clear =
+            hand_policy_active &&
+            hand_policy.hand_conflict_evaluated &&
+            !hand_policy.hand_conflict_blocks_equip;
+        if (is_offhand_weapon_attempt && offhand_policy.eligible && hand_conflict_clear) {
             ++g_invslot_handle_lbutton_core_late_branch_prep_override_count;
             LogInvSlotHandleLButtonCoreLateBranchPrepOverride(
                 this_context,
@@ -21794,13 +22260,61 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
         TryCopyBytes(this_context, context_bytes_after.size(), context_bytes_after.data());
     std::uint32_t lookup_dword0_after = 0;
     const bool lookup_dword0_after_copied = TryCopyObject(lookup_result_like, &lookup_dword0_after);
+    const std::int32_t slot_like =
+        g_invslot_handle_lbutton_core_last_late_branch_slot;
+    HandEquipConflictSnapshot hand_policy = {};
+    monomyth::server_auth_stats::Snapshot hand_snapshot = {};
+    std::uintptr_t hand_item_like = 0;
+    bool hand_policy_active = false;
+    if (g_multiclass_item_usability_enabled &&
+        ((slot_like == kPrimaryEquipmentSlot &&
+          lookup_dword0_before_copied &&
+          lookup_dword0_before != 0) ||
+         slot_like == kSecondaryEquipmentSlot)) {
+        hand_snapshot = monomyth::server_auth_stats::GetSnapshot();
+        hand_item_like = lookup_dword0_before_copied && lookup_dword0_before != 0
+            ? ResolveLateBranchItemLike(lookup_dword0_before, lookup_dword0_before_copied)
+            : 0;
+        hand_policy =
+            CaptureHandEquipConflictSnapshot(this_context, hand_item_like, slot_like);
+        hand_policy_active = true;
+        const std::uint8_t hand_returned_result =
+            original_result != 0 && hand_policy.hand_conflict_blocks_equip ? 0 : original_result;
+        const bool should_log_hand_policy =
+            hand_policy.hand_conflict_evaluated ||
+            hand_policy.target_is_secondary ||
+            hand_policy.candidate_is_weapon ||
+            hand_returned_result != original_result;
+        if (should_log_hand_policy) {
+            LogInvSlotHandleLButtonCoreHandEquipConflictPolicy(
+                L"InvSlotHandleLButtonCoreLateBranchDispatchHandConflict",
+                this_context,
+                slot_like,
+                lookup_result_like,
+                caller_return_address,
+                original_result,
+                hand_returned_result,
+                lookup_dword0_before,
+                lookup_dword0_before_copied,
+                lookup_dword0_after,
+                lookup_dword0_after_copied,
+                hand_item_like,
+                hand_policy,
+                hand_snapshot);
+        }
+        RememberPendingHandEquipmentMoveState(slot_like, hand_policy, hand_returned_result);
+        if (hand_returned_result != original_result) {
+            return hand_returned_result;
+        }
+    }
     if (g_multiclass_item_usability_enabled && original_result == 0) {
         const monomyth::server_auth_stats::Snapshot snapshot =
-            monomyth::server_auth_stats::GetSnapshot();
-        const std::int32_t slot_like =
-            g_invslot_handle_lbutton_core_last_late_branch_slot;
-        const std::uintptr_t item_like =
-            ResolveLateBranchItemLike(lookup_dword0_before, lookup_dword0_before_copied);
+            hand_policy_active
+                ? hand_snapshot
+                : monomyth::server_auth_stats::GetSnapshot();
+        const std::uintptr_t item_like = hand_policy_active
+            ? hand_item_like
+            : ResolveLateBranchItemLike(lookup_dword0_before, lookup_dword0_before_copied);
         if (slot_like == kPowerSourceEquipmentSlot) {
             const PowerSourceSlotPolicySnapshot power_source_policy =
                 CapturePowerSourceSlotPolicySnapshot(item_like, snapshot);
@@ -21827,9 +22341,13 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
                 CaptureOffhandWeaponPolicySnapshot(item_like, snapshot);
             const bool is_offhand_weapon_attempt =
                 offhand_policy.is_weapon && offhand_policy.can_wear_secondary;
+            const bool hand_conflict_clear =
+                hand_policy_active &&
+                hand_policy.hand_conflict_evaluated &&
+                !hand_policy.hand_conflict_blocks_equip;
             // Current live repros can reach late dispatch with prep already green, so keep a
             // narrow secondary fallback here instead of assuming Prep/GateB always stay hot.
-            if (is_offhand_weapon_attempt && offhand_policy.eligible) {
+            if (is_offhand_weapon_attempt && offhand_policy.eligible && hand_conflict_clear) {
                 ++g_invslot_handle_lbutton_core_late_branch_dispatch_offhand_override_count;
                 LogInvSlotHandleLButtonCoreLateBranchDispatchOffhandOverride(
                     this_context,
@@ -21864,7 +22382,12 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
         }
         const EquipmentClassPolicySnapshot equipment_policy =
             CaptureEquipmentClassPolicySnapshot(item_like, slot_like, snapshot);
-        if (equipment_policy.eligible) {
+        const bool primary_hand_conflict_clear =
+            slot_like != kPrimaryEquipmentSlot ||
+            (hand_policy_active &&
+             hand_policy.hand_conflict_evaluated &&
+             !hand_policy.hand_conflict_blocks_equip);
+        if (equipment_policy.eligible && primary_hand_conflict_clear) {
             ++g_invslot_handle_lbutton_core_equipment_class_override_count;
             LogInvSlotHandleLButtonCoreEquipmentClassPolicy(
                 L"InvSlotHandleLButtonCoreLateBranchDispatch",
@@ -21880,6 +22403,7 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
                 lookup_dword0_after_copied,
                 item_like,
                 equipment_policy,
+                slot_like == kPrimaryEquipmentSlot && hand_policy_active ? &hand_policy : nullptr,
                 snapshot,
                 true);
             return 1;
@@ -21901,6 +22425,7 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
                 lookup_dword0_after_copied,
                 item_like,
                 equipment_policy,
+                slot_like == kPrimaryEquipmentSlot && hand_policy_active ? &hand_policy : nullptr,
                 snapshot,
                 false);
         }
@@ -25572,6 +26097,8 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
     g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
     g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
     g_invslot_handle_lbutton_core_late_branch_dispatch_power_source_override_count = 0;
+    g_cached_hand_equipment_state = {};
+    ClearPendingHandEquipmentMoveState();
     std::wstring message =
         L"hook_manager: item usability hook installed target=EQ_Character::CanEquip address=";
     message += HexPtr(manifest.can_equip_address);
@@ -28684,6 +29211,8 @@ bool RemoveCanEquipHook() noexcept {
         g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
         g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
         g_invslot_handle_lbutton_core_late_branch_dispatch_power_source_override_count = 0;
+        g_cached_hand_equipment_state = {};
+        ClearPendingHandEquipmentMoveState();
         monomyth::logger::Log(
             L"hook_manager: item usability hook removed target=EQ_Character::CanEquip");
         return true;

@@ -245,6 +245,38 @@ bool HasAuthoritativeOffhandWeaponClassAndDualWield(
             client_item_class_mask);
 }
 
+bool IsTwoHandedWeaponItemClass(std::uint8_t item_class) noexcept {
+    switch (item_class) {
+    case 1:   // 2H slashing
+    case 4:   // 2H blunt
+    case 35:  // 2H piercing
+        return true;
+    default:
+        return false;
+    }
+}
+
+HandEquipConflict EvaluateHandEquipConflict(
+    bool target_is_primary,
+    bool target_is_secondary,
+    bool candidate_is_weapon,
+    bool candidate_is_two_handed_weapon,
+    bool current_primary_blocks_secondary,
+    bool current_secondary_occupied) noexcept {
+    if (target_is_primary &&
+        candidate_is_weapon &&
+        candidate_is_two_handed_weapon &&
+        current_secondary_occupied) {
+        return HandEquipConflict::kPrimaryTwoHandedBlockedByOccupiedSecondary;
+    }
+
+    if (target_is_secondary && current_primary_blocks_secondary) {
+        return HandEquipConflict::kSecondaryBlockedByPrimaryTwoHanded;
+    }
+
+    return HandEquipConflict::kNone;
+}
+
 const wchar_t* ClassDisplayToken(
     unsigned int class_id,
     ClassDisplayStyle style) noexcept {
