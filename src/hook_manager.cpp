@@ -1597,11 +1597,15 @@ struct EquipmentClassPolicySnapshot {
     std::uintptr_t item_data_like = 0;
     std::uint32_t item_class_mask = 0;
     std::uint32_t equip_slots = 0;
+    std::uint8_t item_class = 0xff;
     bool item_class_mask_copied = false;
     bool equip_slots_copied = false;
+    bool item_class_copied = false;
     bool target_slot_is_equipment = false;
     bool target_slot_is_secondary = false;
     bool target_slot_equippable = false;
+    bool item_is_weapon = false;
+    bool target_slot_secondary_non_weapon = false;
     bool item_matches_assigned_class = false;
     bool eligible = false;
 };
@@ -11872,6 +11876,12 @@ EquipmentClassPolicySnapshot CaptureEquipmentClassPolicySnapshot(
             kClientItemInfoEquipSlotsOffset,
             &snapshot.equip_slots,
             nullptr);
+    snapshot.item_class_copied =
+        TryReadClientItemFieldFromWrapper(
+            item_wrapper_like,
+            kClientItemInfoItemClassOffset,
+            &snapshot.item_class,
+            &snapshot.item_data_like);
     snapshot.target_slot_is_equipment = IsNormalEquipmentSlot(target_slot);
     snapshot.target_slot_is_secondary = target_slot == kSecondaryEquipmentSlot;
     const std::uint32_t target_slot_bit = ClientEquipmentSlotBit(target_slot);
@@ -11879,6 +11889,12 @@ EquipmentClassPolicySnapshot CaptureEquipmentClassPolicySnapshot(
         snapshot.equip_slots_copied &&
         target_slot_bit != 0 &&
         (snapshot.equip_slots & target_slot_bit) != 0;
+    snapshot.item_is_weapon =
+        snapshot.item_class_copied && IsWeaponItemClass(snapshot.item_class);
+    snapshot.target_slot_secondary_non_weapon =
+        snapshot.target_slot_is_secondary &&
+        snapshot.item_class_copied &&
+        !snapshot.item_is_weapon;
     snapshot.item_matches_assigned_class =
         snapshot.item_class_mask_copied &&
         monomyth::multiclass_identity::HasAnyAuthoritativeClientItemClass(
@@ -11887,8 +11903,8 @@ EquipmentClassPolicySnapshot CaptureEquipmentClassPolicySnapshot(
             snapshot.item_class_mask);
     snapshot.eligible =
         snapshot.target_slot_is_equipment &&
-        !snapshot.target_slot_is_secondary &&
         snapshot.target_slot_equippable &&
+        (!snapshot.target_slot_is_secondary || snapshot.target_slot_secondary_non_weapon) &&
         snapshot.item_matches_assigned_class;
     return snapshot;
 }
@@ -16043,12 +16059,22 @@ void AppendEquipmentClassPolicyFields(
         message->append(L" equip_slots=");
         message->append(Hex32(snapshot.equip_slots));
     }
+    message->append(L" item_class_status=");
+    message->append(snapshot.item_class_copied ? L"copied" : L"unavailable");
+    if (snapshot.item_class_copied) {
+        message->append(L" item_class=");
+        message->append(std::to_wstring(snapshot.item_class));
+    }
     message->append(L" target_slot_is_equipment=");
     message->append(snapshot.target_slot_is_equipment ? L"true" : L"false");
     message->append(L" target_slot_is_secondary=");
     message->append(snapshot.target_slot_is_secondary ? L"true" : L"false");
     message->append(L" target_slot_equippable=");
     message->append(snapshot.target_slot_equippable ? L"true" : L"false");
+    message->append(L" item_is_weapon=");
+    message->append(snapshot.item_is_weapon ? L"true" : L"false");
+    message->append(L" target_slot_secondary_non_weapon=");
+    message->append(snapshot.target_slot_secondary_non_weapon ? L"true" : L"false");
     message->append(L" item_matches_assigned_class=");
     message->append(snapshot.item_matches_assigned_class ? L"true" : L"false");
     message->append(L" eligible_equipment_class_override=");
@@ -19691,6 +19717,7 @@ void LogInvSlotHandleLButtonCoreEquipmentClassPolicy(
     std::uintptr_t item_like,
     const EquipmentClassPolicySnapshot& equipment_policy,
     const HandEquipConflictSnapshot* hand_policy,
+    bool secondary_prep_fallback_used,
     const monomyth::server_auth_stats::Snapshot& snapshot,
     bool override_applied) {
     const std::uintptr_t module_base = GetHostModuleBase();
@@ -19736,7 +19763,9 @@ void LogInvSlotHandleLButtonCoreEquipmentClassPolicy(
     if (hand_policy != nullptr) {
         AppendHandEquipConflictFields(&message, *hand_policy);
     }
-    message += L" gate_label=equipment_slot_late_branch_prep";
+    message += L" secondary_prep_fallback_used=";
+    message += secondary_prep_fallback_used ? L"true" : L"false";
+    message += L" gate_label=equipment_slot_late_branch_dispatch";
     message += L" override_mode=equipment_item_class_mask_intersection";
     message += L" assigned_mask=";
     message += FormatAssignedMask(snapshot);
@@ -22266,6 +22295,8 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
     monomyth::server_auth_stats::Snapshot hand_snapshot = {};
     std::uintptr_t hand_item_like = 0;
     bool hand_policy_active = false;
+    bool had_pending_hand_move_for_slot = false;
+    bool pending_hand_move_item_class_matches = false;
     if (g_multiclass_item_usability_enabled &&
         ((slot_like == kPrimaryEquipmentSlot &&
           lookup_dword0_before_copied &&
@@ -22278,6 +22309,14 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
         hand_policy =
             CaptureHandEquipConflictSnapshot(this_context, hand_item_like, slot_like);
         hand_policy_active = true;
+        had_pending_hand_move_for_slot =
+            g_pending_hand_equipment_move_state.active &&
+            g_pending_hand_equipment_move_state.target_slot == slot_like;
+        pending_hand_move_item_class_matches =
+            !had_pending_hand_move_for_slot ||
+            !g_pending_hand_equipment_move_state.item_class_copied ||
+            !hand_policy.item_class_copied ||
+            g_pending_hand_equipment_move_state.item_class == hand_policy.item_class;
         const std::uint8_t hand_returned_result =
             original_result != 0 && hand_policy.hand_conflict_blocks_equip ? 0 : original_result;
         const bool should_log_hand_policy =
@@ -22382,12 +22421,29 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
         }
         const EquipmentClassPolicySnapshot equipment_policy =
             CaptureEquipmentClassPolicySnapshot(item_like, slot_like, snapshot);
-        const bool primary_hand_conflict_clear =
-            slot_like != kPrimaryEquipmentSlot ||
-            (hand_policy_active &&
-             hand_policy.hand_conflict_evaluated &&
-             !hand_policy.hand_conflict_blocks_equip);
-        if (equipment_policy.eligible && primary_hand_conflict_clear) {
+        const bool secondary_prep_fallback_used =
+            slot_like == kSecondaryEquipmentSlot &&
+            hand_policy_active &&
+            !hand_policy.hand_conflict_evaluated &&
+            had_pending_hand_move_for_slot &&
+            pending_hand_move_item_class_matches;
+        const bool equipment_hand_conflict_clear =
+            slot_like == kPrimaryEquipmentSlot
+            ? (hand_policy_active &&
+               hand_policy.hand_conflict_evaluated &&
+               !hand_policy.hand_conflict_blocks_equip)
+            : slot_like == kSecondaryEquipmentSlot
+                ? (hand_policy_active &&
+                   ((hand_policy.hand_conflict_evaluated &&
+                     !hand_policy.hand_conflict_blocks_equip) ||
+                    secondary_prep_fallback_used))
+                : true;
+        const HandEquipConflictSnapshot* equipment_hand_policy =
+            (slot_like == kPrimaryEquipmentSlot || slot_like == kSecondaryEquipmentSlot) &&
+                hand_policy_active
+            ? &hand_policy
+            : nullptr;
+        if (equipment_policy.eligible && equipment_hand_conflict_clear) {
             ++g_invslot_handle_lbutton_core_equipment_class_override_count;
             LogInvSlotHandleLButtonCoreEquipmentClassPolicy(
                 L"InvSlotHandleLButtonCoreLateBranchDispatch",
@@ -22403,14 +22459,13 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
                 lookup_dword0_after_copied,
                 item_like,
                 equipment_policy,
-                slot_like == kPrimaryEquipmentSlot && hand_policy_active ? &hand_policy : nullptr,
+                equipment_hand_policy,
+                secondary_prep_fallback_used,
                 snapshot,
                 true);
             return 1;
         }
-        if (equipment_policy.target_slot_is_equipment &&
-            !equipment_policy.target_slot_is_secondary &&
-            equipment_policy.item_class_mask_copied) {
+        if (equipment_policy.target_slot_is_equipment && equipment_policy.item_class_mask_copied) {
             LogInvSlotHandleLButtonCoreEquipmentClassPolicy(
                 L"InvSlotHandleLButtonCoreLateBranchDispatchObserved",
                 this_context,
@@ -22425,7 +22480,8 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
                 lookup_dword0_after_copied,
                 item_like,
                 equipment_policy,
-                slot_like == kPrimaryEquipmentSlot && hand_policy_active ? &hand_policy : nullptr,
+                equipment_hand_policy,
+                secondary_prep_fallback_used,
                 snapshot,
                 false);
         }
