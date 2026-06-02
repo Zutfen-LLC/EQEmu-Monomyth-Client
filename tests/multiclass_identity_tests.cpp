@@ -336,6 +336,15 @@ int main() {
         "secondary candidate allowed when primary is not two-handed");
     passed &= Expect(
         EvaluateHandEquipConflict(
+            false,
+            true,
+            false,
+            false,
+            true,
+            false) == HandEquipConflict::kSecondaryBlockedByPrimaryTwoHanded,
+        "secondary non-weapon candidate blocked by two-handed primary");
+    passed &= Expect(
+        EvaluateHandEquipConflict(
             true,
             false,
             false,
