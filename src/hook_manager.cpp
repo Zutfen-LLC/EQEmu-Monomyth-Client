@@ -9768,6 +9768,23 @@ const wchar_t* ActivatedSkillCallerSurface(std::uint32_t caller_rva) noexcept {
     }
 }
 
+bool IsCastTimeCombatSkillOverrideCandidate(int skill_id) noexcept {
+    switch (skill_id) {
+    case 8:  // Backstab
+    case 10: // Bash/Slam
+    case 21: // Dragon Punch
+    case 23: // Eagle Strike
+    case 26: // Flying Kick
+    case 30: // Kick
+    case 38: // Round Kick
+    case 52: // Tiger Claw
+    case 74: // Frenzy
+        return true;
+    default:
+        return false;
+    }
+}
+
 std::wstring HexBytes(const std::uint8_t* bytes, std::size_t length);
 
 bool ValidateActivatedSkillUseSeamBytes(
@@ -10305,7 +10322,9 @@ void LogActivatedSkillUseSkillTrace(
     void* target,
     std::uintptr_t caller_return_address,
     const monomyth::server_auth_stats::Snapshot& snapshot,
-    bool multiclass_mask_result) noexcept {
+    bool multiclass_mask_result,
+    bool timed_cast_active,
+    bool cast_time_override_candidate) noexcept {
     ++g_activated_skill_use_skill_trace_count;
     if (g_activated_skill_use_skill_trace_count > kSkillVisibilityOverrideInitialLogCount &&
         (g_activated_skill_use_skill_trace_count % kSkillVisibilityOverrideLogInterval) != 0) {
@@ -10336,6 +10355,10 @@ void LogActivatedSkillUseSkillTrace(
     message += L" native_gate_allowed=pending";
     message += L" multiclass_mask_allowed=";
     message += multiclass_mask_result ? L"true" : L"false";
+    message += L" timed_cast_active=";
+    message += timed_cast_active ? L"true" : L"false";
+    message += L" cast_time_override_candidate=";
+    message += cast_time_override_candidate ? L"true" : L"false";
     message += L" send_attempted=after_original_if_gate_allows";
     message += L" has_statClassesBitmask=";
     message += snapshot.has_classes_bitmask ? L"true" : L"false";
@@ -10361,7 +10384,10 @@ void LogActivatedSkillAdjustedSkillGateTrace(
     int returned_result,
     const monomyth::server_auth_stats::Snapshot& snapshot,
     bool multiclass_mask_result,
-    bool override_applied) noexcept {
+    bool override_applied,
+    bool timed_cast_active,
+    bool cast_time_override_applied,
+    std::uint32_t timed_cast_spell_id) noexcept {
     if (override_applied) {
         ++g_activated_skill_adjusted_skill_override_count;
     }
@@ -10403,6 +10429,12 @@ void LogActivatedSkillAdjustedSkillGateTrace(
     message += std::to_wstring(returned_result);
     message += L" override_applied=";
     message += override_applied ? L"true" : L"false";
+    message += L" timed_cast_active=";
+    message += timed_cast_active ? L"true" : L"false";
+    message += L" cast_time_override_applied=";
+    message += cast_time_override_applied ? L"true" : L"false";
+    message += L" timed_cast_spell_id=";
+    message += std::to_wstring(timed_cast_spell_id);
     message += L" send_attempted=gate_allows_followup";
     message += L" has_statClassesBitmask=";
     message += snapshot.has_classes_bitmask ? L"true" : L"false";
@@ -10434,6 +10466,9 @@ void MONOMYTH_FASTCALL CharacterZoneClientUseSkillHook(
         monomyth::multiclass_skill_visibility::HasAuthoritativeActivatedSkill(
             snapshot,
             skill);
+    const bool timed_cast_active = monomyth::packet_observer::IsTimedCastActive();
+    const bool cast_time_override_candidate =
+        timed_cast_active && IsCastTimeCombatSkillOverrideCandidate(skill);
 
     if (monomyth::multiclass_skill_visibility::IsAdvertisedActivatedSkill(skill)) {
         const std::uintptr_t module_base = GetHostModuleBase();
@@ -10452,7 +10487,9 @@ void MONOMYTH_FASTCALL CharacterZoneClientUseSkillHook(
             target,
             caller_return_address,
             snapshot,
-            multiclass_mask_result);
+            multiclass_mask_result,
+            timed_cast_active,
+            cast_time_override_candidate);
     }
 
     if (g_original_character_zone_client_use_skill == nullptr) {
@@ -10518,13 +10555,27 @@ int MONOMYTH_FASTCALL CharacterZoneClientGetAdjustedSkillHook(
         monomyth::multiclass_skill_visibility::HasAuthoritativeActivatedSkill(
             snapshot,
             skill_id);
+    bool local_has_skill = false;
+    if (IsCastTimeCombatSkillOverrideCandidate(skill_id)) {
+        TryHasLocalPlayerSkill(skill_id, &local_has_skill);
+    }
+    const bool timed_cast_active = monomyth::packet_observer::IsTimedCastActive();
+    const bool cast_time_override_applied =
+        timed_cast_active &&
+        IsLocalPlayerCharacterContext(this_context) &&
+        IsCastTimeCombatSkillOverrideCandidate(skill_id) &&
+        local_has_skill;
     const bool override_applied =
         authoritative_class_result > native_result ||
-        (authoritative_class_result <= 0 && multiclass_mask_result);
-    const int returned_result =
+        (authoritative_class_result <= 0 && multiclass_mask_result) ||
+        cast_time_override_applied;
+    int returned_result =
         authoritative_class_result > 0
             ? authoritative_class_result
             : (multiclass_mask_result ? 1 : authoritative_class_result);
+    if (cast_time_override_applied && returned_result <= 0) {
+        returned_result = 1;
+    }
 
     LogActivatedSkillAdjustedSkillGateTrace(
         skill_id,
@@ -10533,7 +10584,10 @@ int MONOMYTH_FASTCALL CharacterZoneClientGetAdjustedSkillHook(
         returned_result,
         snapshot,
         multiclass_mask_result,
-        override_applied);
+        override_applied,
+        timed_cast_active,
+        cast_time_override_applied,
+        monomyth::packet_observer::GetTimedCastSpellId());
     return returned_result;
 }
 
