@@ -66,13 +66,18 @@ constexpr std::uint32_t kGuildUpdateOpcode = 0x2958;
 constexpr std::uint32_t kGuildMemberUpdateOpcode = 0x69b9;
 constexpr std::uint32_t kActionOpcode = 0x744c;
 constexpr std::uint32_t kApplyPoisonOpcode = 0x31e6;
+constexpr std::uint32_t kBeginCastOpcode = 0x318f;
+constexpr std::uint32_t kCastSpellOpcode = 0x1287;
 constexpr std::uint32_t kCombatAbilityOpcode = 0x3eba;
 constexpr std::uint32_t kFeignDeathOpcode = 0x52fa;
+constexpr std::uint32_t kInterruptCastOpcode = 0x3358;
 constexpr std::uint32_t kTauntOpcode = 0x2703;
 constexpr std::uint32_t kTrackOpcode = 0x17e5;
 constexpr std::uint32_t kTrackTargetOpcode = 0x695e;
 constexpr std::uint32_t kMoveItemReceiveFocusBudget = 12;
 constexpr std::uint32_t kActivatedSkillSendCorrelationBudget = 12;
+constexpr std::uint32_t kTimedCastGraceMs = 250;
+constexpr std::uint32_t kTimedCastBeginWindowMs = 2000;
 constexpr std::uint64_t kGuildRosterPacketLogLimit = 12;
 constexpr std::uint64_t kRemoteMulticlassIdentityLogLimit = 12;
 constexpr std::size_t kGuildRosterPacketPrefixByteCap = 64;
@@ -112,6 +117,9 @@ std::atomic<std::uint64_t> g_activated_skill_send_correlation_activation = 0;
 std::atomic<int> g_activated_skill_send_correlation_skill_id = -1;
 std::atomic<std::uintptr_t> g_activated_skill_send_correlation_caller_return = 0;
 std::atomic<std::uint32_t> g_activated_skill_send_correlation_caller_rva = 0;
+std::atomic<std::uint64_t> g_timed_cast_active_until_ms = 0;
+std::atomic<std::uint32_t> g_timed_cast_spell_id = 0;
+std::atomic<std::uint64_t> g_local_cast_begin_pending_until_ms = 0;
 std::vector<std::uint32_t> g_introspection_allowlist;
 
 struct IntrospectionAllowlistConfig {
@@ -245,6 +253,109 @@ bool TryCopyPayloadBytes(
     std::memcpy(buffer_out, payload, bytes_to_copy);
 #endif
     return true;
+}
+
+bool TryReadU16FromPayload(
+    const void* payload,
+    std::uint32_t payload_length,
+    std::size_t offset,
+    std::uint16_t* value_out) noexcept {
+    if (value_out == nullptr || offset + sizeof(std::uint16_t) > payload_length) {
+        return false;
+    }
+
+    std::array<std::uint8_t, sizeof(std::uint16_t)> bytes = {};
+    if (!TryCopyPayloadBytes(
+            reinterpret_cast<const std::uint8_t*>(payload) + offset,
+            bytes.size(),
+            bytes.data())) {
+        return false;
+    }
+
+    *value_out = static_cast<std::uint16_t>(bytes[0]) |
+        (static_cast<std::uint16_t>(bytes[1]) << 8);
+    return true;
+}
+
+bool TryReadU32FromPayload(
+    const void* payload,
+    std::uint32_t payload_length,
+    std::size_t offset,
+    std::uint32_t* value_out) noexcept {
+    if (value_out == nullptr || offset + sizeof(std::uint32_t) > payload_length) {
+        return false;
+    }
+
+    std::array<std::uint8_t, sizeof(std::uint32_t)> bytes = {};
+    if (!TryCopyPayloadBytes(
+            reinterpret_cast<const std::uint8_t*>(payload) + offset,
+            bytes.size(),
+            bytes.data())) {
+        return false;
+    }
+
+    *value_out = static_cast<std::uint32_t>(bytes[0]) |
+        (static_cast<std::uint32_t>(bytes[1]) << 8) |
+        (static_cast<std::uint32_t>(bytes[2]) << 16) |
+        (static_cast<std::uint32_t>(bytes[3]) << 24);
+    return true;
+}
+
+void ClearTimedCastState() noexcept {
+    g_timed_cast_active_until_ms.store(0);
+    g_timed_cast_spell_id.store(0);
+}
+
+void ArmLocalBeginCastWindow() noexcept {
+    g_local_cast_begin_pending_until_ms.store(
+        GetTickCount64() + kTimedCastBeginWindowMs);
+}
+
+bool ConsumeLocalBeginCastWindow() noexcept {
+    const std::uint64_t pending_until = g_local_cast_begin_pending_until_ms.load();
+    if (pending_until == 0) {
+        return false;
+    }
+
+    const std::uint64_t now_ms = GetTickCount64();
+    if (now_ms > pending_until) {
+        g_local_cast_begin_pending_until_ms.store(0);
+        return false;
+    }
+
+    g_local_cast_begin_pending_until_ms.store(0);
+    return true;
+}
+
+void ObserveTimedCastPacket(
+    std::uint32_t opcode,
+    std::uint32_t payload_length,
+    const void* payload) noexcept {
+    if (opcode == kInterruptCastOpcode) {
+        ClearTimedCastState();
+        return;
+    }
+
+    if (opcode != kBeginCastOpcode || payload == nullptr || payload_length < 10) {
+        return;
+    }
+
+    std::uint32_t spell_id = 0;
+    std::uint32_t cast_time = 0;
+    if (!TryReadU32FromPayload(payload, payload_length, 0, &spell_id) ||
+        !TryReadU32FromPayload(payload, payload_length, 6, &cast_time)) {
+        return;
+    }
+
+    if (cast_time == 0 || !ConsumeLocalBeginCastWindow()) {
+        ClearTimedCastState();
+        return;
+    }
+
+    const std::uint64_t now_ms = GetTickCount64();
+    g_timed_cast_spell_id.store(spell_id);
+    g_timed_cast_active_until_ms.store(
+        now_ms + static_cast<std::uint64_t>(cast_time) + kTimedCastGraceMs);
 }
 
 void ResetWhoAllClassDisplayEntries() noexcept {
@@ -1187,7 +1298,9 @@ void ObserveReceiveMetadata(
     const bool guild_trainer_focus = IsGuildTrainerOpcode(opcode);
     if (opcode == kEnterWorldOpcode) {
         ClearRemoteMulticlassIdentityStore(L"enter_world");
+        ClearTimedCastState();
     }
+    ObserveTimedCastPacket(opcode, payload_length, payload);
     if (move_item_focus || guild_trainer_focus || auth_stats_bootstrap_logging || ShouldLogPacket(sequence)) {
         std::wstringstream message;
         const std::wstring_view opcode_name = monomyth::opcode_reference::LookupRof2OpcodeName(opcode);
@@ -1312,6 +1425,10 @@ void ObserveSendMetadata(
     const bool guild_trainer_focus = opcode_decoded && IsGuildTrainerOpcode(opcode);
     const bool activated_skill_use_focus =
         opcode_decoded && IsActivatedSkillUseOpcode(opcode);
+    if (opcode_decoded && opcode == kCastSpellOpcode &&
+        original_result_available && original_result) {
+        ArmLocalBeginCastWindow();
+    }
     std::uint32_t activated_skill_remaining_before = 0;
     std::uint32_t activated_skill_remaining_after = 0;
     std::uint64_t activated_skill_activation = 0;
@@ -1484,6 +1601,29 @@ void ArmActivatedSkillSendCorrelation(
             << L" caller_rva=" << Hex32(caller_rva)
             << L" budget=" << kActivatedSkillSendCorrelationBudget;
     monomyth::logger::Log(message.str());
+}
+
+bool IsTimedCastActive() noexcept {
+    const std::uint64_t active_until = g_timed_cast_active_until_ms.load();
+    if (active_until == 0) {
+        return false;
+    }
+
+    const std::uint64_t now_ms = GetTickCount64();
+    if (now_ms <= active_until) {
+        return true;
+    }
+
+    ClearTimedCastState();
+    return false;
+}
+
+std::uint32_t GetTimedCastSpellId() noexcept {
+    if (!IsTimedCastActive()) {
+        return 0;
+    }
+
+    return g_timed_cast_spell_id.load();
 }
 
 bool TryConsumeWhoAllClassDisplayCorrelation(

@@ -59,6 +59,8 @@ void ArmActivatedSkillSendCorrelation(
     int skill_id,
     std::uintptr_t caller_return_address,
     std::uint32_t caller_rva) noexcept;
+bool IsTimedCastActive() noexcept;
+std::uint32_t GetTimedCastSpellId() noexcept;
 bool TryConsumeWhoAllClassDisplayCorrelation(
     WhoAllClassDisplayCorrelationWindow* window) noexcept;
 bool TryConsumeWhoAllClassDisplayEntry(
