@@ -299,6 +299,34 @@ int main() {
         !IsTwoHandedWeaponItemClass(0),
         "1h slashing rejected as two-handed weapon");
     passed &= Expect(
+        !NeedsHandEquipConflictCheck(
+            true,
+            false,
+            true,
+            false),
+        "primary one-handed weapon does not require hand conflict check");
+    passed &= Expect(
+        NeedsHandEquipConflictCheck(
+            true,
+            false,
+            true,
+            true),
+        "primary two-handed weapon requires hand conflict check");
+    passed &= Expect(
+        NeedsHandEquipConflictCheck(
+            false,
+            true,
+            false,
+            false),
+        "secondary non-weapon equip requires hand conflict check");
+    passed &= Expect(
+        !NeedsHandEquipConflictCheck(
+            false,
+            false,
+            false,
+            false),
+        "non-hand equip does not require hand conflict check");
+    passed &= Expect(
         EvaluateHandEquipConflict(
             true,
             false,

@@ -256,6 +256,22 @@ bool IsTwoHandedWeaponItemClass(std::uint8_t item_class) noexcept {
     }
 }
 
+bool NeedsHandEquipConflictCheck(
+    bool target_is_primary,
+    bool target_is_secondary,
+    bool candidate_is_weapon,
+    bool candidate_is_two_handed_weapon) noexcept {
+    if (target_is_primary) {
+        return candidate_is_weapon && candidate_is_two_handed_weapon;
+    }
+
+    if (target_is_secondary) {
+        return true;
+    }
+
+    return false;
+}
+
 HandEquipConflict EvaluateHandEquipConflict(
     bool target_is_primary,
     bool target_is_secondary,

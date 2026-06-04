@@ -63,6 +63,11 @@ bool HasAuthoritativeOffhandWeaponClassAndDualWield(
     std::uint32_t client_item_class_mask,
     bool has_dual_wield_entitlement) noexcept;
 bool IsTwoHandedWeaponItemClass(std::uint8_t item_class) noexcept;
+bool NeedsHandEquipConflictCheck(
+    bool target_is_primary,
+    bool target_is_secondary,
+    bool candidate_is_weapon,
+    bool candidate_is_two_handed_weapon) noexcept;
 HandEquipConflict EvaluateHandEquipConflict(
     bool target_is_primary,
     bool target_is_secondary,

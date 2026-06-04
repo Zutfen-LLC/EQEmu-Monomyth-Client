@@ -19525,6 +19525,7 @@ void LogInvSlotHandleLButtonCoreLateBranchDispatchOffhandOverride(
     bool lookup_dword0_after_copied,
     std::uintptr_t item_like,
     const OffhandWeaponPolicySnapshot& offhand_policy,
+    bool secondary_prep_fallback_used,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
     const std::uintptr_t module_base = GetHostModuleBase();
     std::wstring message =
@@ -19561,6 +19562,8 @@ void LogInvSlotHandleLButtonCoreLateBranchDispatchOffhandOverride(
     message += L" item_data_like=";
     message += HexPtr(offhand_policy.item_data_like);
     AppendOffhandWeaponPolicyFields(&message, offhand_policy);
+    message += L" secondary_prep_fallback_used=";
+    message += secondary_prep_fallback_used ? L"true" : L"false";
     message += L" gate_label=equipment_slot_late_branch_dispatch";
     message += L" override_mode=secondary_weapon_dual_wield_matrix";
     message += L" assigned_mask=";
@@ -19585,6 +19588,7 @@ void LogInvSlotHandleLButtonCoreLateBranchDispatchOffhandObservation(
     bool lookup_dword0_after_copied,
     std::uintptr_t item_like,
     const OffhandWeaponPolicySnapshot& offhand_policy,
+    bool secondary_prep_fallback_used,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
     const std::uintptr_t module_base = GetHostModuleBase();
     std::wstring message =
@@ -19623,7 +19627,9 @@ void LogInvSlotHandleLButtonCoreLateBranchDispatchOffhandObservation(
     message += HexPtr(offhand_policy.item_data_like);
     AppendOffhandWeaponPolicyFields(&message, offhand_policy);
     message += L" override_candidate=";
-    message += offhand_policy.eligible ? L"true" : L"false";
+    message += (offhand_policy.eligible || secondary_prep_fallback_used) ? L"true" : L"false";
+    message += L" secondary_prep_fallback_used=";
+    message += secondary_prep_fallback_used ? L"true" : L"false";
     message += L" gate_label=equipment_slot_late_branch_dispatch";
     message += L" assigned_mask=";
     message += FormatAssignedMask(snapshot);
@@ -22408,6 +22414,12 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
         const std::uintptr_t item_like = hand_policy_active
             ? hand_item_like
             : ResolveLateBranchItemLike(lookup_dword0_before, lookup_dword0_before_copied);
+        const bool secondary_prep_fallback_used =
+            slot_like == kSecondaryEquipmentSlot &&
+            hand_policy_active &&
+            !hand_policy.hand_conflict_evaluated &&
+            had_pending_hand_move_for_slot &&
+            pending_hand_move_item_class_matches;
         if (slot_like == kPowerSourceEquipmentSlot) {
             const PowerSourceSlotPolicySnapshot power_source_policy =
                 CapturePowerSourceSlotPolicySnapshot(item_like, snapshot);
@@ -22436,11 +22448,18 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
                 offhand_policy.is_weapon && offhand_policy.can_wear_secondary;
             const bool hand_conflict_clear =
                 hand_policy_active &&
-                hand_policy.hand_conflict_evaluated &&
-                !hand_policy.hand_conflict_blocks_equip;
+                ((hand_policy.hand_conflict_evaluated &&
+                  !hand_policy.hand_conflict_blocks_equip) ||
+                 secondary_prep_fallback_used);
+            const bool offhand_dispatch_fallback_eligible =
+                secondary_prep_fallback_used &&
+                offhand_policy.item_matches_assigned_class &&
+                offhand_policy.has_dual_wield_entitlement;
             // Current live repros can reach late dispatch with prep already green, so keep a
             // narrow secondary fallback here instead of assuming Prep/GateB always stay hot.
-            if (is_offhand_weapon_attempt && offhand_policy.eligible && hand_conflict_clear) {
+            if (is_offhand_weapon_attempt &&
+                hand_conflict_clear &&
+                (offhand_policy.eligible || offhand_dispatch_fallback_eligible)) {
                 ++g_invslot_handle_lbutton_core_late_branch_dispatch_offhand_override_count;
                 LogInvSlotHandleLButtonCoreLateBranchDispatchOffhandOverride(
                     this_context,
@@ -22454,6 +22473,7 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
                     lookup_dword0_after_copied,
                     item_like,
                     offhand_policy,
+                    secondary_prep_fallback_used,
                     snapshot);
                 return 1;
             }
@@ -22470,22 +22490,25 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
                     lookup_dword0_after_copied,
                     item_like,
                     offhand_policy,
+                    secondary_prep_fallback_used,
                     snapshot);
             }
         }
         const EquipmentClassPolicySnapshot equipment_policy =
             CaptureEquipmentClassPolicySnapshot(item_like, slot_like, snapshot);
-        const bool secondary_prep_fallback_used =
-            slot_like == kSecondaryEquipmentSlot &&
+        const bool hand_conflict_check_required =
             hand_policy_active &&
-            !hand_policy.hand_conflict_evaluated &&
-            had_pending_hand_move_for_slot &&
-            pending_hand_move_item_class_matches;
+            monomyth::multiclass_identity::NeedsHandEquipConflictCheck(
+                hand_policy.target_is_primary,
+                hand_policy.target_is_secondary,
+                hand_policy.candidate_is_weapon,
+                hand_policy.candidate_is_two_handed_weapon);
         const bool equipment_hand_conflict_clear =
             slot_like == kPrimaryEquipmentSlot
-            ? (hand_policy_active &&
-               hand_policy.hand_conflict_evaluated &&
-               !hand_policy.hand_conflict_blocks_equip)
+            ? (!hand_conflict_check_required ||
+               !hand_policy.current_secondary_occupied_copied ||
+               (hand_policy.hand_conflict_evaluated &&
+                !hand_policy.hand_conflict_blocks_equip))
             : slot_like == kSecondaryEquipmentSlot
                 ? (hand_policy_active &&
                    ((hand_policy.hand_conflict_evaluated &&
