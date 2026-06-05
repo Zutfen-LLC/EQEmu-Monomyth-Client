@@ -15,9 +15,11 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "logger.h"
 #include "multiclass_cache.h"
+#include "multiclass_combat_ability.h"
 #include "multiclass_identity.h"
 #include "multiclass_skill_visibility.h"
 #include "opcode_reference.h"
@@ -91,6 +93,8 @@ constexpr std::uint32_t kCharacterZoneClientCurManaTickCallsiteBRva = 0x00057a29
 constexpr std::uint32_t kCharacterZoneClientGetAdjustedSkillRva = 0x00049fe0;
 constexpr std::uint32_t kCharacterZoneClientGetManaRegenRva = 0x00052df0;
 constexpr std::uint32_t kCharacterZoneClientUseSkillRva = 0x0005b2d0;
+constexpr std::uint32_t kCombatAbilityGetRva = 0x003c44f0;
+constexpr std::uint32_t kCombatAbilityTimerRva = 0x003c45a0;
 constexpr std::uint32_t kCharacterZoneClientMaxManaRva = 0x00181e60;
 constexpr std::uint32_t kPlayerManaEqTypeResolverRva = 0x00038990;
 constexpr std::uint32_t kCharacterZoneClientCurManaRefreshCallsiteRva = 0x0017a739;
@@ -140,6 +144,28 @@ constexpr std::uint32_t kActivatedSkillUseSkillAdjustedSkillCallsiteRva = 0x0005
 constexpr std::uint32_t kActivatedSkillUseSkillAdjustedSkillReturnRva = 0x0005b343;
 constexpr std::uint32_t kActivatedSkillActionSlotDispatcherRva = 0x0028c8b0;
 constexpr std::uint32_t kActivatedSkillActionSlotUseSkillCallsiteRva = 0x0028ca21;
+constexpr std::uint32_t kCombatAbilityOpenCommandGetAbilityCallsiteRva = 0x00259c9e;
+constexpr std::uint32_t kCombatAbilityWndRebuildPrimarySlotsGetAbilityCallsiteRva = 0x0025a12a;
+constexpr std::uint32_t kCombatAbilityWndRebuildAbilityListGetAbilityCallsiteRva = 0x0025aea7;
+constexpr std::uint32_t kCombatAbilityProducerArrayCopyCallsiteARva = 0x00179366;
+constexpr std::uint32_t kCombatAbilityProducerArrayCopyCallsiteBRva = 0x000c7423;
+constexpr std::uint32_t kCombatAbilityWndHasAbilityCallsiteRva = 0x0017f873;
+constexpr std::uint32_t kCombatAbilityWndBestAbilityCallsiteRva = 0x0018083b;
+constexpr std::uint32_t kCombatAbilityWndDispatcherShowPostShowCallsiteRva = 0x000d84c1;
+constexpr std::uint32_t kCombatAbilityWndDispatcherHidePostShowCallsiteRva = 0x000d84d6;
+constexpr std::uint32_t kCombatAbilityWndPostShowHelperRva = 0x0045ce90;
+constexpr std::uint32_t kCombatAbilityWndAboutToShowRva = 0x0025a070;
+constexpr std::uint32_t kCombatAbilityWndAboutToShowGateCallsiteRva = 0x0025a080;
+constexpr std::uint32_t kCombatAbilityWndAboutToShowGateReturnRva = 0x0025a085;
+constexpr std::uint32_t kCombatAbilityWndAboutToShowGateContextGlobalRva = 0x009d261c;
+constexpr std::uint32_t kCombatAbilityWndAboutToShowGateTargetRva = 0x00182350;
+constexpr std::uint32_t kCombatAbilityWndAboutToShowSharedLookupTargetRva = 0x003db210;
+constexpr std::uint32_t kCombatAbilityWndRefreshWorkerRva = 0x0025a0a0;
+constexpr std::uint32_t kCombatAbilityWndRefreshWorkerSpellManagerCallsiteRva = 0x0025a143;
+constexpr std::uint32_t kCombatAbilityWndRefreshWorkerSpellManagerReturnRva = 0x0025a145;
+constexpr std::uint32_t kCombatAbilityWndRefreshWorkerSlotValueTableRva = 0x00a15c48;
+constexpr std::uint32_t kCombatAbilityArrayCopyTargetRva = 0x004db280;
+constexpr std::uint32_t kSpellManagerInstanceGlobalRva = 0x00e646b0;
 constexpr std::uint32_t kBackstabPrimaryWeaponClassifierCallsiteRva = 0x001a55ea;
 constexpr std::uint32_t kBackstabPrimaryWeaponClassifierTargetRva = 0x003affa0;
 constexpr std::uint32_t kHideWhileSneakingClassLookupCallsiteRva = 0x0005ea03;
@@ -168,6 +194,26 @@ constexpr std::size_t kPlayerWndManaLastSelectedEntryOffset = 0x0224;
 constexpr std::size_t kPlayerWndManaStateOffset = 0x024c;
 constexpr std::size_t kPlayerWndManaCurrentIndexOffset = 0x0254;
 constexpr std::size_t kHideWhileSneakingResolvedClassIdOffset = 0x3374;
+constexpr std::size_t kPcProfileDisciplineCountOffset = 0x5120;
+constexpr std::size_t kPcProfileDisciplinesOffset = 0x5124;
+constexpr std::size_t kPcProfileCombatAbilitiesOffset = 0x64d8;
+constexpr std::size_t kPcProfileDeityOffset = 0x88e4;
+constexpr std::size_t kClientSpellManagerSpellsOffset = 0x2c180;
+constexpr std::size_t kSpellDeityOffset = 0x15c;
+constexpr std::size_t kSpellIdOffset = 0x174;
+constexpr std::size_t kSpellCategoryOffset = 0x17c;
+constexpr std::size_t kSpellEnduranceCostOffset = 0x194;
+constexpr std::size_t kSpellReuseTimerIndexOffset = 0x198;
+constexpr std::size_t kSpellGroupOffset = 0x1d4;
+constexpr std::size_t kSpellSubGroupOffset = 0x1d8;
+constexpr std::size_t kSpellRankOffset = 0x1dc;
+constexpr std::size_t kSpellIsSkillOffset = 0x244;
+constexpr std::size_t kSpellClassLevelOffset = 0x246;
+constexpr std::uint32_t kTotalSpellCount = 45001;
+constexpr int kSpellLevelUnavailable = 255;
+constexpr int kSpellCategoryCombatAbilities = 15;
+constexpr int kSpellCategoryDisciplines = 27;
+constexpr int kSpellCategorySkillAttacks = 166;
 constexpr std::size_t kUiGaugeStatePointerOffset = 0x01d8;
 constexpr std::size_t kUiGaugeStateMaxValueOffset = 0x01d8;
 constexpr std::size_t kUiGaugeStateAltMaxValueOffset = 0x01e8;
@@ -317,6 +363,7 @@ constexpr std::uint32_t kLocalPlayerGlobalRva = 0x009d2630;
 // auth-time multiclass unlock hits the actual spellbar/spellbook surfaces.
 constexpr std::uint32_t kCastSpellWindowGlobalRva = 0x0091fc84;
 constexpr std::uint32_t kSpellBookWindowGlobalRva = 0x0091fc88;
+constexpr std::uint32_t kCombatAbilityWindowGlobalRva = 0x0091fca0;
 constexpr std::uint32_t kBindListRva = 0x00acbee8;
 constexpr std::uint32_t kExecuteCmdRva = 0x004d7230;
 constexpr std::uint32_t kCXWndShowRva = 0x00465290;
@@ -536,6 +583,11 @@ using CharacterZoneClientUseSkillFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     unsigned char skill_id,
     void* target);
+using CombatAbilityGetFn = int (MONOMYTH_THISCALL*)(
+    void* this_context,
+    int ability_index);
+using CombatAbilityWndPostShowHelperFn = void (MONOMYTH_THISCALL*)(void* this_context);
+using MemoryCopyFn = void* (CDECL*)(void* destination, const void* source, std::size_t length);
 using CharacterZoneClientMaxManaFn = int (MONOMYTH_THISCALL*)(
     void* this_context,
     int cap_at_max_like);
@@ -781,8 +833,11 @@ using CXWndShowTraceFn = int (MONOMYTH_THISCALL*)(void* this_context, int show_l
 using CXWndShowWrapperFn = int (MONOMYTH_THISCALL*)(void* this_context);
 using SpellUiOnShowFn = int (MONOMYTH_THISCALL*)(void* this_context);
 using SpellUiAboutToShowFn = bool (MONOMYTH_THISCALL*)(void* this_context);
+using CombatAbilityWndRefreshWorkerFn = void (MONOMYTH_THISCALL*)(void* this_context);
+using CombatAbilityWndAboutToShowGateFn = int (MONOMYTH_THISCALL*)(void* this_context);
 using SpellUiAboutToShowSharedBoolGateFn = int (MONOMYTH_THISCALL*)(void* this_context);
 using SpellUiAboutToShowSharedLookupFn = void* (MONOMYTH_THISCALL*)(void* this_context);
+using SpellManagerLookupBySpellIdFn = void* (MONOMYTH_THISCALL*)(void* this_context, int spell_id);
 using CharSelectClassNameFuncFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     unsigned int selected_index);
@@ -1099,6 +1154,9 @@ InlineDetour g_cast_spell_on_show_trace_detour = {};
 InlineDetour g_cast_spell_about_to_show_trace_detour = {};
 InlineDetour g_spellbook_on_show_trace_detour = {};
 InlineDetour g_spellbook_about_to_show_trace_detour = {};
+InlineDetour g_combat_ability_window_on_show_trace_detour = {};
+InlineDetour g_combat_ability_wnd_refresh_worker_trace_detour = {};
+InlineDetour g_combat_ability_spell_manager_lookup_trace_detour = {};
 CallsitePatch g_cast_spell_about_to_show_shared_lookup_callsite_patch = {};
 CallsitePatch g_cast_spell_about_to_show_shared_bool_gate_callsite_patch = {};
 CallsitePatch g_spellbook_about_to_show_shared_bool_gate_callsite_patch = {};
@@ -1178,6 +1236,16 @@ CallsitePatch g_skills_window_skill_value_callsite_patch = {};
 CallsitePatch g_skills_window_row_helper_callsite_a_patch = {};
 CallsitePatch g_skills_window_row_helper_callsite_b_patch = {};
 CallsitePatch g_skills_window_row_helper_callsite_c_patch = {};
+CallsitePatch g_combat_ability_open_command_get_ability_callsite_patch = {};
+CallsitePatch g_combat_ability_wnd_about_to_show_gate_callsite_patch = {};
+CallsitePatch g_combat_ability_wnd_rebuild_primary_slots_get_ability_callsite_patch = {};
+CallsitePatch g_combat_ability_wnd_rebuild_ability_list_get_ability_callsite_patch = {};
+CallsitePatch g_combat_ability_producer_array_copy_callsite_a_patch = {};
+CallsitePatch g_combat_ability_producer_array_copy_callsite_b_patch = {};
+CallsitePatch g_combat_ability_wnd_has_ability_callsite_patch = {};
+CallsitePatch g_combat_ability_wnd_best_ability_callsite_patch = {};
+CallsitePatch g_combat_ability_wnd_dispatcher_show_post_show_callsite_patch = {};
+CallsitePatch g_combat_ability_wnd_dispatcher_hide_post_show_callsite_patch = {};
 CallsitePatch g_backstab_primary_weapon_classifier_callsite_patch = {};
 CallsitePatch g_hide_while_sneaking_class_lookup_callsite_patch = {};
 CallsitePatch g_equip_local_record_lookup_callsite_patch = {};
@@ -1210,6 +1278,9 @@ CharacterZoneClientGetAdjustedSkillFn g_original_character_zone_client_get_adjus
 CharacterZoneClientGetManaRegenFn g_original_character_zone_client_get_mana_regen = nullptr;
 CharacterZoneClientMaxManaFn g_original_character_zone_client_max_mana = nullptr;
 CharacterZoneClientUseSkillFn g_original_character_zone_client_use_skill = nullptr;
+CombatAbilityGetFn g_original_combat_ability_get = nullptr;
+CombatAbilityWndPostShowHelperFn g_original_combat_ability_wnd_post_show_helper = nullptr;
+MemoryCopyFn g_original_combat_ability_array_copy = nullptr;
 SkillsWindowSkillValueProducerFn g_original_skills_window_skill_value_producer = nullptr;
 SkillsWindowRowHelperFn g_original_skills_window_row_helper = nullptr;
 BackstabPrimaryWeaponClassifierFn g_original_backstab_primary_weapon_classifier = nullptr;
@@ -1323,6 +1394,10 @@ SpellUiOnShowFn g_original_cast_spell_on_show_trace = nullptr;
 SpellUiAboutToShowFn g_original_cast_spell_about_to_show_trace = nullptr;
 SpellUiOnShowFn g_original_spellbook_on_show_trace = nullptr;
 SpellUiAboutToShowFn g_original_spellbook_about_to_show_trace = nullptr;
+SpellUiOnShowFn g_original_combat_ability_window_on_show_trace = nullptr;
+CombatAbilityWndRefreshWorkerFn g_original_combat_ability_wnd_refresh_worker_trace = nullptr;
+CombatAbilityWndAboutToShowGateFn g_original_combat_ability_wnd_about_to_show_gate = nullptr;
+SpellManagerLookupBySpellIdFn g_original_combat_ability_spell_manager_lookup_trace = nullptr;
 SpellUiAboutToShowSharedBoolGateFn g_original_spell_ui_about_to_show_shared_bool_gate = nullptr;
 SpellUiAboutToShowSharedLookupFn g_original_spell_ui_about_to_show_shared_lookup = nullptr;
 ProgressionSelectionClassLookupFn g_original_progression_selection_class_lookup = nullptr;
@@ -1338,11 +1413,16 @@ std::uint64_t g_inventory_custom_label_refresh_failure_count = 0;
 std::uint64_t g_inventory_custom_eqtype_trace_count = 0;
 std::uint64_t g_inventory_on_process_frame_trace_count = 0;
 std::uint64_t g_spell_ui_show_trace_count = 0;
+std::uint64_t g_combat_ability_window_show_trace_count = 0;
 std::uint64_t g_spell_ui_show_wrapper_trace_count = 0;
 std::uint64_t g_cast_spell_on_show_trace_count = 0;
 std::uint64_t g_cast_spell_about_to_show_trace_count = 0;
 std::uint64_t g_spellbook_on_show_trace_count = 0;
 std::uint64_t g_spellbook_about_to_show_trace_count = 0;
+std::uint64_t g_combat_ability_window_on_show_trace_count = 0;
+std::uint64_t g_combat_ability_wnd_refresh_worker_trace_count = 0;
+std::uint64_t g_combat_ability_wnd_about_to_show_gate_trace_count = 0;
+std::uint64_t g_combat_ability_spell_manager_lookup_trace_count = 0;
 std::uint64_t g_spell_ui_about_to_show_shared_bool_gate_trace_count = 0;
 std::uint64_t g_spell_ui_about_to_show_shared_lookup_trace_count = 0;
 std::uint64_t g_item_display_refresh_worker_entry_trace_count = 0;
@@ -1353,6 +1433,20 @@ std::uint64_t g_progression_selection_trace_count = 0;
 std::uint64_t g_char_select_class_name_func_trace_count = 0;
 std::uint64_t g_char_select_late_full_name_trace_count = 0;
 std::uint64_t g_skill_visibility_override_count = 0;
+std::uint64_t g_combat_ability_lookup_override_count = 0;
+std::uint64_t g_combat_ability_lookup_trace_count = 0;
+std::uint64_t g_combat_ability_producer_trace_count = 0;
+std::uint64_t g_combat_ability_window_force_show_count = 0;
+std::uint64_t g_combat_ability_dispatcher_trace_count = 0;
+std::uintptr_t g_combat_ability_window_on_show_target_address = 0;
+bool g_combat_ability_window_on_show_trace_install_failed = false;
+std::uintptr_t g_combat_ability_wnd_refresh_worker_target_address = 0;
+bool g_combat_ability_wnd_refresh_worker_trace_install_failed = false;
+std::uintptr_t g_combat_ability_spell_manager_lookup_target_address = 0;
+bool g_combat_ability_spell_manager_lookup_trace_install_failed = false;
+std::atomic<bool> g_combat_ability_window_force_show_pending = false;
+std::atomic<std::uintptr_t> g_last_local_combat_ability_source = 0;
+std::atomic<std::uint32_t> g_last_local_combat_ability_source_length = 0;
 std::uint64_t g_skills_window_skill_value_entry_count = 0;
 std::uint64_t g_skills_window_row_helper_entry_count = 0;
 std::uint64_t g_skills_window_skill_value_trace_count = 0;
@@ -1363,6 +1457,18 @@ std::uint64_t g_multiclass_cur_mana_trace_count = 0;
 std::uint64_t g_multiclass_cur_mana_override_count = 0;
 std::uint64_t g_multiclass_cur_mana_callsite_override_count = 0;
 std::uint64_t g_player_mana_visibility_force_count = 0;
+
+bool TryResyncLocalCombatAbilityArrayFromLastSource(
+    const monomyth::server_auth_stats::Snapshot& snapshot) noexcept;
+bool InstallInlineDetour(
+    void* target,
+    void* hook,
+    InlineDetour* detour,
+    void** original_out,
+    const wchar_t* failure_label) noexcept;
+int MONOMYTH_FASTCALL CombatAbilityWindowOnShowTraceHook(
+    void* this_window,
+    void*) noexcept;
 std::uint64_t g_player_mana_visibility_callsite_override_count = 0;
 std::uint64_t g_player_mana_visibility_callsite_trace_count = 0;
 std::uint64_t g_player_mana_visibility_rebind_count = 0;
@@ -1414,6 +1520,10 @@ std::atomic<bool> g_multiclass_caster_ui_access_retry_pending = false;
 std::atomic<std::uint32_t> g_multiclass_caster_ui_access_retry_mask = 0;
 std::atomic<std::uint32_t> g_multiclass_caster_ui_access_retry_attempt_count = 0;
 std::atomic<std::uint64_t> g_multiclass_caster_ui_access_retry_next_tick_ms = 0;
+std::atomic<bool> g_combat_ability_resync_retry_pending = false;
+std::atomic<std::uint32_t> g_combat_ability_resync_retry_mask = 0;
+std::atomic<std::uint32_t> g_combat_ability_resync_retry_attempt_count = 0;
+std::atomic<std::uint64_t> g_combat_ability_resync_retry_next_tick_ms = 0;
 std::atomic<std::uint32_t> g_item_display_class_display_correlation_remaining = 0;
 std::atomic<std::uint64_t> g_item_display_class_display_correlation_activation = 0;
 std::atomic<std::uintptr_t> g_item_display_class_display_correlation_refresh_caller_return = 0;
@@ -1996,6 +2106,19 @@ bool TryReadLocalProfileClassId(std::uint8_t* class_id) noexcept;
 bool TryReadLocalPlayerDisplayedClassId(std::uint8_t* class_id) noexcept;
 void TryPersistPendingMulticlassCache(const wchar_t* trigger) noexcept;
 void TryRetryPendingMulticlassCasterUiAccess(const wchar_t* trigger) noexcept;
+void TryRetryPendingCombatAbilityResync(const wchar_t* trigger) noexcept;
+bool TryReadClientSpellManagerPointer(void** spell_manager) noexcept;
+bool LooksLikeSpellManagerObject(void* candidate, std::uintptr_t* vtable) noexcept;
+int MONOMYTH_FASTCALL CombatAbilityWndAboutToShowGateCallsiteHook(
+    void* this_context,
+    void*) noexcept;
+void MONOMYTH_FASTCALL CombatAbilityWndRefreshWorkerTraceHook(
+    void* this_context,
+    void*) noexcept;
+void* MONOMYTH_FASTCALL CombatAbilitySpellManagerLookupTraceHook(
+    void* this_context,
+    void*,
+    int spell_id) noexcept;
 const char* BuildPreferredLocalPlayerClassDisplayAscii(
     unsigned int requested_class_id,
     monomyth::multiclass_identity::ClassDisplayStyle style,
@@ -2351,6 +2474,7 @@ const char* TryBuildCachedCharacterClassDisplayAscii(
     const wchar_t* surface) noexcept {
     TryPersistPendingMulticlassCache(surface);
     TryRetryPendingMulticlassCasterUiAccess(surface);
+    TryRetryPendingCombatAbilityResync(surface);
 
     if (character_name == nullptr || character_name[0] == '\0' ||
         !g_multiclass_ui_display_enabled ||
@@ -3882,8 +4006,8 @@ bool IsExecutableCodeAddress(std::uintptr_t address) noexcept {
         protect == PAGE_EXECUTE_WRITECOPY;
 }
 
-bool TryResolveWindowVirtualTarget(
-    void* window,
+bool TryResolveObjectVirtualTarget(
+    void* object,
     std::size_t vftable_offset,
     std::uintptr_t* target_address) noexcept {
     if (target_address == nullptr) {
@@ -3891,12 +4015,12 @@ bool TryResolveWindowVirtualTarget(
     }
 
     *target_address = 0;
-    if (window == nullptr) {
+    if (object == nullptr) {
         return false;
     }
 
     void** vftable = nullptr;
-    if (!TryCopyObject(window, &vftable) || vftable == nullptr) {
+    if (!TryCopyObject(object, &vftable) || vftable == nullptr) {
         return false;
     }
 
@@ -3913,6 +4037,13 @@ bool TryResolveWindowVirtualTarget(
 
     *target_address = resolved_target;
     return true;
+}
+
+bool TryResolveWindowVirtualTarget(
+    void* window,
+    std::size_t vftable_offset,
+    std::uintptr_t* target_address) noexcept {
+    return TryResolveObjectVirtualTarget(window, vftable_offset, target_address);
 }
 
 bool TryInvokeWindowActivate(
@@ -4116,6 +4247,356 @@ bool TryReadCastSpellWindowPointer(void** cast_spell_window) noexcept {
 
 bool TryReadSpellBookWindowPointer(void** spellbook_window) noexcept {
     return TryReadEqWindowPointer(kSpellBookWindowGlobalRva, spellbook_window);
+}
+
+bool TryReadCombatAbilityWindowPointer(void** combat_ability_window) noexcept {
+    return TryReadEqWindowPointer(kCombatAbilityWindowGlobalRva, combat_ability_window);
+}
+
+bool TryReadCombatAbilityWindowAboutToShowGateContext(void** gate_context) noexcept {
+    return TryReadEqWindowPointer(kCombatAbilityWndAboutToShowGateContextGlobalRva, gate_context);
+}
+
+bool CombatAbilityWindowAboutToShowGateAllowsClassId(std::uint8_t class_id) noexcept {
+    static constexpr std::array<bool, 16> kAllowedClassIds = {
+        true, false, true, true, true, false, true, true,
+        true, false, false, false, false, false, true, true,
+    };
+    if (class_id == 0 || class_id > kAllowedClassIds.size()) {
+        return false;
+    }
+    return kAllowedClassIds[class_id - 1];
+}
+
+bool TryResolveAnyAuthoritativeCombatAbilityGateClass(
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    std::uint8_t* class_id_out) noexcept {
+    if (class_id_out != nullptr) {
+        *class_id_out = 0;
+    }
+    if (!snapshot.has_classes_bitmask || snapshot.classes_bitmask == 0 || class_id_out == nullptr) {
+        return false;
+    }
+
+    for (unsigned int class_id = monomyth::multiclass_identity::kFirstPlayableClassId;
+         class_id <= monomyth::multiclass_identity::kLastPlayableClassId;
+         ++class_id) {
+        if (monomyth::multiclass_identity::HasAuthoritativeClass(
+                snapshot.has_classes_bitmask,
+                snapshot.classes_bitmask,
+                class_id) &&
+            CombatAbilityWindowAboutToShowGateAllowsClassId(
+                static_cast<std::uint8_t>(class_id))) {
+            *class_id_out = static_cast<std::uint8_t>(class_id);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool TryResolveCombatAbilityWindowAboutToShowClassRecord(
+    void* gate_context,
+    void** class_record_out,
+    std::uint8_t* class_id_out) noexcept {
+    if (class_record_out != nullptr) {
+        *class_record_out = nullptr;
+    }
+    if (class_id_out != nullptr) {
+        *class_id_out = 0;
+    }
+    if (gate_context == nullptr || class_record_out == nullptr || class_id_out == nullptr) {
+        return false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return false;
+    }
+
+    void* descriptor = nullptr;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(gate_context) + 0x8,
+            &descriptor) ||
+        descriptor == nullptr) {
+        return false;
+    }
+
+    std::int32_t lookup_delta = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(descriptor) + 0x4,
+            &lookup_delta)) {
+        return false;
+    }
+
+    const std::uintptr_t gate_context_address =
+        reinterpret_cast<std::uintptr_t>(gate_context);
+    const std::intptr_t signed_lookup_context =
+        static_cast<std::intptr_t>(gate_context_address) +
+        static_cast<std::intptr_t>(lookup_delta) + 0xc;
+    if (signed_lookup_context <= 0) {
+        return false;
+    }
+
+    const auto shared_lookup = reinterpret_cast<SpellUiAboutToShowSharedLookupFn>(
+        module_base + kCombatAbilityWndAboutToShowSharedLookupTargetRva);
+    void* class_record = shared_lookup(reinterpret_cast<void*>(signed_lookup_context));
+    if (class_record == nullptr) {
+        return false;
+    }
+
+    std::uint8_t class_id = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(class_record) + 0x3374,
+            &class_id)) {
+        return false;
+    }
+
+    *class_record_out = class_record;
+    *class_id_out = class_id;
+    return true;
+}
+
+bool TryClassifyCombatAbilityWindow(
+    void* window,
+    const wchar_t** window_name) noexcept {
+    if (window_name != nullptr) {
+        *window_name = L"unknown";
+    }
+    if (window == nullptr) {
+        return false;
+    }
+
+    void* combat_ability_window = nullptr;
+    if (TryReadCombatAbilityWindowPointer(&combat_ability_window) &&
+        combat_ability_window != nullptr &&
+        combat_ability_window == window) {
+        if (window_name != nullptr) {
+            *window_name = L"CombatAbilityWnd";
+        }
+        return true;
+    }
+
+    return false;
+}
+
+bool EnsureCombatAbilityWindowOnShowTraceInstalled(
+    void* window,
+    std::uintptr_t* resolved_target_address,
+    bool* hook_installed) noexcept {
+    if (resolved_target_address != nullptr) {
+        *resolved_target_address = 0;
+    }
+    if (hook_installed != nullptr) {
+        *hook_installed = false;
+    }
+
+    std::uintptr_t target_address = 0;
+    if (!TryResolveWindowVirtualTarget(window, 0xdc, &target_address) || target_address == 0) {
+        return false;
+    }
+
+    if (resolved_target_address != nullptr) {
+        *resolved_target_address = target_address;
+    }
+
+    if (g_combat_ability_window_on_show_trace_detour.installed) {
+        if (hook_installed != nullptr) {
+            *hook_installed = g_combat_ability_window_on_show_target_address == target_address;
+        }
+        return true;
+    }
+
+    if (g_combat_ability_window_on_show_target_address == target_address &&
+        g_combat_ability_window_on_show_trace_install_failed) {
+        return true;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(target_address),
+            reinterpret_cast<void*>(&CombatAbilityWindowOnShowTraceHook),
+            &g_combat_ability_window_on_show_trace_detour,
+            reinterpret_cast<void**>(&g_original_combat_ability_window_on_show_trace),
+            L"CombatAbilityWnd::OnShow trace")) {
+        g_original_combat_ability_window_on_show_trace = nullptr;
+        g_combat_ability_window_on_show_target_address = target_address;
+        g_combat_ability_window_on_show_trace_install_failed = true;
+        std::wstring message =
+            L"hook_manager: combat ability window derived show trace denied address=";
+        message += HexPtr(target_address);
+        const std::uintptr_t module_base = GetHostModuleBase();
+        if (module_base != 0 && target_address >= module_base) {
+            message += L" target_rva=";
+            message += Hex32(static_cast<std::uint32_t>(target_address - module_base));
+        }
+        monomyth::logger::Log(message);
+        return true;
+    }
+
+    g_combat_ability_window_on_show_target_address = target_address;
+    g_combat_ability_window_on_show_trace_install_failed = false;
+    g_combat_ability_window_on_show_trace_count = 0;
+    if (hook_installed != nullptr) {
+        *hook_installed = true;
+    }
+
+    std::wstring message =
+        L"hook_manager: combat ability window derived show trace installed address=";
+    message += HexPtr(target_address);
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base != 0 && target_address >= module_base) {
+        message += L" target_rva=";
+        message += Hex32(static_cast<std::uint32_t>(target_address - module_base));
+    }
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool EnsureCombatAbilitySpellManagerLookupTraceInstalled(
+    std::uintptr_t* resolved_target_address,
+    bool* hook_installed) noexcept {
+    if (resolved_target_address != nullptr) {
+        *resolved_target_address = 0;
+    }
+    if (hook_installed != nullptr) {
+        *hook_installed = false;
+    }
+
+    void* spell_manager = nullptr;
+    if (!TryReadClientSpellManagerPointer(&spell_manager) || spell_manager == nullptr) {
+        return false;
+    }
+
+    std::uintptr_t target_address = 0;
+    if (!TryResolveObjectVirtualTarget(spell_manager, 0xc, &target_address) ||
+        target_address == 0) {
+        return false;
+    }
+
+    if (resolved_target_address != nullptr) {
+        *resolved_target_address = target_address;
+    }
+
+    if (g_combat_ability_spell_manager_lookup_trace_detour.installed) {
+        if (hook_installed != nullptr) {
+            *hook_installed =
+                g_combat_ability_spell_manager_lookup_target_address == target_address;
+        }
+        return true;
+    }
+
+    if (g_combat_ability_spell_manager_lookup_target_address == target_address &&
+        g_combat_ability_spell_manager_lookup_trace_install_failed) {
+        return true;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(target_address),
+            reinterpret_cast<void*>(&CombatAbilitySpellManagerLookupTraceHook),
+            &g_combat_ability_spell_manager_lookup_trace_detour,
+            reinterpret_cast<void**>(&g_original_combat_ability_spell_manager_lookup_trace),
+            L"CombatAbilityWnd spell manager lookup trace")) {
+        g_original_combat_ability_spell_manager_lookup_trace = nullptr;
+        g_combat_ability_spell_manager_lookup_target_address = target_address;
+        g_combat_ability_spell_manager_lookup_trace_install_failed = true;
+        std::wstring message =
+            L"hook_manager: combat ability spell manager lookup trace denied address=";
+        message += HexPtr(target_address);
+        const std::uintptr_t module_base = GetHostModuleBase();
+        if (module_base != 0 && target_address >= module_base) {
+            message += L" target_rva=";
+            message += Hex32(static_cast<std::uint32_t>(target_address - module_base));
+        }
+        monomyth::logger::Log(message);
+        return true;
+    }
+
+    g_combat_ability_spell_manager_lookup_target_address = target_address;
+    g_combat_ability_spell_manager_lookup_trace_install_failed = false;
+    g_combat_ability_spell_manager_lookup_trace_count = 0;
+    if (hook_installed != nullptr) {
+        *hook_installed = true;
+    }
+
+    std::wstring message =
+        L"hook_manager: combat ability spell manager lookup trace installed address=";
+    message += HexPtr(target_address);
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base != 0 && target_address >= module_base) {
+        message += L" target_rva=";
+        message += Hex32(static_cast<std::uint32_t>(target_address - module_base));
+    }
+    message += L" caller_return_rva=";
+    message += Hex32(kCombatAbilityWndRefreshWorkerSpellManagerReturnRva);
+    monomyth::logger::Log(message);
+    return true;
+}
+
+bool EnsureCombatAbilityWndRefreshWorkerTraceInstalled(
+    std::uintptr_t* resolved_target_address,
+    bool* hook_installed) noexcept {
+    if (resolved_target_address != nullptr) {
+        *resolved_target_address = 0;
+    }
+    if (hook_installed != nullptr) {
+        *hook_installed = false;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return false;
+    }
+
+    const std::uintptr_t target_address = module_base + kCombatAbilityWndRefreshWorkerRva;
+    if (resolved_target_address != nullptr) {
+        *resolved_target_address = target_address;
+    }
+
+    if (g_combat_ability_wnd_refresh_worker_trace_detour.installed) {
+        if (hook_installed != nullptr) {
+            *hook_installed =
+                g_combat_ability_wnd_refresh_worker_target_address == target_address;
+        }
+        return true;
+    }
+
+    if (g_combat_ability_wnd_refresh_worker_target_address == target_address &&
+        g_combat_ability_wnd_refresh_worker_trace_install_failed) {
+        return true;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(target_address),
+            reinterpret_cast<void*>(&CombatAbilityWndRefreshWorkerTraceHook),
+            &g_combat_ability_wnd_refresh_worker_trace_detour,
+            reinterpret_cast<void**>(&g_original_combat_ability_wnd_refresh_worker_trace),
+            L"CombatAbilityWnd refresh worker trace")) {
+        g_original_combat_ability_wnd_refresh_worker_trace = nullptr;
+        g_combat_ability_wnd_refresh_worker_target_address = target_address;
+        g_combat_ability_wnd_refresh_worker_trace_install_failed = true;
+        std::wstring message =
+            L"hook_manager: combat ability refresh worker trace denied address=";
+        message += HexPtr(target_address);
+        message += L" target_rva=";
+        message += Hex32(kCombatAbilityWndRefreshWorkerRva);
+        monomyth::logger::Log(message);
+        return true;
+    }
+
+    g_combat_ability_wnd_refresh_worker_target_address = target_address;
+    g_combat_ability_wnd_refresh_worker_trace_install_failed = false;
+    g_combat_ability_wnd_refresh_worker_trace_count = 0;
+    if (hook_installed != nullptr) {
+        *hook_installed = true;
+    }
+
+    std::wstring message =
+        L"hook_manager: combat ability refresh worker trace installed address=";
+    message += HexPtr(target_address);
+    message += L" target_rva=";
+    message += Hex32(kCombatAbilityWndRefreshWorkerRva);
+    monomyth::logger::Log(message);
+    return true;
 }
 
 bool TryClassifyTrackedSpellUiWindow(
@@ -4436,6 +4917,314 @@ int MONOMYTH_FASTCALL SpellBookOnShowTraceHook(
     return original_result;
 }
 
+int MONOMYTH_FASTCALL CombatAbilityWndAboutToShowGateCallsiteHook(
+    void* this_context,
+    void*) noexcept {
+    const int original_result = g_original_combat_ability_wnd_about_to_show_gate != nullptr
+        ? g_original_combat_ability_wnd_about_to_show_gate(this_context)
+        : 0;
+
+    void* resolved_class_record = nullptr;
+    std::uint8_t resolved_class_id = 0;
+    const bool resolved_class_record_ok =
+        TryResolveCombatAbilityWindowAboutToShowClassRecord(
+            this_context,
+            &resolved_class_record,
+            &resolved_class_id);
+    const bool native_gate_allows_class =
+        resolved_class_record_ok &&
+        CombatAbilityWindowAboutToShowGateAllowsClassId(resolved_class_id);
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    std::uint8_t override_class_id = 0;
+    const bool authoritative_gate_class_found =
+        TryResolveAnyAuthoritativeCombatAbilityGateClass(snapshot, &override_class_id);
+    const bool override_applied =
+        original_result == 0 &&
+        authoritative_gate_class_found;
+    const int returned_result = override_applied ? 1 : original_result;
+
+    if (!override_applied) {
+        return returned_result;
+    }
+
+    const std::uint64_t count = ++g_combat_ability_wnd_about_to_show_gate_trace_count;
+    if (!ShouldLogSpellUiAboutToShowGateTrace(count)) {
+        return returned_result;
+    }
+
+    std::wstring message = L"hook_manager: combat ability about-to-show gate trace";
+    message += L" count=";
+    message += std::to_wstring(count);
+    message += L" gate_context=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" resolved_class_record=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(resolved_class_record));
+    message += L" resolved_class_record_ok=";
+    message += resolved_class_record_ok ? L"true" : L"false";
+    message += L" resolved_class_id=";
+    message += std::to_wstring(resolved_class_id);
+    message += L" native_gate_allows_class=";
+    message += native_gate_allows_class ? L"true" : L"false";
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    message += L" override_applied=";
+    message += override_applied ? L"true" : L"false";
+    message += L" override_class_id=";
+    message += std::to_wstring(override_class_id);
+    if (override_class_id != 0) {
+        const char* class_name = monomyth::multiclass_identity::ClassDisplayTokenAscii(
+            override_class_id,
+            monomyth::multiclass_identity::ClassDisplayStyle::kFullName);
+        if (class_name != nullptr && class_name[0] != '\0') {
+            message += L" override_class_name=\"";
+            message += WidenAsciiLossy(class_name);
+            message += L"\"";
+        }
+    }
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    message += L" returned_result=";
+    message += std::to_wstring(returned_result);
+    monomyth::logger::Log(message);
+    return returned_result;
+}
+
+void MONOMYTH_FASTCALL CombatAbilityWndRefreshWorkerTraceHook(
+    void* this_context,
+    void*) noexcept {
+    if (g_original_combat_ability_wnd_refresh_worker_trace != nullptr) {
+        g_original_combat_ability_wnd_refresh_worker_trace(this_context);
+    }
+}
+
+void* MONOMYTH_FASTCALL CombatAbilitySpellManagerLookupTraceHook(
+    void* this_context,
+    void*,
+    int spell_id) noexcept {
+    return g_original_combat_ability_spell_manager_lookup_trace != nullptr
+        ? g_original_combat_ability_spell_manager_lookup_trace(this_context, spell_id)
+        : nullptr;
+}
+
+int MONOMYTH_FASTCALL CombatAbilityWindowOnShowTraceHook(
+    void* this_window,
+    void*) noexcept {
+    const wchar_t* window_name = L"unknown";
+    const bool tracked_window =
+        TryClassifyCombatAbilityWindow(this_window, &window_name);
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    std::uint32_t caller_return_rva = 0;
+    const bool caller_in_eqgame =
+        TryComputeEqgameCallerReturnRva(caller_return_address, &caller_return_rva);
+
+    CxWndStateSnapshot before = {};
+    if (tracked_window) {
+        TryReadCxWndStateSnapshot(this_window, &before);
+    }
+
+    void* about_to_show_gate_context = nullptr;
+    const bool about_to_show_gate_context_read =
+        TryReadCombatAbilityWindowAboutToShowGateContext(&about_to_show_gate_context);
+    void* about_to_show_class_record = nullptr;
+    std::uint8_t about_to_show_class_id = 0;
+    const bool about_to_show_class_record_resolved =
+        about_to_show_gate_context_read &&
+        about_to_show_gate_context != nullptr &&
+        TryResolveCombatAbilityWindowAboutToShowClassRecord(
+            about_to_show_gate_context,
+            &about_to_show_class_record,
+            &about_to_show_class_id);
+    const bool about_to_show_gate_allows_class =
+        about_to_show_class_record_resolved &&
+        CombatAbilityWindowAboutToShowGateAllowsClassId(about_to_show_class_id);
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    std::uint8_t primary_class_id = 0;
+    const bool primary_class_read = TryReadLocalProfileClassId(&primary_class_id);
+    const bool about_to_show_class_playable =
+        about_to_show_class_record_resolved &&
+        monomyth::multiclass_identity::IsPlayableClassId(about_to_show_class_id);
+    const bool about_to_show_class_matches_primary =
+        primary_class_read &&
+        about_to_show_class_record_resolved &&
+        primary_class_id == about_to_show_class_id;
+    const bool about_to_show_class_in_assigned_mask =
+        about_to_show_class_playable &&
+        monomyth::multiclass_identity::HasAuthoritativeClass(
+            snapshot.has_classes_bitmask,
+            snapshot.classes_bitmask,
+            about_to_show_class_id);
+    const std::uintptr_t module_base = GetHostModuleBase();
+    const std::uintptr_t spell_manager_global_address =
+        module_base == 0 ? 0 : (module_base + kSpellManagerInstanceGlobalRva);
+    void* spell_manager_global_pointer_value = nullptr;
+    const bool spell_manager_global_pointer_read =
+        spell_manager_global_address != 0 &&
+        TryCopyObject(
+            reinterpret_cast<const void*>(spell_manager_global_address),
+            &spell_manager_global_pointer_value);
+    std::uintptr_t spell_manager_global_pointer_vtable = 0;
+    const bool spell_manager_dereferenced_valid =
+        spell_manager_global_pointer_read &&
+        LooksLikeSpellManagerObject(
+            spell_manager_global_pointer_value,
+            &spell_manager_global_pointer_vtable);
+    std::uintptr_t spell_manager_direct_vtable = 0;
+    const bool spell_manager_direct_object_valid =
+        spell_manager_global_address != 0 &&
+        LooksLikeSpellManagerObject(
+            reinterpret_cast<void*>(spell_manager_global_address),
+            &spell_manager_direct_vtable);
+    const wchar_t* spell_manager_resolution = L"unresolved";
+    std::uintptr_t resolved_spell_manager_address = 0;
+    std::uintptr_t resolved_spell_manager_vtable = 0;
+    std::uintptr_t resolved_spell_manager_spells_base = 0;
+    if (spell_manager_dereferenced_valid) {
+        spell_manager_resolution = L"dereferenced_global";
+        resolved_spell_manager_address =
+            reinterpret_cast<std::uintptr_t>(spell_manager_global_pointer_value);
+        resolved_spell_manager_vtable = spell_manager_global_pointer_vtable;
+        resolved_spell_manager_spells_base =
+            resolved_spell_manager_address + kClientSpellManagerSpellsOffset;
+    } else if (spell_manager_direct_object_valid) {
+        spell_manager_resolution = L"direct_global_object";
+        resolved_spell_manager_address = spell_manager_global_address;
+        resolved_spell_manager_vtable = spell_manager_direct_vtable;
+        resolved_spell_manager_spells_base =
+            resolved_spell_manager_address + kClientSpellManagerSpellsOffset;
+    }
+    std::uintptr_t spell_manager_lookup_target = 0;
+    bool spell_manager_lookup_target_resolved = false;
+    bool spell_manager_lookup_hook_installed = false;
+    spell_manager_lookup_target_resolved = EnsureCombatAbilitySpellManagerLookupTraceInstalled(
+        &spell_manager_lookup_target,
+        &spell_manager_lookup_hook_installed);
+    std::uintptr_t refresh_worker_target = 0;
+    bool refresh_worker_target_resolved = false;
+    bool refresh_worker_hook_installed = false;
+    refresh_worker_target_resolved = EnsureCombatAbilityWndRefreshWorkerTraceInstalled(
+        &refresh_worker_target,
+        &refresh_worker_hook_installed);
+
+    const int original_result = g_original_combat_ability_window_on_show_trace != nullptr
+        ? g_original_combat_ability_window_on_show_trace(this_window)
+        : 0;
+    if (!tracked_window) {
+        return original_result;
+    }
+
+    CxWndStateSnapshot after = {};
+    TryReadCxWndStateSnapshot(this_window, &after);
+
+    ++g_combat_ability_window_on_show_trace_count;
+    if (g_combat_ability_window_on_show_trace_count >
+            kSkillVisibilityOverrideInitialLogCount &&
+        (g_combat_ability_window_on_show_trace_count %
+            kSkillVisibilityOverrideLogInterval) != 0) {
+        return original_result;
+    }
+
+    std::wstring message = L"hook_manager: combat ability window derived show trace";
+    message += L" count=";
+    message += std::to_wstring(g_combat_ability_window_on_show_trace_count);
+    message += L" target_address=";
+    message += HexPtr(g_combat_ability_window_on_show_target_address);
+    if (module_base != 0 &&
+        g_combat_ability_window_on_show_target_address >= module_base) {
+        message += L" target_rva=";
+        message += Hex32(static_cast<std::uint32_t>(
+            g_combat_ability_window_on_show_target_address - module_base));
+    }
+    message += L" expected_target_rva=";
+    message += Hex32(kCombatAbilityWndAboutToShowRva);
+    message += L" window=\"";
+    message += window_name;
+    message += L"\" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_window));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_return_rva=";
+    message += Hex32(caller_return_rva);
+    message += L" caller_in_eqgame=";
+    message += caller_in_eqgame ? L"true" : L"false";
+    message += L" gate_context_read=";
+    message += about_to_show_gate_context_read ? L"true" : L"false";
+    message += L" gate_context=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(about_to_show_gate_context));
+    message += L" gate_target_rva=";
+    message += Hex32(kCombatAbilityWndAboutToShowGateTargetRva);
+    message += L" gate_class_record_resolved=";
+    message += about_to_show_class_record_resolved ? L"true" : L"false";
+    message += L" gate_class_record=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(about_to_show_class_record));
+    message += L" gate_class_id=";
+    message += std::to_wstring(about_to_show_class_id);
+    if (about_to_show_class_playable) {
+        const char* class_name = monomyth::multiclass_identity::ClassDisplayTokenAscii(
+            about_to_show_class_id,
+            monomyth::multiclass_identity::ClassDisplayStyle::kFullName);
+        if (class_name != nullptr && class_name[0] != '\0') {
+            message += L" gate_class_name=\"";
+            message += WidenAsciiLossy(class_name);
+            message += L"\"";
+        }
+    }
+    message += L" gate_class_playable=";
+    message += about_to_show_class_playable ? L"true" : L"false";
+    message += L" gate_allows_class=";
+    message += about_to_show_gate_allows_class ? L"true" : L"false";
+    message += L" gate_class_matches_primary=";
+    message += about_to_show_class_matches_primary ? L"true" : L"false";
+    message += L" gate_class_in_assigned_mask=";
+    message += about_to_show_class_in_assigned_mask ? L"true" : L"false";
+    message += L" primary_class_read=";
+    message += primary_class_read ? L"true" : L"false";
+    message += L" primary_class_id=";
+    message += std::to_wstring(primary_class_id);
+    message += L" assigned_mask=";
+    message += Hex32(snapshot.has_classes_bitmask ? snapshot.classes_bitmask : 0);
+    message += L" spell_manager_lookup_target_resolved=";
+    message += spell_manager_lookup_target_resolved ? L"true" : L"false";
+    message += L" spell_manager_lookup_target=";
+    message += HexPtr(spell_manager_lookup_target);
+    message += L" spell_manager_lookup_hook_installed=";
+    message += spell_manager_lookup_hook_installed ? L"true" : L"false";
+    message += L" refresh_worker_target_resolved=";
+    message += refresh_worker_target_resolved ? L"true" : L"false";
+    message += L" refresh_worker_target=";
+    message += HexPtr(refresh_worker_target);
+    message += L" refresh_worker_hook_installed=";
+    message += refresh_worker_hook_installed ? L"true" : L"false";
+    message += L" spell_manager_global_address=";
+    message += HexPtr(spell_manager_global_address);
+    message += L" spell_manager_global_pointer_read=";
+    message += spell_manager_global_pointer_read ? L"true" : L"false";
+    message += L" spell_manager_global_pointer_value=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(spell_manager_global_pointer_value));
+    message += L" spell_manager_dereferenced_valid=";
+    message += spell_manager_dereferenced_valid ? L"true" : L"false";
+    message += L" spell_manager_direct_object_valid=";
+    message += spell_manager_direct_object_valid ? L"true" : L"false";
+    message += L" spell_manager_resolution=\"";
+    message += spell_manager_resolution;
+    message += L"\"";
+    message += L" spell_manager_resolved_address=";
+    message += HexPtr(resolved_spell_manager_address);
+    message += L" spell_manager_vtable=";
+    message += HexPtr(resolved_spell_manager_vtable);
+    message += L" spell_manager_spells_base=";
+    message += HexPtr(resolved_spell_manager_spells_base);
+    message += L" result_raw=";
+    message += std::to_wstring(original_result);
+    message += L" result_bool=";
+    message += original_result != 0 ? L"true" : L"false";
+    AppendCxWndStateSnapshot(&message, L"before", before);
+    AppendCxWndStateSnapshot(&message, L"after", after);
+    monomyth::logger::Log(message);
+    return original_result;
+}
+
 bool MONOMYTH_FASTCALL SpellBookAboutToShowTraceHook(
     void* this_window,
     void*) noexcept {
@@ -4730,8 +5519,12 @@ int MONOMYTH_FASTCALL CXWndShowTraceHook(
     int recurse_like,
     int unknown_like) noexcept {
     const wchar_t* window_name = L"unknown";
-    const bool tracked_window =
+    const bool combat_ability_window =
+        TryClassifyCombatAbilityWindow(this_window, &window_name);
+    const bool tracked_spell_window =
+        !combat_ability_window &&
         TryClassifyTrackedSpellUiWindow(this_window, &window_name);
+    const bool tracked_window = tracked_spell_window;
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::uint32_t caller_return_rva = 0;
     const bool caller_in_eqgame =
@@ -4976,6 +5769,35 @@ void ClearDeferredMulticlassCasterUiAccessRetryState() noexcept {
     g_multiclass_caster_ui_access_retry_mask.store(0);
     g_multiclass_caster_ui_access_retry_attempt_count.store(0);
     g_multiclass_caster_ui_access_retry_next_tick_ms.store(0);
+}
+
+bool ShouldArmDeferredCombatAbilityResyncRetry(std::uint32_t assigned_mask) noexcept {
+    return assigned_mask != 0 &&
+        monomyth::multiclass_identity::IsPlayableClassMask(assigned_mask);
+}
+
+void ArmDeferredCombatAbilityResyncRetry(
+    std::uint32_t assigned_mask,
+    std::uint64_t next_retry_tick_ms) noexcept {
+    g_combat_ability_resync_retry_mask.store(assigned_mask);
+    g_combat_ability_resync_retry_pending.store(true);
+    g_combat_ability_resync_retry_attempt_count.store(0);
+    g_combat_ability_resync_retry_next_tick_ms.store(next_retry_tick_ms);
+}
+
+void ClearDeferredCombatAbilityResyncRetryState() noexcept {
+    g_combat_ability_resync_retry_pending.store(false);
+    g_combat_ability_resync_retry_mask.store(0);
+    g_combat_ability_resync_retry_attempt_count.store(0);
+    g_combat_ability_resync_retry_next_tick_ms.store(0);
+}
+
+void ArmPendingCombatAbilityWindowForceShow() noexcept {
+    g_combat_ability_window_force_show_pending.store(true);
+}
+
+void ClearPendingCombatAbilityWindowForceShow() noexcept {
+    g_combat_ability_window_force_show_pending.store(false);
 }
 
 void TryRearmMulticlassCasterUiAccessForZoneTransition(std::uint32_t opcode) noexcept {
@@ -5725,6 +6547,134 @@ void TryRetryPendingMulticlassCasterUiAccess(const wchar_t* trigger) noexcept {
         message += WidenAsciiLossy(local_player_name);
         message += L"\"";
     }
+    message += L" still_eligible=";
+    message += still_eligible ? L"true" : L"false";
+    message += L" success=";
+    message += success ? L"true" : L"false";
+    message += L" exhausted=";
+    message += exhausted ? L"true" : L"false";
+    message += L" next_retry_in_ms=";
+    message += std::to_wstring(
+        success || !still_eligible || exhausted ? 0
+                                                : kMulticlassCasterUiAccessRetryCooldownMs);
+    monomyth::logger::Log(message);
+}
+
+void TryRetryPendingCombatAbilityResync(const wchar_t* trigger) noexcept {
+    if (!g_combat_ability_resync_retry_pending.load()) {
+        return;
+    }
+
+    const std::uint32_t retry_mask = g_combat_ability_resync_retry_mask.load();
+    if (retry_mask == 0) {
+        ClearDeferredCombatAbilityResyncRetryState();
+        return;
+    }
+
+    const std::uint64_t current_tick_ms = static_cast<std::uint64_t>(GetTickCount64());
+    const std::uint64_t next_retry_tick_ms =
+        g_combat_ability_resync_retry_next_tick_ms.load();
+    if (next_retry_tick_ms != 0 && current_tick_ms < next_retry_tick_ms) {
+        return;
+    }
+
+    const std::uint32_t attempts_already_made =
+        g_combat_ability_resync_retry_attempt_count.load();
+    if (attempts_already_made >= kMulticlassCasterUiAccessRetryMaxAttempts) {
+        ClearDeferredCombatAbilityResyncRetryState();
+
+        std::wstring message = L"CombatAbilityDeferredRetry";
+        message += L" trigger=\"";
+        message += (trigger == nullptr ? L"" : trigger);
+        message += L"\" mask=";
+        message += Hex32(retry_mask);
+        message += L" attempt_number=";
+        message += std::to_wstring(attempts_already_made);
+        message += L" max_attempts=";
+        message += std::to_wstring(kMulticlassCasterUiAccessRetryMaxAttempts);
+        message += L" remaining_attempts=0 success=false exhausted=true";
+        monomyth::logger::Log(message);
+        return;
+    }
+
+    void* local_player = nullptr;
+    void* spell_manager = nullptr;
+    std::uint8_t displayed_class_id = 0;
+    const bool local_player_ok =
+        TryReadLocalPlayerPointer(&local_player) && local_player != nullptr;
+    const bool displayed_class_ok =
+        TryReadLocalPlayerDisplayedClassId(&displayed_class_id) &&
+        monomyth::multiclass_identity::IsPlayableClassId(displayed_class_id);
+    const bool spell_manager_ok =
+        TryReadClientSpellManagerPointer(&spell_manager) && spell_manager != nullptr;
+
+    if (!local_player_ok || !displayed_class_ok || !spell_manager_ok) {
+        g_combat_ability_resync_retry_next_tick_ms.store(
+            current_tick_ms + kMulticlassCasterUiAccessRetryCooldownMs);
+
+        std::wstring message = L"CombatAbilityDeferredRetry";
+        message += L" trigger=\"";
+        message += (trigger == nullptr ? L"" : trigger);
+        message += L"\" mask=";
+        message += Hex32(retry_mask);
+        message += L" attempt_number=";
+        message += std::to_wstring(attempts_already_made);
+        message += L" local_player_ok=";
+        message += local_player_ok ? L"true" : L"false";
+        message += L" displayed_class_ok=";
+        message += displayed_class_ok ? L"true" : L"false";
+        message += L" displayed_class_id=";
+        message += std::to_wstring(displayed_class_id);
+        message += L" spell_manager_ok=";
+        message += spell_manager_ok ? L"true" : L"false";
+        message += L" success=false waiting_on_prereqs=true next_retry_in_ms=";
+        message += std::to_wstring(kMulticlassCasterUiAccessRetryCooldownMs);
+        monomyth::logger::Log(message);
+        return;
+    }
+
+    const std::uint32_t attempt_number =
+        g_combat_ability_resync_retry_attempt_count.fetch_add(1) + 1;
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    const bool success = TryResyncLocalCombatAbilityArrayFromLastSource(snapshot);
+    const bool still_eligible =
+        !success && ShouldArmDeferredCombatAbilityResyncRetry(retry_mask);
+    bool exhausted = false;
+    if (success || !still_eligible) {
+        ClearDeferredCombatAbilityResyncRetryState();
+    } else if (attempt_number >= kMulticlassCasterUiAccessRetryMaxAttempts) {
+        exhausted = true;
+        ClearDeferredCombatAbilityResyncRetryState();
+    } else {
+        g_combat_ability_resync_retry_next_tick_ms.store(
+            current_tick_ms + kMulticlassCasterUiAccessRetryCooldownMs);
+    }
+
+    const std::uint32_t remaining_attempts =
+        success || !still_eligible || exhausted
+            ? 0
+            : (kMulticlassCasterUiAccessRetryMaxAttempts - attempt_number);
+
+    std::wstring message = L"CombatAbilityDeferredRetry";
+    message += L" trigger=\"";
+    message += (trigger == nullptr ? L"" : trigger);
+    message += L"\" mask=";
+    message += Hex32(retry_mask);
+    message += L" attempt_number=";
+    message += std::to_wstring(attempt_number);
+    message += L" max_attempts=";
+    message += std::to_wstring(kMulticlassCasterUiAccessRetryMaxAttempts);
+    message += L" remaining_attempts=";
+    message += std::to_wstring(remaining_attempts);
+    message += L" local_player_ok=";
+    message += local_player_ok ? L"true" : L"false";
+    message += L" displayed_class_ok=";
+    message += displayed_class_ok ? L"true" : L"false";
+    message += L" displayed_class_id=";
+    message += std::to_wstring(displayed_class_id);
+    message += L" spell_manager_ok=";
+    message += spell_manager_ok ? L"true" : L"false";
     message += L" still_eligible=";
     message += still_eligible ? L"true" : L"false";
     message += L" success=";
@@ -8540,6 +9490,90 @@ int EvaluateBestAuthoritativeSkillsWindowSkillValue(
     return best_result;
 }
 
+int EvaluateBestAuthoritativeCombatAbility(
+    void* this_context,
+    int ability_index,
+    int native_result,
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    unsigned int* resolved_class_id,
+    monomyth::multiclass_identity::OrderedClassIds* resolved_class_order,
+    std::array<int, monomyth::multiclass_identity::kPlayableClassCount>* candidate_results) noexcept {
+    if (resolved_class_id != nullptr) {
+        *resolved_class_id = 0;
+    }
+    if (resolved_class_order != nullptr) {
+        *resolved_class_order = {};
+    }
+    if (candidate_results != nullptr) {
+        candidate_results->fill(0);
+    }
+
+    if (g_original_combat_ability_get == nullptr ||
+        !monomyth::multiclass_combat_ability::ShouldResolveAuthoritativeCombatAbility(
+            snapshot,
+            ability_index,
+            native_result) ||
+        !IsLocalCharDataContext(this_context)) {
+        return native_result;
+    }
+
+    auto try_candidate = [&](unsigned int class_id) noexcept -> int {
+        TemporaryLocalClassOverrideState override_state = {};
+        if (!TryApplyTemporaryLocalClassOverride(
+                static_cast<std::uint8_t>(class_id),
+                &override_state)) {
+            return 0;
+        }
+
+        int candidate_result = 0;
+        bool candidate_ok = false;
+#if defined(_MSC_VER)
+        __try {
+            candidate_result = g_original_combat_ability_get(this_context, ability_index);
+            candidate_ok = true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            candidate_ok = false;
+        }
+#else
+        candidate_result = g_original_combat_ability_get(this_context, ability_index);
+        candidate_ok = true;
+#endif
+
+        RestoreTemporaryLocalClassOverride(&override_state);
+        if (!candidate_ok || candidate_result <= 0) {
+            return 0;
+        }
+
+        if (resolved_class_id != nullptr) {
+            *resolved_class_id = class_id;
+        }
+        return candidate_result;
+    };
+
+    std::uint8_t displayed_class_id = 0;
+    TryReadLocalPlayerDisplayedClassId(&displayed_class_id);
+    const auto class_order =
+        monomyth::multiclass_combat_ability::BuildAuthoritativeCombatAbilityClassOrder(
+            snapshot,
+            displayed_class_id);
+    if (resolved_class_order != nullptr) {
+        *resolved_class_order = class_order;
+    }
+    for (std::size_t i = 0; i < class_order.count; ++i) {
+        const unsigned int class_id = class_order.class_ids[i];
+        const int candidate_result = try_candidate(class_id);
+        if (candidate_results != nullptr &&
+            i < candidate_results->size()) {
+            (*candidate_results)[i] = candidate_result;
+        }
+        if (candidate_result > 0) {
+            return candidate_result;
+        }
+    }
+
+    return native_result;
+}
+
 bool SkillsWindowRowRecordBetter(
     const SkillsWindowRowRecordLayout& candidate,
     const SkillsWindowRowRecordLayout& best) noexcept {
@@ -8726,6 +9760,7 @@ const char* BuildLocalPlayerClassDisplayAscii(
     const wchar_t* surface) noexcept {
     TryPersistPendingMulticlassCache(surface);
     TryRetryPendingMulticlassCasterUiAccess(surface);
+    TryRetryPendingCombatAbilityResync(surface);
 
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
@@ -8807,6 +9842,7 @@ const char* BuildPreferredLocalPlayerClassDisplayAscii(
     const wchar_t* surface) noexcept {
     TryPersistPendingMulticlassCache(surface);
     TryRetryPendingMulticlassCasterUiAccess(surface);
+    TryRetryPendingCombatAbilityResync(surface);
 
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
@@ -8891,6 +9927,7 @@ const char* BuildLocalSubjectClassDisplayAscii(
     const wchar_t* surface) noexcept {
     TryPersistPendingMulticlassCache(surface);
     TryRetryPendingMulticlassCasterUiAccess(surface);
+    TryRetryPendingCombatAbilityResync(surface);
 
     const monomyth::server_auth_stats::Snapshot snapshot =
         monomyth::server_auth_stats::GetSnapshot();
@@ -9466,6 +10503,639 @@ bool TryReadLocalPlayerLevel(std::uint32_t* level) noexcept {
         level);
 }
 
+bool TryResolveLocalCombatAbilityArray(void** combat_ability_array) noexcept {
+    if (combat_ability_array == nullptr) {
+        return false;
+    }
+
+    void* profile = nullptr;
+    std::uint32_t profile_class_id = 0;
+    if (!TryResolveLocalProfileClassStorage(&profile, &profile_class_id) || profile == nullptr) {
+        return false;
+    }
+
+    *combat_ability_array =
+        reinterpret_cast<std::uint8_t*>(profile) + kPcProfileCombatAbilitiesOffset;
+    return true;
+}
+
+bool TryReadLocalPlayerDeity(std::uint32_t* deity) noexcept {
+    if (deity == nullptr) {
+        return false;
+    }
+
+    void* profile = nullptr;
+    std::uint32_t profile_class_id = 0;
+    if (!TryResolveLocalProfileClassStorage(&profile, &profile_class_id) || profile == nullptr) {
+        return false;
+    }
+
+    return TryCopyObject(
+        reinterpret_cast<const std::uint8_t*>(profile) + kPcProfileDeityOffset,
+        deity);
+}
+
+bool TrySnapshotLocalLearnedDisciplines(
+    std::array<int, monomyth::multiclass_combat_ability::kMaxLearnedDisciplineIndex>*
+        learned_disciplines,
+    std::uint32_t* discipline_count,
+    std::size_t* nonzero_entries) noexcept {
+    if (learned_disciplines == nullptr || discipline_count == nullptr || nonzero_entries == nullptr) {
+        return false;
+    }
+
+    learned_disciplines->fill(0);
+    *discipline_count = 0;
+    *nonzero_entries = 0;
+
+    void* profile = nullptr;
+    std::uint32_t profile_class_id = 0;
+    if (!TryResolveLocalProfileClassStorage(&profile, &profile_class_id) || profile == nullptr) {
+        return false;
+    }
+
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(profile) + kPcProfileDisciplineCountOffset,
+            discipline_count)) {
+        return false;
+    }
+
+    if (!TryCopyBytes(
+            reinterpret_cast<const std::uint8_t*>(profile) + kPcProfileDisciplinesOffset,
+            learned_disciplines->size() * sizeof((*learned_disciplines)[0]),
+            reinterpret_cast<std::uint8_t*>(learned_disciplines->data()))) {
+        return false;
+    }
+
+    for (const int discipline_spell_id : *learned_disciplines) {
+        if (discipline_spell_id > 0) {
+            ++(*nonzero_entries);
+        }
+    }
+    return true;
+}
+
+std::size_t CountNonZeroCombatAbilities(
+    const std::array<int, monomyth::multiclass_combat_ability::kMaxCombatAbilityIndex>&
+        combat_abilities,
+    std::size_t copied_entries) noexcept {
+    std::size_t nonzero_entries = 0;
+    const std::size_t bounded_entries =
+        std::min(copied_entries, combat_abilities.size());
+    for (std::size_t i = 0; i < bounded_entries; ++i) {
+        if (combat_abilities[i] > 0) {
+            ++nonzero_entries;
+        }
+    }
+    return nonzero_entries;
+}
+
+bool TrySnapshotCombatAbilityArray(
+    const void* source,
+    std::size_t length,
+    std::array<int, monomyth::multiclass_combat_ability::kMaxCombatAbilityIndex>* copied,
+    std::size_t* copied_entries,
+    std::size_t* nonzero_entries) noexcept {
+    if (source == nullptr || copied == nullptr || copied_entries == nullptr ||
+        nonzero_entries == nullptr) {
+        return false;
+    }
+
+    copied->fill(0);
+    *copied_entries = 0;
+    *nonzero_entries = 0;
+
+    const std::size_t bounded_length = std::min(
+        length,
+        copied->size() * sizeof((*copied)[0]));
+    if (bounded_length == 0) {
+        return true;
+    }
+
+    if (!TryCopyBytes(
+            source,
+            bounded_length,
+            reinterpret_cast<std::uint8_t*>(copied->data()))) {
+        return false;
+    }
+
+    *copied_entries = bounded_length / sizeof((*copied)[0]);
+    *nonzero_entries = CountNonZeroCombatAbilities(*copied, *copied_entries);
+    return true;
+}
+
+struct CombatAbilitySpellRecord {
+    int spell_id = 0;
+    int category = 0;
+    int endurance_cost = 0;
+    int reuse_timer_index = 0;
+    int group = 0;
+    int subgroup = 0;
+    int rank = 0;
+    int deity = 0;
+    bool is_skill = false;
+};
+
+struct CombatAbilityCandidate {
+    int spell_id = 0;
+    int category = 0;
+    int group = 0;
+    int subgroup = 0;
+    int rank = 0;
+    unsigned int source_class_id = 0;
+};
+
+struct CombatAbilitySynthesisDebug {
+    bool snapshot_has_classes_mask = false;
+    std::uint32_t classes_mask = 0;
+    bool local_player_level_copied = false;
+    std::uint32_t local_player_level = 0;
+    bool local_player_deity_copied = false;
+    std::uint32_t local_player_deity = 0;
+    bool learned_discipline_count_copied = false;
+    std::uint32_t learned_discipline_count = 0;
+    std::size_t learned_discipline_nonzero_entries = 0;
+    int first_learned_discipline_spell_id = 0;
+    bool spell_manager_available = false;
+    std::uintptr_t spell_manager_global_address = 0;
+    std::uintptr_t spell_manager_pointer_value = 0;
+    std::uintptr_t spell_manager_vtable = 0;
+    std::uintptr_t spell_manager_spells_base = 0;
+    const wchar_t* spell_manager_resolution = L"unresolved";
+    std::uint8_t displayed_class_id = 0;
+    std::size_t class_order_count = 0;
+    std::size_t spell_ids_scanned = 0;
+    std::size_t spell_pointer_failures = 0;
+    std::size_t spell_record_read_failures = 0;
+    std::size_t spell_id_mismatch_count = 0;
+    std::size_t not_skill_count = 0;
+    std::size_t category_rejected_count = 0;
+    std::size_t deity_rejected_count = 0;
+    std::size_t class_level_read_failures = 0;
+    std::size_t class_level_unavailable_count = 0;
+    std::size_t class_level_too_high_count = 0;
+    std::size_t eligible_count = 0;
+    std::size_t candidate_replaced_count = 0;
+    std::size_t duplicate_spell_id_skips = 0;
+    std::size_t capacity_skips = 0;
+    int first_eligible_spell_id = 0;
+    unsigned int first_eligible_class_id = 0;
+};
+
+bool IsLikelyModuleAddress(std::uintptr_t address) noexcept {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    return module_base != 0 &&
+        address >= module_base &&
+        address < (module_base + 0x02000000u);
+}
+
+bool LooksLikeSpellManagerObject(void* candidate, std::uintptr_t* vtable) noexcept {
+    if (vtable != nullptr) {
+        *vtable = 0;
+    }
+    if (candidate == nullptr) {
+        return false;
+    }
+
+    std::uintptr_t candidate_vtable = 0;
+    if (!TryCopyObject(candidate, &candidate_vtable) ||
+        !IsLikelyModuleAddress(candidate_vtable)) {
+        return false;
+    }
+
+    if (vtable != nullptr) {
+        *vtable = candidate_vtable;
+    }
+    return true;
+}
+
+bool TryResolveClientSpellManager(
+    void** spell_manager,
+    CombatAbilitySynthesisDebug* debug) noexcept {
+    if (spell_manager == nullptr) {
+        return false;
+    }
+
+    *spell_manager = nullptr;
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return false;
+    }
+
+    const std::uintptr_t global_address = module_base + kSpellManagerInstanceGlobalRva;
+    if (debug != nullptr) {
+        debug->spell_manager_global_address = global_address;
+    }
+
+    void* global_pointer_value = nullptr;
+    if (TryCopyObject(reinterpret_cast<const void*>(global_address), &global_pointer_value)) {
+        if (debug != nullptr) {
+            debug->spell_manager_pointer_value =
+                reinterpret_cast<std::uintptr_t>(global_pointer_value);
+        }
+
+        std::uintptr_t vtable = 0;
+        if (LooksLikeSpellManagerObject(global_pointer_value, &vtable)) {
+            *spell_manager = global_pointer_value;
+            if (debug != nullptr) {
+                debug->spell_manager_available = true;
+                debug->spell_manager_vtable = vtable;
+                debug->spell_manager_spells_base =
+                    reinterpret_cast<std::uintptr_t>(global_pointer_value) +
+                    kClientSpellManagerSpellsOffset;
+                debug->spell_manager_resolution = L"dereferenced_global";
+            }
+            return true;
+        }
+    }
+
+    std::uintptr_t direct_vtable = 0;
+    void* direct_object = reinterpret_cast<void*>(global_address);
+    if (LooksLikeSpellManagerObject(direct_object, &direct_vtable)) {
+        *spell_manager = direct_object;
+        if (debug != nullptr) {
+            debug->spell_manager_available = true;
+            debug->spell_manager_pointer_value = global_address;
+            debug->spell_manager_vtable = direct_vtable;
+            debug->spell_manager_spells_base = global_address + kClientSpellManagerSpellsOffset;
+            debug->spell_manager_resolution = L"direct_global_object";
+        }
+        return true;
+    }
+
+    if (debug != nullptr) {
+        debug->spell_manager_available = false;
+        debug->spell_manager_resolution = L"unresolved";
+    }
+    return false;
+}
+
+bool TryReadClientSpellManagerPointer(void** spell_manager) noexcept {
+    return TryResolveClientSpellManager(spell_manager, nullptr);
+}
+
+bool TryReadSpellPointerById(int spell_id, void** spell) noexcept {
+    if (spell == nullptr || spell_id <= 0 || spell_id >= static_cast<int>(kTotalSpellCount)) {
+        return false;
+    }
+
+    void* spell_manager = nullptr;
+    if (!TryResolveClientSpellManager(&spell_manager, nullptr) || spell_manager == nullptr) {
+        return false;
+    }
+
+    return TryCopyObject(
+        reinterpret_cast<const std::uint8_t*>(spell_manager) + kClientSpellManagerSpellsOffset +
+            (static_cast<std::size_t>(spell_id) * sizeof(void*)),
+        spell);
+}
+
+bool TryReadCombatAbilitySpellRecord(int spell_id, CombatAbilitySpellRecord* record) noexcept {
+    if (record == nullptr) {
+        return false;
+    }
+
+    void* spell = nullptr;
+    if (!TryReadSpellPointerById(spell_id, &spell) || spell == nullptr) {
+        return false;
+    }
+
+    CombatAbilitySpellRecord local = {};
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spell) + kSpellIdOffset,
+            &local.spell_id) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spell) + kSpellCategoryOffset,
+            &local.category) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spell) + kSpellEnduranceCostOffset,
+            &local.endurance_cost) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spell) + kSpellReuseTimerIndexOffset,
+            &local.reuse_timer_index) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spell) + kSpellGroupOffset,
+            &local.group) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spell) + kSpellSubGroupOffset,
+            &local.subgroup) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spell) + kSpellRankOffset,
+            &local.rank) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spell) + kSpellDeityOffset,
+            &local.deity) ||
+        !TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spell) + kSpellIsSkillOffset,
+            &local.is_skill)) {
+        return false;
+    }
+
+    if (local.spell_id != spell_id || !local.is_skill) {
+        *record = local;
+        return local.spell_id == spell_id;
+    }
+
+    *record = local;
+    return true;
+}
+
+bool TryReadCombatAbilitySpellRecord(
+    int spell_id,
+    CombatAbilitySpellRecord* record,
+    CombatAbilitySynthesisDebug* debug) noexcept {
+    if (debug != nullptr) {
+        ++debug->spell_ids_scanned;
+    }
+
+    void* spell = nullptr;
+    if (!TryReadSpellPointerById(spell_id, &spell) || spell == nullptr) {
+        if (debug != nullptr) {
+            ++debug->spell_pointer_failures;
+        }
+        return false;
+    }
+
+    const bool ok = TryReadCombatAbilitySpellRecord(spell_id, record);
+    if (!ok) {
+        if (debug != nullptr) {
+            ++debug->spell_record_read_failures;
+        }
+        return false;
+    }
+
+    if (record != nullptr) {
+        if (record->spell_id != spell_id && debug != nullptr) {
+            ++debug->spell_id_mismatch_count;
+        }
+        if (!record->is_skill && debug != nullptr) {
+            ++debug->not_skill_count;
+        }
+    }
+
+    return true;
+}
+
+bool TryReadSpellClassLevel(
+    int spell_id,
+    unsigned int class_id,
+    std::uint8_t* class_level) noexcept {
+    if (class_level == nullptr ||
+        !monomyth::multiclass_identity::IsPlayableClassId(class_id) ||
+        spell_id <= 0 ||
+        spell_id >= static_cast<int>(kTotalSpellCount)) {
+        return false;
+    }
+
+    void* spell = nullptr;
+    if (!TryReadSpellPointerById(spell_id, &spell) || spell == nullptr) {
+        return false;
+    }
+
+    return TryCopyObject(
+        reinterpret_cast<const std::uint8_t*>(spell) + kSpellClassLevelOffset + class_id,
+        class_level);
+}
+
+bool IsCombatAbilitySpellCategory(int category) noexcept {
+    return category == kSpellCategoryCombatAbilities ||
+        category == kSpellCategoryDisciplines ||
+        category == kSpellCategorySkillAttacks;
+}
+
+bool IsCombatAbilitySpellEligibleForClass(
+    const CombatAbilitySpellRecord& record,
+    unsigned int class_id,
+    std::uint32_t local_player_level,
+    std::uint32_t local_player_deity,
+    CombatAbilitySynthesisDebug* debug) noexcept {
+    if (!record.is_skill ||
+        (!IsCombatAbilitySpellCategory(record.category) &&
+            record.endurance_cost <= 0 &&
+            record.reuse_timer_index <= 0)) {
+        if (debug != nullptr) {
+            ++debug->category_rejected_count;
+        }
+        return false;
+    }
+
+    if (record.deity != 0 &&
+        static_cast<std::uint32_t>(record.deity) != local_player_deity) {
+        if (debug != nullptr) {
+            ++debug->deity_rejected_count;
+        }
+        return false;
+    }
+
+    std::uint8_t class_level = kSpellLevelUnavailable;
+    if (!TryReadSpellClassLevel(record.spell_id, class_id, &class_level)) {
+        if (debug != nullptr) {
+            ++debug->class_level_read_failures;
+        }
+        return false;
+    }
+
+    if (class_level == kSpellLevelUnavailable) {
+        if (debug != nullptr) {
+            ++debug->class_level_unavailable_count;
+        }
+        return false;
+    }
+
+    if (class_level > local_player_level) {
+        if (debug != nullptr) {
+            ++debug->class_level_too_high_count;
+        }
+        return false;
+    }
+
+    if (debug != nullptr) {
+        ++debug->eligible_count;
+    }
+    return true;
+}
+
+bool CombatAbilityCandidateBetter(
+    const CombatAbilityCandidate& candidate,
+    const CombatAbilityCandidate& current) noexcept {
+    if (candidate.rank != current.rank) {
+        return candidate.rank > current.rank;
+    }
+
+    if (candidate.category != current.category) {
+        return candidate.category == kSpellCategoryDisciplines;
+    }
+
+    return candidate.spell_id > current.spell_id;
+}
+
+std::size_t SynthesizeCombatAbilityArrayFromSpellbook(
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    std::array<int, monomyth::multiclass_combat_ability::kMaxCombatAbilityIndex>* combat_abilities,
+    std::size_t* nonzero_entries,
+    CombatAbilitySynthesisDebug* debug) noexcept {
+    if (combat_abilities == nullptr || nonzero_entries == nullptr) {
+        return 0;
+    }
+
+    combat_abilities->fill(0);
+    *nonzero_entries = 0;
+    if (debug != nullptr) {
+        *debug = {};
+        debug->snapshot_has_classes_mask = snapshot.has_classes_bitmask;
+        debug->classes_mask = snapshot.classes_bitmask;
+    }
+
+    if (!snapshot.has_classes_bitmask ||
+        snapshot.classes_bitmask == 0 ||
+        !monomyth::multiclass_identity::IsPlayableClassMask(snapshot.classes_bitmask)) {
+        return 0;
+    }
+
+    std::uint32_t local_player_level = 0;
+    std::uint32_t local_player_deity = 0;
+    const bool level_ok = TryReadLocalPlayerLevel(&local_player_level);
+    const bool deity_ok = TryReadLocalPlayerDeity(&local_player_deity);
+    if (debug != nullptr) {
+        debug->local_player_level_copied = level_ok;
+        debug->local_player_level = local_player_level;
+        debug->local_player_deity_copied = deity_ok;
+        debug->local_player_deity = local_player_deity;
+    }
+    if (!level_ok || !deity_ok) {
+        return 0;
+    }
+
+    std::array<int, monomyth::multiclass_combat_ability::kMaxLearnedDisciplineIndex>
+        learned_disciplines = {};
+    std::uint32_t learned_discipline_count = 0;
+    std::size_t learned_discipline_nonzero_entries = 0;
+    const bool learned_disciplines_ok = TrySnapshotLocalLearnedDisciplines(
+        &learned_disciplines,
+        &learned_discipline_count,
+        &learned_discipline_nonzero_entries);
+    if (debug != nullptr) {
+        debug->learned_discipline_count_copied = learned_disciplines_ok;
+        debug->learned_discipline_count = learned_discipline_count;
+        debug->learned_discipline_nonzero_entries = learned_discipline_nonzero_entries;
+        for (const int discipline_spell_id : learned_disciplines) {
+            if (discipline_spell_id > 0) {
+                debug->first_learned_discipline_spell_id = discipline_spell_id;
+                break;
+            }
+        }
+    }
+
+    if (learned_disciplines_ok && learned_discipline_nonzero_entries > 0) {
+        return monomyth::multiclass_combat_ability::BuildCombatAbilityArrayFromLearnedDisciplines(
+            learned_disciplines,
+            combat_abilities,
+            nonzero_entries);
+    }
+
+    void* spell_manager = nullptr;
+    const bool spell_manager_ok =
+        TryResolveClientSpellManager(&spell_manager, debug) && spell_manager != nullptr;
+    if (!spell_manager_ok) {
+        return 0;
+    }
+
+    std::uint8_t displayed_class_id = 0;
+    TryReadLocalPlayerDisplayedClassId(&displayed_class_id);
+    if (debug != nullptr) {
+        debug->displayed_class_id = displayed_class_id;
+    }
+    const auto class_order =
+        monomyth::multiclass_combat_ability::BuildAuthoritativeCombatAbilityClassOrder(
+            snapshot,
+            displayed_class_id);
+    if (debug != nullptr) {
+        debug->class_order_count = class_order.count;
+    }
+    if (class_order.count == 0) {
+        return 0;
+    }
+
+    std::vector<CombatAbilityCandidate> candidates;
+    candidates.reserve(monomyth::multiclass_combat_ability::kMaxCombatAbilityIndex);
+    std::array<bool, kTotalSpellCount> seen_spell_ids = {};
+
+    for (std::size_t order_index = 0; order_index < class_order.count; ++order_index) {
+        const unsigned int class_id = class_order.class_ids[order_index];
+        for (int spell_id = 1; spell_id < static_cast<int>(kTotalSpellCount); ++spell_id) {
+            CombatAbilitySpellRecord record = {};
+            if (!TryReadCombatAbilitySpellRecord(spell_id, &record, debug) ||
+                record.spell_id != spell_id ||
+                !IsCombatAbilitySpellEligibleForClass(
+                    record,
+                    class_id,
+                    local_player_level,
+                    local_player_deity,
+                    debug)) {
+                continue;
+            }
+
+            if (debug != nullptr && debug->first_eligible_spell_id == 0) {
+                debug->first_eligible_spell_id = spell_id;
+                debug->first_eligible_class_id = class_id;
+            }
+
+            CombatAbilityCandidate candidate = {};
+            candidate.spell_id = spell_id;
+            candidate.category = record.category;
+            candidate.group = record.group;
+            candidate.subgroup = record.subgroup;
+            candidate.rank = record.rank;
+            candidate.source_class_id = class_id;
+
+            if (record.group > 0) {
+                bool replaced = false;
+                for (CombatAbilityCandidate& existing : candidates) {
+                    if (existing.group == candidate.group &&
+                        existing.subgroup == candidate.subgroup) {
+                        if (CombatAbilityCandidateBetter(candidate, existing)) {
+                            existing = candidate;
+                            if (debug != nullptr) {
+                                ++debug->candidate_replaced_count;
+                            }
+                        }
+                        replaced = true;
+                        break;
+                    }
+                }
+                if (replaced) {
+                    continue;
+                }
+            } else if (seen_spell_ids[spell_id]) {
+                if (debug != nullptr) {
+                    ++debug->duplicate_spell_id_skips;
+                }
+                continue;
+            }
+
+            if (candidates.size() >= combat_abilities->size()) {
+                if (debug != nullptr) {
+                    ++debug->capacity_skips;
+                }
+                continue;
+            }
+
+            candidates.push_back(candidate);
+            seen_spell_ids[spell_id] = true;
+        }
+    }
+
+    for (std::size_t i = 0; i < candidates.size() && i < combat_abilities->size(); ++i) {
+        (*combat_abilities)[i] = candidates[i].spell_id;
+        if (candidates[i].spell_id > 0) {
+            ++(*nonzero_entries);
+        }
+    }
+
+    return candidates.size();
+}
+
 bool TryResolveDualWieldMatrixEntitlement(
     bool has_class_mask,
     std::uint32_t authoritative_class_mask,
@@ -9923,6 +11593,162 @@ bool ValidateSkillsWindowSkillValueSeams(std::uintptr_t module_base) noexcept {
     return producer_matches && callsite_matches;
 }
 
+bool ValidateCombatAbilityWindowSeams(std::uintptr_t module_base) noexcept {
+    constexpr std::array<std::uint8_t, 16> kCombatAbilityGetEntryBytes = {
+        0x55, 0x8b, 0xec, 0x8b, 0x41, 0x08, 0x8b, 0x50,
+        0x04, 0x8d, 0x4c, 0x0a, 0x08, 0x8d, 0x49, 0x04};
+    constexpr std::array<std::uint8_t, 16> kCombatAbilityTimerEntryBytes = {
+        0x55, 0x8b, 0xec, 0x8b, 0x41, 0x08, 0x8b, 0x50,
+        0x04, 0x8d, 0x4c, 0x0a, 0x08, 0x8d, 0x49, 0x04};
+    constexpr std::array<std::uint8_t, 5> kOpenCommandCallsiteBytes = {
+        0xe8, 0x4d, 0xa8, 0x16, 0x00};
+    constexpr std::array<std::uint8_t, 5> kAboutToShowGateCallsiteBytes = {
+        0xe8, 0xcb, 0x82, 0xf2, 0xff};
+    constexpr std::array<std::uint8_t, 5> kWndRebuildPrimarySlotsCallsiteBytes = {
+        0xe8, 0xc1, 0xa3, 0x16, 0x00};
+    constexpr std::array<std::uint8_t, 5> kWndRebuildAbilityListCallsiteBytes = {
+        0xe8, 0x44, 0x96, 0x16, 0x00};
+    constexpr std::array<std::uint8_t, 5> kWndHasAbilityCallsiteBytes = {
+        0xe8, 0x78, 0x4c, 0x24, 0x00};
+    constexpr std::array<std::uint8_t, 5> kWndBestAbilityCallsiteBytes = {
+        0xe8, 0xb0, 0x3c, 0x24, 0x00};
+    constexpr std::array<std::uint8_t, 16> kWndRefreshWorkerSpellManagerCallsiteBytes = {
+        0x8b, 0x0d, 0xb0, 0x46, 0xe6, 0x00, 0x8b, 0x11,
+        0x50, 0x8b, 0x42, 0x0c, 0xff, 0xd0, 0x8b, 0xf0};
+    constexpr std::array<std::uint8_t, 8> kWndRefreshWorkerSpellManagerNullBranchBytes = {
+        0x3b, 0xf5, 0x0f, 0x84, 0x94, 0x00, 0x00, 0x00};
+
+    const bool get_entry_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityGet",
+        module_base + kCombatAbilityGetRva,
+        kCombatAbilityGetRva,
+        kCombatAbilityGetEntryBytes.data(),
+        kCombatAbilityGetEntryBytes.size());
+    const bool timer_entry_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityTimer",
+        module_base + kCombatAbilityTimerRva,
+        kCombatAbilityTimerRva,
+        kCombatAbilityTimerEntryBytes.data(),
+        kCombatAbilityTimerEntryBytes.size());
+    const bool open_command_callsite_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityOpenCommandGetAbilityCallsite",
+        module_base + kCombatAbilityOpenCommandGetAbilityCallsiteRva,
+        kCombatAbilityOpenCommandGetAbilityCallsiteRva,
+        kOpenCommandCallsiteBytes.data(),
+        kOpenCommandCallsiteBytes.size());
+    const bool about_to_show_gate_callsite_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityWndAboutToShowGateCallsite",
+        module_base + kCombatAbilityWndAboutToShowGateCallsiteRva,
+        kCombatAbilityWndAboutToShowGateCallsiteRva,
+        kAboutToShowGateCallsiteBytes.data(),
+        kAboutToShowGateCallsiteBytes.size());
+    const bool wnd_rebuild_primary_slots_callsite_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityWndRebuildPrimarySlotsGetAbilityCallsite",
+        module_base + kCombatAbilityWndRebuildPrimarySlotsGetAbilityCallsiteRva,
+        kCombatAbilityWndRebuildPrimarySlotsGetAbilityCallsiteRva,
+        kWndRebuildPrimarySlotsCallsiteBytes.data(),
+        kWndRebuildPrimarySlotsCallsiteBytes.size());
+    const bool wnd_rebuild_ability_list_callsite_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityWndRebuildAbilityListGetAbilityCallsite",
+        module_base + kCombatAbilityWndRebuildAbilityListGetAbilityCallsiteRva,
+        kCombatAbilityWndRebuildAbilityListGetAbilityCallsiteRva,
+        kWndRebuildAbilityListCallsiteBytes.data(),
+        kWndRebuildAbilityListCallsiteBytes.size());
+    const bool wnd_has_ability_callsite_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityWndHasAbilityCallsite",
+        module_base + kCombatAbilityWndHasAbilityCallsiteRva,
+        kCombatAbilityWndHasAbilityCallsiteRva,
+        kWndHasAbilityCallsiteBytes.data(),
+        kWndHasAbilityCallsiteBytes.size());
+    const bool wnd_best_ability_callsite_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityWndBestAbilityCallsite",
+        module_base + kCombatAbilityWndBestAbilityCallsiteRva,
+        kCombatAbilityWndBestAbilityCallsiteRva,
+        kWndBestAbilityCallsiteBytes.data(),
+        kWndBestAbilityCallsiteBytes.size());
+    const bool wnd_refresh_worker_spell_manager_callsite_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityWndRefreshWorkerSpellManagerCallsite",
+        module_base + kCombatAbilityWndRefreshWorkerSpellManagerCallsiteRva - 0xc,
+        kCombatAbilityWndRefreshWorkerSpellManagerCallsiteRva - 0xc,
+        kWndRefreshWorkerSpellManagerCallsiteBytes.data(),
+        kWndRefreshWorkerSpellManagerCallsiteBytes.size());
+    const bool wnd_refresh_worker_spell_manager_null_branch_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityWndRefreshWorkerSpellManagerNullBranch",
+        module_base + kCombatAbilityWndRefreshWorkerSpellManagerReturnRva + 0x2,
+        kCombatAbilityWndRefreshWorkerSpellManagerReturnRva + 0x2,
+        kWndRefreshWorkerSpellManagerNullBranchBytes.data(),
+        kWndRefreshWorkerSpellManagerNullBranchBytes.size());
+
+    return get_entry_matches && timer_entry_matches && open_command_callsite_matches &&
+        about_to_show_gate_callsite_matches &&
+        wnd_rebuild_primary_slots_callsite_matches &&
+        wnd_rebuild_ability_list_callsite_matches &&
+        wnd_has_ability_callsite_matches && wnd_best_ability_callsite_matches &&
+        wnd_refresh_worker_spell_manager_callsite_matches &&
+        wnd_refresh_worker_spell_manager_null_branch_matches;
+}
+
+bool ValidateCombatAbilityDispatcherSeams(std::uintptr_t module_base) noexcept {
+    constexpr std::array<std::uint8_t, 6> kPostShowHelperEntryBytes = {
+        0x81, 0xec, 0x00, 0x01, 0x00, 0x00};
+    constexpr std::array<std::uint8_t, 5> kShowBranchCallsiteBytes = {
+        0xe8, 0xca, 0x49, 0x38, 0x00};
+    constexpr std::array<std::uint8_t, 5> kHideBranchCallsiteBytes = {
+        0xe8, 0xb5, 0x49, 0x38, 0x00};
+
+    const bool post_show_helper_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityWndPostShowHelper",
+        module_base + kCombatAbilityWndPostShowHelperRva,
+        kCombatAbilityWndPostShowHelperRva,
+        kPostShowHelperEntryBytes.data(),
+        kPostShowHelperEntryBytes.size());
+    const bool show_branch_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityWndDispatcherShowPostShowCallsite",
+        module_base + kCombatAbilityWndDispatcherShowPostShowCallsiteRva,
+        kCombatAbilityWndDispatcherShowPostShowCallsiteRva,
+        kShowBranchCallsiteBytes.data(),
+        kShowBranchCallsiteBytes.size());
+    const bool hide_branch_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityWndDispatcherHidePostShowCallsite",
+        module_base + kCombatAbilityWndDispatcherHidePostShowCallsiteRva,
+        kCombatAbilityWndDispatcherHidePostShowCallsiteRva,
+        kHideBranchCallsiteBytes.data(),
+        kHideBranchCallsiteBytes.size());
+
+    return post_show_helper_matches && show_branch_matches && hide_branch_matches;
+}
+
+bool ValidateCombatAbilityProducerSeams(std::uintptr_t module_base) noexcept {
+    constexpr std::array<std::uint8_t, 16> kArrayCopyEntryBytes = {
+        0x55, 0x8b, 0xec, 0x57, 0x56, 0x8b, 0x75, 0x0c,
+        0x8b, 0x4d, 0x10, 0x8b, 0x7d, 0x08, 0x8b, 0xc1};
+    constexpr std::array<std::uint8_t, 5> kProducerArrayCopyCallsiteABytes = {
+        0xe8, 0x15, 0x1f, 0x36, 0x00};
+    constexpr std::array<std::uint8_t, 5> kProducerArrayCopyCallsiteBBytes = {
+        0xe8, 0x58, 0x3e, 0x41, 0x00};
+
+    const bool target_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityArrayCopyTarget",
+        module_base + kCombatAbilityArrayCopyTargetRva,
+        kCombatAbilityArrayCopyTargetRva,
+        kArrayCopyEntryBytes.data(),
+        kArrayCopyEntryBytes.size());
+    const bool callsite_a_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityProducerArrayCopyCallsiteA",
+        module_base + kCombatAbilityProducerArrayCopyCallsiteARva,
+        kCombatAbilityProducerArrayCopyCallsiteARva,
+        kProducerArrayCopyCallsiteABytes.data(),
+        kProducerArrayCopyCallsiteABytes.size());
+    const bool callsite_b_matches = ValidateActivatedSkillUseSeamBytes(
+        L"CombatAbilityProducerArrayCopyCallsiteB",
+        module_base + kCombatAbilityProducerArrayCopyCallsiteBRva,
+        kCombatAbilityProducerArrayCopyCallsiteBRva,
+        kProducerArrayCopyCallsiteBBytes.data(),
+        kProducerArrayCopyCallsiteBBytes.size());
+
+    return target_matches && callsite_a_matches && callsite_b_matches;
+}
+
 constexpr std::array<std::uint8_t, 18> kCXWndShowTraceEntryBytes = {
     0x83, 0xec, 0x10, 0x53, 0x8b, 0x5c, 0x24, 0x18, 0x56,
     0x8b, 0xf1, 0x8a, 0x86, 0x96, 0x01, 0x00, 0x00, 0x57};
@@ -9942,6 +11768,9 @@ constexpr std::array<std::uint8_t, 12> kSpellBookOnShowEntryBytes = {
 constexpr std::array<std::uint8_t, 15> kSpellBookAboutToShowEntryBytes = {
     0x56, 0x8b, 0xf1, 0x8b, 0x0d, 0x1c, 0x26, 0xdd,
     0x00, 0x81, 0xc1, 0xc8, 0x2d, 0x00, 0x00};
+constexpr std::array<std::uint8_t, 16> kCombatAbilityWndRefreshWorkerEntryBytes = {
+    0x6a, 0xff, 0x68, 0xbc, 0x67, 0x98, 0x00, 0x64,
+    0xa1, 0x00, 0x00, 0x00, 0x00, 0x50, 0x64, 0x89};
 
 bool SpellUiShowTraceEntryBytesMatch(
     std::uintptr_t module_base,
@@ -11694,6 +13523,571 @@ int MONOMYTH_FASTCALL SkillsWindowSkillValueProducerHook(
         this_context,
         skill_id,
         kSkillsWindowSkillValueReturnRva);
+}
+
+void LogCombatAbilityLookupOverride(
+    int ability_index,
+    int native_result,
+    int authoritative_result,
+    unsigned int resolved_class_id,
+    std::uint32_t caller_rva,
+    const monomyth::server_auth_stats::Snapshot& snapshot) noexcept {
+    ++g_combat_ability_lookup_override_count;
+    if (g_combat_ability_lookup_override_count > kSkillVisibilityOverrideInitialLogCount &&
+        (g_combat_ability_lookup_override_count % kSkillVisibilityOverrideLogInterval) != 0) {
+        return;
+    }
+
+    std::wstring message = L"hook_manager: combat ability lookup override";
+    message += L" count=";
+    message += std::to_wstring(g_combat_ability_lookup_override_count);
+    message += L" ability_index=";
+    message += std::to_wstring(ability_index);
+    message += L" native_result=";
+    message += std::to_wstring(native_result);
+    message += L" authoritative_result=";
+    message += std::to_wstring(authoritative_result);
+    message += L" resolved_class_id=";
+    message += std::to_wstring(resolved_class_id);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" classes_mask=";
+    message += snapshot.has_classes_bitmask
+        ? Hex32(snapshot.classes_bitmask)
+        : std::wstring(L"unset");
+    monomyth::logger::Log(message);
+}
+
+void LogCombatAbilityLookupTrace(
+    int ability_index,
+    int native_result,
+    int authoritative_result,
+    unsigned int resolved_class_id,
+    std::uint32_t caller_rva,
+    bool local_char_data_context,
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    const monomyth::multiclass_identity::OrderedClassIds& class_order,
+    const std::array<int, monomyth::multiclass_identity::kPlayableClassCount>& candidate_results) noexcept {
+    static_cast<void>(ability_index);
+    static_cast<void>(native_result);
+    static_cast<void>(authoritative_result);
+    static_cast<void>(resolved_class_id);
+    static_cast<void>(caller_rva);
+    static_cast<void>(local_char_data_context);
+    static_cast<void>(snapshot);
+    static_cast<void>(class_order);
+    static_cast<void>(candidate_results);
+}
+
+void AppendCombatAbilitySample(
+    std::wstring* message,
+    const std::array<int, monomyth::multiclass_combat_ability::kMaxCombatAbilityIndex>&
+        combat_abilities,
+    std::size_t copied_entries) noexcept {
+    if (message == nullptr) {
+        return;
+    }
+
+    message->append(L" sample=\"");
+    const std::size_t sample_entries = std::min<std::size_t>(copied_entries, 8);
+    for (std::size_t i = 0; i < sample_entries; ++i) {
+        if (i != 0) {
+            message->append(L",");
+        }
+        message->append(std::to_wstring(combat_abilities[i]));
+    }
+    message->append(L"\"");
+}
+
+void LogCombatAbilityProducerTrace(
+    const wchar_t* producer_kind,
+    std::uint32_t caller_rva,
+    const void* destination,
+    const void* source,
+    std::size_t length,
+    bool local_combat_ability_destination,
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    const std::array<int, monomyth::multiclass_combat_ability::kMaxCombatAbilityIndex>&
+        copied_combat_abilities,
+    std::size_t copied_entries,
+    std::size_t nonzero_entries) noexcept {
+    static_cast<void>(producer_kind);
+    static_cast<void>(caller_rva);
+    static_cast<void>(destination);
+    static_cast<void>(source);
+    static_cast<void>(length);
+    static_cast<void>(local_combat_ability_destination);
+    static_cast<void>(snapshot);
+    static_cast<void>(copied_combat_abilities);
+    static_cast<void>(copied_entries);
+    static_cast<void>(nonzero_entries);
+}
+
+void LogCombatAbilityResyncResult(
+    const wchar_t* reason,
+    const monomyth::server_auth_stats::Snapshot& snapshot,
+    const void* destination,
+    const void* source,
+    std::size_t length,
+    std::size_t copied_entries,
+    std::size_t nonzero_entries,
+    const std::array<int, monomyth::multiclass_combat_ability::kMaxCombatAbilityIndex>&
+        copied_combat_abilities) noexcept {
+    std::wstring message = L"hook_manager: combat ability resync";
+    message += L" reason=\"";
+    message += reason == nullptr ? L"unknown" : reason;
+    message += L"\"";
+    message += L" destination=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(destination));
+    message += L" source=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(source));
+    message += L" length=";
+    message += std::to_wstring(length);
+    message += L" copied_entries=";
+    message += std::to_wstring(copied_entries);
+    message += L" nonzero_entries=";
+    message += std::to_wstring(nonzero_entries);
+    message += L" classes_mask=";
+    message += snapshot.has_classes_bitmask
+        ? Hex32(snapshot.classes_bitmask)
+        : std::wstring(L"unset");
+    AppendCombatAbilitySample(&message, copied_combat_abilities, copied_entries);
+    monomyth::logger::Log(message);
+}
+
+void LogCombatAbilitySynthesisTrace(
+    const wchar_t* reason,
+    const CombatAbilitySynthesisDebug& debug,
+    std::size_t synthesized_entries,
+    std::size_t nonzero_entries) noexcept {
+    std::wstring message = L"hook_manager: combat ability synthesis trace";
+    message += L" reason=\"";
+    message += reason == nullptr ? L"unknown" : reason;
+    message += L"\"";
+    message += L" classes_mask=";
+    message += debug.snapshot_has_classes_mask ? Hex32(debug.classes_mask) : std::wstring(L"unset");
+    message += L" local_player_level_status=";
+    message += debug.local_player_level_copied ? L"copied" : L"unavailable";
+    message += L" local_player_level=";
+    message += std::to_wstring(debug.local_player_level);
+    message += L" local_player_deity_status=";
+    message += debug.local_player_deity_copied ? L"copied" : L"unavailable";
+    message += L" local_player_deity=";
+    message += std::to_wstring(debug.local_player_deity);
+    message += L" learned_discipline_count_status=";
+    message += debug.learned_discipline_count_copied ? L"copied" : L"unavailable";
+    message += L" learned_discipline_count=";
+    message += std::to_wstring(debug.learned_discipline_count);
+    message += L" learned_discipline_nonzero_entries=";
+    message += std::to_wstring(debug.learned_discipline_nonzero_entries);
+    message += L" first_learned_discipline_spell_id=";
+    message += std::to_wstring(debug.first_learned_discipline_spell_id);
+    message += L" spell_manager_available=";
+    message += debug.spell_manager_available ? L"true" : L"false";
+    message += L" spell_manager_resolution=\"";
+    message += debug.spell_manager_resolution == nullptr
+        ? L"unknown"
+        : debug.spell_manager_resolution;
+    message += L"\"";
+    message += L" spell_manager_global_address=";
+    message += HexPtr(debug.spell_manager_global_address);
+    message += L" spell_manager_pointer_value=";
+    message += HexPtr(debug.spell_manager_pointer_value);
+    message += L" spell_manager_vtable=";
+    message += HexPtr(debug.spell_manager_vtable);
+    message += L" spell_manager_spells_base=";
+    message += HexPtr(debug.spell_manager_spells_base);
+    message += L" displayed_class_id=";
+    message += std::to_wstring(debug.displayed_class_id);
+    message += L" class_order_count=";
+    message += std::to_wstring(debug.class_order_count);
+    message += L" spell_ids_scanned=";
+    message += std::to_wstring(debug.spell_ids_scanned);
+    message += L" spell_pointer_failures=";
+    message += std::to_wstring(debug.spell_pointer_failures);
+    message += L" spell_record_read_failures=";
+    message += std::to_wstring(debug.spell_record_read_failures);
+    message += L" spell_id_mismatch_count=";
+    message += std::to_wstring(debug.spell_id_mismatch_count);
+    message += L" not_skill_count=";
+    message += std::to_wstring(debug.not_skill_count);
+    message += L" category_rejected_count=";
+    message += std::to_wstring(debug.category_rejected_count);
+    message += L" deity_rejected_count=";
+    message += std::to_wstring(debug.deity_rejected_count);
+    message += L" class_level_read_failures=";
+    message += std::to_wstring(debug.class_level_read_failures);
+    message += L" class_level_unavailable_count=";
+    message += std::to_wstring(debug.class_level_unavailable_count);
+    message += L" class_level_too_high_count=";
+    message += std::to_wstring(debug.class_level_too_high_count);
+    message += L" eligible_count=";
+    message += std::to_wstring(debug.eligible_count);
+    message += L" candidate_replaced_count=";
+    message += std::to_wstring(debug.candidate_replaced_count);
+    message += L" duplicate_spell_id_skips=";
+    message += std::to_wstring(debug.duplicate_spell_id_skips);
+    message += L" capacity_skips=";
+    message += std::to_wstring(debug.capacity_skips);
+    message += L" synthesized_entries=";
+    message += std::to_wstring(synthesized_entries);
+    message += L" nonzero_entries=";
+    message += std::to_wstring(nonzero_entries);
+    message += L" first_eligible_spell_id=";
+    message += std::to_wstring(debug.first_eligible_spell_id);
+    message += L" first_eligible_class_id=";
+    message += std::to_wstring(debug.first_eligible_class_id);
+    monomyth::logger::Log(message);
+}
+
+void LogCombatAbilityWindowForceShow(
+    int ability_index,
+    int authoritative_result,
+    const CxWndStateSnapshot& before_snapshot,
+    const CxWndStateSnapshot& after_snapshot,
+    bool show_invoked,
+    bool show_result,
+    bool minimize_invoked,
+    bool bring_to_top_invoked,
+    bool activate_invoked,
+    std::uintptr_t show_target_address,
+    std::uintptr_t activate_target_address) noexcept {
+    ++g_combat_ability_window_force_show_count;
+    if (g_combat_ability_window_force_show_count > kSkillVisibilityOverrideInitialLogCount &&
+        (g_combat_ability_window_force_show_count % kSkillVisibilityOverrideLogInterval) != 0) {
+        return;
+    }
+
+    std::wstring message = L"hook_manager: combat ability window force show";
+    message += L" count=";
+    message += std::to_wstring(g_combat_ability_window_force_show_count);
+    message += L" ability_index=";
+    message += std::to_wstring(ability_index);
+    message += L" authoritative_result=";
+    message += std::to_wstring(authoritative_result);
+    message += L" show_invoked=";
+    message += show_invoked ? L"true" : L"false";
+    message += L" show_result=";
+    message += show_result ? L"true" : L"false";
+    message += L" minimize_invoked=";
+    message += minimize_invoked ? L"true" : L"false";
+    message += L" bring_to_top_invoked=";
+    message += bring_to_top_invoked ? L"true" : L"false";
+    message += L" activate_invoked=";
+    message += activate_invoked ? L"true" : L"false";
+    message += L" show_target_address=";
+    message += HexPtr(show_target_address);
+    message += L" activate_target_address=";
+    message += HexPtr(activate_target_address);
+    AppendCxWndStateSnapshot(&message, L"before", before_snapshot);
+    AppendCxWndStateSnapshot(&message, L"after", after_snapshot);
+    monomyth::logger::Log(message);
+}
+
+void TryForceCombatAbilityWindowVisible(
+    int ability_index,
+    int authoritative_result) noexcept {
+    if (authoritative_result <= 0 ||
+        !g_combat_ability_window_force_show_pending.exchange(false)) {
+        return;
+    }
+
+    void* combat_ability_window = nullptr;
+    if (!TryReadCombatAbilityWindowPointer(&combat_ability_window) ||
+        combat_ability_window == nullptr) {
+        g_combat_ability_window_force_show_pending.store(true);
+        return;
+    }
+
+    CxWndStateSnapshot before_snapshot = {};
+    if (!TryReadCxWndStateSnapshot(combat_ability_window, &before_snapshot) ||
+        !before_snapshot.valid) {
+        g_combat_ability_window_force_show_pending.store(true);
+        return;
+    }
+
+    if (before_snapshot.visible && !before_snapshot.minimized && before_snapshot.active) {
+        return;
+    }
+
+    std::uintptr_t show_target_address = 0;
+    std::uintptr_t activate_target_address = 0;
+    bool show_result = false;
+    const bool minimize_invoked = TryInvokeWindowMinimize(
+        combat_ability_window,
+        false,
+        nullptr);
+    const bool show_invoked = TryInvokeWindowShow(
+        combat_ability_window,
+        true,
+        true,
+        true,
+        &show_target_address,
+        &show_result);
+    const bool bring_to_top_invoked = TryInvokeWindowBringToTop(
+        combat_ability_window,
+        true,
+        nullptr);
+    const bool activate_invoked = TryInvokeWindowActivate(
+        combat_ability_window,
+        &activate_target_address);
+
+    CxWndStateSnapshot after_snapshot = {};
+    TryReadCxWndStateSnapshot(combat_ability_window, &after_snapshot);
+    LogCombatAbilityWindowForceShow(
+        ability_index,
+        authoritative_result,
+        before_snapshot,
+        after_snapshot,
+        show_invoked,
+        show_result,
+        minimize_invoked,
+        bring_to_top_invoked,
+        activate_invoked,
+        show_target_address,
+        activate_target_address);
+}
+
+int InvokeCombatAbilityLookupHook(
+    void* this_context,
+    int ability_index,
+    std::uint32_t caller_rva) noexcept {
+    if (g_original_combat_ability_get == nullptr) {
+        return 0;
+    }
+
+    int native_result = 0;
+#if defined(_MSC_VER)
+    __try {
+        native_result = g_original_combat_ability_get(this_context, ability_index);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+#else
+    native_result = g_original_combat_ability_get(this_context, ability_index);
+#endif
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    unsigned int resolved_class_id = 0;
+    monomyth::multiclass_identity::OrderedClassIds class_order = {};
+    std::array<int, monomyth::multiclass_identity::kPlayableClassCount> candidate_results = {};
+    const bool local_char_data_context = IsLocalCharDataContext(this_context);
+    const int authoritative_result = EvaluateBestAuthoritativeCombatAbility(
+        this_context,
+        ability_index,
+        native_result,
+        snapshot,
+        &resolved_class_id,
+        &class_order,
+        &candidate_results);
+    if (native_result <= 0 || authoritative_result != native_result) {
+        LogCombatAbilityLookupTrace(
+            ability_index,
+            native_result,
+            authoritative_result,
+            resolved_class_id,
+            caller_rva,
+            local_char_data_context,
+            snapshot,
+            class_order,
+            candidate_results);
+    }
+    if (authoritative_result > 0 && authoritative_result != native_result) {
+        LogCombatAbilityLookupOverride(
+            ability_index,
+            native_result,
+            authoritative_result,
+            resolved_class_id,
+            caller_rva,
+            snapshot);
+    }
+
+    if (caller_rva == kCombatAbilityWndRebuildAbilityListGetAbilityCallsiteRva) {
+        TryForceCombatAbilityWindowVisible(ability_index, authoritative_result);
+    }
+
+    return authoritative_result;
+}
+
+int MONOMYTH_FASTCALL CombatAbilityOpenCommandGetAbilityHook(
+    void* this_context,
+    void*,
+    int ability_index) noexcept {
+    return InvokeCombatAbilityLookupHook(
+        this_context,
+        ability_index,
+        kCombatAbilityOpenCommandGetAbilityCallsiteRva);
+}
+
+int MONOMYTH_FASTCALL CombatAbilityWndRebuildPrimarySlotsGetAbilityHook(
+    void* this_context,
+    void*,
+    int ability_index) noexcept {
+    return InvokeCombatAbilityLookupHook(
+        this_context,
+        ability_index,
+        kCombatAbilityWndRebuildPrimarySlotsGetAbilityCallsiteRva);
+}
+
+int MONOMYTH_FASTCALL CombatAbilityWndRebuildAbilityListGetAbilityHook(
+    void* this_context,
+    void*,
+    int ability_index) noexcept {
+    return InvokeCombatAbilityLookupHook(
+        this_context,
+        ability_index,
+        kCombatAbilityWndRebuildAbilityListGetAbilityCallsiteRva);
+}
+
+int MONOMYTH_FASTCALL CombatAbilityWndHasAbilityHook(
+    void* this_context,
+    void*,
+    int ability_index) noexcept {
+    return InvokeCombatAbilityLookupHook(
+        this_context,
+        ability_index,
+        kCombatAbilityWndHasAbilityCallsiteRva);
+}
+
+int MONOMYTH_FASTCALL CombatAbilityWndBestAbilityHook(
+    void* this_context,
+    void*,
+    int ability_index) noexcept {
+    return InvokeCombatAbilityLookupHook(
+        this_context,
+        ability_index,
+        kCombatAbilityWndBestAbilityCallsiteRva);
+}
+
+void LogCombatAbilityDispatcherTrace(
+    const wchar_t* branch,
+    void* window_ptr,
+    std::uint8_t flag_196) noexcept {
+    static_cast<void>(branch);
+    static_cast<void>(window_ptr);
+    static_cast<void>(flag_196);
+}
+
+void MONOMYTH_FASTCALL CombatAbilityWndDispatcherShowPostShowHook(
+    void* this_ptr,
+    void*) noexcept {
+    std::uint8_t flag_196 = 0;
+    if (this_ptr != nullptr) {
+        std::memcpy(&flag_196,
+            reinterpret_cast<const std::uint8_t*>(this_ptr) + 0x196,
+            sizeof(flag_196));
+    }
+
+    LogCombatAbilityDispatcherTrace(L"show", this_ptr, flag_196);
+
+    if (g_original_combat_ability_wnd_post_show_helper != nullptr) {
+        g_original_combat_ability_wnd_post_show_helper(this_ptr);
+    }
+}
+
+void MONOMYTH_FASTCALL CombatAbilityWndDispatcherHidePostShowHook(
+    void* this_ptr,
+    void*) noexcept {
+    std::uint8_t flag_196 = 0;
+    if (this_ptr != nullptr) {
+        std::memcpy(&flag_196,
+            reinterpret_cast<const std::uint8_t*>(this_ptr) + 0x196,
+            sizeof(flag_196));
+    }
+
+    LogCombatAbilityDispatcherTrace(L"hide", this_ptr, flag_196);
+
+    if (g_original_combat_ability_wnd_post_show_helper != nullptr) {
+        g_original_combat_ability_wnd_post_show_helper(this_ptr);
+    }
+}
+
+void* CDECL InvokeCombatAbilityProducerArrayCopyHook(
+    const wchar_t* producer_kind,
+    std::uint32_t caller_rva,
+    void* destination,
+    const void* source,
+    std::size_t length) noexcept {
+    if (g_original_combat_ability_array_copy == nullptr) {
+        return destination;
+    }
+
+    void* copied_destination = destination;
+#if defined(_MSC_VER)
+    __try {
+        copied_destination = g_original_combat_ability_array_copy(destination, source, length);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return destination;
+    }
+#else
+    copied_destination = g_original_combat_ability_array_copy(destination, source, length);
+#endif
+
+    void* local_combat_ability_array = nullptr;
+    const bool local_destination =
+        TryResolveLocalCombatAbilityArray(&local_combat_ability_array) &&
+        local_combat_ability_array != nullptr &&
+        destination == local_combat_ability_array;
+
+    if (!local_destination) {
+        return copied_destination;
+    }
+
+    std::array<int, monomyth::multiclass_combat_ability::kMaxCombatAbilityIndex>
+        copied_combat_abilities = {};
+    std::size_t copied_entries = 0;
+    std::size_t nonzero_entries = 0;
+    const bool snapshotted = TrySnapshotCombatAbilityArray(
+        destination,
+        length,
+        &copied_combat_abilities,
+        &copied_entries,
+        &nonzero_entries);
+    if (snapshotted && source != nullptr) {
+        g_last_local_combat_ability_source.store(reinterpret_cast<std::uintptr_t>(source));
+        g_last_local_combat_ability_source_length.store(
+            static_cast<std::uint32_t>(std::min<std::size_t>(
+                length,
+                std::numeric_limits<std::uint32_t>::max())));
+    }
+
+    LogCombatAbilityProducerTrace(
+        producer_kind,
+        caller_rva,
+        destination,
+        source,
+        length,
+        local_destination,
+        monomyth::server_auth_stats::GetSnapshot(),
+        copied_combat_abilities,
+        copied_entries,
+        nonzero_entries);
+    return copied_destination;
+}
+
+void* CDECL CombatAbilityProducerArrayCopyCallsiteAHook(
+    void* destination,
+    const void* source,
+    std::size_t length) noexcept {
+    return InvokeCombatAbilityProducerArrayCopyHook(
+        L"combat_ability_array_copy_a",
+        kCombatAbilityProducerArrayCopyCallsiteARva,
+        destination,
+        source,
+        length);
+}
+
+void* CDECL CombatAbilityProducerArrayCopyCallsiteBHook(
+    void* destination,
+    const void* source,
+    std::size_t length) noexcept {
+    return InvokeCombatAbilityProducerArrayCopyHook(
+        L"combat_ability_array_copy_b",
+        kCombatAbilityProducerArrayCopyCallsiteBRva,
+        destination,
+        source,
+        length);
 }
 
 bool InvokeSkillsWindowRowHelperHook(
@@ -14323,6 +16717,7 @@ void MONOMYTH_FASTCALL ReceiveDispatchHook(
 
     TryRearmMulticlassCasterUiAccessForZoneTransition(opcode);
     TryRetryPendingMulticlassCasterUiAccess(L"ReceiveDispatch");
+    TryRetryPendingCombatAbilityResync(L"ReceiveDispatch");
 }
 
 bool ShouldLogSpellTrace(std::uint64_t count) noexcept {
@@ -27584,10 +29979,156 @@ bool InstallActivatedSkillVisibilityHook(const monomyth::runtime::Manifest& mani
             L"hook_manager: skills window row helper hook denied reason=\"seam_validation_failed\"");
     }
 
+    bool combat_ability_lookup_hooks_installed = false;
+    const bool combat_ability_window_seams_valid =
+        ValidateCombatAbilityWindowSeams(module_base);
+    bool combat_ability_producer_hooks_installed = false;
+    const bool combat_ability_producer_seams_valid =
+        ValidateCombatAbilityProducerSeams(module_base);
+    if (combat_ability_window_seams_valid) {
+        g_original_combat_ability_get =
+            reinterpret_cast<CombatAbilityGetFn>(module_base + kCombatAbilityGetRva);
+        g_original_combat_ability_wnd_about_to_show_gate =
+            reinterpret_cast<CombatAbilityWndAboutToShowGateFn>(
+                module_base + kCombatAbilityWndAboutToShowGateTargetRva);
+        const bool open_command_installed = InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kCombatAbilityOpenCommandGetAbilityCallsiteRva),
+            reinterpret_cast<void*>(&CombatAbilityOpenCommandGetAbilityHook),
+            module_base + kCombatAbilityGetRva,
+            &g_combat_ability_open_command_get_ability_callsite_patch,
+            L"CombatAbilityOpenCommandGetAbilityCallsite");
+        const bool about_to_show_gate_installed = InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kCombatAbilityWndAboutToShowGateCallsiteRva),
+            reinterpret_cast<void*>(&CombatAbilityWndAboutToShowGateCallsiteHook),
+            module_base + kCombatAbilityWndAboutToShowGateTargetRva,
+            &g_combat_ability_wnd_about_to_show_gate_callsite_patch,
+            L"CombatAbilityWndAboutToShowGateCallsite");
+        const bool wnd_rebuild_primary_slots_installed = InstallCallsitePatch(
+            reinterpret_cast<void*>(
+                module_base + kCombatAbilityWndRebuildPrimarySlotsGetAbilityCallsiteRva),
+            reinterpret_cast<void*>(&CombatAbilityWndRebuildPrimarySlotsGetAbilityHook),
+            module_base + kCombatAbilityGetRva,
+            &g_combat_ability_wnd_rebuild_primary_slots_get_ability_callsite_patch,
+            L"CombatAbilityWndRebuildPrimarySlotsGetAbilityCallsite");
+        const bool wnd_rebuild_ability_list_installed = InstallCallsitePatch(
+            reinterpret_cast<void*>(
+                module_base + kCombatAbilityWndRebuildAbilityListGetAbilityCallsiteRva),
+            reinterpret_cast<void*>(&CombatAbilityWndRebuildAbilityListGetAbilityHook),
+            module_base + kCombatAbilityGetRva,
+            &g_combat_ability_wnd_rebuild_ability_list_get_ability_callsite_patch,
+            L"CombatAbilityWndRebuildAbilityListGetAbilityCallsite");
+        const bool wnd_has_ability_installed = InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kCombatAbilityWndHasAbilityCallsiteRva),
+            reinterpret_cast<void*>(&CombatAbilityWndHasAbilityHook),
+            module_base + kCombatAbilityGetRva,
+            &g_combat_ability_wnd_has_ability_callsite_patch,
+            L"CombatAbilityWndHasAbilityCallsite");
+        const bool wnd_best_ability_installed = InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kCombatAbilityWndBestAbilityCallsiteRva),
+            reinterpret_cast<void*>(&CombatAbilityWndBestAbilityHook),
+            module_base + kCombatAbilityGetRva,
+            &g_combat_ability_wnd_best_ability_callsite_patch,
+            L"CombatAbilityWndBestAbilityCallsite");
+        if (open_command_installed && about_to_show_gate_installed &&
+            wnd_rebuild_primary_slots_installed &&
+            wnd_rebuild_ability_list_installed && wnd_has_ability_installed &&
+            wnd_best_ability_installed) {
+            combat_ability_lookup_hooks_installed = true;
+        } else {
+            RemoveCallsitePatch(&g_combat_ability_wnd_about_to_show_gate_callsite_patch);
+            RemoveCallsitePatch(&g_combat_ability_open_command_get_ability_callsite_patch);
+            RemoveCallsitePatch(
+                &g_combat_ability_wnd_rebuild_primary_slots_get_ability_callsite_patch);
+            RemoveCallsitePatch(
+                &g_combat_ability_wnd_rebuild_ability_list_get_ability_callsite_patch);
+            RemoveCallsitePatch(&g_combat_ability_wnd_has_ability_callsite_patch);
+            RemoveCallsitePatch(&g_combat_ability_wnd_best_ability_callsite_patch);
+            g_original_combat_ability_get = nullptr;
+            g_original_combat_ability_wnd_about_to_show_gate = nullptr;
+            monomyth::logger::Log(
+                L"hook_manager: combat ability lookup hooks denied reason=\"callsite_patch_install_failed\"");
+        }
+    } else {
+        monomyth::logger::Log(
+            L"hook_manager: combat ability lookup hooks denied reason=\"seam_validation_failed\"");
+    }
+
+    if (combat_ability_producer_seams_valid) {
+        g_original_combat_ability_array_copy =
+            reinterpret_cast<MemoryCopyFn>(module_base + kCombatAbilityArrayCopyTargetRva);
+        const bool callsite_a_installed = InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kCombatAbilityProducerArrayCopyCallsiteARva),
+            reinterpret_cast<void*>(&CombatAbilityProducerArrayCopyCallsiteAHook),
+            module_base + kCombatAbilityArrayCopyTargetRva,
+            &g_combat_ability_producer_array_copy_callsite_a_patch,
+            L"CombatAbilityProducerArrayCopyCallsiteA");
+        const bool callsite_b_installed = InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kCombatAbilityProducerArrayCopyCallsiteBRva),
+            reinterpret_cast<void*>(&CombatAbilityProducerArrayCopyCallsiteBHook),
+            module_base + kCombatAbilityArrayCopyTargetRva,
+            &g_combat_ability_producer_array_copy_callsite_b_patch,
+            L"CombatAbilityProducerArrayCopyCallsiteB");
+        if (callsite_a_installed && callsite_b_installed) {
+            combat_ability_producer_hooks_installed = true;
+        } else {
+            RemoveCallsitePatch(&g_combat_ability_producer_array_copy_callsite_a_patch);
+            RemoveCallsitePatch(&g_combat_ability_producer_array_copy_callsite_b_patch);
+            g_original_combat_ability_array_copy = nullptr;
+            monomyth::logger::Log(
+                L"hook_manager: combat ability producer hooks denied reason=\"callsite_patch_install_failed\"");
+        }
+    } else {
+        monomyth::logger::Log(
+            L"hook_manager: combat ability producer hooks denied reason=\"seam_validation_failed\"");
+    }
+
+    bool combat_ability_dispatcher_hooks_installed = false;
+    const bool combat_ability_dispatcher_seams_valid =
+        ValidateCombatAbilityDispatcherSeams(module_base);
+    if (combat_ability_dispatcher_seams_valid) {
+        g_original_combat_ability_wnd_post_show_helper =
+            reinterpret_cast<CombatAbilityWndPostShowHelperFn>(
+                module_base + kCombatAbilityWndPostShowHelperRva);
+        const bool show_branch_installed = InstallCallsitePatch(
+            reinterpret_cast<void*>(
+                module_base + kCombatAbilityWndDispatcherShowPostShowCallsiteRva),
+            reinterpret_cast<void*>(&CombatAbilityWndDispatcherShowPostShowHook),
+            module_base + kCombatAbilityWndPostShowHelperRva,
+            &g_combat_ability_wnd_dispatcher_show_post_show_callsite_patch,
+            L"CombatAbilityWndDispatcherShowPostShowCallsite");
+        const bool hide_branch_installed = InstallCallsitePatch(
+            reinterpret_cast<void*>(
+                module_base + kCombatAbilityWndDispatcherHidePostShowCallsiteRva),
+            reinterpret_cast<void*>(&CombatAbilityWndDispatcherHidePostShowHook),
+            module_base + kCombatAbilityWndPostShowHelperRva,
+            &g_combat_ability_wnd_dispatcher_hide_post_show_callsite_patch,
+            L"CombatAbilityWndDispatcherHidePostShowCallsite");
+        if (show_branch_installed && hide_branch_installed) {
+            combat_ability_dispatcher_hooks_installed = true;
+        } else {
+            RemoveCallsitePatch(
+                &g_combat_ability_wnd_dispatcher_show_post_show_callsite_patch);
+            RemoveCallsitePatch(
+                &g_combat_ability_wnd_dispatcher_hide_post_show_callsite_patch);
+            g_original_combat_ability_wnd_post_show_helper = nullptr;
+            monomyth::logger::Log(
+                L"hook_manager: combat ability dispatcher hooks denied reason=\"callsite_patch_install_failed\"");
+        }
+    } else {
+        monomyth::logger::Log(
+            L"hook_manager: combat ability dispatcher hooks denied reason=\"seam_validation_failed\"");
+    }
+
     g_character_zone_client_has_skill_address = target_address;
     g_character_zone_client_has_skill = g_original_character_zone_client_has_skill;
     g_multiclass_skill_visibility_enabled = true;
     g_skill_visibility_override_count = 0;
+    g_combat_ability_lookup_override_count = 0;
+    g_combat_ability_lookup_trace_count = 0;
+    g_combat_ability_producer_trace_count = 0;
+    g_combat_ability_window_force_show_count = 0;
+    g_combat_ability_dispatcher_trace_count = 0;
+    ClearPendingCombatAbilityWindowForceShow();
     g_activated_skill_use_skill_trace_count = 0;
     g_activated_skill_adjusted_skill_trace_count = 0;
     g_activated_skill_adjusted_skill_override_count = 0;
@@ -27621,6 +30162,18 @@ bool InstallActivatedSkillVisibilityHook(const monomyth::runtime::Manifest& mani
     message += skills_window_row_helper_seams_valid ? L"true" : L"false";
     message += L" skills_window_row_helper_hook_installed=";
     message += skills_window_row_helper_hook_installed ? L"true" : L"false";
+    message += L" combat_ability_window_seams_valid=";
+    message += combat_ability_window_seams_valid ? L"true" : L"false";
+    message += L" combat_ability_lookup_hooks_installed=";
+    message += combat_ability_lookup_hooks_installed ? L"true" : L"false";
+    message += L" combat_ability_producer_seams_valid=";
+    message += combat_ability_producer_seams_valid ? L"true" : L"false";
+    message += L" combat_ability_producer_hooks_installed=";
+    message += combat_ability_producer_hooks_installed ? L"true" : L"false";
+    message += L" combat_ability_dispatcher_seams_valid=";
+    message += combat_ability_dispatcher_seams_valid ? L"true" : L"false";
+    message += L" combat_ability_dispatcher_hooks_installed=";
+    message += combat_ability_dispatcher_hooks_installed ? L"true" : L"false";
     monomyth::logger::Log(message);
     return true;
 }
@@ -27708,6 +30261,13 @@ bool InstallSpellUiShowTrace(const monomyth::runtime::Manifest& manifest) noexce
     }
 
     g_spell_ui_show_trace_count = 0;
+    g_combat_ability_window_show_trace_count = 0;
+    g_combat_ability_window_on_show_trace_count = 0;
+    g_combat_ability_window_on_show_target_address = 0;
+    g_combat_ability_window_on_show_trace_install_failed = false;
+    g_combat_ability_spell_manager_lookup_trace_count = 0;
+    g_combat_ability_spell_manager_lookup_target_address = 0;
+    g_combat_ability_spell_manager_lookup_trace_install_failed = false;
     std::wstring message =
         L"hook_manager: spell UI show trace installed target=CXWnd::Show address=";
     message += HexPtr(target_address);
@@ -28017,6 +30577,50 @@ bool InstallSpellUiDerivedWindowTrace(const monomyth::runtime::Manifest& manifes
         }
     }
 
+    {
+        std::array<std::uint8_t, kCombatAbilityWndRefreshWorkerEntryBytes.size()> live_entry_bytes = {};
+        if (!SpellUiDerivedEntryBytesMatch(
+                module_base,
+                kCombatAbilityWndRefreshWorkerRva,
+                kCombatAbilityWndRefreshWorkerEntryBytes,
+                &live_entry_bytes)) {
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace denied target=CombatAbilityWnd::RefreshWorker reason=entry_bytes_mismatch expected=\"";
+            message += HexBytes(
+                kCombatAbilityWndRefreshWorkerEntryBytes.data(),
+                kCombatAbilityWndRefreshWorkerEntryBytes.size());
+            message += L"\" live=\"";
+            message += HexBytes(live_entry_bytes.data(), live_entry_bytes.size());
+            message += L"\" address=";
+            message += HexPtr(module_base + kCombatAbilityWndRefreshWorkerRva);
+            message += L" target_rva=";
+            message += Hex32(kCombatAbilityWndRefreshWorkerRva);
+            monomyth::logger::Log(message);
+        } else if (!InstallInlineDetour(
+                       reinterpret_cast<void*>(module_base + kCombatAbilityWndRefreshWorkerRva),
+                       reinterpret_cast<void*>(&CombatAbilityWndRefreshWorkerTraceHook),
+                       &g_combat_ability_wnd_refresh_worker_trace_detour,
+                       reinterpret_cast<void**>(&g_original_combat_ability_wnd_refresh_worker_trace),
+                       L"CombatAbilityWnd::RefreshWorker trace")) {
+            RemoveInlineDetour(&g_combat_ability_wnd_refresh_worker_trace_detour);
+            g_original_combat_ability_wnd_refresh_worker_trace = nullptr;
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace denied target=CombatAbilityWnd::RefreshWorker reason=inline_detour_failed address=";
+            message += HexPtr(module_base + kCombatAbilityWndRefreshWorkerRva);
+            message += L" target_rva=";
+            message += Hex32(kCombatAbilityWndRefreshWorkerRva);
+            monomyth::logger::Log(message);
+        } else {
+            std::wstring message =
+                L"hook_manager: spell UI derived window trace installed target=CombatAbilityWnd::RefreshWorker address=";
+            message += HexPtr(module_base + kCombatAbilityWndRefreshWorkerRva);
+            message += L" target_rva=";
+            message += Hex32(kCombatAbilityWndRefreshWorkerRva);
+            monomyth::logger::Log(message);
+            installed_any = true;
+        }
+    }
+
     if (!installed_any) {
         return false;
     }
@@ -28025,6 +30629,9 @@ bool InstallSpellUiDerivedWindowTrace(const monomyth::runtime::Manifest& manifes
     g_cast_spell_about_to_show_trace_count = 0;
     g_spellbook_on_show_trace_count = 0;
     g_spellbook_about_to_show_trace_count = 0;
+    g_combat_ability_wnd_refresh_worker_trace_count = 0;
+    g_combat_ability_wnd_refresh_worker_target_address = module_base + kCombatAbilityWndRefreshWorkerRva;
+    g_combat_ability_wnd_refresh_worker_trace_install_failed = false;
     return true;
 }
 
@@ -29140,6 +31747,67 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         g_original_skills_window_row_helper = nullptr;
     }
 
+    const bool combat_ability_open_removed =
+        RemoveCallsitePatch(&g_combat_ability_open_command_get_ability_callsite_patch);
+    const bool combat_ability_about_to_show_gate_removed =
+        RemoveCallsitePatch(&g_combat_ability_wnd_about_to_show_gate_callsite_patch);
+    const bool combat_ability_wnd_rebuild_primary_slots_removed =
+        RemoveCallsitePatch(&g_combat_ability_wnd_rebuild_primary_slots_get_ability_callsite_patch);
+    const bool combat_ability_wnd_rebuild_ability_list_removed =
+        RemoveCallsitePatch(&g_combat_ability_wnd_rebuild_ability_list_get_ability_callsite_patch);
+    const bool combat_ability_wnd_has_removed =
+        RemoveCallsitePatch(&g_combat_ability_wnd_has_ability_callsite_patch);
+    const bool combat_ability_wnd_best_removed =
+        RemoveCallsitePatch(&g_combat_ability_wnd_best_ability_callsite_patch);
+    if (combat_ability_open_removed && combat_ability_about_to_show_gate_removed &&
+        combat_ability_wnd_rebuild_primary_slots_removed &&
+        combat_ability_wnd_rebuild_ability_list_removed && combat_ability_wnd_has_removed &&
+        combat_ability_wnd_best_removed) {
+        g_original_combat_ability_get = nullptr;
+        g_original_combat_ability_wnd_about_to_show_gate = nullptr;
+        g_combat_ability_wnd_about_to_show_gate_trace_count = 0;
+        monomyth::logger::Log(
+            L"hook_manager: activated skill use hook removed target=CombatAbilityLookupCallsites");
+    } else if (!g_combat_ability_open_command_get_ability_callsite_patch.installed &&
+               !g_combat_ability_wnd_about_to_show_gate_callsite_patch.installed &&
+               !g_combat_ability_wnd_rebuild_primary_slots_get_ability_callsite_patch.installed &&
+               !g_combat_ability_wnd_rebuild_ability_list_get_ability_callsite_patch.installed &&
+               !g_combat_ability_wnd_has_ability_callsite_patch.installed &&
+               !g_combat_ability_wnd_best_ability_callsite_patch.installed) {
+        g_original_combat_ability_get = nullptr;
+        g_original_combat_ability_wnd_about_to_show_gate = nullptr;
+        g_combat_ability_wnd_about_to_show_gate_trace_count = 0;
+    }
+
+    const bool combat_ability_producer_callsite_a_removed =
+        RemoveCallsitePatch(&g_combat_ability_producer_array_copy_callsite_a_patch);
+    const bool combat_ability_producer_callsite_b_removed =
+        RemoveCallsitePatch(&g_combat_ability_producer_array_copy_callsite_b_patch);
+    if (combat_ability_producer_callsite_a_removed &&
+        combat_ability_producer_callsite_b_removed) {
+        g_original_combat_ability_array_copy = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: activated skill use hook removed target=CombatAbilityProducerCallsites");
+    } else if (!g_combat_ability_producer_array_copy_callsite_a_patch.installed &&
+               !g_combat_ability_producer_array_copy_callsite_b_patch.installed) {
+        g_original_combat_ability_array_copy = nullptr;
+    }
+
+    const bool dispatcher_show_removed =
+        RemoveCallsitePatch(&g_combat_ability_wnd_dispatcher_show_post_show_callsite_patch);
+    const bool dispatcher_hide_removed =
+        RemoveCallsitePatch(&g_combat_ability_wnd_dispatcher_hide_post_show_callsite_patch);
+    if (dispatcher_show_removed && dispatcher_hide_removed) {
+        g_original_combat_ability_wnd_post_show_helper = nullptr;
+        g_combat_ability_dispatcher_trace_count = 0;
+        monomyth::logger::Log(
+            L"hook_manager: activated skill use hook removed target=CombatAbilityDispatcherCallsites");
+    } else if (!g_combat_ability_wnd_dispatcher_show_post_show_callsite_patch.installed &&
+               !g_combat_ability_wnd_dispatcher_hide_post_show_callsite_patch.installed) {
+        g_original_combat_ability_wnd_post_show_helper = nullptr;
+        g_combat_ability_dispatcher_trace_count = 0;
+    }
+
     if (!g_character_zone_client_has_skill_detour.installed) {
         g_original_character_zone_client_has_skill = nullptr;
         if (!g_multiclass_item_usability_enabled) {
@@ -29148,6 +31816,15 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         }
         g_multiclass_skill_visibility_enabled = false;
         g_skill_visibility_override_count = 0;
+        g_combat_ability_lookup_override_count = 0;
+        g_combat_ability_lookup_trace_count = 0;
+        g_combat_ability_producer_trace_count = 0;
+        g_combat_ability_window_force_show_count = 0;
+        g_combat_ability_dispatcher_trace_count = 0;
+        g_last_local_combat_ability_source.store(0);
+        g_last_local_combat_ability_source_length.store(0);
+        ClearDeferredCombatAbilityResyncRetryState();
+        ClearPendingCombatAbilityWindowForceShow();
         g_activated_skill_use_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_override_count = 0;
@@ -29157,6 +31834,8 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         g_skills_window_row_helper_entry_count = 0;
         g_skills_window_skill_value_trace_count = 0;
         g_skills_window_skill_value_override_count = 0;
+        monomyth::logger::Log(
+            L"hook_manager: activated skill visibility hook removed target=CharacterZoneClient::HasSkill");
         return true;
     }
 
@@ -29172,6 +31851,15 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         }
         g_multiclass_skill_visibility_enabled = false;
         g_skill_visibility_override_count = 0;
+        g_combat_ability_lookup_override_count = 0;
+        g_combat_ability_lookup_trace_count = 0;
+        g_combat_ability_producer_trace_count = 0;
+        g_combat_ability_window_force_show_count = 0;
+        g_combat_ability_dispatcher_trace_count = 0;
+        g_last_local_combat_ability_source.store(0);
+        g_last_local_combat_ability_source_length.store(0);
+        ClearDeferredCombatAbilityResyncRetryState();
+        ClearPendingCombatAbilityWindowForceShow();
         g_activated_skill_use_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_trace_count = 0;
         g_activated_skill_adjusted_skill_override_count = 0;
@@ -29181,9 +31869,6 @@ bool RemoveActivatedSkillVisibilityHook() noexcept {
         g_skills_window_row_helper_entry_count = 0;
         g_skills_window_skill_value_trace_count = 0;
         g_skills_window_skill_value_override_count = 0;
-        monomyth::logger::Log(
-            L"hook_manager: activated skill visibility hook removed target=CharacterZoneClient::HasSkill");
-        return true;
     }
 
     return false;
@@ -29394,6 +32079,7 @@ bool RemoveSpellUiShowTrace() noexcept {
     if (RemoveInlineDetour(&g_cxwnd_show_trace_detour)) {
         g_original_cxwnd_show_trace = nullptr;
         g_spell_ui_show_trace_count = 0;
+        g_combat_ability_window_show_trace_count = 0;
         monomyth::logger::Log(
             L"hook_manager: spell UI show trace removed target=CXWnd::Show");
         return true;
@@ -29434,7 +32120,10 @@ bool RemoveSpellUiDerivedWindowTrace() noexcept {
         g_cast_spell_on_show_trace_detour.installed ||
         g_cast_spell_about_to_show_trace_detour.installed ||
         g_spellbook_on_show_trace_detour.installed ||
-        g_spellbook_about_to_show_trace_detour.installed;
+        g_spellbook_about_to_show_trace_detour.installed ||
+        g_combat_ability_wnd_refresh_worker_trace_detour.installed ||
+        g_combat_ability_window_on_show_trace_detour.installed ||
+        g_combat_ability_spell_manager_lookup_trace_detour.installed;
     bool ok = true;
 
     if (g_cast_spell_on_show_trace_detour.installed &&
@@ -29465,11 +32154,41 @@ bool RemoveSpellUiDerivedWindowTrace() noexcept {
         ok = false;
     }
 
+    if (g_combat_ability_wnd_refresh_worker_trace_detour.installed &&
+        RemoveInlineDetour(&g_combat_ability_wnd_refresh_worker_trace_detour)) {
+        g_original_combat_ability_wnd_refresh_worker_trace = nullptr;
+    } else if (g_combat_ability_wnd_refresh_worker_trace_detour.installed) {
+        ok = false;
+    }
+
+    if (g_combat_ability_window_on_show_trace_detour.installed &&
+        RemoveInlineDetour(&g_combat_ability_window_on_show_trace_detour)) {
+        g_original_combat_ability_window_on_show_trace = nullptr;
+    } else if (g_combat_ability_window_on_show_trace_detour.installed) {
+        ok = false;
+    }
+
+    if (g_combat_ability_spell_manager_lookup_trace_detour.installed &&
+        RemoveInlineDetour(&g_combat_ability_spell_manager_lookup_trace_detour)) {
+        g_original_combat_ability_spell_manager_lookup_trace = nullptr;
+    } else if (g_combat_ability_spell_manager_lookup_trace_detour.installed) {
+        ok = false;
+    }
+
     if (ok && had_any) {
         g_cast_spell_on_show_trace_count = 0;
         g_cast_spell_about_to_show_trace_count = 0;
         g_spellbook_on_show_trace_count = 0;
         g_spellbook_about_to_show_trace_count = 0;
+        g_combat_ability_wnd_refresh_worker_trace_count = 0;
+        g_combat_ability_window_on_show_trace_count = 0;
+        g_combat_ability_spell_manager_lookup_trace_count = 0;
+        g_combat_ability_wnd_refresh_worker_target_address = 0;
+        g_combat_ability_wnd_refresh_worker_trace_install_failed = false;
+        g_combat_ability_window_on_show_target_address = 0;
+        g_combat_ability_window_on_show_trace_install_failed = false;
+        g_combat_ability_spell_manager_lookup_target_address = 0;
+        g_combat_ability_spell_manager_lookup_trace_install_failed = false;
         monomyth::logger::Log(
             L"hook_manager: spell UI derived window trace removed target=OnShow/AboutToShow");
     }
@@ -29757,6 +32476,108 @@ bool RemoveMemorizeSendTrace() noexcept {
     return false;
 }
 
+bool TryResyncLocalCombatAbilityArrayFromLastSource(
+    const monomyth::server_auth_stats::Snapshot& snapshot) noexcept {
+    void* destination = nullptr;
+    if (!TryResolveLocalCombatAbilityArray(&destination) || destination == nullptr) {
+        std::array<int, monomyth::multiclass_combat_ability::kMaxCombatAbilityIndex> empty = {};
+        LogCombatAbilityResyncResult(
+            L"local_destination_unavailable",
+            snapshot,
+            nullptr,
+            nullptr,
+            0,
+            0,
+            0,
+            empty);
+        return false;
+    }
+
+    auto try_synthesize = [&](const wchar_t* fallback_reason) noexcept -> bool {
+        std::array<int, monomyth::multiclass_combat_ability::kMaxCombatAbilityIndex>
+            synthesized_combat_abilities = {};
+        std::size_t nonzero_entries = 0;
+        CombatAbilitySynthesisDebug synthesis_debug = {};
+        const std::size_t synthesized_entries =
+            SynthesizeCombatAbilityArrayFromSpellbook(
+                snapshot,
+                &synthesized_combat_abilities,
+                &nonzero_entries,
+                &synthesis_debug);
+        LogCombatAbilitySynthesisTrace(
+            fallback_reason,
+            synthesis_debug,
+            synthesized_entries,
+            nonzero_entries);
+        if (nonzero_entries == 0 || synthesized_entries == 0) {
+            LogCombatAbilityResyncResult(
+                fallback_reason,
+                snapshot,
+                destination,
+                nullptr,
+                0,
+                synthesized_entries,
+                nonzero_entries,
+                synthesized_combat_abilities);
+            return false;
+        }
+
+        const std::size_t copy_length = std::min<std::size_t>(
+            synthesized_combat_abilities.size() * sizeof(synthesized_combat_abilities[0]),
+            synthesized_entries * sizeof(synthesized_combat_abilities[0]));
+        std::memcpy(destination, synthesized_combat_abilities.data(), copy_length);
+        LogCombatAbilityResyncResult(
+            L"synthesized",
+            snapshot,
+            destination,
+            nullptr,
+            copy_length,
+            synthesized_entries,
+            nonzero_entries,
+            synthesized_combat_abilities);
+        ArmPendingCombatAbilityWindowForceShow();
+        return true;
+    };
+
+    const std::uintptr_t source_address = g_last_local_combat_ability_source.load();
+    const std::uint32_t source_length = g_last_local_combat_ability_source_length.load();
+    if (source_address == 0 || source_length == 0) {
+        return try_synthesize(L"no_observed_source");
+    }
+
+    std::array<int, monomyth::multiclass_combat_ability::kMaxCombatAbilityIndex>
+        copied_combat_abilities = {};
+    std::size_t copied_entries = 0;
+    std::size_t nonzero_entries = 0;
+    if (!TrySnapshotCombatAbilityArray(
+            reinterpret_cast<const void*>(source_address),
+            source_length,
+            &copied_combat_abilities,
+            &copied_entries,
+            &nonzero_entries)) {
+        return try_synthesize(L"source_snapshot_failed");
+    }
+
+    if (nonzero_entries == 0) {
+        return try_synthesize(L"source_all_zero");
+    }
+
+    const std::size_t copy_length =
+        std::min<std::size_t>(source_length, copied_entries * sizeof(copied_combat_abilities[0]));
+    std::memcpy(destination, copied_combat_abilities.data(), copy_length);
+    LogCombatAbilityResyncResult(
+        L"applied",
+        snapshot,
+        destination,
+        reinterpret_cast<const void*>(source_address),
+        copy_length,
+        copied_entries,
+        nonzero_entries,
+        copied_combat_abilities);
+    ArmPendingCombatAbilityWindowForceShow();
+    return true;
+}
+
 #else
 
 bool InstallReceiveDispatchHook(const monomyth::runtime::Manifest&) noexcept {
@@ -29987,6 +32808,12 @@ bool RemoveMemorizeSendTrace() noexcept {
     return true;
 }
 
+bool TryResyncLocalCombatAbilityArrayFromLastSource(
+    const monomyth::server_auth_stats::Snapshot& snapshot) noexcept {
+    static_cast<void>(snapshot);
+    return false;
+}
+
 #endif
 
 }  // namespace
@@ -30004,6 +32831,18 @@ void NotifyServerAuthStatsUpdated() noexcept {
     TryPersistPendingMulticlassCache(L"ServerAuthStats");
 
     TryForceCharacterListRefreshForAssignedMask(snapshot.classes_bitmask);
+    const bool combat_ability_resync_ok =
+        TryResyncLocalCombatAbilityArrayFromLastSource(snapshot);
+    if (combat_ability_resync_ok) {
+        ClearDeferredCombatAbilityResyncRetryState();
+    } else if (ShouldArmDeferredCombatAbilityResyncRetry(snapshot.classes_bitmask)) {
+        ArmDeferredCombatAbilityResyncRetry(
+            snapshot.classes_bitmask,
+            static_cast<std::uint64_t>(GetTickCount64()) +
+                kMulticlassCasterUiAccessRetryCooldownMs);
+    } else {
+        ClearDeferredCombatAbilityResyncRetryState();
+    }
     const bool caster_ui_ensured =
         TryEnsureMulticlassCasterUiAccessForAssignedMask(snapshot.classes_bitmask);
     if (caster_ui_ensured) {

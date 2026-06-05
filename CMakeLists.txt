@@ -20,6 +20,7 @@ add_library(dinput8 SHARED
     src/fingerprint.cpp
     src/hook_manager.cpp
     src/multiclass_cache.cpp
+    src/multiclass_combat_ability.cpp
     src/multiclass_identity.cpp
     src/multiclass_skill_visibility.cpp
     src/opcode_reference.cpp
@@ -126,6 +127,17 @@ target_compile_features(multiclass_skill_visibility_tests PRIVATE cxx_std_20)
 monomyth_apply_mingw_static_runtime(multiclass_skill_visibility_tests)
 
 add_test(NAME multiclass_skill_visibility_tests COMMAND multiclass_skill_visibility_tests)
+
+add_executable(multiclass_combat_ability_tests
+    tests/multiclass_combat_ability_tests.cpp
+    src/multiclass_combat_ability.cpp
+    src/multiclass_identity.cpp
+)
+target_include_directories(multiclass_combat_ability_tests PRIVATE src)
+target_compile_features(multiclass_combat_ability_tests PRIVATE cxx_std_20)
+monomyth_apply_mingw_static_runtime(multiclass_combat_ability_tests)
+
+add_test(NAME multiclass_combat_ability_tests COMMAND multiclass_combat_ability_tests)
 
 add_executable(class_display_discovery_tests
     tests/class_display_discovery_tests.cpp
