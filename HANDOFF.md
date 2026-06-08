@@ -2,147 +2,150 @@
 
 ## Active Task
 
-Fix the Disciplines window for multiclass characters, specifically `WIZ` primary with melee secondaries such as `WAR/PAL`.
+Finish the Monomyth multi-pet additions to the stock `PetInfoWindow`.
 
 Current state:
-- The server-side login/profile discipline backfill bug was fixed in the server repo.
-- The client now receives and applies nonzero `CombatAbilities[300]` data.
-- The Disciplines window still does not open.
+- extra-pet gauges for `EQType 6670` and `6671` are created and visible
+- real extra-pet HP values are flowing from the server and drive those gauges live
+- the remaining visible bug is the text on those extra gauge rows:
+  - UI still shows stock fallback text like `No Pet <100%>`
+  - custom extra-pet name transport is not reaching the client yet
 
-This is no longer a data-population bug. It is now a client window-open/visibility bug.
+This is no longer a gauge creation or HP-value bug. It is now a name/text ownership bug.
 
 ## What Is Proven
 
-### Server/data path is working now
+### PetInfo gauge creation is real
 
-Latest good client evidence from `/home/zutfen/everquest_rof2/monomyth-client.log`:
-- `2026-06-05 09:53:16.269`
-- `hook_manager: combat ability resync reason="applied"`
-- `nonzero_entries=22`
-- `classes_mask=0x805`
-- sample: `4498,4499,4500,4501,4503,4514,4518,4585`
+Client runtime proof from `/home/zutfen/everquest_rof2/monomyth-client.log`:
+- `extra_pet_gauge0_eqtype_0x1d8=6670`
+- `extra_pet_gauge1_eqtype_0x1d8=6671`
+- both extra gauge windows are visible and active under `PetInfoWindow`
 
-So the client is no longer empty. It has 22 populated combat ability entries for the `WIZ/WAR/PAL` repro.
+Conclusion:
+- the custom XML controls are instantiated
+- we do not need more SIDL archaeology for whether the gauges exist
 
-### Hot rebuild seam is real, but not the right open seam
+### HP path is working end to end
 
-Installed and hot:
-- `CombatAbilityWndRebuildPrimarySlotsGetAbilityCallsite`
-  - RVA `0x0025a12a`
-  - VA `0x65a12a`
-- `CombatAbilityWndRebuildAbilityListGetAbilityCallsite`
-  - RVA `0x0025aea7`
-  - VA `0x65aea7`
+Current good evidence:
+- `PacketObserverRecv ... opcode_name=OP_ServerAuthStats payload_length=64`
+- `ServerAuthStats valid=true ... statExtraPet0Hp1000=1000 statExtraPet1Hp1000=1000`
+- `MultiPetExtraPetGaugeEqTypeTrace ... server_auth_has_value=true server_auth_value=1000 returned_result=1000`
 
-Latest log proof:
-- `2026-06-05 09:53:17.752+`
-- repeated `hook_manager: combat ability lookup trace`
-- `caller_rva=0x25aea7`
-- trace begins at `ability_index=22`
+Conclusion:
+- the server auth stat transport for extra-pet HP is correct
+- the client gauge seam `GetGaugeValueFromEQ` is correct
+- the bars filling is solved
 
-Interpretation:
-- indices `0..21` are likely already nonzero and therefore do not emit the negative-path trace
-- the rebuild-list seam is hot only on the zero tail of the array
-- this seam is good for population evidence, but not for window-open repair
+### The visible row text is not coming through the current custom label hook
+
+Latest negative proof:
+- no `PacketObserverRemoteMultiPetStatus`
+- no `RemoteMultiPetStatus valid=true`
+- no `MultiPetExtraPetLabelEqTypeTrace`
+
+Even in runs where the screenshot shows `No Pet <100%>`, the client log still shows:
+- extra-pet gauge value traces are hot
+- custom label traces for `EQType 6670/6671` never fire
+
+Conclusion:
+- the visible row text for the extra gauge rows is not currently owned by our `GetLabelFromEQ(6670/6671)` override path
+- do not keep assuming that editing the name packet alone will change the visible text
 
 ## What Failed Most Recently
 
-### Failed client-side force-show attempt
+### Custom name packet path is still cold
 
-Code added in `src/hook_manager.cpp`:
-- `TryReadCombatAbilityWindowPointer()` using `pinstCCombatAbilityWnd`
-- `TryForceCombatAbilityWindowVisible(...)`
-- pending show arming tied to successful `combat ability resync`
+Implemented:
+- server custom opcode `OP_RemoteMultiPetStatus=0xd7f2`
+- server packet builder in `common/remote_multipet_status.{h,cpp}`
+- client parser/store in `src/remote_multipet_status.{h,cpp}`
+- packet observer dispatch in `src/packet_observer.cpp`
+- label hook lookup in `src/hook_manager.cpp`
 
-Latest staged DLL before handoff:
-- `/home/zutfen/everquest_rof2/dinput8.dll`
-- SHA-256 `476c1d5f2e164703f37d3668bddb5966e3a2a890ecf57fd2cbd1c9a24acbe0d6`
-
-Why it failed:
-- latest repro showed `combat ability resync reason="applied"` as expected
-- but there were still **no** `hook_manager: combat ability window force show` lines
-- so the show repair never fired
+Why it is not solved:
+- fresh logs still contain no `PacketObserverRemoteMultiPetStatus`
+- fresh logs still contain no `RemoteMultiPetStatus valid=true`
+- fresh logs still contain no `MultiPetExtraPetLabelEqTypeTrace`
 
 Conclusion:
-- even after removing the earlier bad `ability_index == 0` gate, the rebuild-list seam still does not observe the nonzero entries where we need to force visibility
-- this seam is too late / too partial for the actual open path
+- either the server is still not actually sending the name packet
+- or the packet is irrelevant to the visible text because the stock row text is produced elsewhere
 
 ## Real Next Target
 
-Patch the actual Disciplines dispatcher/open gate around:
-- VA `0x4d8497`
-- expected global: `pinstCCombatAbilityWnd` at `0x00d1fca0`
+Trace the actual visible text producer for the extra gauge rows.
 
-Relevant clean-room disassembly already recovered:
+The next seam should start from the live created extra gauge windows:
+- `EQType 6670`
+- `EQType 6671`
 
-```asm
-4d8497: mov ecx, ds:0xd1fca0
-4d849d: cmp ecx, ebx
-4d849f: je  0x4db2ed
-4d84a5: cmp byte ptr [ecx+0x196],0
-4d84ac: mov eax,[ecx]
-4d84ae: mov edx,[eax+0xd8]
-4d84b4: push ebp
-4d84b5: push ebp
-4d84b6: jne 0x4d84cd
-4d84b8: push ebp
-4d84b9: call edx
-4d84bb: mov ecx, ds:0xd1fca0
-4d84c1: call 0x85ce90
-...
-4d84cd: push ebx
-4d84ce: call edx
-4d84d0: mov ecx, ds:0xd1fca0
-4d84d6: call 0x85ce90
-```
+Goal:
+- identify which child control or setter produces the visible `No Pet <100%>` string
+- prove whether that text comes from:
+  1. a nested label child under the gauge control
+  2. a stock gauge text formatter path
+  3. a direct `SetWindowText` / `CXStr::Assign` style update on a descendant
 
-This is the preferred next seam.
+Do not start by assuming `GetLabelFromEQ` is still the right seam.
 
 ## Next Session Plan
 
-1. Validate the dispatcher seam bytes at `0x4d8497`.
-2. Add bounded trace there for:
-   - window pointer null/non-null
-   - `[window+0x196]`
-   - which branch/path is taken before the `vfunc +0xd8` call
-3. Confirm the seam is hot on `ALT-C` and GUI-menu Disciplines open attempts.
-4. If hot, patch behavior there instead of in the rebuild loop.
+1. Keep the current working HP path intact. Do not reopen gauge-value work.
+2. Add a bounded trace around the created extra gauge windows to identify:
+   - descendant label children
+   - text-setter calls affecting those descendants
+   - any stock formatter path that appends `<100%>`
+3. Correlate the visible `No Pet <100%>` updates with:
+   - `result window` pointers for `6670/6671`
+   - any child `CXWnd` text changes underneath them
+4. Only after the real visible text producer is proven:
+   - decide whether `OP_RemoteMultiPetStatus` is still needed
+   - or whether the fix belongs in a stock text-format seam instead
 
-Do not spend another iteration trying to force-show from the `0x25aea7` rebuild-list hook unless new evidence proves it sees the actual nonzero entry path.
+## Current Code State
 
-## Useful References
-
-Read first:
-- `docs/multiclass-negative-results.md`
+Client repo changes of interest:
 - `src/hook_manager.cpp`
+- `src/server_auth_stats_observer.{h,cpp}`
+- `src/packet_observer.cpp`
+- `src/remote_multipet_status.{h,cpp}`
+- `src/opcode_reference.cpp`
+- `CMakeLists.txt`
 
-External orientation allowed by repo policy:
-- sibling `MacroQuest` / `eqlib` repos under `/home/zutfen/`
-- confirmed useful MQ anchor:
-  - `pinstCCombatAbilityWnd_x = 0xD1FCA0`
+Server repo changes of interest:
+- `common/eq_packet_structs.h`
+- `zone/client.{h,cpp}`
+- `zone/mob.cpp`
+- `common/remote_multipet_status.{h,cpp}`
+- `common/emu_oplist.h`
+- `utils/patches/patch_RoF2.conf`
 
 ## Important Negative Results Already Proven
 
 Do not reopen these without new contrary evidence:
-- cold `EQ_PC::GetCombatAbility` callsites:
-  - `0x259c9e`
-  - `0x17f873`
-  - `0x18083b`
-- bogus early producer assumption via timer/recast setters:
-  - `0x57937c`
-  - `0x579398`
-  - `0x5793b9`
-- rebuild-list force-show attempt from `0x25aea7`
+- `PetInfoWindow` child creation absence theory
+  - disproven: the extra gauges are created
+- `0..255` gauge scale theory
+  - disproven: stock focused-pet gauge uses `0..1000`
+- “missing pets because server auth path is wrong”
+  - disproven in the current good runs: HP values arrive and drive the bars
+- “name text must be owned by `GetLabelFromEQ(6670/6671)`”
+  - currently unsupported by runtime evidence; no hot label traces
 
 ## Validation Loop
 
-Focused tests:
-- `ctest --test-dir build --output-on-failure -R "multiclass_combat_ability_tests|multiclass_skill_visibility_tests"`
+Focused client tests:
+- `ctest --test-dir build --output-on-failure -R "runtime_capabilities_tests|class_display_discovery_tests|multiclass_identity_tests|spell_level_selection_tests|server_auth_stats_observer_tests|remote_multiclass_identity_tests|remote_multipet_status_tests"`
 
 Build and stage:
-- `cmake --build build-cross-i686 --target dinput8 -j4`
+- `cmake --build build-cross-i686 -j4`
 - copy `build-cross-i686/dinput8.dll` to `/home/zutfen/everquest_rof2/dinput8.dll`
 - verify hashes match
+
+Server build:
+- `cmake --build build --target zone -j4`
 
 Live proof source:
 - `/home/zutfen/everquest_rof2/monomyth-client.log`

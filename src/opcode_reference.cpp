@@ -17,7 +17,7 @@ struct OpcodeNameEntry {
 // mappings recorded in THJ-Server-Original, including reference-only
 // OP_ServerAuthStats recognition at 0x1338. Duplicate numeric ids retain the
 // first name that appears in source order so lookup stays deterministic.
-constexpr std::array<OpcodeNameEntry, 528> kRof2OpcodeNames = {{
+constexpr std::array<OpcodeNameEntry, 529> kRof2OpcodeNames = {{
     {0x000f, L"OP_RestState"},
     {0x0026, L"OP_UpdateLeadershipAA"},
     {0x004c, L"OP_SkillUpdate"},
@@ -548,6 +548,7 @@ constexpr std::array<OpcodeNameEntry, 528> kRof2OpcodeNames = {{
     // Provisional paired server/client assignment for the dedicated remote
     // multiclass identity feed. Keep in sync with the server-side opcode table.
     {0xd7f1, L"OP_RemoteMulticlassIdentity"},
+    {0xd7f2, L"OP_RemoteMultiPetStatus"},
 }};
 
 }  // namespace
