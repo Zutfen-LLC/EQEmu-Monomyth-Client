@@ -177,6 +177,7 @@ constexpr std::int32_t kFirstGeneralInventorySlot = 23;
 constexpr std::int32_t kPrimaryEquipmentSlot = 13;
 constexpr std::int32_t kSecondaryEquipmentSlot = 14;
 constexpr std::int32_t kPowerSourceEquipmentSlot = 21;
+constexpr std::int32_t kAmmoEquipmentSlot = 22;
 constexpr std::uint32_t kSecondaryEquipmentSlotBit = 1u << kSecondaryEquipmentSlot;
 constexpr std::uint32_t kPowerSourceEquipmentSlotBit = 1u << kPowerSourceEquipmentSlot;
 constexpr std::uint8_t kClientItemClassAugmentation = 54;
@@ -25067,6 +25068,47 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateBranchDispatchCallsit
                     item_like,
                     power_source_policy,
                     snapshot);
+                return 1;
+            }
+        }
+        if (slot_like == kAmmoEquipmentSlot) {
+            std::uint32_t ammo_item_class_mask = 0;
+            const bool ammo_class_mask_copied =
+                TryReadClientItemClassMaskFromWrapper(item_like, &ammo_item_class_mask, nullptr);
+            const bool ammo_item_matches =
+                ammo_class_mask_copied &&
+                monomyth::multiclass_identity::HasAnyAuthoritativeClientItemClass(
+                    snapshot.has_classes_bitmask,
+                    snapshot.classes_bitmask,
+                    ammo_item_class_mask);
+            if (ammo_item_matches) {
+                ++g_ammo_slot_override_count;
+                const std::uintptr_t module_base = GetHostModuleBase();
+                std::wstring message =
+                    L"MulticlassItemUsability target=AmmoSlotEquipOverride";
+                message += L" this=";
+                message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+                message += L" slot_like=";
+                message += std::to_wstring(slot_like);
+                message += L" caller_return=";
+                message += HexPtr(caller_return_address);
+                if (module_base != 0 && caller_return_address >= module_base) {
+                    message += L" caller_return_rva=";
+                    message += Hex32(static_cast<std::uint32_t>(
+                        caller_return_address - module_base));
+                }
+                message += L" original_result=0 returned_result=1";
+                message += L" item_wrapper=";
+                message += HexPtr(item_like);
+                message += L" item_class_mask=";
+                message += Hex32(ammo_item_class_mask);
+                message += L" assigned_mask=";
+                message += FormatAssignedMask(snapshot);
+                message += L" has_assigned_mask=";
+                message += snapshot.has_classes_bitmask ? L"true" : L"false";
+                message += L" override_count=";
+                message += std::to_wstring(g_ammo_slot_override_count);
+                monomyth::logger::Log(message);
                 return 1;
             }
         }
