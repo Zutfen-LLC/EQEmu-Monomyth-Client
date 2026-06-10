@@ -261,6 +261,11 @@ constexpr std::uint32_t kMerchantPurchasePageUpdateListRva = 0x002f0bb0;
 constexpr std::uint32_t kMerchantUsableClassMaskCallsiteARva = 0x002f0d9e;
 constexpr std::uint32_t kMerchantUsableClassMaskCallsiteBRva = 0x002f0e00;
 constexpr std::uint32_t kMerchantUsableClassMaskTargetRva = 0x003b4ce0;
+constexpr std::uint32_t kAugmentPlacementValidatorCallsiteRva = 0x002a8352;
+constexpr std::uint32_t kAugmentPlacementValidatorTargetRva = 0x003bcdb0;
+constexpr std::uint32_t kAugmentCombinedUsabilityCallsiteARva = 0x002a8421;
+constexpr std::uint32_t kAugmentCombinedUsabilityCallsiteBRva = 0x002a8441;
+constexpr std::uint32_t kAugmentCombinedUsabilityTargetRva = 0x0004c430;
 constexpr std::uint32_t kCharSelectClassNameFuncRva = 0x00321210;
 constexpr std::uint32_t kCharacterListWndUpdateListRva = 0x00430760;
 constexpr std::uint32_t kCharSelectNativeClassSubstitutionBudget = 48;
@@ -466,6 +471,15 @@ constexpr std::array<std::uint8_t, 5> kMerchantUsableClassMaskCallsiteABytes = {
 constexpr std::array<std::uint8_t, 5> kMerchantUsableClassMaskCallsiteBBytes = {{
     0xe8, 0xdb, 0x3e, 0x0c, 0x00,
 }};
+constexpr std::array<std::uint8_t, 5> kAugmentPlacementValidatorCallsiteBytes = {{
+    0xe8, 0x59, 0x4a, 0x11, 0x00,
+}};
+constexpr std::array<std::uint8_t, 5> kAugmentCombinedUsabilityCallsiteABytes = {{
+    0xe8, 0x0a, 0x40, 0xda, 0xff,
+}};
+constexpr std::array<std::uint8_t, 5> kAugmentCombinedUsabilityCallsiteBBytes = {{
+    0xe8, 0xea, 0x3f, 0xda, 0xff,
+}};
 constexpr std::array<std::uint8_t, 2> kAAXpPctResetBelow51GateExpectedBytes = {{
     0x77, 0x13,
 }};
@@ -513,6 +527,17 @@ using MerchantUsableClassMaskFn = std::uint32_t (MONOMYTH_THISCALL*)(
     void* this_item,
     unsigned long arg1,
     unsigned long arg2);
+using AugmentPlacementValidatorFn = int (MONOMYTH_THISCALL*)(
+    void* this_item,
+    void* stack_local_ptr,
+    unsigned long slot_index,
+    unsigned long arg3,
+    unsigned long arg4);
+using AugmentCombinedUsabilityFn = int (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* arg1,
+    unsigned long arg2,
+    unsigned long arg3);
 using InvSlotMgrMoveItemFn = bool (MONOMYTH_THISCALL*)(
     void* this_context,
     void* move_data_a,
@@ -1215,6 +1240,9 @@ CallsitePatch g_guild_trainer_class_lookup_callsite_patch = {};
 CallsitePatch g_guild_manager_roster_class_lookup_callsite_patch = {};
 CallsitePatch g_merchant_usable_class_mask_callsite_a_patch = {};
 CallsitePatch g_merchant_usable_class_mask_callsite_b_patch = {};
+CallsitePatch g_augment_placement_validator_callsite_patch = {};
+CallsitePatch g_augment_combined_usability_callsite_a_patch = {};
+CallsitePatch g_augment_combined_usability_callsite_b_patch = {};
 CallsitePatch g_character_zone_client_cur_mana_tick_callsite_a_patch = {};
 CallsitePatch g_character_zone_client_cur_mana_tick_callsite_b_patch = {};
 CallsitePatch g_character_zone_client_cur_mana_refresh_callsite_patch = {};
@@ -1263,6 +1291,8 @@ IsClassUsablePredicateFn g_original_is_class_usable_predicate = nullptr;
 GuildTrainerClassLookupFn g_original_guild_trainer_class_lookup = nullptr;
 CanEquipFn g_original_can_equip = nullptr;
 MerchantUsableClassMaskFn g_original_merchant_usable_class_mask = nullptr;
+AugmentPlacementValidatorFn g_original_augment_placement_validator = nullptr;
+AugmentCombinedUsabilityFn g_original_augment_combined_usability = nullptr;
 CharacterZoneClientHasSkillFn g_original_character_zone_client_has_skill = nullptr;
 CharacterZoneClientCurManaFn g_original_character_zone_client_cur_mana = nullptr;
 PlayerWndConstructorFn g_original_player_wnd_constructor = nullptr;
@@ -1578,6 +1608,8 @@ std::uintptr_t g_player_mana_full_refresh_warmup_window = 0;
 std::uint32_t g_player_mana_full_refresh_warmup_count = 0;
 std::uint64_t g_is_class_usable_predicate_override_count = 0;
 std::uint64_t g_merchant_usable_class_mask_override_count = 0;
+std::uint64_t g_augment_placement_validator_override_count = 0;
+std::uint64_t g_augment_combined_usability_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_equipment_class_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
@@ -21702,6 +21734,80 @@ void LogMerchantUsableClassMaskOverride(
     monomyth::logger::Log(message);
 }
 
+void LogAugmentPlacementValidatorTrace(
+    void* this_item,
+    std::uintptr_t caller_return_address,
+    void* augment_item,
+    unsigned long slot_index,
+    int original_result,
+    int returned_result) {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"MulticlassAugmentTrace target=AugmentPlacementValidator this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_item));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" augment_item=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(augment_item));
+    message += L" slot_index=";
+    message += std::to_wstring(slot_index);
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    message += L" returned_result=";
+    message += std::to_wstring(returned_result);
+    if (original_result != 0) {
+        const std::uint32_t target_class_mask = ReadClientItemClassMask(this_item);
+        const std::uint32_t augment_class_mask = ReadClientItemClassMask(augment_item);
+        message += L" target_class_mask=";
+        message += Hex32(target_class_mask);
+        message += L" augment_class_mask=";
+        message += Hex32(augment_class_mask);
+    }
+    monomyth::logger::Log(message);
+}
+
+void LogAugmentPlacementValidatorOverride(
+    void* this_item,
+    std::uintptr_t caller_return_address,
+    void* augment_item,
+    unsigned long slot_index,
+    int original_result,
+    std::uint32_t target_class_mask,
+    std::uint32_t augment_class_mask,
+    const monomyth::server_auth_stats::Snapshot& snapshot) {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    std::wstring message =
+        L"MulticlassAugmentOverride target=AugmentPlacementValidator this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_item));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    if (module_base != 0 && caller_return_address >= module_base) {
+        message += L" caller_return_rva=";
+        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
+    }
+    message += L" augment_item=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(augment_item));
+    message += L" slot_index=";
+    message += std::to_wstring(slot_index);
+    message += L" original_result=";
+    message += std::to_wstring(original_result);
+    message += L" target_class_mask=";
+    message += Hex32(target_class_mask);
+    message += L" augment_class_mask=";
+    message += Hex32(augment_class_mask);
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    message += L" has_assigned_mask=";
+    message += snapshot.has_classes_bitmask ? L"true" : L"false";
+    message += L" override_count=";
+    message += std::to_wstring(g_augment_placement_validator_override_count);
+    monomyth::logger::Log(message);
+}
+
 void LogInvSlotHandleLButtonCoreLateBranchGateBOverride(
     void* slot_record_like,
     std::uintptr_t caller_return_address,
@@ -23657,6 +23763,132 @@ int MONOMYTH_FASTCALL EquipClickCanEquipCallsiteHook(
         arg5,
         original_result,
         1);
+    return 1;
+}
+
+int MONOMYTH_FASTCALL AugmentPlacementValidatorCallsiteHook(
+    void* this_item,
+    void* edx_value,
+    void* stack_local_ptr,
+    unsigned long slot_index,
+    unsigned long arg3,
+    unsigned long arg4) noexcept {
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const int original_result = g_original_augment_placement_validator(
+        this_item,
+        stack_local_ptr,
+        slot_index,
+        arg3,
+        arg4);
+
+    void* augment_item_ptr = nullptr;
+    if (stack_local_ptr != nullptr) {
+        std::memcpy(
+            &augment_item_ptr,
+            stack_local_ptr,
+            sizeof(augment_item_ptr));
+    }
+
+    if (original_result == 0) {
+        LogAugmentPlacementValidatorTrace(
+            this_item,
+            caller_return_address,
+            augment_item_ptr,
+            slot_index,
+            original_result,
+            original_result);
+        return 0;
+    }
+
+    if (!g_multiclass_item_usability_enabled) {
+        LogAugmentPlacementValidatorTrace(
+            this_item,
+            caller_return_address,
+            augment_item_ptr,
+            slot_index,
+            original_result,
+            original_result);
+        return original_result;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    const std::uint32_t target_class_mask = ReadClientItemClassMask(this_item);
+    const std::uint32_t augment_class_mask = ReadClientItemClassMask(augment_item_ptr);
+
+    const bool target_covered =
+        monomyth::multiclass_identity::HasAnyAuthoritativeClientItemClass(
+            snapshot.has_classes_bitmask,
+            snapshot.classes_bitmask,
+            target_class_mask);
+    const bool augment_covered =
+        monomyth::multiclass_identity::HasAnyAuthoritativeClientItemClass(
+            snapshot.has_classes_bitmask,
+            snapshot.classes_bitmask,
+            augment_class_mask);
+
+    if (target_covered && augment_covered) {
+        ++g_augment_placement_validator_override_count;
+        LogAugmentPlacementValidatorOverride(
+            this_item,
+            caller_return_address,
+            augment_item_ptr,
+            slot_index,
+            original_result,
+            target_class_mask,
+            augment_class_mask,
+            snapshot);
+        LogAugmentPlacementValidatorTrace(
+            this_item,
+            caller_return_address,
+            augment_item_ptr,
+            slot_index,
+            original_result,
+            0);
+        return 0;
+    }
+
+    LogAugmentPlacementValidatorTrace(
+        this_item,
+        caller_return_address,
+        augment_item_ptr,
+        slot_index,
+        original_result,
+        original_result);
+    return original_result;
+}
+
+int MONOMYTH_FASTCALL AugmentCombinedUsabilityCallsiteHook(
+    void* this_context,
+    void*,
+    void* arg1,
+    unsigned long arg2,
+    unsigned long arg3) noexcept {
+    const int original_result = g_original_augment_combined_usability(
+        this_context, arg1, arg2, arg3);
+
+    if (original_result != 0 || !g_multiclass_item_usability_enabled) {
+        return original_result;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    if (!snapshot.has_classes_bitmask) {
+        return original_result;
+    }
+
+    ++g_augment_combined_usability_override_count;
+    std::wstring message =
+        L"MulticlassAugmentOverride target=AugmentCombinedUsability this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" arg1=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(arg1));
+    message += L" original_result=0 returned_result=1";
+    message += L" assigned_mask=";
+    message += FormatAssignedMask(snapshot);
+    message += L" override_count=";
+    message += std::to_wstring(g_augment_combined_usability_override_count);
+    monomyth::logger::Log(message);
     return 1;
 }
 
@@ -28592,6 +28824,167 @@ void RemoveMerchantUsabilityCallsites() noexcept {
     g_original_merchant_usable_class_mask = nullptr;
 }
 
+bool InstallAugmentPlacementValidatorCallsite() noexcept {
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: augment placement validator callsite denied reason=\"module_base_unavailable\"");
+        return false;
+    }
+
+    std::array<std::uint8_t, kAugmentPlacementValidatorCallsiteBytes.size()> live_bytes = {};
+    const bool copied = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kAugmentPlacementValidatorCallsiteRva),
+        live_bytes.size(),
+        live_bytes.data());
+    const bool matches =
+        copied &&
+        std::memcmp(
+            live_bytes.data(),
+            kAugmentPlacementValidatorCallsiteBytes.data(),
+            kAugmentPlacementValidatorCallsiteBytes.size()) == 0;
+    if (!matches) {
+        std::wstring message =
+            L"hook_manager: AugmentPlacementValidatorCallsite byte validation failed expected=\"";
+        message += HexBytes(
+            kAugmentPlacementValidatorCallsiteBytes.data(),
+            kAugmentPlacementValidatorCallsiteBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(live_bytes.data(), live_bytes.size());
+        message += L"\" address=";
+        message += HexPtr(module_base + kAugmentPlacementValidatorCallsiteRva);
+        message += L" callsite_rva=";
+        message += Hex32(kAugmentPlacementValidatorCallsiteRva);
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    g_original_augment_placement_validator = reinterpret_cast<AugmentPlacementValidatorFn>(
+        module_base + kAugmentPlacementValidatorTargetRva);
+    if (!InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kAugmentPlacementValidatorCallsiteRva),
+            reinterpret_cast<void*>(&AugmentPlacementValidatorCallsiteHook),
+            module_base + kAugmentPlacementValidatorTargetRva,
+            &g_augment_placement_validator_callsite_patch,
+            L"AugmentPlacementValidatorCallsite")) {
+        g_original_augment_placement_validator = nullptr;
+        return false;
+    }
+
+    std::wstring message =
+        L"hook_manager: augment placement validator callsite installed "
+        L"insert_augment_request_rva=0x002a8190"
+        L" callsite_rva=";
+    message += Hex32(kAugmentPlacementValidatorCallsiteRva);
+    message += L" target_rva=";
+    message += Hex32(kAugmentPlacementValidatorTargetRva);
+    monomyth::logger::Log(message);
+
+    g_original_augment_combined_usability = reinterpret_cast<AugmentCombinedUsabilityFn>(
+        module_base + kAugmentCombinedUsabilityTargetRva);
+
+    std::array<std::uint8_t, kAugmentCombinedUsabilityCallsiteABytes.size()> live_usability_a = {};
+    const bool copied_a = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kAugmentCombinedUsabilityCallsiteARva),
+        live_usability_a.size(),
+        live_usability_a.data());
+    const bool matches_a =
+        copied_a &&
+        std::memcmp(
+            live_usability_a.data(),
+            kAugmentCombinedUsabilityCallsiteABytes.data(),
+            kAugmentCombinedUsabilityCallsiteABytes.size()) == 0;
+    if (!matches_a) {
+        std::wstring msg =
+            L"hook_manager: AugmentCombinedUsabilityCallsiteA byte validation failed expected=\"";
+        msg += HexBytes(
+            kAugmentCombinedUsabilityCallsiteABytes.data(),
+            kAugmentCombinedUsabilityCallsiteABytes.size());
+        msg += L"\" live=\"";
+        msg += HexBytes(live_usability_a.data(), live_usability_a.size());
+        msg += L"\" callsite_rva=";
+        msg += Hex32(kAugmentCombinedUsabilityCallsiteARva);
+        monomyth::logger::Log(msg);
+        RemoveCallsitePatch(&g_augment_placement_validator_callsite_patch);
+        g_original_augment_placement_validator = nullptr;
+        g_original_augment_combined_usability = nullptr;
+        return false;
+    }
+
+    if (!InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kAugmentCombinedUsabilityCallsiteARva),
+            reinterpret_cast<void*>(&AugmentCombinedUsabilityCallsiteHook),
+            module_base + kAugmentCombinedUsabilityTargetRva,
+            &g_augment_combined_usability_callsite_a_patch,
+            L"AugmentCombinedUsabilityCallsiteA")) {
+        RemoveCallsitePatch(&g_augment_placement_validator_callsite_patch);
+        g_original_augment_placement_validator = nullptr;
+        g_original_augment_combined_usability = nullptr;
+        return false;
+    }
+
+    std::array<std::uint8_t, kAugmentCombinedUsabilityCallsiteBBytes.size()> live_usability_b = {};
+    const bool copied_b = TryCopyBytes(
+        reinterpret_cast<const void*>(module_base + kAugmentCombinedUsabilityCallsiteBRva),
+        live_usability_b.size(),
+        live_usability_b.data());
+    const bool matches_b =
+        copied_b &&
+        std::memcmp(
+            live_usability_b.data(),
+            kAugmentCombinedUsabilityCallsiteBBytes.data(),
+            kAugmentCombinedUsabilityCallsiteBBytes.size()) == 0;
+    if (!matches_b) {
+        std::wstring msg =
+            L"hook_manager: AugmentCombinedUsabilityCallsiteB byte validation failed expected=\"";
+        msg += HexBytes(
+            kAugmentCombinedUsabilityCallsiteBBytes.data(),
+            kAugmentCombinedUsabilityCallsiteBBytes.size());
+        msg += L"\" live=\"";
+        msg += HexBytes(live_usability_b.data(), live_usability_b.size());
+        msg += L"\" callsite_rva=";
+        msg += Hex32(kAugmentCombinedUsabilityCallsiteBRva);
+        monomyth::logger::Log(msg);
+        RemoveCallsitePatch(&g_augment_combined_usability_callsite_a_patch);
+        RemoveCallsitePatch(&g_augment_placement_validator_callsite_patch);
+        g_original_augment_placement_validator = nullptr;
+        g_original_augment_combined_usability = nullptr;
+        return false;
+    }
+
+    if (!InstallCallsitePatch(
+            reinterpret_cast<void*>(module_base + kAugmentCombinedUsabilityCallsiteBRva),
+            reinterpret_cast<void*>(&AugmentCombinedUsabilityCallsiteHook),
+            module_base + kAugmentCombinedUsabilityTargetRva,
+            &g_augment_combined_usability_callsite_b_patch,
+            L"AugmentCombinedUsabilityCallsiteB")) {
+        RemoveCallsitePatch(&g_augment_combined_usability_callsite_a_patch);
+        RemoveCallsitePatch(&g_augment_placement_validator_callsite_patch);
+        g_original_augment_placement_validator = nullptr;
+        g_original_augment_combined_usability = nullptr;
+        return false;
+    }
+
+    std::wstring usability_message =
+        L"hook_manager: augment combined usability callsites installed "
+        L"callsite_a_rva=";
+    usability_message += Hex32(kAugmentCombinedUsabilityCallsiteARva);
+    usability_message += L" callsite_b_rva=";
+    usability_message += Hex32(kAugmentCombinedUsabilityCallsiteBRva);
+    usability_message += L" target_rva=";
+    usability_message += Hex32(kAugmentCombinedUsabilityTargetRva);
+    monomyth::logger::Log(usability_message);
+    return true;
+}
+
+void RemoveAugmentPlacementValidatorCallsite() noexcept {
+    RemoveCallsitePatch(&g_augment_combined_usability_callsite_b_patch);
+    RemoveCallsitePatch(&g_augment_combined_usability_callsite_a_patch);
+    RemoveCallsitePatch(&g_augment_placement_validator_callsite_patch);
+    g_original_augment_placement_validator = nullptr;
+    g_original_augment_combined_usability = nullptr;
+}
+
 bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
     if (!manifest.multiclass_item_usability_allowed ||
         manifest.can_equip_state !=
@@ -28621,6 +29014,8 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
 
     g_multiclass_item_usability_enabled = true;
     g_merchant_usable_class_mask_override_count = 0;
+    g_augment_placement_validator_override_count = 0;
+    g_augment_combined_usability_override_count = 0;
     g_invslot_handle_lbutton_core_equipment_class_override_count = 0;
     g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
     g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
@@ -28636,6 +29031,15 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
         RemoveInlineDetour(&g_can_equip_detour);
         g_original_can_equip = nullptr;
         RemoveMerchantUsabilityCallsites();
+        g_multiclass_item_usability_enabled = false;
+        return false;
+    }
+
+    if (!InstallAugmentPlacementValidatorCallsite()) {
+        RemoveInlineDetour(&g_can_equip_detour);
+        g_original_can_equip = nullptr;
+        RemoveMerchantUsabilityCallsites();
+        RemoveAugmentPlacementValidatorCallsite();
         g_multiclass_item_usability_enabled = false;
         return false;
     }
@@ -28672,6 +29076,7 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
         has_skill_message += Hex32(kCharacterZoneClientHasSkillRva);
         monomyth::logger::Log(has_skill_message);
         RemoveMerchantUsabilityCallsites();
+        RemoveAugmentPlacementValidatorCallsite();
         RemoveInlineDetour(&g_can_equip_detour);
         g_original_can_equip = nullptr;
         g_multiclass_item_usability_enabled = false;
@@ -28755,6 +29160,7 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             RemoveInlineDetour(&g_move_item_slot21_lookup_detour);
             g_original_move_item_slot21_lookup = nullptr;
             RemoveMerchantUsabilityCallsites();
+            RemoveAugmentPlacementValidatorCallsite();
             RemoveInlineDetour(&g_can_equip_detour);
             g_original_can_equip = nullptr;
             g_multiclass_item_usability_enabled = false;
@@ -28769,6 +29175,7 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             RemoveInlineDetour(&g_move_item_slot21_lookup_detour);
             g_original_move_item_slot21_lookup = nullptr;
             RemoveMerchantUsabilityCallsites();
+            RemoveAugmentPlacementValidatorCallsite();
             RemoveInlineDetour(&g_can_equip_detour);
             g_original_can_equip = nullptr;
             g_multiclass_item_usability_enabled = false;
@@ -28795,6 +29202,7 @@ bool InstallCanEquipHook(const monomyth::runtime::Manifest& manifest) noexcept {
             RemoveInlineDetour(&g_move_item_slot21_lookup_detour);
             g_original_move_item_slot21_lookup = nullptr;
             RemoveMerchantUsabilityCallsites();
+            RemoveAugmentPlacementValidatorCallsite();
             RemoveInlineDetour(&g_can_equip_detour);
             g_original_can_equip = nullptr;
             g_multiclass_item_usability_enabled = false;
@@ -31963,6 +32371,7 @@ bool RemoveCanEquipHook() noexcept {
     RemoveCallsitePatch(&g_drag_drop_silent_precheck_callsite_patch);
     RemoveCallsitePatch(&g_drag_drop_local_reject_message_callsite_patch);
     RemoveMerchantUsabilityCallsites();
+    RemoveAugmentPlacementValidatorCallsite();
     RemoveCallsitePatch(&g_equip_nested_validator_callsite_patch);
     RemoveCallsitePatch(&g_equip_nested_inventory_gate_callsite_patch);
     RemoveCallsitePatch(&g_equip_local_requirement_lookup_b_callsite_patch);
@@ -32025,6 +32434,8 @@ bool RemoveCanEquipHook() noexcept {
         g_original_can_equip = nullptr;
         g_multiclass_item_usability_enabled = false;
         g_merchant_usable_class_mask_override_count = 0;
+        g_augment_placement_validator_override_count = 0;
+        g_augment_combined_usability_override_count = 0;
         g_invslot_handle_lbutton_core_equipment_class_override_count = 0;
         g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
         g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
