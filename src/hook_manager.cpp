@@ -1617,6 +1617,7 @@ std::uint64_t g_invslot_handle_lbutton_core_late_branch_dispatch_offhand_overrid
 std::uint64_t g_invslot_handle_lbutton_core_late_branch_dispatch_power_source_override_count = 0;
 std::uint64_t g_invslot_handle_lbutton_core_power_source_override_count = 0;
 std::uint64_t g_auto_equip_class_gate_override_count = 0;
+std::uint64_t g_ammo_slot_override_count = 0;
 std::uint64_t g_guild_trainer_class_lookup_override_count = 0;
 std::uint64_t g_guild_trainer_class_lookup_call_count = 0;
 std::uint8_t g_pending_guild_trainer_session_class_id = 0;
@@ -1631,6 +1632,7 @@ std::uint64_t g_ui_class_display_trace_count = 0;
 std::uint32_t g_active_equip_nested_validation_id = 0;
 std::uint32_t g_equip_nested_validation_count = 0;
 std::uintptr_t g_invslot_handle_lbutton_core_last_late_lookup_item_pointer = 0;
+std::uint32_t g_invslot_handle_lbutton_core_last_range_gate_item_id = 0;
 std::int32_t g_invslot_handle_lbutton_core_last_late_branch_slot = -1;
 std::array<std::uint8_t, kGuildTrainerClassLookupResolvedClassOffset + 1>
     g_guild_trainer_class_lookup_override_record = {};
@@ -25587,6 +25589,7 @@ void MONOMYTH_FASTCALL InvSlotHandleLButtonCoreGlobalAction49CallsiteHook(
 std::uint8_t CDECL InvSlotHandleLButtonCoreItemRangeGateCallsiteHook(
     std::uint32_t item_id_like) noexcept {
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    g_invslot_handle_lbutton_core_last_range_gate_item_id = item_id_like;
     const auto snapshot_before = CaptureInvSlotHandleLButtonCorePostResolveGateContext(nullptr);
     const std::uint8_t original_result =
         g_original_invslot_handle_lbutton_core_item_range_gate != nullptr
@@ -25622,6 +25625,164 @@ std::uint8_t MONOMYTH_FASTCALL InvSlotHandleLButtonCoreLateSlot17GateCallsiteHoo
               slot_record_pointer)
         : 0;
     const auto manager_after = CaptureInvSlotHandleLButtonCoreLateManagerContext(this_context);
+
+    if (g_multiclass_item_usability_enabled && original_result == 0) {
+        std::uintptr_t resolved_item_wrapper = 0;
+        std::uint32_t item_class_mask = 0;
+        bool item_resolved = false;
+        const char* resolution_source = "none";
+
+        std::uintptr_t candidate = 0;
+        std::uintptr_t resolved_data = 0;
+
+        candidate = manager_before.field_244 != 0
+            ? static_cast<std::uintptr_t>(manager_before.field_244)
+            : 0;
+        if (candidate != 0 &&
+            TryReadClientItemClassMaskFromWrapper(candidate, &item_class_mask, &resolved_data)) {
+            resolved_item_wrapper = candidate;
+            item_resolved = true;
+            resolution_source = "manager_field_244";
+        }
+
+        if (!item_resolved) {
+            candidate = g_invslot_handle_lbutton_core_last_range_gate_item_id != 0
+                ? static_cast<std::uintptr_t>(g_invslot_handle_lbutton_core_last_range_gate_item_id)
+                : 0;
+            if (candidate != 0 &&
+                TryReadClientItemClassMaskFromWrapper(candidate, &item_class_mask, &resolved_data)) {
+                resolved_item_wrapper = candidate;
+                item_resolved = true;
+                resolution_source = "range_gate_item_id";
+            }
+        }
+
+        if (!item_resolved) {
+            candidate = manager_before.field_248;
+            if (candidate != 0 &&
+                TryReadClientItemClassMaskFromWrapper(candidate, &item_class_mask, &resolved_data)) {
+                resolved_item_wrapper = candidate;
+                item_resolved = true;
+                resolution_source = "manager_field_248";
+            }
+        }
+
+        if (!item_resolved) {
+            candidate = g_invslot_handle_lbutton_core_last_late_lookup_item_pointer;
+            if (candidate != 0 &&
+                TryReadClientItemClassMaskFromWrapper(candidate, &item_class_mask, &resolved_data)) {
+                resolved_item_wrapper = candidate;
+                item_resolved = true;
+                resolution_source = "last_late_lookup";
+            }
+        }
+
+        if (!item_resolved && manager_before.field_244 != 0) {
+            const void* raw_item_ptr = reinterpret_cast<const void*>(
+                static_cast<std::uintptr_t>(manager_before.field_244));
+            item_class_mask = ReadClientItemClassMask(raw_item_ptr);
+            if (item_class_mask != 0) {
+                resolved_item_wrapper = static_cast<std::uintptr_t>(manager_before.field_244);
+                item_resolved = true;
+                resolution_source = "raw_field_244";
+            }
+        }
+
+        if (!item_resolved && g_invslot_handle_lbutton_core_last_range_gate_item_id != 0) {
+            const void* raw_item_ptr = reinterpret_cast<const void*>(
+                static_cast<std::uintptr_t>(g_invslot_handle_lbutton_core_last_range_gate_item_id));
+            item_class_mask = ReadClientItemClassMask(raw_item_ptr);
+            if (item_class_mask != 0) {
+                resolved_item_wrapper = static_cast<std::uintptr_t>(
+                    g_invslot_handle_lbutton_core_last_range_gate_item_id);
+                item_resolved = true;
+                resolution_source = "raw_range_gate_item_id";
+            }
+        }
+
+        if (item_resolved) {
+            const monomyth::server_auth_stats::Snapshot snapshot =
+                monomyth::server_auth_stats::GetSnapshot();
+            const bool item_matches =
+                monomyth::multiclass_identity::HasAnyAuthoritativeClientItemClass(
+                    snapshot.has_classes_bitmask,
+                    snapshot.classes_bitmask,
+                    item_class_mask);
+
+            if (item_matches) {
+                ++g_ammo_slot_override_count;
+                const std::uintptr_t module_base = GetHostModuleBase();
+                std::wstring message =
+                    L"MulticlassItemUsability target=AmmoSlotEquipOverride";
+                message += L" this=";
+                message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+                message += L" caller_return=";
+                message += HexPtr(caller_return_address);
+                if (module_base != 0 && caller_return_address >= module_base) {
+                    message += L" caller_return_rva=";
+                    message += Hex32(static_cast<std::uint32_t>(
+                        caller_return_address - module_base));
+                }
+                message += L" original_result=0 returned_result=1";
+                message += L" item_wrapper=";
+                message += HexPtr(resolved_item_wrapper);
+                message += L" item_class_mask=";
+                message += Hex32(item_class_mask);
+                message += L" resolution_source=";
+                message += std::wstring(resolution_source, resolution_source + std::strlen(resolution_source));
+                message += L" assigned_mask=";
+                message += FormatAssignedMask(snapshot);
+                message += L" has_assigned_mask=";
+                message += snapshot.has_classes_bitmask ? L"true" : L"false";
+                message += L" override_count=";
+                message += std::to_wstring(g_ammo_slot_override_count);
+                monomyth::logger::Log(message);
+
+                LogInvSlotHandleLButtonCoreLateSlot17GateTrace(
+                    L"InvSlotHandleLButtonCoreLateSlot17Gate",
+                    kInvSlotHandleLButtonCoreLateSlot17GateCallsiteRva,
+                    this_context,
+                    caller_return_address,
+                    slot_record_pointer,
+                    original_result,
+                    slot_record,
+                    slot_record_copied,
+                    slot_record_bytes,
+                    slot_record_bytes_copied,
+                    manager_before,
+                    manager_after);
+
+                return 1;
+            }
+        } else if (g_multiclass_item_usability_enabled) {
+            const std::uintptr_t module_base = GetHostModuleBase();
+            std::wstring message =
+                L"MulticlassItemTrace target=AmmoSlotEquipResolveFailed";
+            message += L" this=";
+            message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+            message += L" range_gate_item_id=";
+            message += Hex32(g_invslot_handle_lbutton_core_last_range_gate_item_id);
+            message += L" manager_field_244=";
+            message += Hex32(manager_before.field_244);
+            message += L" manager_field_244_copied=";
+            message += manager_before.field_244_copied ? L"true" : L"false";
+            message += L" manager_field_248=";
+            message += HexPtr(manager_before.field_248);
+            message += L" manager_field_248_copied=";
+            message += manager_before.field_248_copied ? L"true" : L"false";
+            message += L" last_late_lookup=";
+            message += HexPtr(g_invslot_handle_lbutton_core_last_late_lookup_item_pointer);
+            message += L" original_result=";
+            message += std::to_wstring(original_result);
+            if (module_base != 0 && caller_return_address >= module_base) {
+                message += L" caller_return_rva=";
+                message += Hex32(static_cast<std::uint32_t>(
+                    caller_return_address - module_base));
+            }
+            monomyth::logger::Log(message);
+        }
+    }
+
     LogInvSlotHandleLButtonCoreLateSlot17GateTrace(
         L"InvSlotHandleLButtonCoreLateSlot17Gate",
         kInvSlotHandleLButtonCoreLateSlot17GateCallsiteRva,
@@ -26574,6 +26735,7 @@ void MONOMYTH_FASTCALL InvSlotHandleLButtonCoreHook(
     std::uint32_t slot_like,
     std::uint32_t held_flag_like) noexcept {
     g_invslot_handle_lbutton_core_last_late_lookup_item_pointer = 0;
+    g_invslot_handle_lbutton_core_last_range_gate_item_id = 0;
     const std::uintptr_t module_base = GetHostModuleBase();
     const std::uintptr_t caller_return_address = GetCallerReturnAddress();
     std::uintptr_t drag_context_pointer = 0;
@@ -32440,6 +32602,7 @@ bool RemoveCanEquipHook() noexcept {
         g_invslot_handle_lbutton_core_late_branch_prep_override_count = 0;
         g_invslot_handle_lbutton_core_late_branch_gate_b_override_count = 0;
         g_invslot_handle_lbutton_core_late_branch_dispatch_power_source_override_count = 0;
+        g_ammo_slot_override_count = 0;
         g_cached_hand_equipment_state = {};
         ClearPendingHandEquipmentMoveState();
         monomyth::logger::Log(

@@ -477,5 +477,26 @@ int main() {
         FormatClassDisplay(3, false, ClassBitForTest(3), ClassDisplayStyle::kFullName).empty(),
         "missing authoritative mask falls back to empty display");
 
+    constexpr std::uint32_t kWizShdRngMask =
+        ClassBitForTest(12) | ClassBitForTest(5) | ClassBitForTest(4);
+    constexpr std::uint32_t kArrowClassMask = ClientItemClassBitForTest(4);
+    constexpr std::uint32_t kPaladinOnlyMask = ClientItemClassBitForTest(3);
+
+    passed &= Expect(
+        HasAnyAuthoritativeClientItemClass(true, kWizShdRngMask, kArrowClassMask),
+        "WIZ/SHD/RNG multiclass can equip arrow (RNG class mask)");
+    passed &= Expect(
+        HasAnyAuthoritativeClientItemClass(true, kWizShdRngMask, ClientItemClassBitForTest(12)),
+        "WIZ/SHD/RNG multiclass can use WIZ-only item");
+    passed &= Expect(
+        !HasAnyAuthoritativeClientItemClass(true, kWizShdRngMask, kPaladinOnlyMask),
+        "WIZ/SHD/RNG multiclass rejects PAL-only item");
+    passed &= Expect(
+        HasAnyAuthoritativeClientItemClass(
+            true,
+            kWizShdRngMask,
+            ClientItemClassBitForTest(4) | ClientItemClassBitForTest(5)),
+        "WIZ/SHD/RNG multiclass matches RNG+SHD item mask");
+
     return passed ? 0 : 1;
 }
