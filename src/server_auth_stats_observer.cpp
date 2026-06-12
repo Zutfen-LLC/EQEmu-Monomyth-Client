@@ -304,7 +304,7 @@ ParseResult ParsePayload(const void* payload, std::uint32_t payload_length) noex
         const std::uint64_t entry_offset =
             static_cast<std::uint64_t>(kHeaderBytes) +
             (static_cast<std::uint64_t>(i) * kEntryBytes);
-        if (entry_offset > std::numeric_limits<std::uint32_t>::max()) {
+        if (entry_offset > (std::numeric_limits<std::uint32_t>::max)()) {
             result.malformed_reason = L"entry_offset_overflow";
             return result;
         }
@@ -325,7 +325,7 @@ ParseResult ParsePayload(const void* payload, std::uint32_t payload_length) noex
         switch (stat_key) {
         case kStatClassesBitmaskKey:
             ++result.recognized_entry_count;
-            if (stat_value > std::numeric_limits<std::uint32_t>::max()) {
+            if (stat_value > (std::numeric_limits<std::uint32_t>::max)()) {
                 result.invalid_classes_bitmask = true;
                 result.invalid_classes_bitmask_value = stat_value;
                 continue;
@@ -362,7 +362,7 @@ ParseResult ParsePayload(const void* payload, std::uint32_t payload_length) noex
         }
         case kStatFocusedPetIdKey:
             ++result.recognized_entry_count;
-            if (stat_value > std::numeric_limits<std::uint32_t>::max()) {
+            if (stat_value > (std::numeric_limits<std::uint32_t>::max)()) {
                 ++result.unknown_entry_count;
                 break;
             }

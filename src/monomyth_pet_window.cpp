@@ -15,8 +15,10 @@
 #if defined(_M_IX86) || defined(__i386__)
 
 #if defined(_MSC_VER)
+#define MONOMYTH_FASTCALL __fastcall
 #define MONOMYTH_THISCALL __thiscall
 #else
+#define MONOMYTH_FASTCALL __attribute__((fastcall))
 #define MONOMYTH_THISCALL __attribute__((thiscall))
 #endif
 
@@ -125,8 +127,9 @@ DWORD g_next_attach_attempt_tick = 0;
 GetChildItemByNameFn g_get_child_item_by_name = nullptr;
 CXWndShowFn g_cxwnd_show = nullptr;
 
-int MONOMYTH_THISCALL HookedWndNotification(
+int MONOMYTH_FASTCALL HookedWndNotification(
     void* this_context,
+    void* /*edx_value*/,
     void* sender_window,
     std::uint32_t notification_code,
     void* payload) {
