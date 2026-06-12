@@ -433,6 +433,14 @@ constexpr WORD kEqExportCSidlScreenWndCreateChildrenFromSidlOrdinal = 0x01c5;
 // eqlib maps 0x136310 to CEverQuest::LeftClickedOnPlayer, not a live /who wrapper.
 // Keep the detour code path for legacy context experiments, but label the seam honestly.
 constexpr std::uint32_t kLeftClickedOnPlayerSurrogateRva = 0x00136310;
+// Clean-room and eqlib notes often record eqgame VAs. When we add them to the live
+// module base here, they must be normalized back to RVAs first.
+constexpr std::uint32_t kPetInfoClickEverQuestGlobalRva = 0x009d2630;
+constexpr std::uint32_t kPinstSpawnManagerRva = 0x00a641d0;
+constexpr std::uint32_t kPlayerManagerClientGetSpawnByIdRva = 0x005996e0;
+constexpr std::uint32_t kPlayerManagerFirstSpawnOffset = 0x00000004;
+constexpr std::uint32_t kPlayerClientNextSpawnOffset = 0x00000004;
+constexpr std::uint32_t kPlayerClientSpawnIdOffset = 0x00000148;
 constexpr std::uint32_t kWhoClassNameClassLookupTargetRva = 0x003d0660;
 constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnARva = 0x001364ec;
 constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnBRva = 0x001365c7;
@@ -848,6 +856,12 @@ using MemorizeSendPacketWrapperFn = bool (MONOMYTH_THISCALL*)(
     std::uint32_t mode_like,
     const void* packet,
     std::uint32_t total_length);
+using EverQuestLeftClickedOnPlayerFn = void (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* spawn);
+using PlayerManagerClientGetSpawnByIdFn = void* (MONOMYTH_THISCALL*)(
+    void* this_context,
+    int spawn_id);
 using GetClassDescFn = const char* (MONOMYTH_THISCALL*)(
     void* this_context,
     unsigned int class_id);
@@ -1553,6 +1567,8 @@ std::uint64_t g_multiclass_cur_mana_override_count = 0;
 std::uint64_t g_multiclass_cur_mana_callsite_override_count = 0;
 std::uint64_t g_player_mana_visibility_force_count = 0;
 std::uint64_t g_pet_info_window_wnd_notification_trace_count = 0;
+std::uint64_t g_pet_info_target_click_trace_count = 0;
+std::uint64_t g_pet_info_spawn_walk_trace_count = 0;
 std::uint64_t g_multipet_pet_info_probe_trace_count = 0;
 std::uint64_t g_multipet_extra_pet_eqtype_trace_count = 0;
 std::uint64_t g_pet_info_stock_gauge_eqtype_trace_count = 0;
@@ -1983,6 +1999,11 @@ std::uintptr_t GetHostModuleBase() noexcept;
 bool TryComputeEqgameCallerReturnRva(
     std::uintptr_t caller_return_address,
     std::uint32_t* caller_return_rva) noexcept;
+bool LooksLikeEqgameObject(void* candidate, std::uintptr_t* vtable) noexcept;
+bool TryFindSpawnByIdFromSpawnList(
+    void* spawn_manager,
+    std::uint32_t spawn_id,
+    void** spawn_out) noexcept;
 bool TryReadLocalPlayerCharacterPointer(void** character) noexcept;
 MONOMYTH_NOINLINE bool TryInvokeCharacterZoneClientCurMana(
     CharacterZoneClientCurManaFn cur_mana,
@@ -3624,7 +3645,16 @@ bool TryCopyBytes(
         return false;
     }
 #else
-    std::memcpy(destination, source, length);
+    SIZE_T bytes_read = 0;
+    if (!ReadProcessMemory(
+            GetCurrentProcess(),
+            source,
+            destination,
+            length,
+            &bytes_read) ||
+        bytes_read != length) {
+        return false;
+    }
 #endif
     return true;
 }
@@ -10426,6 +10456,260 @@ void* ReadMultiPetExtraPetGaugeWindow(int slot) noexcept {
         g_multipet_extra_pet_gauge_windows[static_cast<std::size_t>(slot)].load());
 }
 
+int MultiPetSlotFromSenderWindow(void* sender_window) noexcept {
+    if (sender_window == nullptr) {
+        return -1;
+    }
+
+    for (int slot = 0; slot < static_cast<int>(g_multipet_extra_pet_gauge_windows.size()); ++slot) {
+        if (sender_window == ReadMultiPetExtraPetGaugeWindow(slot)) {
+            return slot;
+        }
+    }
+
+    return -1;
+}
+
+void LogPetInfoTargetClickTrace(
+    const wchar_t* resolution,
+    int slot,
+    std::uint32_t notification_code,
+    void* sender_window,
+    std::uint32_t spawn_id,
+    void* spawn,
+    void* everquest,
+    void* spawn_manager) noexcept {
+    const std::uint64_t count = ++g_pet_info_target_click_trace_count;
+    if (count > 20 && (count % 100) != 0) {
+        return;
+    }
+
+    std::wstring message = L"MultiPetPetInfoTargetClickTrace count=";
+    message += std::to_wstring(count);
+    message += L" resolution=\"";
+    message += resolution == nullptr ? L"unknown" : resolution;
+    message += L"\" slot=";
+    message += std::to_wstring(slot);
+    message += L" notification_code=";
+    message += Hex32(notification_code);
+    message += L" sender=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(sender_window));
+    message += L" spawn_id=";
+    message += std::to_wstring(spawn_id);
+    message += L" spawn=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(spawn));
+    message += L" everquest=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(everquest));
+    message += L" spawn_manager=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(spawn_manager));
+    monomyth::logger::Log(message);
+}
+
+void LogPetInfoSpawnWalkTrace(
+    const wchar_t* step,
+    std::uint32_t requested_spawn_id,
+    void* spawn_manager,
+    void* node,
+    std::uint32_t candidate_spawn_id,
+    void* next_node,
+    std::size_t iteration) noexcept {
+    const std::uint64_t count = ++g_pet_info_spawn_walk_trace_count;
+    if (count > 40 && (count % 100) != 0) {
+        return;
+    }
+
+    std::wstring message = L"PetInfoSpawnWalkTrace count=";
+    message += std::to_wstring(count);
+    message += L" step=\"";
+    message += step == nullptr ? L"unknown" : step;
+    message += L"\" requested_spawn_id=";
+    message += std::to_wstring(requested_spawn_id);
+    message += L" spawn_manager=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(spawn_manager));
+    message += L" node=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(node));
+    message += L" candidate_spawn_id=";
+    message += std::to_wstring(candidate_spawn_id);
+    message += L" next_node=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(next_node));
+    message += L" iteration=";
+    message += std::to_wstring(iteration);
+    monomyth::logger::Log(message);
+}
+
+bool TryTargetMultiPetAuxiliarySlotFromPetInfoClick(
+    void* sender_window,
+    std::uint32_t notification_code) noexcept {
+    const int slot = MultiPetSlotFromSenderWindow(sender_window);
+    if (slot < 0) {
+        return false;
+    }
+
+    LogPetInfoTargetClickTrace(
+        L"slot_matched",
+        slot,
+        notification_code,
+        sender_window,
+        0,
+        nullptr,
+        nullptr,
+        nullptr);
+
+    const auto snapshot = monomyth::multipet_spawn_observer::GetSnapshot();
+    if (slot >= static_cast<int>(snapshot.has_other_pet_spawn_id.size()) ||
+        !snapshot.has_other_pet_spawn_id[static_cast<std::size_t>(slot)]) {
+        LogPetInfoTargetClickTrace(
+            L"missing_auxiliary_spawn_id",
+            slot,
+            notification_code,
+            sender_window,
+            0,
+            nullptr,
+            nullptr,
+            nullptr);
+        return true;
+    }
+
+    const std::uint32_t spawn_id = snapshot.other_pet_spawn_id[static_cast<std::size_t>(slot)];
+    if (spawn_id == 0) {
+        LogPetInfoTargetClickTrace(
+            L"auxiliary_spawn_id_zero",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            nullptr,
+            nullptr,
+            nullptr);
+        return true;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        LogPetInfoTargetClickTrace(
+            L"module_base_unavailable",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            nullptr,
+            nullptr,
+            nullptr);
+        return true;
+    }
+
+    void* everquest = nullptr;
+    void* spawn_manager = nullptr;
+    TryCopyObject(
+        reinterpret_cast<const void*>(module_base + kPetInfoClickEverQuestGlobalRva),
+        &everquest);
+    TryCopyObject(
+        reinterpret_cast<const void*>(module_base + kPinstSpawnManagerRva),
+        &spawn_manager);
+    if (everquest == nullptr || spawn_manager == nullptr) {
+        LogPetInfoTargetClickTrace(
+            L"singleton_unavailable",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            nullptr,
+            everquest,
+            spawn_manager);
+        return true;
+    }
+
+    std::uintptr_t everquest_vtable = 0;
+    std::uintptr_t spawn_manager_vtable = 0;
+    if (!LooksLikeEqgameObject(everquest, &everquest_vtable) ||
+        !LooksLikeEqgameObject(spawn_manager, &spawn_manager_vtable)) {
+        LogPetInfoTargetClickTrace(
+            L"singleton_invalid",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            reinterpret_cast<void*>(everquest_vtable),
+            everquest,
+            spawn_manager);
+        return true;
+    }
+
+    LogPetInfoTargetClickTrace(
+        L"spawn_lookup_begin",
+        slot,
+        notification_code,
+        sender_window,
+        spawn_id,
+        nullptr,
+        everquest,
+        spawn_manager);
+
+    void* spawn = nullptr;
+    if (!TryFindSpawnByIdFromSpawnList(spawn_manager, spawn_id, &spawn) || spawn == nullptr) {
+        LogPetInfoTargetClickTrace(
+            L"spawn_lookup_failed",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            spawn,
+            everquest,
+            spawn_manager);
+        return true;
+    }
+
+    std::uintptr_t spawn_vtable = 0;
+    if (!LooksLikeEqgameObject(spawn, &spawn_vtable)) {
+        LogPetInfoTargetClickTrace(
+            L"spawn_invalid",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            spawn,
+            everquest,
+            reinterpret_cast<void*>(spawn_vtable));
+        return true;
+    }
+
+    auto left_clicked_on_player = reinterpret_cast<EverQuestLeftClickedOnPlayerFn>(
+        reinterpret_cast<void*>(module_base + kLeftClickedOnPlayerSurrogateRva));
+    if (left_clicked_on_player == nullptr) {
+        LogPetInfoTargetClickTrace(
+            L"target_action_unavailable",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            spawn,
+            everquest,
+            spawn_manager);
+        return true;
+    }
+
+    LogPetInfoTargetClickTrace(
+        L"target_call_begin",
+        slot,
+        notification_code,
+        sender_window,
+        spawn_id,
+        spawn,
+        everquest,
+        spawn_manager);
+    left_clicked_on_player(everquest, spawn);
+    LogPetInfoTargetClickTrace(
+        L"target_applied",
+        slot,
+        notification_code,
+        sender_window,
+        spawn_id,
+        spawn,
+        everquest,
+        spawn_manager);
+    return true;
+}
+
 void LogMultiPetPetInfoProbe(
     const wchar_t* source,
     int eq_type,
@@ -11316,7 +11600,7 @@ bool IsLikelyModuleAddress(std::uintptr_t address) noexcept {
         address < (module_base + 0x02000000u);
 }
 
-bool LooksLikeSpellManagerObject(void* candidate, std::uintptr_t* vtable) noexcept {
+bool LooksLikeEqgameObject(void* candidate, std::uintptr_t* vtable) noexcept {
     if (vtable != nullptr) {
         *vtable = 0;
     }
@@ -11334,6 +11618,133 @@ bool LooksLikeSpellManagerObject(void* candidate, std::uintptr_t* vtable) noexce
         *vtable = candidate_vtable;
     }
     return true;
+}
+
+bool TryFindSpawnByIdFromSpawnList(
+    void* spawn_manager,
+    std::uint32_t spawn_id,
+    void** spawn_out) noexcept {
+    if (spawn_out == nullptr) {
+        return false;
+    }
+
+    *spawn_out = nullptr;
+    if (spawn_manager == nullptr || spawn_id == 0) {
+        return false;
+    }
+
+    LogPetInfoSpawnWalkTrace(
+        L"begin",
+        spawn_id,
+        spawn_manager,
+        nullptr,
+        0,
+        nullptr,
+        0);
+
+    void* node = nullptr;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spawn_manager) + kPlayerManagerFirstSpawnOffset,
+            &node) ||
+        node == nullptr) {
+        LogPetInfoSpawnWalkTrace(
+            L"first_node_read_failed",
+            spawn_id,
+            spawn_manager,
+            node,
+            0,
+            nullptr,
+            0);
+        return false;
+    }
+
+    LogPetInfoSpawnWalkTrace(
+        L"first_node_read_ok",
+        spawn_id,
+        spawn_manager,
+        node,
+        0,
+        nullptr,
+        0);
+
+    constexpr std::size_t kMaxSpawnWalkCount = 4096;
+    for (std::size_t i = 0; i < kMaxSpawnWalkCount && node != nullptr; ++i) {
+        std::uint32_t candidate_spawn_id = 0;
+        if (!TryCopyObject(
+                reinterpret_cast<const std::uint8_t*>(node) + kPlayerClientSpawnIdOffset,
+                &candidate_spawn_id)) {
+            LogPetInfoSpawnWalkTrace(
+                L"candidate_id_read_failed",
+                spawn_id,
+                spawn_manager,
+                node,
+                0,
+                nullptr,
+                i);
+            return false;
+        }
+
+        LogPetInfoSpawnWalkTrace(
+            L"candidate_id_read_ok",
+            spawn_id,
+            spawn_manager,
+            node,
+            candidate_spawn_id,
+            nullptr,
+            i);
+
+        if (candidate_spawn_id == spawn_id) {
+            LogPetInfoSpawnWalkTrace(
+                L"match_found",
+                spawn_id,
+                spawn_manager,
+                node,
+                candidate_spawn_id,
+                nullptr,
+                i);
+            *spawn_out = node;
+            return true;
+        }
+
+        void* next = nullptr;
+        if (!TryCopyObject(
+                reinterpret_cast<const std::uint8_t*>(node) + kPlayerClientNextSpawnOffset,
+                &next)) {
+            LogPetInfoSpawnWalkTrace(
+                L"next_read_failed",
+                spawn_id,
+                spawn_manager,
+                node,
+                candidate_spawn_id,
+                nullptr,
+                i);
+            return false;
+        }
+
+        LogPetInfoSpawnWalkTrace(
+            L"next_read_ok",
+            spawn_id,
+            spawn_manager,
+            node,
+            candidate_spawn_id,
+            next,
+            i);
+        node = next;
+    }
+
+    LogPetInfoSpawnWalkTrace(
+        L"walk_exhausted",
+        spawn_id,
+        spawn_manager,
+        node,
+        0,
+        nullptr,
+        kMaxSpawnWalkCount);
+    return false;
+}
+
+bool LooksLikeSpellManagerObject(void* candidate, std::uintptr_t* vtable) noexcept {
+    return LooksLikeEqgameObject(candidate, vtable);
 }
 
 bool TryResolveClientSpellManager(
@@ -27445,6 +27856,13 @@ int MONOMYTH_FASTCALL PetInfoWindowWndNotificationHook(
                 ? static_cast<std::uint32_t>(caller_return_address - module_base)
                 : 0);
         monomyth::logger::Log(message);
+    }
+
+    if (notification_code == 1 &&
+        TryTargetMultiPetAuxiliarySlotFromPetInfoClick(
+            sender_window,
+            notification_code)) {
+        return 0;
     }
 
     if (g_original_pet_info_window_wnd_notification == nullptr) {

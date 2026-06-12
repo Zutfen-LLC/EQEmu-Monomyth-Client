@@ -16,7 +16,9 @@ struct ParsedSpawnEntry {
 struct Snapshot {
     std::uint32_t focused_pet_id = 0;
     std::array<bool, 2> has_other_pet_name = {false, false};
+    std::array<bool, 2> has_other_pet_spawn_id = {false, false};
     std::array<std::string, 2> other_pet_name = {};
+    std::array<std::uint32_t, 2> other_pet_spawn_id = {0, 0};
 };
 
 bool ParseSingleSpawnPayload(

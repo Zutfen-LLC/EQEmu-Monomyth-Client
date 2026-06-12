@@ -321,7 +321,9 @@ Snapshot GetSnapshot() noexcept {
 
     for (std::size_t i = 0; i < snapshot.has_other_pet_name.size() && i < candidates.size(); ++i) {
         snapshot.has_other_pet_name[i] = true;
+        snapshot.has_other_pet_spawn_id[i] = true;
         snapshot.other_pet_name[i] = BuildDisplayName(candidates[i]->name);
+        snapshot.other_pet_spawn_id[i] = candidates[i]->spawn_id;
     }
 
     return snapshot;

@@ -158,8 +158,12 @@ int main() {
     passed &= Expect(snapshot.focused_pet_id == 101, "focused pet id");
     passed &= Expect(snapshot.has_other_pet_name[0], "slot0 has name");
     passed &= Expect(snapshot.other_pet_name[0] == "Emberpaw", "slot0 order");
+    passed &= Expect(snapshot.has_other_pet_spawn_id[0], "slot0 has spawn id");
+    passed &= Expect(snapshot.other_pet_spawn_id[0] == 102, "slot0 spawn id");
     passed &= Expect(snapshot.has_other_pet_name[1], "slot1 has name");
     passed &= Expect(snapshot.other_pet_name[1] == "Fang", "slot1 order");
+    passed &= Expect(snapshot.has_other_pet_spawn_id[1], "slot1 has spawn id");
+    passed &= Expect(snapshot.other_pet_spawn_id[1] == 103, "slot1 spawn id");
 
     const auto delete_emberpaw = BuildDeleteSpawnPayload(102);
     monomyth::multipet_spawn_observer::ObserveDeleteSpawnPayload(
@@ -168,7 +172,10 @@ int main() {
     snapshot = monomyth::multipet_spawn_observer::GetSnapshot();
     passed &= Expect(snapshot.has_other_pet_name[0], "slot0 survives delete");
     passed &= Expect(snapshot.other_pet_name[0] == "Fang", "slot0 after delete");
+    passed &= Expect(snapshot.has_other_pet_spawn_id[0], "slot0 spawn id survives delete");
+    passed &= Expect(snapshot.other_pet_spawn_id[0] == 103, "slot0 spawn id after delete");
     passed &= Expect(!snapshot.has_other_pet_name[1], "slot1 cleared after delete");
+    passed &= Expect(!snapshot.has_other_pet_spawn_id[1], "slot1 spawn id cleared after delete");
 
     monomyth::multipet_spawn_observer::ObserveSpawnPayload(
         emberpaw.data(),
@@ -181,8 +188,12 @@ int main() {
     passed &= Expect(snapshot.focused_pet_id == 103, "focused pet changes");
     passed &= Expect(snapshot.has_other_pet_name[0], "slot0 after refocus");
     passed &= Expect(snapshot.other_pet_name[0] == "Splashboi", "slot0 stable order");
+    passed &= Expect(snapshot.has_other_pet_spawn_id[0], "slot0 spawn id after refocus");
+    passed &= Expect(snapshot.other_pet_spawn_id[0] == 101, "slot0 spawn id stable order");
     passed &= Expect(snapshot.has_other_pet_name[1], "slot1 after refocus");
     passed &= Expect(snapshot.other_pet_name[1] == "Emberpaw", "slot1 stable order");
+    passed &= Expect(snapshot.has_other_pet_spawn_id[1], "slot1 spawn id after refocus");
+    passed &= Expect(snapshot.other_pet_spawn_id[1] == 102, "slot1 spawn id stable order");
 
     return passed ? 0 : 1;
 }
