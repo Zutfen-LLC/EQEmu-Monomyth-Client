@@ -25,10 +25,10 @@
 #include "multiclass_combat_ability.h"
 #include "multiclass_identity.h"
 #include "multiclass_skill_visibility.h"
+#include "multipet_spawn_observer.h"
 #include "opcode_reference.h"
 #include "packet_observer.h"
 #include "remote_multiclass_identity.h"
-#include "remote_multipet_status.h"
 #include "server_auth_stats_observer.h"
 #include "spell_level_selection.h"
 
@@ -10472,11 +10472,11 @@ void LogMultiPetPetInfoProbe(
 
 std::string BuildMultiPetExtraPetDisplayText(int eq_type, bool pet_info_available) {
     const int slot = MultiPetSlotFromEqType(eq_type);
-    if (slot >= 0 &&
-        slot < static_cast<int>(monomyth::remote_multipet_status::kRemoteMultiPetStatusSlotCount)) {
-        const auto snapshot = monomyth::remote_multipet_status::GetSnapshot();
-        if (snapshot.has_name[slot] && !snapshot.pet_name[slot].empty()) {
-            return snapshot.pet_name[slot];
+    if (slot >= 0 && slot < 2) {
+        const auto local_snapshot = monomyth::multipet_spawn_observer::GetSnapshot();
+        if (local_snapshot.has_other_pet_name[slot] &&
+            !local_snapshot.other_pet_name[slot].empty()) {
+            return local_snapshot.other_pet_name[slot];
         }
     }
 
@@ -10846,6 +10846,70 @@ int CDECL GetGaugeValueFromEQHook(
         message += HexPtr(reinterpret_cast<std::uintptr_t>(pet_info_window));
         monomyth::logger::Log(message);
     }
+
+    void* gauge_window = ReadMultiPetExtraPetGaugeWindow(slot);
+    if (gauge_window != nullptr || text_cxstr != nullptr) {
+        const std::string display_text = BuildMultiPetExtraPetDisplayText(
+            eq_type, pointer_copied && pet_info_window != nullptr);
+
+        // The renderer passes a live CXStr scratch/output pointer for the
+        // current gauge draw. Updating that sink keeps the visible label aligned
+        // even when the window-owned CXStr is not the final paint source.
+        bool draw_text_updated = false;
+        const wchar_t* draw_text_failure_reason = nullptr;
+        if (TryAssignCxStrFromAscii(
+                text_cxstr,
+                display_text.c_str(),
+                &draw_text_failure_reason)) {
+            draw_text_updated = true;
+        }
+
+        bool window_text_updated = false;
+        const wchar_t* window_text_failure_reason = nullptr;
+        if (gauge_window != nullptr) {
+            void* gauge_text_cxstr = reinterpret_cast<void*>(
+                reinterpret_cast<std::uintptr_t>(gauge_window) + kCxWndTextFieldOffset);
+            if (TryAssignCxStrFromAscii(
+                    gauge_text_cxstr,
+                    display_text.c_str(),
+                    &window_text_failure_reason)) {
+                window_text_updated = true;
+            }
+        }
+
+        const std::uint64_t text_count =
+            ++g_multipet_extra_pet_eqtype_trace_count;
+        if (text_count <= 40 || (text_count % 100) == 0) {
+            std::wstring msg = L"MultiPetExtraPetGaugeTextUpdate count=";
+            msg += std::to_wstring(text_count);
+            msg += L" eq_type=";
+            msg += std::to_wstring(eq_type);
+            msg += L" slot=";
+            msg += std::to_wstring(slot);
+            msg += L" gauge_window=";
+            msg += HexPtr(reinterpret_cast<std::uintptr_t>(gauge_window));
+            msg += L" display_text=\"";
+            msg += WidenAsciiLossy(display_text);
+            msg += L"\" draw_text_cxstr=";
+            msg += HexPtr(reinterpret_cast<std::uintptr_t>(text_cxstr));
+            msg += L" draw_text_updated=";
+            msg += draw_text_updated ? L"true" : L"false";
+            if (!draw_text_updated && draw_text_failure_reason != nullptr) {
+                msg += L" draw_text_failure_reason=\"";
+                msg += draw_text_failure_reason;
+                msg += L"\"";
+            }
+            msg += L" window_text_updated=";
+            msg += window_text_updated ? L"true" : L"false";
+            if (!window_text_updated && window_text_failure_reason != nullptr) {
+                msg += L" window_text_failure_reason=\"";
+                msg += window_text_failure_reason;
+                msg += L"\"";
+            }
+            monomyth::logger::Log(msg);
+        }
+    }
+
     return resolved_result;
 }
 

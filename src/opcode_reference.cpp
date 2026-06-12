@@ -548,7 +548,6 @@ constexpr std::array<OpcodeNameEntry, 529> kRof2OpcodeNames = {{
     // Provisional paired server/client assignment for the dedicated remote
     // multiclass identity feed. Keep in sync with the server-side opcode table.
     {0xd7f1, L"OP_RemoteMulticlassIdentity"},
-    {0xd7f2, L"OP_RemoteMultiPetStatus"},
 }};
 
 }  // namespace

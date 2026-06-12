@@ -96,14 +96,53 @@ int main() {
         monomyth::server_auth_stats::ParsePayload(without_key.data(), static_cast<std::uint32_t>(without_key.size()));
     passed &= Expect(without_key_result.valid, "without key packet valid");
     passed &= Expect(!without_key_result.has_classes_bitmask, "without key has no class mask");
-    passed &= Expect(without_key_result.recognized_entry_count == 0, "without key recognized stat count");
-    passed &= Expect(without_key_result.unknown_entry_count == 2, "without key unknown stat count");
+    passed &= Expect(without_key_result.recognized_entry_count == 1, "without key recognized stat count");
+    passed &= Expect(without_key_result.unknown_entry_count == 1, "without key unknown stat count");
     passed &= Expect(
         !without_key_result.has_activated_skill_mask_low,
         "without key has no low activated skill mask");
     passed &= Expect(
         !without_key_result.has_activated_skill_mask_high,
         "without key has no high activated skill mask");
+    passed &= Expect(without_key_result.has_extra_pet_hp_1000[0], "without key has extra pet slot0");
+    passed &= Expect(without_key_result.extra_pet_hp_1000[0] == 1234, "without key slot0 hp value");
+    passed &= Expect(!without_key_result.has_extra_pet_hp_1000[1], "without key slot1 absent");
+    passed &= Expect(!without_key_result.has_focused_pet_id, "without key focused pet absent");
+
+    std::vector<std::uint8_t> extra_pet_hp;
+    AppendU32(&extra_pet_hp, 4);
+    AppendEntry(&extra_pet_hp, 1, 7);
+    AppendEntry(&extra_pet_hp, 100, 345);
+    AppendEntry(&extra_pet_hp, 101, 678);
+    AppendEntry(&extra_pet_hp, 101, 910);
+    const auto extra_pet_hp_result =
+        monomyth::server_auth_stats::ParsePayload(
+            extra_pet_hp.data(),
+            static_cast<std::uint32_t>(extra_pet_hp.size()));
+    passed &= Expect(extra_pet_hp_result.valid, "extra pet hp packet valid");
+    passed &= Expect(extra_pet_hp_result.has_extra_pet_hp_1000[0], "extra pet hp slot0 present");
+    passed &= Expect(extra_pet_hp_result.extra_pet_hp_1000[0] == 345, "extra pet hp slot0 value");
+    passed &= Expect(extra_pet_hp_result.has_extra_pet_hp_1000[1], "extra pet hp slot1 present");
+    passed &= Expect(extra_pet_hp_result.extra_pet_hp_1000[1] == 910, "extra pet hp slot1 last value wins");
+    passed &= Expect(
+        extra_pet_hp_result.duplicate_extra_pet_hp_1000[1],
+        "extra pet hp duplicate slot1 marked");
+
+    std::vector<std::uint8_t> focused_pet_id;
+    AppendU32(&focused_pet_id, 3);
+    AppendEntry(&focused_pet_id, 100, 345);
+    AppendEntry(&focused_pet_id, 102, 517);
+    AppendEntry(&focused_pet_id, 102, 516);
+    const auto focused_pet_id_result =
+        monomyth::server_auth_stats::ParsePayload(
+            focused_pet_id.data(),
+            static_cast<std::uint32_t>(focused_pet_id.size()));
+    passed &= Expect(focused_pet_id_result.valid, "focused pet id packet valid");
+    passed &= Expect(focused_pet_id_result.has_focused_pet_id, "focused pet id present");
+    passed &= Expect(focused_pet_id_result.focused_pet_id == 516, "focused pet id last value wins");
+    passed &= Expect(
+        focused_pet_id_result.duplicate_focused_pet_id,
+        "focused pet id duplicate marked");
 
     std::vector<std::uint8_t> duplicate_masks;
     AppendU32(&duplicate_masks, 4);

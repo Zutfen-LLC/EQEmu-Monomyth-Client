@@ -20,6 +20,7 @@ add_library(dinput8 SHARED
     src/fingerprint.cpp
     src/hook_manager.cpp
     src/monomyth_pet_window.cpp
+    src/multipet_spawn_observer.cpp
     src/multiclass_cache.cpp
     src/multiclass_combat_ability.cpp
     src/multiclass_identity.cpp
@@ -28,7 +29,6 @@ add_library(dinput8 SHARED
     src/packet_observer.cpp
     src/receive_dispatch_discovery.cpp
     src/remote_multiclass_identity.cpp
-    src/remote_multipet_status.cpp
     src/runtime_capabilities.cpp
     src/server_auth_stats_observer.cpp
     src/spell_level_selection.cpp
@@ -99,16 +99,16 @@ monomyth_apply_mingw_static_runtime(remote_multiclass_identity_tests)
 
 add_test(NAME remote_multiclass_identity_tests COMMAND remote_multiclass_identity_tests)
 
-add_executable(remote_multipet_status_tests
-    tests/remote_multipet_status_tests.cpp
-    src/opcode_reference.cpp
-    src/remote_multipet_status.cpp
+add_executable(multipet_spawn_observer_tests
+    tests/multipet_spawn_observer_tests.cpp
+    src/multipet_spawn_observer.cpp
+    src/server_auth_stats_observer.cpp
 )
-target_include_directories(remote_multipet_status_tests PRIVATE src)
-target_compile_features(remote_multipet_status_tests PRIVATE cxx_std_20)
-monomyth_apply_mingw_static_runtime(remote_multipet_status_tests)
+target_include_directories(multipet_spawn_observer_tests PRIVATE src)
+target_compile_features(multipet_spawn_observer_tests PRIVATE cxx_std_20)
+monomyth_apply_mingw_static_runtime(multipet_spawn_observer_tests)
 
-add_test(NAME remote_multipet_status_tests COMMAND remote_multipet_status_tests)
+add_test(NAME multipet_spawn_observer_tests COMMAND multipet_spawn_observer_tests)
 
 add_executable(spell_level_selection_tests
     tests/spell_level_selection_tests.cpp
