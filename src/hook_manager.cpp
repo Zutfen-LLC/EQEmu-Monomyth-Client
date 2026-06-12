@@ -438,9 +438,12 @@ constexpr std::uint32_t kLeftClickedOnPlayerSurrogateRva = 0x00136310;
 constexpr std::uint32_t kPetInfoClickEverQuestGlobalRva = 0x009d2630;
 constexpr std::uint32_t kPinstSpawnManagerRva = 0x00a641d0;
 constexpr std::uint32_t kPlayerManagerClientGetSpawnByIdRva = 0x005996e0;
-constexpr std::uint32_t kPlayerManagerFirstSpawnOffset = 0x00000004;
-constexpr std::uint32_t kPlayerClientNextSpawnOffset = 0x00000004;
-constexpr std::uint32_t kPlayerClientSpawnIdOffset = 0x00000148;
+constexpr std::uint32_t kPlayerManagerSpawnIdIndexOffset = 0x00000014;
+constexpr std::uint32_t kSpawnIdIndexBucketsOffset = 0x00000000;
+constexpr std::uint32_t kSpawnIdIndexBucketCountOffset = 0x00000004;
+constexpr std::uint32_t kSpawnIdIndexNodeSpawnOffset = 0x00000000;
+constexpr std::uint32_t kSpawnIdIndexNodeSpawnIdOffset = 0x00000004;
+constexpr std::uint32_t kSpawnIdIndexNodeNextOffset = 0x00000008;
 constexpr std::uint32_t kWhoClassNameClassLookupTargetRva = 0x003d0660;
 constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnARva = 0x001364ec;
 constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnBRva = 0x001365c7;
@@ -2234,7 +2237,8 @@ bool ShouldLogSpellUiAboutToShowGateTrace(std::uint64_t count) noexcept {
 }
 
 bool ShouldLogMulticlassManaTrace(std::uint64_t count) noexcept {
-    return count <= 20 || (count % 50) == 0;
+    (void)count;
+    return false;
 }
 
 std::wstring FormatAssignedMask(
@@ -10479,30 +10483,14 @@ void LogPetInfoTargetClickTrace(
     void* spawn,
     void* everquest,
     void* spawn_manager) noexcept {
-    const std::uint64_t count = ++g_pet_info_target_click_trace_count;
-    if (count > 20 && (count % 100) != 0) {
-        return;
-    }
-
-    std::wstring message = L"MultiPetPetInfoTargetClickTrace count=";
-    message += std::to_wstring(count);
-    message += L" resolution=\"";
-    message += resolution == nullptr ? L"unknown" : resolution;
-    message += L"\" slot=";
-    message += std::to_wstring(slot);
-    message += L" notification_code=";
-    message += Hex32(notification_code);
-    message += L" sender=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(sender_window));
-    message += L" spawn_id=";
-    message += std::to_wstring(spawn_id);
-    message += L" spawn=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(spawn));
-    message += L" everquest=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(everquest));
-    message += L" spawn_manager=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(spawn_manager));
-    monomyth::logger::Log(message);
+    (void)resolution;
+    (void)slot;
+    (void)notification_code;
+    (void)sender_window;
+    (void)spawn_id;
+    (void)spawn;
+    (void)everquest;
+    (void)spawn_manager;
 }
 
 void LogPetInfoSpawnWalkTrace(
@@ -10513,28 +10501,13 @@ void LogPetInfoSpawnWalkTrace(
     std::uint32_t candidate_spawn_id,
     void* next_node,
     std::size_t iteration) noexcept {
-    const std::uint64_t count = ++g_pet_info_spawn_walk_trace_count;
-    if (count > 40 && (count % 100) != 0) {
-        return;
-    }
-
-    std::wstring message = L"PetInfoSpawnWalkTrace count=";
-    message += std::to_wstring(count);
-    message += L" step=\"";
-    message += step == nullptr ? L"unknown" : step;
-    message += L"\" requested_spawn_id=";
-    message += std::to_wstring(requested_spawn_id);
-    message += L" spawn_manager=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(spawn_manager));
-    message += L" node=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(node));
-    message += L" candidate_spawn_id=";
-    message += std::to_wstring(candidate_spawn_id);
-    message += L" next_node=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(next_node));
-    message += L" iteration=";
-    message += std::to_wstring(iteration);
-    monomyth::logger::Log(message);
+    (void)step;
+    (void)requested_spawn_id;
+    (void)spawn_manager;
+    (void)node;
+    (void)candidate_spawn_id;
+    (void)next_node;
+    (void)iteration;
 }
 
 bool TryTargetMultiPetAuxiliarySlotFromPetInfoClick(
@@ -10715,43 +10688,10 @@ void LogMultiPetPetInfoProbe(
     int eq_type,
     void* pet_info_window,
     bool pointer_copied) noexcept {
-    const std::uint64_t count = ++g_multipet_pet_info_probe_trace_count;
-    if (count > 40 && (count % 100) != 0) {
-        return;
-    }
-
-    std::wstring message = L"MultiPetPetInfoProbeTrace count=";
-    message += std::to_wstring(count);
-    message += L" source=\"";
-    message += source == nullptr ? L"unknown" : source;
-    message += L"\" eq_type=";
-    message += std::to_wstring(eq_type);
-    message += L" slot=";
-    message += std::to_wstring(MultiPetSlotFromEqType(eq_type));
-    message += L" pointer_copied=";
-    message += pointer_copied ? L"true" : L"false";
-    message += L" pet_info_window=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(pet_info_window));
-    CxWndStateSnapshot pet_info_snapshot = {};
-    if (pet_info_window != nullptr) {
-        TryReadCxWndStateSnapshot(pet_info_window, &pet_info_snapshot);
-    }
-    AppendCxWndStateSnapshot(&message, L"pet_info", pet_info_snapshot);
-    for (int slot = 0; slot < 2; ++slot) {
-        void* gauge_window = ReadMultiPetExtraPetGaugeWindow(slot);
-        message += L" extra_pet_gauge";
-        message += std::to_wstring(slot);
-        message += L"=";
-        message += HexPtr(reinterpret_cast<std::uintptr_t>(gauge_window));
-        CxWndStateSnapshot gauge_snapshot = {};
-        if (gauge_window != nullptr) {
-            TryReadCxWndStateSnapshot(gauge_window, &gauge_snapshot);
-        }
-        std::wstring prefix = L"extra_pet_gauge";
-        prefix += std::to_wstring(slot);
-        AppendCxWndStateSnapshot(&message, prefix.c_str(), gauge_snapshot);
-    }
-    monomyth::logger::Log(message);
+    (void)source;
+    (void)eq_type;
+    (void)pet_info_window;
+    (void)pointer_copied;
 }
 
 std::string BuildMultiPetExtraPetDisplayText(int eq_type, bool pet_info_available) {
@@ -11006,27 +10946,6 @@ bool CDECL GetLabelFromEQHook(
             if (zero_flag_out != nullptr) {
                 *zero_flag_out = false;
             }
-            static std::uint64_t s_player_mana_custom_label_trace_count = 0;
-            const std::uint64_t count = ++s_player_mana_custom_label_trace_count;
-            if (count <= 20 || (count % 100) == 0) {
-                std::wstring message = L"PlayerManaCustomLabelEqTypeTrace count=";
-                message += std::to_wstring(count);
-                message += L" eq_type=";
-                message += std::to_wstring(eq_type);
-                message += L" text=\"";
-                message += WidenAsciiLossy(display);
-                message += L"\" resolved=";
-                message += resolved ? L"true" : L"false";
-                message += L" authoritative_context_used=";
-                message += authoritative_context_used ? L"true" : L"false";
-                message += L" current=";
-                message += std::to_wstring(current);
-                message += L" max=";
-                message += std::to_wstring(max);
-                message += L" best_class_id=";
-                message += std::to_wstring(best_class_id);
-                monomyth::logger::Log(message);
-            }
             return true;
         }
     }
@@ -11060,29 +10979,6 @@ int CDECL GetGaugeValueFromEQHook(
             pointer_copied);
     }
 
-    if (eq_type == kPetInfoFocusedPetGaugeEqType) {
-        const std::uint64_t count = ++g_pet_info_stock_gauge_eqtype_trace_count;
-        if (count <= 40 || (count % 100) == 0) {
-            std::wstring message = L"PetInfoStockGaugeEqTypeTrace count=";
-            message += std::to_wstring(count);
-            message += L" eq_type=";
-            message += std::to_wstring(eq_type);
-            message += L" native_result=";
-            message += std::to_wstring(native_result);
-            message += L" text_cxstr=";
-            message += HexPtr(reinterpret_cast<std::uintptr_t>(text_cxstr));
-            message += L" zero_flag_out=";
-            message += HexPtr(reinterpret_cast<std::uintptr_t>(zero_flag_out));
-            if (zero_flag_out != nullptr) {
-                message += L" zero_flag_value=";
-                message += *zero_flag_out ? L"true" : L"false";
-            }
-            message += L" pet_info_window=";
-            message += HexPtr(reinterpret_cast<std::uintptr_t>(pet_info_window));
-            monomyth::logger::Log(message);
-        }
-    }
-
     if (!IsMultiPetExtraPetEqType(eq_type)) {
         return native_result;
     }
@@ -11100,35 +10996,6 @@ int CDECL GetGaugeValueFromEQHook(
         : 0;
     if (zero_flag_out != nullptr) {
         *zero_flag_out = resolved_result == 0;
-    }
-
-    const std::uint64_t count = ++g_multipet_extra_pet_eqtype_trace_count;
-    if (count <= 40 || (count % 100) == 0) {
-        std::wstring message = L"MultiPetExtraPetGaugeEqTypeTrace count=";
-        message += std::to_wstring(count);
-        message += L" eq_type=";
-        message += std::to_wstring(eq_type);
-        message += L" slot=";
-        message += std::to_wstring(slot);
-        message += L" native_result=";
-        message += std::to_wstring(native_result);
-        message += L" server_auth_has_value=";
-        message += has_server_auth_value ? L"true" : L"false";
-        message += L" server_auth_value=";
-        message += std::to_wstring(resolved_result);
-        message += L" returned_result=";
-        message += std::to_wstring(resolved_result);
-        message += L" text_cxstr=";
-        message += HexPtr(reinterpret_cast<std::uintptr_t>(text_cxstr));
-        message += L" zero_flag_out=";
-        message += HexPtr(reinterpret_cast<std::uintptr_t>(zero_flag_out));
-        if (zero_flag_out != nullptr) {
-            message += L" zero_flag_value=";
-            message += *zero_flag_out ? L"true" : L"false";
-        }
-        message += L" pet_info_window=";
-        message += HexPtr(reinterpret_cast<std::uintptr_t>(pet_info_window));
-        monomyth::logger::Log(message);
     }
 
     void* gauge_window = ReadMultiPetExtraPetGaugeWindow(slot);
@@ -11161,37 +11028,10 @@ int CDECL GetGaugeValueFromEQHook(
             }
         }
 
-        const std::uint64_t text_count =
-            ++g_multipet_extra_pet_eqtype_trace_count;
-        if (text_count <= 40 || (text_count % 100) == 0) {
-            std::wstring msg = L"MultiPetExtraPetGaugeTextUpdate count=";
-            msg += std::to_wstring(text_count);
-            msg += L" eq_type=";
-            msg += std::to_wstring(eq_type);
-            msg += L" slot=";
-            msg += std::to_wstring(slot);
-            msg += L" gauge_window=";
-            msg += HexPtr(reinterpret_cast<std::uintptr_t>(gauge_window));
-            msg += L" display_text=\"";
-            msg += WidenAsciiLossy(display_text);
-            msg += L"\" draw_text_cxstr=";
-            msg += HexPtr(reinterpret_cast<std::uintptr_t>(text_cxstr));
-            msg += L" draw_text_updated=";
-            msg += draw_text_updated ? L"true" : L"false";
-            if (!draw_text_updated && draw_text_failure_reason != nullptr) {
-                msg += L" draw_text_failure_reason=\"";
-                msg += draw_text_failure_reason;
-                msg += L"\"";
-            }
-            msg += L" window_text_updated=";
-            msg += window_text_updated ? L"true" : L"false";
-            if (!window_text_updated && window_text_failure_reason != nullptr) {
-                msg += L" window_text_failure_reason=\"";
-                msg += window_text_failure_reason;
-                msg += L"\"";
-            }
-            monomyth::logger::Log(msg);
-        }
+        (void)draw_text_updated;
+        (void)draw_text_failure_reason;
+        (void)window_text_updated;
+        (void)window_text_failure_reason;
     }
 
     return resolved_result;
@@ -11642,28 +11482,89 @@ bool TryFindSpawnByIdFromSpawnList(
         nullptr,
         0);
 
-    void* node = nullptr;
+    void* spawn_id_index = nullptr;
     if (!TryCopyObject(
-            reinterpret_cast<const std::uint8_t*>(spawn_manager) + kPlayerManagerFirstSpawnOffset,
-            &node) ||
-        node == nullptr) {
+            reinterpret_cast<const std::uint8_t*>(spawn_manager) +
+                kPlayerManagerSpawnIdIndexOffset,
+            &spawn_id_index) ||
+        spawn_id_index == nullptr) {
         LogPetInfoSpawnWalkTrace(
-            L"first_node_read_failed",
+            L"index_read_failed",
             spawn_id,
             spawn_manager,
-            node,
+            spawn_id_index,
             0,
             nullptr,
             0);
         return false;
     }
 
+    std::uint32_t bucket_count = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spawn_id_index) +
+                kSpawnIdIndexBucketCountOffset,
+            &bucket_count) ||
+        bucket_count == 0) {
+        LogPetInfoSpawnWalkTrace(
+            L"bucket_count_read_failed",
+            spawn_id,
+            spawn_manager,
+            spawn_id_index,
+            bucket_count,
+            nullptr,
+            0);
+        return false;
+    }
+
+    void* buckets = nullptr;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spawn_id_index) +
+                kSpawnIdIndexBucketsOffset,
+            &buckets) ||
+        buckets == nullptr) {
+        LogPetInfoSpawnWalkTrace(
+            L"buckets_read_failed",
+            spawn_id,
+            spawn_manager,
+            spawn_id_index,
+            bucket_count,
+            buckets,
+            0);
+        return false;
+    }
+
+    const std::uint32_t bucket_index = spawn_id % bucket_count;
     LogPetInfoSpawnWalkTrace(
-        L"first_node_read_ok",
+        L"bucket_select",
+        spawn_id,
+        spawn_manager,
+        spawn_id_index,
+        bucket_count,
+        buckets,
+        bucket_index);
+
+    void* node = nullptr;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(buckets) +
+                static_cast<std::size_t>(bucket_index) * sizeof(void*),
+            &node)) {
+        LogPetInfoSpawnWalkTrace(
+            L"bucket_head_read_failed",
+            spawn_id,
+            spawn_manager,
+            buckets,
+            bucket_index,
+            nullptr,
+            0);
+        return false;
+    }
+
+    LogPetInfoSpawnWalkTrace(
+        L"bucket_head_read_ok",
         spawn_id,
         spawn_manager,
         node,
-        0,
+        bucket_index,
         nullptr,
         0);
 
@@ -11671,7 +11572,8 @@ bool TryFindSpawnByIdFromSpawnList(
     for (std::size_t i = 0; i < kMaxSpawnWalkCount && node != nullptr; ++i) {
         std::uint32_t candidate_spawn_id = 0;
         if (!TryCopyObject(
-                reinterpret_cast<const std::uint8_t*>(node) + kPlayerClientSpawnIdOffset,
+                reinterpret_cast<const std::uint8_t*>(node) +
+                    kSpawnIdIndexNodeSpawnIdOffset,
                 &candidate_spawn_id)) {
             LogPetInfoSpawnWalkTrace(
                 L"candidate_id_read_failed",
@@ -11694,21 +11596,39 @@ bool TryFindSpawnByIdFromSpawnList(
             i);
 
         if (candidate_spawn_id == spawn_id) {
+            void* spawn = nullptr;
+            if (!TryCopyObject(
+                    reinterpret_cast<const std::uint8_t*>(node) +
+                        kSpawnIdIndexNodeSpawnOffset,
+                    &spawn) ||
+                spawn == nullptr) {
+                LogPetInfoSpawnWalkTrace(
+                    L"match_spawn_read_failed",
+                    spawn_id,
+                    spawn_manager,
+                    node,
+                    candidate_spawn_id,
+                    nullptr,
+                    i);
+                return false;
+            }
+
             LogPetInfoSpawnWalkTrace(
                 L"match_found",
                 spawn_id,
                 spawn_manager,
                 node,
                 candidate_spawn_id,
-                nullptr,
+                spawn,
                 i);
-            *spawn_out = node;
+            *spawn_out = spawn;
             return true;
         }
 
         void* next = nullptr;
         if (!TryCopyObject(
-                reinterpret_cast<const std::uint8_t*>(node) + kPlayerClientNextSpawnOffset,
+                reinterpret_cast<const std::uint8_t*>(node) +
+                    kSpawnIdIndexNodeNextOffset,
                 &next)) {
             LogPetInfoSpawnWalkTrace(
                 L"next_read_failed",
@@ -14421,7 +14341,7 @@ int MONOMYTH_FASTCALL PlayerManaEqTypeResolverHook(
             ++g_player_mana_eqtype_override_count;
         }
 
-        if (resolved || ShouldLogMulticlassManaTrace(count)) {
+        if (ShouldLogMulticlassManaTrace(count)) {
             std::wstring message = L"MulticlassManaTrace kind=\"";
             message += eq_type == kPlayerManaCustomGaugeEqType
                 ? L"player_mana_custom_gauge_eqtype"
@@ -22671,30 +22591,12 @@ void LogItemUsabilityOverride(
     int original_result,
     int returned_result,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
-    const std::uintptr_t module_base = GetHostModuleBase();
-    std::wstring message = L"MulticlassItemUsability target=IsClassUsablePredicate this=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_character));
-    message += L" caller_return=";
-    message += HexPtr(caller_return_address);
-    if (module_base != 0 && caller_return_address >= module_base) {
-        message += L" caller_return_rva=";
-        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
-    }
-    message += L" class_id=";
-    message += std::to_wstring(class_id);
-    message += L" original_result=";
-    message += std::to_wstring(original_result);
-    message += L" returned_result=";
-    message += std::to_wstring(returned_result);
-    message += L" assigned_mask=";
-    message += FormatAssignedMask(snapshot);
-    message += L" has_assigned_mask=";
-    message += snapshot.has_classes_bitmask ? L"true" : L"false";
-    message += L" evidence_source=";
-    message += g_is_class_usable_predicate_evidence_source;
-    message += L" override_count=";
-    message += std::to_wstring(g_is_class_usable_predicate_override_count);
-    monomyth::logger::Log(message);
+    (void)this_character;
+    (void)caller_return_address;
+    (void)class_id;
+    (void)original_result;
+    (void)returned_result;
+    (void)snapshot;
 }
 
 void LogCanEquipOverride(
@@ -22708,41 +22610,16 @@ void LogCanEquipOverride(
     int original_result,
     std::uint32_t item_class_mask,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
-    const std::uintptr_t module_base = GetHostModuleBase();
-    std::wstring message = L"MulticlassItemUsability target=CanEquip this=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
-    message += L" caller_return=";
-    message += HexPtr(caller_return_address);
-    if (module_base != 0 && caller_return_address >= module_base) {
-        const std::uint32_t caller_return_rva = static_cast<std::uint32_t>(
-            caller_return_address - module_base);
-        message += L" caller_return_rva=";
-        message += Hex32(caller_return_rva);
-        message += DescribeCanEquipCallerSite(caller_return_rva);
-    }
-    message += L" inventory_like=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(inventory_or_container_like));
-    message += L" item_like=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(item_like));
-    message += L" arg3=";
-    message += std::to_wstring(arg3);
-    message += L" arg4=";
-    message += std::to_wstring(arg4);
-    message += L" arg5=";
-    message += std::to_wstring(arg5);
-    message += L" original_result=";
-    message += std::to_wstring(original_result);
-    message += L" returned_result=1";
-    message += L" item_class_mask_client=";
-    message += Hex32(item_class_mask);
-    message += L" item_matches_assigned_class=true";
-    message += L" override_mode=authoritative_item_mask_intersection";
-    message += L" assigned_mask=";
-    message += FormatAssignedMask(snapshot);
-    message += L" has_assigned_mask=";
-    message += snapshot.has_classes_bitmask ? L"true" : L"false";
-    message += L" evidence_source=cleanroom_rva";
-    monomyth::logger::Log(message);
+    (void)this_context;
+    (void)caller_return_address;
+    (void)inventory_or_container_like;
+    (void)item_like;
+    (void)arg3;
+    (void)arg4;
+    (void)arg5;
+    (void)original_result;
+    (void)item_class_mask;
+    (void)snapshot;
 }
 
 void LogMerchantUsableClassMaskOverride(
@@ -23395,39 +23272,17 @@ void LogCanEquipObservation(
     std::uint32_t item_class_mask,
     bool item_matches_assigned_class,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
-    const std::uintptr_t module_base = GetHostModuleBase();
-    std::wstring message = L"MulticlassItemTrace target=CanEquipObserved this=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
-    message += L" caller_return=";
-    message += HexPtr(caller_return_address);
-    if (module_base != 0 && caller_return_address >= module_base) {
-        const std::uint32_t caller_return_rva = static_cast<std::uint32_t>(
-            caller_return_address - module_base);
-        message += L" caller_return_rva=";
-        message += Hex32(caller_return_rva);
-        message += DescribeCanEquipCallerSite(caller_return_rva);
-    }
-    message += L" inventory_like=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(inventory_or_container_like));
-    message += L" item_like=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(item_like));
-    message += L" arg3=";
-    message += std::to_wstring(arg3);
-    message += L" arg4=";
-    message += std::to_wstring(arg4);
-    message += L" arg5=";
-    message += std::to_wstring(arg5);
-    message += L" original_result=";
-    message += std::to_wstring(original_result);
-    message += L" item_class_mask_client=";
-    message += Hex32(item_class_mask);
-    message += L" item_matches_assigned_class=";
-    message += item_matches_assigned_class ? L"true" : L"false";
-    message += L" assigned_mask=";
-    message += FormatAssignedMask(snapshot);
-    message += L" has_assigned_mask=";
-    message += snapshot.has_classes_bitmask ? L"true" : L"false";
-    monomyth::logger::Log(message);
+    (void)this_context;
+    (void)caller_return_address;
+    (void)inventory_or_container_like;
+    (void)item_like;
+    (void)arg3;
+    (void)arg4;
+    (void)arg5;
+    (void)original_result;
+    (void)item_class_mask;
+    (void)item_matches_assigned_class;
+    (void)snapshot;
 }
 
 void LogEquipRecordLookupTrace(
@@ -27033,13 +26888,13 @@ bool IsMultiPetWindowFeatureRequested() noexcept {
 #if !MONOMYTH_ENABLE_MULTIPET_WINDOW
     return false;
 #else
-    const char* env = std::getenv("MONOMYTH_ENABLE_MULTIPET_WINDOW");
-    return env != nullptr && std::strcmp(env, "1") == 0;
+    return true;
 #endif
 }
 
 bool ShouldLogPetInfoWindowNotification(std::uint64_t count) noexcept {
-    return count <= 40 || (count % 100) == 0;
+    (void)count;
+    return false;
 }
 
 void* TryProbePetInfoChildByName(

@@ -260,18 +260,8 @@ bool Initialize(std::uintptr_t module_base) noexcept {
     (void)module_base;
     return false;
 #else
-    const char* env = std::getenv("MONOMYTH_ENABLE_MULTIPET_WINDOW");
-    if (env == nullptr || std::strcmp(env, "1") != 0) {
-        monomyth::logger::Log(
-            L"multipet_window: feature flag not set "
-            L"(MONOMYTH_ENABLE_MULTIPET_WINDOW env var absent or != 1)");
-        return false;
-    }
-
     g_multipet_enabled = true;
-    monomyth::logger::Log(
-        L"multipet_window: feature enabled "
-        L"(MONOMYTH_ENABLE_MULTIPET_WINDOW=1)");
+    monomyth::logger::Log(L"multipet_window: feature enabled (built-in default)");
 
     g_get_child_item_by_name = reinterpret_cast<GetChildItemByNameFn>(
         module_base + kCXWndGetChildItemByNameRva);
