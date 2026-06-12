@@ -21,6 +21,7 @@
 #include "logger.h"
 #include "multiclass_cache.h"
 #include "multiclass_skill_visibility.h"
+#include "multipet_spawn_observer.h"
 #include "opcode_reference.h"
 #include "remote_multiclass_identity.h"
 #include "server_auth_stats_observer.h"
@@ -44,8 +45,11 @@ constexpr std::uint32_t kWhoAllClassDisplayCorrelationBudget = 48;
 constexpr std::size_t kWhoAllClassDisplayEntryCaptureCap = 256;
 constexpr std::uint32_t kRemoteMulticlassIdentityOpcode =
     monomyth::remote_multiclass_identity::kRemoteMulticlassIdentityOpcode;
+constexpr std::uint32_t kDeleteSpawnOpcode = 0x7280;
+constexpr std::uint32_t kNewSpawnOpcode = 0x6097;
 constexpr std::uint32_t kWhoAllResponseOpcode = 0x578c;
 constexpr std::uint32_t kEnterWorldOpcode = 0x578f;
+constexpr std::uint32_t kZoneEntryOpcode = 0x5089;
 constexpr std::uint32_t kWhoAllResponseHeaderSize = 64;
 constexpr std::uint32_t kWhoAllResponseEntryLogLimit = 6;
 constexpr std::uint32_t kWhoAllResponseFixedBlockBytes = 28;
@@ -377,6 +381,18 @@ void ClearRemoteMulticlassIdentityStore(const wchar_t* reason) {
     monomyth::logger::Log(message);
 }
 
+void ClearMultiPetSpawnRosterStore(const wchar_t* reason) {
+    monomyth::multipet_spawn_observer::Clear();
+
+    std::wstring message = L"PacketObserverMultiPetSpawnRosterStoreCleared";
+    if (reason != nullptr && reason[0] != L'\0') {
+        message += L" reason=\"";
+        message += reason;
+        message += L"\"";
+    }
+    monomyth::logger::Log(message);
+}
+
 void BeginWhoAllClassDisplayEntriesCapture() noexcept {
     std::lock_guard<std::mutex> lock(g_who_all_class_display_entries_mutex);
     g_who_all_class_display_entries = {};
@@ -527,7 +543,7 @@ bool IsStrictServerAuthStatsFallbackCandidate(
         payload_length <= kAuthStatsCandidatePayloadCeiling &&
         candidate.valid &&
         candidate.count > 0 &&
-        candidate.count <= 3 &&
+        candidate.count <= 5 &&
         candidate.has_classes_bitmask &&
         !candidate.invalid_classes_bitmask &&
         candidate.unknown_entry_count == 0 &&
@@ -1160,6 +1176,28 @@ void MaybeHandleRemoteMulticlassIdentity(
     monomyth::logger::Log(message.str());
 }
 
+void MaybeObserveMultiPetSpawnRoster(
+    std::uint32_t opcode,
+    std::uint32_t payload_length,
+    const void* payload) {
+    if (payload == nullptr) {
+        return;
+    }
+
+    if (opcode == kZoneEntryOpcode || opcode == kNewSpawnOpcode) {
+        monomyth::multipet_spawn_observer::ObserveSpawnPayload(payload, payload_length);
+        return;
+    }
+
+    if (opcode == kDeleteSpawnOpcode) {
+        monomyth::multipet_spawn_observer::ObserveDeleteSpawnPayload(
+            payload,
+            payload_length);
+        return;
+    }
+
+}
+
 }  // namespace
 
 State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
@@ -1207,6 +1245,7 @@ State Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
     g_who_all_class_display_correlation_response_index.store(0);
     ResetWhoAllClassDisplayEntries();
     ClearRemoteMulticlassIdentityStore(L"initialize");
+    ClearMultiPetSpawnRosterStore(L"initialize");
     const IntrospectionAllowlistConfig allowlist_config = LoadIntrospectionAllowlist();
     g_introspection_allowlist = allowlist_config.opcodes;
     g_state.store(State::kInitialized);
@@ -1298,6 +1337,7 @@ void ObserveReceiveMetadata(
     const bool guild_trainer_focus = IsGuildTrainerOpcode(opcode);
     if (opcode == kEnterWorldOpcode) {
         ClearRemoteMulticlassIdentityStore(L"enter_world");
+        ClearMultiPetSpawnRosterStore(L"enter_world");
         ClearTimedCastState();
     }
     ObserveTimedCastPacket(opcode, payload_length, payload);
@@ -1339,6 +1379,7 @@ void ObserveReceiveMetadata(
         MaybeHandleServerAuthStatsCandidate(sequence, opcode, payload_length, payload);
     }
     MaybeHandleRemoteMulticlassIdentity(sequence, opcode, payload_length, payload);
+    MaybeObserveMultiPetSpawnRoster(opcode, payload_length, payload);
     MaybeLogWhoAllResponse(sequence, opcode, payload_length, payload);
     MaybeLogGuildRosterPacket(sequence, opcode, payload_length, payload);
 
@@ -1701,6 +1742,7 @@ void Shutdown() noexcept {
     g_who_all_class_display_correlation_remaining.store(0);
     ResetWhoAllClassDisplayEntries();
     ClearRemoteMulticlassIdentityStore(L"shutdown");
+    ClearMultiPetSpawnRosterStore(L"shutdown");
     monomyth::logger::Log(message.str());
 }
 

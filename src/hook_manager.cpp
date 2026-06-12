@@ -9,6 +9,7 @@
 #include <cctype>
 #include <cstdint>
 #include <cwchar>
+#include <cstdlib>
 #include <cstring>
 #include <iomanip>
 #include <limits>
@@ -17,11 +18,14 @@
 #include <string_view>
 #include <vector>
 
+#include "config.h"
 #include "logger.h"
+#include "monomyth_pet_window.h"
 #include "multiclass_cache.h"
 #include "multiclass_combat_ability.h"
 #include "multiclass_identity.h"
 #include "multiclass_skill_visibility.h"
+#include "multipet_spawn_observer.h"
 #include "opcode_reference.h"
 #include "packet_observer.h"
 #include "remote_multiclass_identity.h"
@@ -123,11 +127,16 @@ constexpr std::uint32_t kPlayerWndManaStateSelectionIndexRva = 0x00453430;
 constexpr std::uint32_t kPlayerWndManaStateEntryByIndexRva = 0x00453680;
 constexpr std::uint32_t kPlayerWndManaVisibilityTargetRva = 0x00466610;
 constexpr std::uint32_t kPlayerWndConstructorRva = 0x00319690;
+constexpr std::uint32_t kGetGaugeValueFromEQRva = 0x00362410;
 constexpr std::uint32_t kGetLabelFromEQRva = 0x00363640;
 constexpr int kPlayerManaEqTypeGauge = 0x0002;
 constexpr int kPlayerManaEqTypeLabel = 0x0014;
 constexpr int kPlayerManaCustomGaugeEqType = 6667;
 constexpr int kPlayerManaCustomLabelEqType = 6668;
+constexpr int kPetInfoFocusedPetGaugeEqType = 16;
+constexpr int kMultiPetExtraPet0GaugeEqType = 6670;
+constexpr int kMultiPetExtraPet1GaugeEqType = 6671;
+constexpr std::uint32_t kPetInfoWindowGlobalRva = 0x0091fbf8;
 constexpr std::uint32_t kSkillsWindowSkillValueProducerRva = 0x00184be0;
 constexpr std::uint32_t kSkillsWindowSkillValueCallsiteRva = 0x003577b5;
 constexpr std::uint32_t kSkillsWindowSkillValueReturnRva = 0x003577ba;
@@ -253,6 +262,23 @@ constexpr std::uint32_t kMoveItemStackLocalGateTargetRva = 0x000322b0;
 constexpr std::uint32_t kEverQuestLMouseUpTargetRva = 0x000c1760;
 constexpr std::uint32_t kCXWndHandleLButtonUpTargetRva = 0x000c1e91;
 constexpr std::uint32_t kInventoryWindowWndNotificationTargetRva = 0x00293490;
+constexpr std::uint32_t kPetInfoWindowWndNotificationTargetRva = 0x00310800;
+constexpr std::uint32_t kPetInfoWindowBaseSidlCtorCallsiteRva = 0x003112d2;
+constexpr std::uint32_t kPetInfoWindowBaseSidlCtorTargetRva = 0x0045f070;
+constexpr std::uint32_t kPetInfoWindowCreateChildrenCallsiteRva = 0x003113f0;
+constexpr std::uint32_t kSidlCreateChildrenEquivalentTargetRva = 0x0045dcf0;
+constexpr std::uint32_t kSidlCreateChildFromTemplateTargetRva = 0x0046e5e0;
+constexpr std::uint32_t kSidlFindScreenPieceTemplateByNameTargetRva = 0x0046e010;
+constexpr std::uint32_t kPetInfoWindowPostCreateRegistrationCallsiteRva = 0x00097f7c;
+constexpr std::uint32_t kPetInfoWindowPostCreateRegistrationTargetRva = 0x001b9e30;
+constexpr std::uint32_t kPetInfoWindowGetChildItemTargetRva = 0x0045cfd0;
+constexpr std::uint32_t kPetInfoWindowGetChildItemStandardCallsiteRva = 0x0031143b;
+constexpr std::uint32_t kPetInfoWindowGetChildItemPetGaugeCallsiteRva = 0x0031157d;
+constexpr std::uint32_t kPetInfoWindowGetChildItemBuffCallsiteRva = 0x00311715;
+constexpr std::size_t kSidlScreenWndTemplateDataOffset = 0x01e0;
+constexpr std::size_t kSidlTemplateChildBeginLikeOffset = 0x98;
+constexpr std::size_t kSidlTemplateChildEndLikeOffset = 0x9c;
+constexpr std::size_t kCXStrInternalTextOffset = 0x14;
 constexpr std::uint32_t kInventorySummaryRefreshCandidateARva = 0x00290100;
 constexpr std::uint32_t kInventorySummaryRefreshCandidateBRva = 0x002905f0;
 constexpr std::uint32_t kInventorySummaryRefreshCandidateCRva = 0x00312b00;
@@ -395,6 +421,8 @@ constexpr std::uint32_t kGetClassDescRva = 0x00114dc0;
 constexpr std::uint32_t kGetClassThreeLetterCodeRva = 0x001153c0;
 constexpr std::uint32_t kGetDeityDescRva = 0x00115f70;
 constexpr std::size_t kPcProfileCurrentManaOffset = 0x338c;
+constexpr std::uint32_t kCXStrCtorFromAsciiRva = 0x00405c20;
+constexpr std::uint32_t kCXStrDtorRva = 0x00405b20;
 constexpr std::uint32_t kCXStrAssignTargetRva = 0x00405d90;
 constexpr std::uint32_t kCXStrAssignFromAsciiRva = 0x00405de0;
 constexpr std::uint32_t kCXWndSetWindowTextATargetRva = 0x00406ec0;
@@ -403,9 +431,25 @@ constexpr char kEqExportCxStrDtor[] = "??1CXStr@EQClasses@@QAE@XZ";
 constexpr char kEqExportCxStrAssignFromAscii[] = "??4CXStr@EQClasses@@QAEAAV01@PBD@Z";
 constexpr char kEqExportCxWndSetWindowTextA[] =
     "?SetWindowTextA@CXWnd@EQClasses@@QAEXAAVCXStr@2@@Z";
+constexpr char kEqExportCSidlScreenWndCreateChildrenFromSidl[] =
+    "?CreateChildrenFromSidl@CSidlScreenWnd@EQClasses@@QAEXXZ";
+constexpr char kEqExportCSidlScreenWndCreateChildrenFromSidlAlias[] =
+    "CSidlScreenWnd__CreateChildrenFromSidl";
+constexpr WORD kEqExportCSidlScreenWndCreateChildrenFromSidlOrdinal = 0x01c5;
 // eqlib maps 0x136310 to CEverQuest::LeftClickedOnPlayer, not a live /who wrapper.
 // Keep the detour code path for legacy context experiments, but label the seam honestly.
 constexpr std::uint32_t kLeftClickedOnPlayerSurrogateRva = 0x00136310;
+// Clean-room and eqlib notes often record eqgame VAs. When we add them to the live
+// module base here, they must be normalized back to RVAs first.
+constexpr std::uint32_t kPetInfoClickEverQuestGlobalRva = 0x009d2630;
+constexpr std::uint32_t kPinstSpawnManagerRva = 0x00a641d0;
+constexpr std::uint32_t kPlayerManagerClientGetSpawnByIdRva = 0x005996e0;
+constexpr std::uint32_t kPlayerManagerSpawnIdIndexOffset = 0x00000014;
+constexpr std::uint32_t kSpawnIdIndexBucketsOffset = 0x00000000;
+constexpr std::uint32_t kSpawnIdIndexBucketCountOffset = 0x00000004;
+constexpr std::uint32_t kSpawnIdIndexNodeSpawnOffset = 0x00000000;
+constexpr std::uint32_t kSpawnIdIndexNodeSpawnIdOffset = 0x00000004;
+constexpr std::uint32_t kSpawnIdIndexNodeNextOffset = 0x00000008;
 constexpr std::uint32_t kWhoClassNameClassLookupTargetRva = 0x003d0660;
 constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnARva = 0x001364ec;
 constexpr std::uint32_t kWhoClassNameClassLookupCallerReturnBRva = 0x001365c7;
@@ -636,6 +680,37 @@ using InventoryWindowWndNotificationFn = int (MONOMYTH_THISCALL*)(
     void* sender_window,
     std::uint32_t notification_code,
     void* payload_like);
+using PetInfoWindowWndNotificationFn = int (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* sender_window,
+    std::uint32_t notification_code,
+    void* payload_like);
+using PetInfoWindowPostCreateRegistrationFn = int (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* global_pointer_arg,
+    void* registration_callback_arg,
+    void* zero_arg_a,
+    void* zero_arg_b);
+using PetInfoWindowBaseSidlCtorFn = void* (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* ctor_arg0,
+    void* name_cxstr,
+    std::uint32_t style_mask_like,
+    std::uint32_t one_like,
+    std::uint32_t zero_like);
+using CSidlScreenWndGetChildItemFn = void* (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* name_cxstr,
+    int required_like);
+using CSidlScreenWndCreateChildrenFromSidlFn = void (MONOMYTH_THISCALL*)(
+    void* this_context);
+using CSidlCreateChildFromTemplateFn = void* (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* parent_window,
+    void* template_like);
+using CSidlFindScreenPieceTemplateByNameFn = void* (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* name_cxstr);
 using ItemDisplayRefreshWorkerFn = void (MONOMYTH_THISCALL*)(
     void* this_context,
     void* arg1_like,
@@ -810,6 +885,12 @@ using MemorizeSendPacketWrapperFn = bool (MONOMYTH_THISCALL*)(
     std::uint32_t mode_like,
     const void* packet,
     std::uint32_t total_length);
+using EverQuestLeftClickedOnPlayerFn = void (MONOMYTH_THISCALL*)(
+    void* this_context,
+    void* spawn);
+using PlayerManagerClientGetSpawnByIdFn = void* (MONOMYTH_THISCALL*)(
+    void* this_context,
+    int spawn_id);
 using GetClassDescFn = const char* (MONOMYTH_THISCALL*)(
     void* this_context,
     unsigned int class_id);
@@ -891,6 +972,10 @@ using GetLabelFromEQFn = bool (CDECL*)(
     void* text_cxstr,
     bool* zero_flag_out,
     COLORREF* color_out);
+using GetGaugeValueFromEQFn = int (CDECL*)(
+    int eq_type,
+    void* text_cxstr,
+    bool* zero_flag_out);
 using ProgressionSelectionClassLookupFn = const char* (CDECL*)(
     unsigned int class_id);
 using WhoClassNameClassLookupFn = const char* (MONOMYTH_THISCALL*)(
@@ -916,6 +1001,8 @@ struct CallsitePatch {
 };
 
 struct CxWndStateSnapshot {
+    bool vtable_copied = false;
+    std::uintptr_t vtable = 0;
     bool enabled = false;
     bool visible = false;
     bool minimized = false;
@@ -923,6 +1010,10 @@ struct CxWndStateSnapshot {
     bool controls_created = false;
     bool init_visibility = false;
     bool visible_before_resize = false;
+    bool eqtype_0x1d8_copied = false;
+    int eqtype_0x1d8 = 0;
+    bool eqtype_0x1e4_copied = false;
+    int eqtype_0x1e4 = 0;
     bool valid = false;
 };
 
@@ -1126,6 +1217,10 @@ InlineDetour g_move_item_slot_populate_detour = {};
 InlineDetour g_everquest_lmouse_up_detour = {};
 InlineDetour g_cxwnd_handle_lbutton_up_detour = {};
 InlineDetour g_inventory_window_wnd_notification_detour = {};
+InlineDetour g_pet_info_window_wnd_notification_detour = {};
+InlineDetour g_sidl_create_children_from_sidl_detour = {};
+InlineDetour g_sidl_create_child_from_template_detour = {};
+InlineDetour g_sidl_find_screen_piece_template_by_name_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_a_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_b_detour = {};
 InlineDetour g_inventory_summary_refresh_candidate_c_detour = {};
@@ -1137,6 +1232,7 @@ InlineDetour g_player_wnd_mana_visibility_refresh_detour = {};
 InlineDetour g_player_wnd_mana_producer_a_detour = {};
 InlineDetour g_player_wnd_mana_producer_b_detour = {};
 InlineDetour g_player_mana_eqtype_resolver_detour = {};
+InlineDetour g_get_gauge_value_from_eq_detour = {};
 InlineDetour g_get_label_from_eq_detour = {};
 InlineDetour g_character_zone_client_get_adjusted_skill_detour = {};
 InlineDetour g_character_zone_client_get_mana_regen_detour = {};
@@ -1275,6 +1371,12 @@ CallsitePatch g_combat_ability_wnd_has_ability_callsite_patch = {};
 CallsitePatch g_combat_ability_wnd_best_ability_callsite_patch = {};
 CallsitePatch g_combat_ability_wnd_dispatcher_show_post_show_callsite_patch = {};
 CallsitePatch g_combat_ability_wnd_dispatcher_hide_post_show_callsite_patch = {};
+CallsitePatch g_pet_info_window_base_sidl_ctor_callsite_patch = {};
+CallsitePatch g_pet_info_window_create_children_callsite_patch = {};
+CallsitePatch g_pet_info_window_post_create_registration_callsite_patch = {};
+CallsitePatch g_pet_info_window_get_child_item_standard_callsite_patch = {};
+CallsitePatch g_pet_info_window_get_child_item_pet_gauge_callsite_patch = {};
+CallsitePatch g_pet_info_window_get_child_item_buff_callsite_patch = {};
 CallsitePatch g_backstab_primary_weapon_classifier_callsite_patch = {};
 CallsitePatch g_hide_while_sneaking_class_lookup_callsite_patch = {};
 CallsitePatch g_equip_local_record_lookup_callsite_patch = {};
@@ -1330,6 +1432,15 @@ MoveItemStackLocalGateFn g_original_move_item_stack_local_gate = nullptr;
 EverQuestLMouseUpFn g_original_everquest_lmouse_up = nullptr;
 CXWndHandleLButtonUpFn g_original_cxwnd_handle_lbutton_up = nullptr;
 InventoryWindowWndNotificationFn g_original_inventory_window_wnd_notification = nullptr;
+PetInfoWindowWndNotificationFn g_original_pet_info_window_wnd_notification = nullptr;
+CSidlScreenWndCreateChildrenFromSidlFn g_original_pet_info_window_create_children_from_sidl =
+    nullptr;
+PetInfoWindowBaseSidlCtorFn g_original_pet_info_window_base_sidl_ctor = nullptr;
+PetInfoWindowPostCreateRegistrationFn g_original_pet_info_window_post_create_registration = nullptr;
+CSidlScreenWndGetChildItemFn g_original_pet_info_window_get_child_item = nullptr;
+CSidlScreenWndCreateChildrenFromSidlFn g_original_sidl_create_children_from_sidl = nullptr;
+CSidlCreateChildFromTemplateFn g_original_sidl_create_child_from_template = nullptr;
+CSidlFindScreenPieceTemplateByNameFn g_original_sidl_find_screen_piece_template_by_name = nullptr;
 ItemDisplayRefreshWorkerFn g_original_item_display_refresh_worker_trace = nullptr;
 ItemDisplayClassRowBuilderFn g_original_item_display_class_row_builder = nullptr;
 InvSlotWndHandleLButtonUpFn g_original_invslot_wnd_handle_lbutton_up = nullptr;
@@ -1415,6 +1526,7 @@ CXStrCtorFromAsciiFn g_cxstr_ctor_from_ascii = nullptr;
 CXStrDtorFn g_cxstr_dtor = nullptr;
 CXStrAssignFromAsciiFn g_cxstr_assign_from_ascii = nullptr;
 CXWndSetWindowTextACXStrFn g_cxwnd_set_window_text_a_cxstr = nullptr;
+GetGaugeValueFromEQFn g_original_get_gauge_value_from_eq = nullptr;
 GetLabelFromEQFn g_original_get_label_from_eq = nullptr;
 bool g_inventory_custom_label_notification_owned = false;
 std::atomic<std::uintptr_t> g_last_inventory_window_context = 0;
@@ -1488,6 +1600,27 @@ std::uint64_t g_multiclass_cur_mana_trace_count = 0;
 std::uint64_t g_multiclass_cur_mana_override_count = 0;
 std::uint64_t g_multiclass_cur_mana_callsite_override_count = 0;
 std::uint64_t g_player_mana_visibility_force_count = 0;
+std::uint64_t g_pet_info_window_wnd_notification_trace_count = 0;
+std::uint64_t g_pet_info_target_click_trace_count = 0;
+std::uint64_t g_pet_info_spawn_walk_trace_count = 0;
+std::uint64_t g_multipet_pet_info_probe_trace_count = 0;
+std::uint64_t g_multipet_extra_pet_eqtype_trace_count = 0;
+std::uint64_t g_pet_info_stock_gauge_eqtype_trace_count = 0;
+std::array<std::atomic<std::uintptr_t>, 2> g_multipet_extra_pet_gauge_windows = {};
+std::uint64_t g_pet_info_window_base_sidl_ctor_trace_count = 0;
+std::uint64_t g_pet_info_window_create_children_trace_count = 0;
+std::uint64_t g_pet_info_window_get_child_item_trace_count = 0;
+std::uint64_t g_sidl_create_children_from_sidl_trace_count = 0;
+std::uint64_t g_sidl_create_child_from_template_trace_count = 0;
+std::uint64_t g_sidl_create_child_from_template_pet_info_trace_count = 0;
+std::uint64_t g_sidl_find_screen_piece_template_by_name_trace_count = 0;
+std::atomic<std::uintptr_t> g_active_pet_info_create_children_window = 0;
+struct ActivePetInfoCreatedChild {
+    std::uintptr_t window = 0;
+    std::uint32_t depth = 0;
+};
+std::array<ActivePetInfoCreatedChild, 256> g_active_pet_info_created_children = {};
+std::size_t g_active_pet_info_created_children_count = 0;
 
 bool TryResyncLocalCombatAbilityArrayFromLastSource(
     const monomyth::server_auth_stats::Snapshot& snapshot) noexcept;
@@ -1500,6 +1633,9 @@ bool InstallInlineDetour(
 int MONOMYTH_FASTCALL CombatAbilityWindowOnShowTraceHook(
     void* this_window,
     void*) noexcept;
+bool InstallPetInfoWindowTraceForMultiPet(const monomyth::runtime::Manifest& manifest) noexcept;
+bool RemovePetInfoWindowTraceForMultiPet() noexcept;
+bool IsMultiPetWindowFeatureRequested() noexcept;
 std::uint64_t g_player_mana_visibility_callsite_override_count = 0;
 std::uint64_t g_player_mana_visibility_callsite_trace_count = 0;
 std::uint64_t g_player_mana_visibility_rebind_count = 0;
@@ -1901,6 +2037,11 @@ std::uintptr_t GetHostModuleBase() noexcept;
 bool TryComputeEqgameCallerReturnRva(
     std::uintptr_t caller_return_address,
     std::uint32_t* caller_return_rva) noexcept;
+bool LooksLikeEqgameObject(void* candidate, std::uintptr_t* vtable) noexcept;
+bool TryFindSpawnByIdFromSpawnList(
+    void* spawn_manager,
+    std::uint32_t spawn_id,
+    void** spawn_out) noexcept;
 bool TryReadLocalPlayerCharacterPointer(void** character) noexcept;
 MONOMYTH_NOINLINE bool TryInvokeCharacterZoneClientCurMana(
     CharacterZoneClientCurManaFn cur_mana,
@@ -2131,7 +2272,8 @@ bool ShouldLogSpellUiAboutToShowGateTrace(std::uint64_t count) noexcept {
 }
 
 bool ShouldLogMulticlassManaTrace(std::uint64_t count) noexcept {
-    return count <= 20 || (count % 50) == 0;
+    (void)count;
+    return false;
 }
 
 std::wstring FormatAssignedMask(
@@ -3542,7 +3684,16 @@ bool TryCopyBytes(
         return false;
     }
 #else
-    std::memcpy(destination, source, length);
+    SIZE_T bytes_read = 0;
+    if (!ReadProcessMemory(
+            GetCurrentProcess(),
+            source,
+            destination,
+            length,
+            &bytes_read) ||
+        bytes_read != length) {
+        return false;
+    }
 #endif
     return true;
 }
@@ -3768,6 +3919,24 @@ bool TryReadAsciiCString(
     }
 
     return !value->empty();
+}
+
+bool LooksLikeUsefulAsciiTraceString(const std::string& value) noexcept {
+    if (value.size() < 2 || value.size() > 96) {
+        return false;
+    }
+
+    bool has_letter = false;
+    for (char ch : value) {
+        const auto byte = static_cast<unsigned char>(ch);
+        if (std::isalpha(byte)) {
+            has_letter = true;
+        }
+        if (byte < 0x20 || byte > 0x7e) {
+            return false;
+        }
+    }
+    return has_letter;
 }
 
 bool TryReadEqSpawnName(
@@ -4679,44 +4848,60 @@ bool TryReadCxWndStateSnapshot(
         return false;
     }
 
-    bool enabled = false;
-    bool visible = false;
-    bool minimized = false;
-    bool active = false;
-    bool controls_created = false;
-    bool init_visibility = false;
-    bool visible_before_resize = false;
+    std::uintptr_t vtable = 0;
+    std::uint8_t enabled_raw = 0;
+    std::uint8_t visible_raw = 0;
+    std::uint8_t minimized_raw = 0;
+    std::uint8_t active_raw = 0;
+    std::uint8_t controls_created_raw = 0;
+    std::uint8_t init_visibility_raw = 0;
+    std::uint8_t visible_before_resize_raw = 0;
+    int eqtype_0x1d8 = 0;
+    int eqtype_0x1e4 = 0;
+    const bool vtable_copied = TryCopyObject(window, &vtable);
+    const bool eqtype_0x1d8_copied = TryCopyObject(
+        reinterpret_cast<const std::uint8_t*>(window) + 0x1d8,
+        &eqtype_0x1d8);
+    const bool eqtype_0x1e4_copied = TryCopyObject(
+        reinterpret_cast<const std::uint8_t*>(window) + 0x1e4,
+        &eqtype_0x1e4);
     if (!TryCopyObject(
             reinterpret_cast<const std::uint8_t*>(window) + kCxWndOpenOffset,
-            &enabled) ||
+            &enabled_raw) ||
         !TryCopyObject(
             reinterpret_cast<const std::uint8_t*>(window) + kCxWndVisibleOffset,
-            &visible) ||
+            &visible_raw) ||
         !TryCopyObject(
             reinterpret_cast<const std::uint8_t*>(window) + kCxWndMinimizedOffset,
-            &minimized) ||
+            &minimized_raw) ||
         !TryCopyObject(
             reinterpret_cast<const std::uint8_t*>(window) + kCxWndActiveOffset,
-            &active) ||
+            &active_raw) ||
         !TryCopyObject(
             reinterpret_cast<const std::uint8_t*>(window) + kCSidlControlsCreatedOffset,
-            &controls_created) ||
+            &controls_created_raw) ||
         !TryCopyObject(
             reinterpret_cast<const std::uint8_t*>(window) + kCSidlInitVisibilityOffset,
-            &init_visibility) ||
+            &init_visibility_raw) ||
         !TryCopyObject(
             reinterpret_cast<const std::uint8_t*>(window) + kCSidlVisibleBeforeResizeOffset,
-            &visible_before_resize)) {
+            &visible_before_resize_raw)) {
         return false;
     }
 
-    snapshot->enabled = enabled;
-    snapshot->visible = visible;
-    snapshot->minimized = minimized;
-    snapshot->active = active;
-    snapshot->controls_created = controls_created;
-    snapshot->init_visibility = init_visibility;
-    snapshot->visible_before_resize = visible_before_resize;
+    snapshot->vtable_copied = vtable_copied;
+    snapshot->vtable = vtable;
+    snapshot->enabled = enabled_raw != 0;
+    snapshot->visible = visible_raw != 0;
+    snapshot->minimized = minimized_raw != 0;
+    snapshot->active = active_raw != 0;
+    snapshot->controls_created = controls_created_raw != 0;
+    snapshot->init_visibility = init_visibility_raw != 0;
+    snapshot->visible_before_resize = visible_before_resize_raw != 0;
+    snapshot->eqtype_0x1d8_copied = eqtype_0x1d8_copied;
+    snapshot->eqtype_0x1d8 = eqtype_0x1d8;
+    snapshot->eqtype_0x1e4_copied = eqtype_0x1e4_copied;
+    snapshot->eqtype_0x1e4 = eqtype_0x1e4;
     snapshot->valid = true;
     return true;
 }
@@ -4737,6 +4922,16 @@ void AppendCxWndStateSnapshot(
         return;
     }
 
+    *message += L" ";
+    *message += prefix;
+    *message += L"_vtable_copied=";
+    *message += snapshot.vtable_copied ? L"true" : L"false";
+    if (snapshot.vtable_copied) {
+        *message += L" ";
+        *message += prefix;
+        *message += L"_vtable=";
+        *message += HexPtr(snapshot.vtable);
+    }
     *message += L" ";
     *message += prefix;
     *message += L"_enabled=";
@@ -4765,6 +4960,26 @@ void AppendCxWndStateSnapshot(
     *message += prefix;
     *message += L"_visible_before_resize=";
     *message += snapshot.visible_before_resize ? L"true" : L"false";
+    *message += L" ";
+    *message += prefix;
+    *message += L"_eqtype_0x1d8_copied=";
+    *message += snapshot.eqtype_0x1d8_copied ? L"true" : L"false";
+    if (snapshot.eqtype_0x1d8_copied) {
+        *message += L" ";
+        *message += prefix;
+        *message += L"_eqtype_0x1d8=";
+        *message += std::to_wstring(snapshot.eqtype_0x1d8);
+    }
+    *message += L" ";
+    *message += prefix;
+    *message += L"_eqtype_0x1e4_copied=";
+    *message += snapshot.eqtype_0x1e4_copied ? L"true" : L"false";
+    if (snapshot.eqtype_0x1e4_copied) {
+        *message += L" ";
+        *message += prefix;
+        *message += L"_eqtype_0x1e4=";
+        *message += std::to_wstring(snapshot.eqtype_0x1e4);
+    }
 }
 
 void AppendSpellUiDerivedWindowTracePrefix(
@@ -10041,6 +10256,17 @@ CXStrCtorFromAsciiFn ResolveCxStrCtorFromAscii() noexcept {
 
     g_cxstr_ctor_from_ascii =
         ResolveEqgameExport<CXStrCtorFromAsciiFn>(kEqExportCxStrCtorFromAscii);
+    if (g_cxstr_ctor_from_ascii != nullptr) {
+        return g_cxstr_ctor_from_ascii;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return nullptr;
+    }
+
+    g_cxstr_ctor_from_ascii = reinterpret_cast<CXStrCtorFromAsciiFn>(
+        module_base + kCXStrCtorFromAsciiRva);
     return g_cxstr_ctor_from_ascii;
 }
 
@@ -10050,6 +10276,17 @@ CXStrDtorFn ResolveCxStrDtor() noexcept {
     }
 
     g_cxstr_dtor = ResolveEqgameExport<CXStrDtorFn>(kEqExportCxStrDtor);
+    if (g_cxstr_dtor != nullptr) {
+        return g_cxstr_dtor;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return nullptr;
+    }
+
+    g_cxstr_dtor = reinterpret_cast<CXStrDtorFn>(
+        module_base + kCXStrDtorRva);
     return g_cxstr_dtor;
 }
 
@@ -10111,6 +10348,402 @@ CXWndGetChildItemByNameFn ResolveCxWndGetChildItemByName() noexcept {
 
     return reinterpret_cast<CXWndGetChildItemByNameFn>(
         module_base + kCXWndGetChildItemByNameRva);
+}
+
+void* ResolveCSidlScreenWndCreateChildrenFromSidl(
+    const wchar_t** evidence_source) noexcept {
+    if (evidence_source != nullptr) {
+        *evidence_source = L"unresolved";
+    }
+
+    HMODULE const module = GetModuleHandleW(nullptr);
+    if (module == nullptr) {
+        return nullptr;
+    }
+
+    void* target = reinterpret_cast<void*>(
+        GetProcAddress(module, kEqExportCSidlScreenWndCreateChildrenFromSidl));
+    if (target != nullptr) {
+        if (evidence_source != nullptr) {
+            *evidence_source = L"decorated_export";
+        }
+        return target;
+    }
+
+    target = reinterpret_cast<void*>(
+        GetProcAddress(module, kEqExportCSidlScreenWndCreateChildrenFromSidlAlias));
+    if (target != nullptr) {
+        if (evidence_source != nullptr) {
+            *evidence_source = L"alias_export";
+        }
+        return target;
+    }
+
+    target = reinterpret_cast<void*>(
+        GetProcAddress(
+            module,
+            MAKEINTRESOURCEA(kEqExportCSidlScreenWndCreateChildrenFromSidlOrdinal)));
+    if (target != nullptr && reinterpret_cast<std::uintptr_t>(target) > 0xffff) {
+        if (evidence_source != nullptr) {
+            *evidence_source = L"ordinal_export";
+        }
+        return target;
+    }
+
+    return nullptr;
+}
+
+bool IsMultiPetExtraPetEqType(int eq_type) noexcept {
+    return eq_type == kMultiPetExtraPet0GaugeEqType ||
+        eq_type == kMultiPetExtraPet1GaugeEqType;
+}
+
+int MultiPetSlotFromEqType(int eq_type) noexcept {
+    switch (eq_type) {
+        case kMultiPetExtraPet0GaugeEqType:
+            return 0;
+        case kMultiPetExtraPet1GaugeEqType:
+            return 1;
+        default:
+            return -1;
+    }
+}
+
+bool IsPetInfoGaugeEqTypeTraceCandidate(int eq_type) noexcept {
+    return eq_type == kPetInfoFocusedPetGaugeEqType ||
+        IsMultiPetExtraPetEqType(eq_type);
+}
+
+bool TryReadPetInfoWindowPointer(void** pet_info_window_out) noexcept {
+    if (pet_info_window_out != nullptr) {
+        *pet_info_window_out = nullptr;
+    }
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        return false;
+    }
+
+    void* pet_info_window = nullptr;
+    const bool copied = TryCopyObject(
+        reinterpret_cast<const void*>(module_base + kPetInfoWindowGlobalRva),
+        &pet_info_window);
+    if (pet_info_window_out != nullptr) {
+        *pet_info_window_out = pet_info_window;
+    }
+    return copied;
+}
+
+bool TryReadSidlScreenWndTemplateDataPointer(
+    const void* window,
+    void** template_data_out) noexcept {
+    if (template_data_out != nullptr) {
+        *template_data_out = nullptr;
+    }
+    if (window == nullptr) {
+        return false;
+    }
+
+    void* template_data = nullptr;
+    const bool copied = TryCopyObject(
+        reinterpret_cast<const std::uint8_t*>(window) +
+            kSidlScreenWndTemplateDataOffset,
+        &template_data);
+    if (template_data_out != nullptr) {
+        *template_data_out = template_data;
+    }
+    return copied;
+}
+
+bool TryReadCxStrAsciiValue(
+    const void* cxstr,
+    std::size_t max_bytes,
+    std::string* value,
+    void** internal_string_out = nullptr,
+    const char** text_out = nullptr) noexcept {
+    if (internal_string_out != nullptr) {
+        *internal_string_out = nullptr;
+    }
+    if (text_out != nullptr) {
+        *text_out = nullptr;
+    }
+    if (cxstr == nullptr || value == nullptr) {
+        return false;
+    }
+
+    void* internal_string = nullptr;
+    if (!TryCopyObject(cxstr, &internal_string) || internal_string == nullptr) {
+        return false;
+    }
+
+    const char* text = reinterpret_cast<const char*>(
+        reinterpret_cast<const std::uint8_t*>(internal_string) +
+        kCXStrInternalTextOffset);
+    if (internal_string_out != nullptr) {
+        *internal_string_out = internal_string;
+    }
+    if (text_out != nullptr) {
+        *text_out = text;
+    }
+    return TryReadAsciiCString(text, max_bytes, value);
+}
+
+void* ReadMultiPetExtraPetGaugeWindow(int slot) noexcept {
+    if (slot < 0 || slot >= static_cast<int>(g_multipet_extra_pet_gauge_windows.size())) {
+        return nullptr;
+    }
+    return reinterpret_cast<void*>(
+        g_multipet_extra_pet_gauge_windows[static_cast<std::size_t>(slot)].load());
+}
+
+int MultiPetSlotFromSenderWindow(void* sender_window) noexcept {
+    if (sender_window == nullptr) {
+        return -1;
+    }
+
+    for (int slot = 0; slot < static_cast<int>(g_multipet_extra_pet_gauge_windows.size()); ++slot) {
+        if (sender_window == ReadMultiPetExtraPetGaugeWindow(slot)) {
+            return slot;
+        }
+    }
+
+    return -1;
+}
+
+void LogPetInfoTargetClickTrace(
+    const wchar_t* resolution,
+    int slot,
+    std::uint32_t notification_code,
+    void* sender_window,
+    std::uint32_t spawn_id,
+    void* spawn,
+    void* everquest,
+    void* spawn_manager) noexcept {
+    (void)resolution;
+    (void)slot;
+    (void)notification_code;
+    (void)sender_window;
+    (void)spawn_id;
+    (void)spawn;
+    (void)everquest;
+    (void)spawn_manager;
+}
+
+void LogPetInfoSpawnWalkTrace(
+    const wchar_t* step,
+    std::uint32_t requested_spawn_id,
+    void* spawn_manager,
+    void* node,
+    std::uint32_t candidate_spawn_id,
+    void* next_node,
+    std::size_t iteration) noexcept {
+    (void)step;
+    (void)requested_spawn_id;
+    (void)spawn_manager;
+    (void)node;
+    (void)candidate_spawn_id;
+    (void)next_node;
+    (void)iteration;
+}
+
+bool TryTargetMultiPetAuxiliarySlotFromPetInfoClick(
+    void* sender_window,
+    std::uint32_t notification_code) noexcept {
+    const int slot = MultiPetSlotFromSenderWindow(sender_window);
+    if (slot < 0) {
+        return false;
+    }
+
+    LogPetInfoTargetClickTrace(
+        L"slot_matched",
+        slot,
+        notification_code,
+        sender_window,
+        0,
+        nullptr,
+        nullptr,
+        nullptr);
+
+    const auto snapshot = monomyth::multipet_spawn_observer::GetSnapshot();
+    if (slot >= static_cast<int>(snapshot.has_other_pet_spawn_id.size()) ||
+        !snapshot.has_other_pet_spawn_id[static_cast<std::size_t>(slot)]) {
+        LogPetInfoTargetClickTrace(
+            L"missing_auxiliary_spawn_id",
+            slot,
+            notification_code,
+            sender_window,
+            0,
+            nullptr,
+            nullptr,
+            nullptr);
+        return true;
+    }
+
+    const std::uint32_t spawn_id = snapshot.other_pet_spawn_id[static_cast<std::size_t>(slot)];
+    if (spawn_id == 0) {
+        LogPetInfoTargetClickTrace(
+            L"auxiliary_spawn_id_zero",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            nullptr,
+            nullptr,
+            nullptr);
+        return true;
+    }
+
+    const std::uintptr_t module_base = GetHostModuleBase();
+    if (module_base == 0) {
+        LogPetInfoTargetClickTrace(
+            L"module_base_unavailable",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            nullptr,
+            nullptr,
+            nullptr);
+        return true;
+    }
+
+    void* everquest = nullptr;
+    void* spawn_manager = nullptr;
+    TryCopyObject(
+        reinterpret_cast<const void*>(module_base + kPetInfoClickEverQuestGlobalRva),
+        &everquest);
+    TryCopyObject(
+        reinterpret_cast<const void*>(module_base + kPinstSpawnManagerRva),
+        &spawn_manager);
+    if (everquest == nullptr || spawn_manager == nullptr) {
+        LogPetInfoTargetClickTrace(
+            L"singleton_unavailable",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            nullptr,
+            everquest,
+            spawn_manager);
+        return true;
+    }
+
+    std::uintptr_t everquest_vtable = 0;
+    std::uintptr_t spawn_manager_vtable = 0;
+    if (!LooksLikeEqgameObject(everquest, &everquest_vtable) ||
+        !LooksLikeEqgameObject(spawn_manager, &spawn_manager_vtable)) {
+        LogPetInfoTargetClickTrace(
+            L"singleton_invalid",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            reinterpret_cast<void*>(everquest_vtable),
+            everquest,
+            spawn_manager);
+        return true;
+    }
+
+    LogPetInfoTargetClickTrace(
+        L"spawn_lookup_begin",
+        slot,
+        notification_code,
+        sender_window,
+        spawn_id,
+        nullptr,
+        everquest,
+        spawn_manager);
+
+    void* spawn = nullptr;
+    if (!TryFindSpawnByIdFromSpawnList(spawn_manager, spawn_id, &spawn) || spawn == nullptr) {
+        LogPetInfoTargetClickTrace(
+            L"spawn_lookup_failed",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            spawn,
+            everquest,
+            spawn_manager);
+        return true;
+    }
+
+    std::uintptr_t spawn_vtable = 0;
+    if (!LooksLikeEqgameObject(spawn, &spawn_vtable)) {
+        LogPetInfoTargetClickTrace(
+            L"spawn_invalid",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            spawn,
+            everquest,
+            reinterpret_cast<void*>(spawn_vtable));
+        return true;
+    }
+
+    auto left_clicked_on_player = reinterpret_cast<EverQuestLeftClickedOnPlayerFn>(
+        reinterpret_cast<void*>(module_base + kLeftClickedOnPlayerSurrogateRva));
+    if (left_clicked_on_player == nullptr) {
+        LogPetInfoTargetClickTrace(
+            L"target_action_unavailable",
+            slot,
+            notification_code,
+            sender_window,
+            spawn_id,
+            spawn,
+            everquest,
+            spawn_manager);
+        return true;
+    }
+
+    LogPetInfoTargetClickTrace(
+        L"target_call_begin",
+        slot,
+        notification_code,
+        sender_window,
+        spawn_id,
+        spawn,
+        everquest,
+        spawn_manager);
+    left_clicked_on_player(everquest, spawn);
+    LogPetInfoTargetClickTrace(
+        L"target_applied",
+        slot,
+        notification_code,
+        sender_window,
+        spawn_id,
+        spawn,
+        everquest,
+        spawn_manager);
+    return true;
+}
+
+void LogMultiPetPetInfoProbe(
+    const wchar_t* source,
+    int eq_type,
+    void* pet_info_window,
+    bool pointer_copied) noexcept {
+    (void)source;
+    (void)eq_type;
+    (void)pet_info_window;
+    (void)pointer_copied;
+}
+
+std::string BuildMultiPetExtraPetDisplayText(int eq_type, bool pet_info_available) {
+    const int slot = MultiPetSlotFromEqType(eq_type);
+    if (slot >= 0 && slot < 2) {
+        const auto local_snapshot = monomyth::multipet_spawn_observer::GetSnapshot();
+        if (local_snapshot.has_other_pet_name[slot] &&
+            !local_snapshot.other_pet_name[slot].empty()) {
+            return local_snapshot.other_pet_name[slot];
+        }
+    }
+
+    if (!pet_info_available) {
+        return "No Pet";
+    }
+
+    return "No Pet";
 }
 
 void LogInventoryCustomClassLabelRefreshFailure(
@@ -10228,6 +10861,53 @@ bool CDECL GetLabelFromEQHook(
     void* text_cxstr,
     bool* zero_flag_out,
     COLORREF* color_out) noexcept {
+    if (IsMultiPetWindowFeatureRequested() && IsMultiPetExtraPetEqType(eq_type)) {
+        void* pet_info_window = nullptr;
+        const bool pointer_copied = TryReadPetInfoWindowPointer(&pet_info_window);
+        LogMultiPetPetInfoProbe(
+            L"GetLabelFromEQ",
+            eq_type,
+            pet_info_window,
+            pointer_copied);
+
+        const std::string display = BuildMultiPetExtraPetDisplayText(
+            eq_type,
+            pointer_copied && pet_info_window != nullptr);
+        const wchar_t* failure_reason = nullptr;
+        if (TryAssignCxStrFromAscii(text_cxstr, display.c_str(), &failure_reason)) {
+            if (zero_flag_out != nullptr) {
+                *zero_flag_out = false;
+            }
+            const std::uint64_t count = ++g_multipet_extra_pet_eqtype_trace_count;
+            if (count <= 40 || (count % 100) == 0) {
+                std::wstring message = L"MultiPetExtraPetLabelEqTypeTrace count=";
+                message += std::to_wstring(count);
+                message += L" eq_type=";
+                message += std::to_wstring(eq_type);
+                message += L" slot=";
+                message += std::to_wstring(MultiPetSlotFromEqType(eq_type));
+                message += L" text=\"";
+                message += WidenAsciiLossy(display);
+                message += L"\" pet_info_window=";
+                message += HexPtr(reinterpret_cast<std::uintptr_t>(pet_info_window));
+                monomyth::logger::Log(message);
+            }
+            return true;
+        }
+
+        const std::uint64_t count = ++g_multipet_extra_pet_eqtype_trace_count;
+        if (count <= 40 || (count % 100) == 0) {
+            std::wstring message = L"MultiPetExtraPetLabelEqTypeTrace count=";
+            message += std::to_wstring(count);
+            message += L" eq_type=";
+            message += std::to_wstring(eq_type);
+            message += L" override_applied=false reason=\"";
+            message += failure_reason == nullptr ? L"unknown" : failure_reason;
+            message += L"\"";
+            monomyth::logger::Log(message);
+        }
+    }
+
     if (eq_type == kInventoryCustomMulticlassEqType) {
         const char* display = BuildLocalPlayerClassDisplayAscii(
             monomyth::multiclass_identity::ClassDisplayStyle::kThreeLetterCode,
@@ -10273,6 +10953,16 @@ bool CDECL GetLabelFromEQHook(
     }
 
     if (eq_type == kPlayerManaCustomLabelEqType) {
+        if (IsMultiPetWindowFeatureRequested()) {
+            void* pet_info_window = nullptr;
+            const bool pointer_copied = TryReadPetInfoWindowPointer(&pet_info_window);
+            LogMultiPetPetInfoProbe(
+                L"PlayerManaCustomLabel",
+                eq_type,
+                pet_info_window,
+                pointer_copied);
+        }
+
         int percent = 0;
         int current = 0;
         int max = 0;
@@ -10291,27 +10981,6 @@ bool CDECL GetLabelFromEQHook(
             if (zero_flag_out != nullptr) {
                 *zero_flag_out = false;
             }
-            static std::uint64_t s_player_mana_custom_label_trace_count = 0;
-            const std::uint64_t count = ++s_player_mana_custom_label_trace_count;
-            if (count <= 20 || (count % 100) == 0) {
-                std::wstring message = L"PlayerManaCustomLabelEqTypeTrace count=";
-                message += std::to_wstring(count);
-                message += L" eq_type=";
-                message += std::to_wstring(eq_type);
-                message += L" text=\"";
-                message += WidenAsciiLossy(display);
-                message += L"\" resolved=";
-                message += resolved ? L"true" : L"false";
-                message += L" authoritative_context_used=";
-                message += authoritative_context_used ? L"true" : L"false";
-                message += L" current=";
-                message += std::to_wstring(current);
-                message += L" max=";
-                message += std::to_wstring(max);
-                message += L" best_class_id=";
-                message += std::to_wstring(best_class_id);
-                monomyth::logger::Log(message);
-            }
             return true;
         }
     }
@@ -10319,6 +10988,88 @@ bool CDECL GetLabelFromEQHook(
     return g_original_get_label_from_eq == nullptr
         ? false
         : g_original_get_label_from_eq(eq_type, text_cxstr, zero_flag_out, color_out);
+}
+
+int CDECL GetGaugeValueFromEQHook(
+    int eq_type,
+    void* text_cxstr,
+    bool* zero_flag_out) noexcept {
+    if (g_original_get_gauge_value_from_eq == nullptr) {
+        return 0;
+    }
+
+    const int native_result =
+        g_original_get_gauge_value_from_eq(eq_type, text_cxstr, zero_flag_out);
+    if (!IsMultiPetWindowFeatureRequested()) {
+        return native_result;
+    }
+
+    void* pet_info_window = nullptr;
+    const bool pointer_copied = TryReadPetInfoWindowPointer(&pet_info_window);
+    if (IsPetInfoGaugeEqTypeTraceCandidate(eq_type)) {
+        LogMultiPetPetInfoProbe(
+            L"GetGaugeValueFromEQ",
+            eq_type,
+            pet_info_window,
+            pointer_copied);
+    }
+
+    if (!IsMultiPetExtraPetEqType(eq_type)) {
+        return native_result;
+    }
+
+    const monomyth::server_auth_stats::Snapshot snapshot =
+        monomyth::server_auth_stats::GetSnapshot();
+    const int slot = MultiPetSlotFromEqType(eq_type);
+    const bool has_server_auth_value =
+        slot >= 0 &&
+        slot < static_cast<int>(std::size(snapshot.has_extra_pet_hp_1000)) &&
+        snapshot.has_extra_pet_hp_1000[static_cast<std::size_t>(slot)];
+    const int resolved_result = has_server_auth_value
+        ? static_cast<int>(
+              snapshot.extra_pet_hp_1000[static_cast<std::size_t>(slot)])
+        : 0;
+    if (zero_flag_out != nullptr) {
+        *zero_flag_out = resolved_result == 0;
+    }
+
+    void* gauge_window = ReadMultiPetExtraPetGaugeWindow(slot);
+    if (gauge_window != nullptr || text_cxstr != nullptr) {
+        const std::string display_text = BuildMultiPetExtraPetDisplayText(
+            eq_type, pointer_copied && pet_info_window != nullptr);
+
+        // The renderer passes a live CXStr scratch/output pointer for the
+        // current gauge draw. Updating that sink keeps the visible label aligned
+        // even when the window-owned CXStr is not the final paint source.
+        bool draw_text_updated = false;
+        const wchar_t* draw_text_failure_reason = nullptr;
+        if (TryAssignCxStrFromAscii(
+                text_cxstr,
+                display_text.c_str(),
+                &draw_text_failure_reason)) {
+            draw_text_updated = true;
+        }
+
+        bool window_text_updated = false;
+        const wchar_t* window_text_failure_reason = nullptr;
+        if (gauge_window != nullptr) {
+            void* gauge_text_cxstr = reinterpret_cast<void*>(
+                reinterpret_cast<std::uintptr_t>(gauge_window) + kCxWndTextFieldOffset);
+            if (TryAssignCxStrFromAscii(
+                    gauge_text_cxstr,
+                    display_text.c_str(),
+                    &window_text_failure_reason)) {
+                window_text_updated = true;
+            }
+        }
+
+        (void)draw_text_updated;
+        (void)draw_text_failure_reason;
+        (void)window_text_updated;
+        (void)window_text_failure_reason;
+    }
+
+    return resolved_result;
 }
 
 bool TryRefreshInventoryCustomClassLabel(
@@ -10724,7 +11475,7 @@ bool IsLikelyModuleAddress(std::uintptr_t address) noexcept {
         address < (module_base + 0x02000000u);
 }
 
-bool LooksLikeSpellManagerObject(void* candidate, std::uintptr_t* vtable) noexcept {
+bool LooksLikeEqgameObject(void* candidate, std::uintptr_t* vtable) noexcept {
     if (vtable != nullptr) {
         *vtable = 0;
     }
@@ -10742,6 +11493,213 @@ bool LooksLikeSpellManagerObject(void* candidate, std::uintptr_t* vtable) noexce
         *vtable = candidate_vtable;
     }
     return true;
+}
+
+bool TryFindSpawnByIdFromSpawnList(
+    void* spawn_manager,
+    std::uint32_t spawn_id,
+    void** spawn_out) noexcept {
+    if (spawn_out == nullptr) {
+        return false;
+    }
+
+    *spawn_out = nullptr;
+    if (spawn_manager == nullptr || spawn_id == 0) {
+        return false;
+    }
+
+    LogPetInfoSpawnWalkTrace(
+        L"begin",
+        spawn_id,
+        spawn_manager,
+        nullptr,
+        0,
+        nullptr,
+        0);
+
+    void* spawn_id_index = nullptr;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spawn_manager) +
+                kPlayerManagerSpawnIdIndexOffset,
+            &spawn_id_index) ||
+        spawn_id_index == nullptr) {
+        LogPetInfoSpawnWalkTrace(
+            L"index_read_failed",
+            spawn_id,
+            spawn_manager,
+            spawn_id_index,
+            0,
+            nullptr,
+            0);
+        return false;
+    }
+
+    std::uint32_t bucket_count = 0;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spawn_id_index) +
+                kSpawnIdIndexBucketCountOffset,
+            &bucket_count) ||
+        bucket_count == 0) {
+        LogPetInfoSpawnWalkTrace(
+            L"bucket_count_read_failed",
+            spawn_id,
+            spawn_manager,
+            spawn_id_index,
+            bucket_count,
+            nullptr,
+            0);
+        return false;
+    }
+
+    void* buckets = nullptr;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(spawn_id_index) +
+                kSpawnIdIndexBucketsOffset,
+            &buckets) ||
+        buckets == nullptr) {
+        LogPetInfoSpawnWalkTrace(
+            L"buckets_read_failed",
+            spawn_id,
+            spawn_manager,
+            spawn_id_index,
+            bucket_count,
+            buckets,
+            0);
+        return false;
+    }
+
+    const std::uint32_t bucket_index = spawn_id % bucket_count;
+    LogPetInfoSpawnWalkTrace(
+        L"bucket_select",
+        spawn_id,
+        spawn_manager,
+        spawn_id_index,
+        bucket_count,
+        buckets,
+        bucket_index);
+
+    void* node = nullptr;
+    if (!TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(buckets) +
+                static_cast<std::size_t>(bucket_index) * sizeof(void*),
+            &node)) {
+        LogPetInfoSpawnWalkTrace(
+            L"bucket_head_read_failed",
+            spawn_id,
+            spawn_manager,
+            buckets,
+            bucket_index,
+            nullptr,
+            0);
+        return false;
+    }
+
+    LogPetInfoSpawnWalkTrace(
+        L"bucket_head_read_ok",
+        spawn_id,
+        spawn_manager,
+        node,
+        bucket_index,
+        nullptr,
+        0);
+
+    constexpr std::size_t kMaxSpawnWalkCount = 4096;
+    for (std::size_t i = 0; i < kMaxSpawnWalkCount && node != nullptr; ++i) {
+        std::uint32_t candidate_spawn_id = 0;
+        if (!TryCopyObject(
+                reinterpret_cast<const std::uint8_t*>(node) +
+                    kSpawnIdIndexNodeSpawnIdOffset,
+                &candidate_spawn_id)) {
+            LogPetInfoSpawnWalkTrace(
+                L"candidate_id_read_failed",
+                spawn_id,
+                spawn_manager,
+                node,
+                0,
+                nullptr,
+                i);
+            return false;
+        }
+
+        LogPetInfoSpawnWalkTrace(
+            L"candidate_id_read_ok",
+            spawn_id,
+            spawn_manager,
+            node,
+            candidate_spawn_id,
+            nullptr,
+            i);
+
+        if (candidate_spawn_id == spawn_id) {
+            void* spawn = nullptr;
+            if (!TryCopyObject(
+                    reinterpret_cast<const std::uint8_t*>(node) +
+                        kSpawnIdIndexNodeSpawnOffset,
+                    &spawn) ||
+                spawn == nullptr) {
+                LogPetInfoSpawnWalkTrace(
+                    L"match_spawn_read_failed",
+                    spawn_id,
+                    spawn_manager,
+                    node,
+                    candidate_spawn_id,
+                    nullptr,
+                    i);
+                return false;
+            }
+
+            LogPetInfoSpawnWalkTrace(
+                L"match_found",
+                spawn_id,
+                spawn_manager,
+                node,
+                candidate_spawn_id,
+                spawn,
+                i);
+            *spawn_out = spawn;
+            return true;
+        }
+
+        void* next = nullptr;
+        if (!TryCopyObject(
+                reinterpret_cast<const std::uint8_t*>(node) +
+                    kSpawnIdIndexNodeNextOffset,
+                &next)) {
+            LogPetInfoSpawnWalkTrace(
+                L"next_read_failed",
+                spawn_id,
+                spawn_manager,
+                node,
+                candidate_spawn_id,
+                nullptr,
+                i);
+            return false;
+        }
+
+        LogPetInfoSpawnWalkTrace(
+            L"next_read_ok",
+            spawn_id,
+            spawn_manager,
+            node,
+            candidate_spawn_id,
+            next,
+            i);
+        node = next;
+    }
+
+    LogPetInfoSpawnWalkTrace(
+        L"walk_exhausted",
+        spawn_id,
+        spawn_manager,
+        node,
+        0,
+        nullptr,
+        kMaxSpawnWalkCount);
+    return false;
+}
+
+bool LooksLikeSpellManagerObject(void* candidate, std::uintptr_t* vtable) noexcept {
+    return LooksLikeEqgameObject(candidate, vtable);
 }
 
 bool TryResolveClientSpellManager(
@@ -13352,8 +14310,51 @@ int MONOMYTH_FASTCALL PlayerManaEqTypeResolverHook(
         arg_a_like,
         arg_b_like,
         arg_c_like,
-        arg_d_like);
+            arg_d_like);
 #endif
+
+    if (IsMultiPetWindowFeatureRequested() && IsMultiPetExtraPetEqType(eq_type)) {
+        void* pet_info_window = nullptr;
+        const bool pointer_copied = TryReadPetInfoWindowPointer(&pet_info_window);
+        LogMultiPetPetInfoProbe(
+            L"PlayerManaEqTypeResolver",
+            eq_type,
+            pet_info_window,
+            pointer_copied);
+
+        const monomyth::server_auth_stats::Snapshot snapshot =
+            monomyth::server_auth_stats::GetSnapshot();
+        const int slot = MultiPetSlotFromEqType(eq_type);
+        const bool has_server_auth_value =
+            slot >= 0 &&
+            slot < static_cast<int>(std::size(snapshot.has_extra_pet_hp_1000)) &&
+            snapshot.has_extra_pet_hp_1000[static_cast<std::size_t>(slot)];
+        const int resolved_result = has_server_auth_value
+            ? static_cast<int>(
+                  snapshot.extra_pet_hp_1000[static_cast<std::size_t>(slot)])
+            : 0;
+        const std::uint64_t count = ++g_multipet_extra_pet_eqtype_trace_count;
+        if (count <= 40 || (count % 100) == 0) {
+            std::wstring message = L"MultiPetExtraPetGaugeEqTypeTrace count=";
+            message += std::to_wstring(count);
+            message += L" eq_type=";
+            message += std::to_wstring(eq_type);
+            message += L" slot=";
+            message += std::to_wstring(slot);
+            message += L" native_result=";
+            message += std::to_wstring(native_result);
+            message += L" server_auth_has_value=";
+            message += has_server_auth_value ? L"true" : L"false";
+            message += L" server_auth_value=";
+            message += std::to_wstring(resolved_result);
+            message += L" returned_result=";
+            message += std::to_wstring(resolved_result);
+            message += L" pet_info_window=";
+            message += HexPtr(reinterpret_cast<std::uintptr_t>(pet_info_window));
+            monomyth::logger::Log(message);
+        }
+        return resolved_result;
+    }
 
     if (eq_type == kPlayerManaEqTypeGauge || eq_type == kPlayerManaCustomGaugeEqType) {
         int percent = 0;
@@ -13375,7 +14376,7 @@ int MONOMYTH_FASTCALL PlayerManaEqTypeResolverHook(
             ++g_player_mana_eqtype_override_count;
         }
 
-        if (resolved || ShouldLogMulticlassManaTrace(count)) {
+        if (ShouldLogMulticlassManaTrace(count)) {
             std::wstring message = L"MulticlassManaTrace kind=\"";
             message += eq_type == kPlayerManaCustomGaugeEqType
                 ? L"player_mana_custom_gauge_eqtype"
@@ -21625,30 +22626,12 @@ void LogItemUsabilityOverride(
     int original_result,
     int returned_result,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
-    const std::uintptr_t module_base = GetHostModuleBase();
-    std::wstring message = L"MulticlassItemUsability target=IsClassUsablePredicate this=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_character));
-    message += L" caller_return=";
-    message += HexPtr(caller_return_address);
-    if (module_base != 0 && caller_return_address >= module_base) {
-        message += L" caller_return_rva=";
-        message += Hex32(static_cast<std::uint32_t>(caller_return_address - module_base));
-    }
-    message += L" class_id=";
-    message += std::to_wstring(class_id);
-    message += L" original_result=";
-    message += std::to_wstring(original_result);
-    message += L" returned_result=";
-    message += std::to_wstring(returned_result);
-    message += L" assigned_mask=";
-    message += FormatAssignedMask(snapshot);
-    message += L" has_assigned_mask=";
-    message += snapshot.has_classes_bitmask ? L"true" : L"false";
-    message += L" evidence_source=";
-    message += g_is_class_usable_predicate_evidence_source;
-    message += L" override_count=";
-    message += std::to_wstring(g_is_class_usable_predicate_override_count);
-    monomyth::logger::Log(message);
+    (void)this_character;
+    (void)caller_return_address;
+    (void)class_id;
+    (void)original_result;
+    (void)returned_result;
+    (void)snapshot;
 }
 
 void LogCanEquipOverride(
@@ -21662,41 +22645,16 @@ void LogCanEquipOverride(
     int original_result,
     std::uint32_t item_class_mask,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
-    const std::uintptr_t module_base = GetHostModuleBase();
-    std::wstring message = L"MulticlassItemUsability target=CanEquip this=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
-    message += L" caller_return=";
-    message += HexPtr(caller_return_address);
-    if (module_base != 0 && caller_return_address >= module_base) {
-        const std::uint32_t caller_return_rva = static_cast<std::uint32_t>(
-            caller_return_address - module_base);
-        message += L" caller_return_rva=";
-        message += Hex32(caller_return_rva);
-        message += DescribeCanEquipCallerSite(caller_return_rva);
-    }
-    message += L" inventory_like=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(inventory_or_container_like));
-    message += L" item_like=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(item_like));
-    message += L" arg3=";
-    message += std::to_wstring(arg3);
-    message += L" arg4=";
-    message += std::to_wstring(arg4);
-    message += L" arg5=";
-    message += std::to_wstring(arg5);
-    message += L" original_result=";
-    message += std::to_wstring(original_result);
-    message += L" returned_result=1";
-    message += L" item_class_mask_client=";
-    message += Hex32(item_class_mask);
-    message += L" item_matches_assigned_class=true";
-    message += L" override_mode=authoritative_item_mask_intersection";
-    message += L" assigned_mask=";
-    message += FormatAssignedMask(snapshot);
-    message += L" has_assigned_mask=";
-    message += snapshot.has_classes_bitmask ? L"true" : L"false";
-    message += L" evidence_source=cleanroom_rva";
-    monomyth::logger::Log(message);
+    (void)this_context;
+    (void)caller_return_address;
+    (void)inventory_or_container_like;
+    (void)item_like;
+    (void)arg3;
+    (void)arg4;
+    (void)arg5;
+    (void)original_result;
+    (void)item_class_mask;
+    (void)snapshot;
 }
 
 void LogMerchantUsableClassMaskOverride(
@@ -22423,39 +23381,17 @@ void LogCanEquipObservation(
     std::uint32_t item_class_mask,
     bool item_matches_assigned_class,
     const monomyth::server_auth_stats::Snapshot& snapshot) {
-    const std::uintptr_t module_base = GetHostModuleBase();
-    std::wstring message = L"MulticlassItemTrace target=CanEquipObserved this=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
-    message += L" caller_return=";
-    message += HexPtr(caller_return_address);
-    if (module_base != 0 && caller_return_address >= module_base) {
-        const std::uint32_t caller_return_rva = static_cast<std::uint32_t>(
-            caller_return_address - module_base);
-        message += L" caller_return_rva=";
-        message += Hex32(caller_return_rva);
-        message += DescribeCanEquipCallerSite(caller_return_rva);
-    }
-    message += L" inventory_like=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(inventory_or_container_like));
-    message += L" item_like=";
-    message += HexPtr(reinterpret_cast<std::uintptr_t>(item_like));
-    message += L" arg3=";
-    message += std::to_wstring(arg3);
-    message += L" arg4=";
-    message += std::to_wstring(arg4);
-    message += L" arg5=";
-    message += std::to_wstring(arg5);
-    message += L" original_result=";
-    message += std::to_wstring(original_result);
-    message += L" item_class_mask_client=";
-    message += Hex32(item_class_mask);
-    message += L" item_matches_assigned_class=";
-    message += item_matches_assigned_class ? L"true" : L"false";
-    message += L" assigned_mask=";
-    message += FormatAssignedMask(snapshot);
-    message += L" has_assigned_mask=";
-    message += snapshot.has_classes_bitmask ? L"true" : L"false";
-    monomyth::logger::Log(message);
+    (void)this_context;
+    (void)caller_return_address;
+    (void)inventory_or_container_like;
+    (void)item_like;
+    (void)arg3;
+    (void)arg4;
+    (void)arg5;
+    (void)original_result;
+    (void)item_class_mask;
+    (void)item_matches_assigned_class;
+    (void)snapshot;
 }
 
 void LogEquipRecordLookupTrace(
@@ -26383,6 +27319,998 @@ int MONOMYTH_FASTCALL InventoryWindowWndNotificationHook(
     return original_result;
 }
 
+bool IsMultiPetWindowFeatureRequested() noexcept {
+#if !MONOMYTH_ENABLE_MULTIPET_WINDOW
+    return false;
+#else
+    return true;
+#endif
+}
+
+bool ShouldLogPetInfoWindowNotification(std::uint64_t count) noexcept {
+    (void)count;
+    return false;
+}
+
+void* TryProbePetInfoChildByName(
+    void* pet_info_window,
+    const char* child_name,
+    const wchar_t** failure_reason) noexcept {
+    if (failure_reason != nullptr) {
+        *failure_reason = nullptr;
+    }
+    if (pet_info_window == nullptr) {
+        if (failure_reason != nullptr) {
+            *failure_reason = L"pet_info_window_null";
+        }
+        return nullptr;
+    }
+    if (child_name == nullptr || child_name[0] == '\0') {
+        if (failure_reason != nullptr) {
+            *failure_reason = L"child_name_empty";
+        }
+        return nullptr;
+    }
+    if (g_original_pet_info_window_get_child_item == nullptr) {
+        if (failure_reason != nullptr) {
+            *failure_reason = L"get_child_item_unresolved";
+        }
+        return nullptr;
+    }
+
+    const auto cxstr_ctor = ResolveCxStrCtorFromAscii();
+    const auto cxstr_dtor = ResolveCxStrDtor();
+    if (cxstr_ctor == nullptr) {
+        if (failure_reason != nullptr) {
+            *failure_reason = L"cxstr_ctor_unresolved";
+        }
+        return nullptr;
+    }
+    if (cxstr_dtor == nullptr) {
+        if (failure_reason != nullptr) {
+            *failure_reason = L"cxstr_dtor_unresolved";
+        }
+        return nullptr;
+    }
+
+    EqCxStrStorage cxstr = {};
+    cxstr_ctor(&cxstr, child_name);
+    void* const child = g_original_pet_info_window_get_child_item(
+        pet_info_window,
+        &cxstr,
+        0);
+    cxstr_dtor(&cxstr);
+    if (child == nullptr && failure_reason != nullptr) {
+        *failure_reason = L"child_not_found";
+    }
+    return child;
+}
+
+void AppendPetInfoChildProbe(
+    std::wstring* message,
+    void* pet_info_window,
+    const char* child_name,
+    const wchar_t* label) noexcept {
+    if (message == nullptr || child_name == nullptr || label == nullptr) {
+        return;
+    }
+
+    static_cast<void>(pet_info_window);
+    static_cast<void>(child_name);
+    *message += L" ";
+    *message += label;
+    *message += L"_child=";
+    *message += HexPtr(0);
+    *message += L" ";
+    *message += label;
+    *message += L"_reason=\"direct_probe_disabled_out_of_band_get_child_item_crash_risk\"";
+}
+
+struct SidlTemplateChildListSnapshot {
+    bool sidl_data_copied = false;
+    void* sidl_data = nullptr;
+    bool begin_like_copied = false;
+    void* begin_like = nullptr;
+    bool end_like_copied = false;
+    void* end_like = nullptr;
+    bool count_plausible = false;
+    std::size_t count_like = 0;
+};
+
+SidlTemplateChildListSnapshot ReadSidlTemplateChildListSnapshot(
+    void* sidl_screen_window) noexcept {
+    SidlTemplateChildListSnapshot snapshot = {};
+    if (sidl_screen_window == nullptr) {
+        return snapshot;
+    }
+
+    snapshot.sidl_data_copied = TryCopyObject(
+        reinterpret_cast<const std::uint8_t*>(sidl_screen_window) +
+            kSidlScreenWndTemplateDataOffset,
+        &snapshot.sidl_data);
+    if (!snapshot.sidl_data_copied || snapshot.sidl_data == nullptr) {
+        return snapshot;
+    }
+
+    const auto* const sidl_data_bytes =
+        reinterpret_cast<const std::uint8_t*>(snapshot.sidl_data);
+    snapshot.begin_like_copied = TryCopyObject(
+        sidl_data_bytes + kSidlTemplateChildBeginLikeOffset,
+        &snapshot.begin_like);
+    snapshot.end_like_copied = TryCopyObject(
+        sidl_data_bytes + kSidlTemplateChildEndLikeOffset,
+        &snapshot.end_like);
+    if (snapshot.begin_like == nullptr || snapshot.end_like == nullptr) {
+        return snapshot;
+    }
+
+    const auto begin_value =
+        reinterpret_cast<std::uintptr_t>(snapshot.begin_like);
+    const auto end_value =
+        reinterpret_cast<std::uintptr_t>(snapshot.end_like);
+    if (snapshot.begin_like_copied &&
+        snapshot.end_like_copied &&
+        end_value >= begin_value &&
+        (end_value - begin_value) <= 0x10000 &&
+        ((end_value - begin_value) % sizeof(void*)) == 0) {
+        snapshot.count_plausible = true;
+        snapshot.count_like = (end_value - begin_value) / sizeof(void*);
+    }
+    return snapshot;
+}
+
+void AppendSidlTemplateChildListSnapshot(
+    std::wstring* message,
+    const wchar_t* prefix,
+    const SidlTemplateChildListSnapshot& snapshot) noexcept {
+    if (message == nullptr || prefix == nullptr) {
+        return;
+    }
+
+    *message += L" ";
+    *message += prefix;
+    *message += L"_sidl_data_copied=";
+    *message += snapshot.sidl_data_copied ? L"true" : L"false";
+    *message += L" ";
+    *message += prefix;
+    *message += L"_sidl_data=";
+    *message += HexPtr(reinterpret_cast<std::uintptr_t>(snapshot.sidl_data));
+    *message += L" ";
+    *message += prefix;
+    *message += L"_child_begin_like_copied=";
+    *message += snapshot.begin_like_copied ? L"true" : L"false";
+    *message += L" ";
+    *message += prefix;
+    *message += L"_child_begin_like=";
+    *message += HexPtr(reinterpret_cast<std::uintptr_t>(snapshot.begin_like));
+    *message += L" ";
+    *message += prefix;
+    *message += L"_child_end_like_copied=";
+    *message += snapshot.end_like_copied ? L"true" : L"false";
+    *message += L" ";
+    *message += prefix;
+    *message += L"_child_end_like=";
+    *message += HexPtr(reinterpret_cast<std::uintptr_t>(snapshot.end_like));
+    *message += L" ";
+    *message += prefix;
+    *message += L"_child_count_plausible=";
+    *message += snapshot.count_plausible ? L"true" : L"false";
+    *message += L" ";
+    *message += prefix;
+    *message += L"_child_count_like=";
+    *message += std::to_wstring(snapshot.count_like);
+}
+
+void AppendFixedDwordSnapshot(
+    std::wstring* message,
+    const wchar_t* prefix,
+    const void* base,
+    const std::uint32_t* offsets,
+    std::size_t offset_count) noexcept {
+    if (message == nullptr || prefix == nullptr || base == nullptr ||
+        offsets == nullptr || offset_count == 0) {
+        return;
+    }
+
+    for (std::size_t i = 0; i < offset_count; ++i) {
+        const std::uint32_t offset = offsets[i];
+        std::uint32_t value = 0;
+        const bool copied = TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(base) + offset,
+            &value);
+        *message += L" ";
+        *message += prefix;
+        *message += L"_dword_";
+        *message += Hex32(offset);
+        *message += L"_copied=";
+        *message += copied ? L"true" : L"false";
+        if (copied) {
+            *message += L" ";
+            *message += prefix;
+            *message += L"_dword_";
+            *message += Hex32(offset);
+            *message += L"=";
+            *message += Hex32(value);
+        }
+    }
+}
+
+void ResetActivePetInfoCreatedChildren() noexcept {
+    g_active_pet_info_created_children_count = 0;
+    for (auto& child : g_active_pet_info_created_children) {
+        child = {};
+    }
+}
+
+std::uint32_t FindActivePetInfoCreatedChildDepth(
+    std::uintptr_t window) noexcept {
+    if (window == 0) {
+        return std::numeric_limits<std::uint32_t>::max();
+    }
+
+    for (std::size_t i = 0; i < g_active_pet_info_created_children_count; ++i) {
+        if (g_active_pet_info_created_children[i].window == window) {
+            return g_active_pet_info_created_children[i].depth;
+        }
+    }
+
+    return std::numeric_limits<std::uint32_t>::max();
+}
+
+void RecordActivePetInfoCreatedChild(
+    std::uintptr_t window,
+    std::uint32_t depth) noexcept {
+    if (window == 0 || depth == 0 ||
+        g_active_pet_info_created_children_count >=
+            g_active_pet_info_created_children.size()) {
+        return;
+    }
+
+    if (FindActivePetInfoCreatedChildDepth(window) !=
+        std::numeric_limits<std::uint32_t>::max()) {
+        return;
+    }
+
+    g_active_pet_info_created_children[g_active_pet_info_created_children_count++] =
+        ActivePetInfoCreatedChild{window, depth};
+}
+
+void MONOMYTH_FASTCALL PetInfoWindowCreateChildrenCallsiteHook(
+    void* this_context,
+    void*) noexcept {
+    constexpr std::uint32_t kTemplateDataOffsets[] = {
+        0x00, 0x04, 0x08, 0x0c, 0x10, 0x14, 0x18, 0x1c, 0x20,
+        0x90, 0x94, 0x98, 0x9c, 0xa0, 0xa4, 0xa8};
+    const std::uint64_t count = ++g_pet_info_window_create_children_trace_count;
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const std::uint32_t caller_rva = CallerRvaFromReturnAddress(caller_return_address);
+
+    CxWndStateSnapshot before = {};
+    TryReadCxWndStateSnapshot(this_context, &before);
+    const SidlTemplateChildListSnapshot before_templates =
+        ReadSidlTemplateChildListSnapshot(this_context);
+
+    const auto active_window =
+        reinterpret_cast<std::uintptr_t>(this_context);
+    const std::uintptr_t previous_active_window =
+        g_active_pet_info_create_children_window.exchange(active_window);
+    ResetActivePetInfoCreatedChildren();
+    if (g_original_pet_info_window_create_children_from_sidl != nullptr) {
+        g_original_pet_info_window_create_children_from_sidl(this_context);
+    }
+    g_active_pet_info_create_children_window.store(previous_active_window);
+    ResetActivePetInfoCreatedChildren();
+
+    CxWndStateSnapshot after = {};
+    TryReadCxWndStateSnapshot(this_context, &after);
+    const SidlTemplateChildListSnapshot after_templates =
+        ReadSidlTemplateChildListSnapshot(this_context);
+
+    std::wstring message = L"PetInfoWindowCreateChildrenTrace count=";
+    message += std::to_wstring(count);
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" callsite_rva=";
+    message += Hex32(kPetInfoWindowCreateChildrenCallsiteRva);
+    message += L" original_target_rva=";
+    message += Hex32(kSidlCreateChildrenEquivalentTargetRva);
+    message += L" active_window_previous=";
+    message += HexPtr(previous_active_window);
+    AppendCxWndStateSnapshot(&message, L"before", before);
+    AppendSidlTemplateChildListSnapshot(&message, L"before", before_templates);
+    if (before_templates.sidl_data_copied && before_templates.sidl_data != nullptr) {
+        AppendFixedDwordSnapshot(
+            &message,
+            L"before_template_data",
+            before_templates.sidl_data,
+            kTemplateDataOffsets,
+            std::size(kTemplateDataOffsets));
+    }
+    AppendCxWndStateSnapshot(&message, L"after", after);
+    AppendSidlTemplateChildListSnapshot(&message, L"after", after_templates);
+    if (after_templates.sidl_data_copied && after_templates.sidl_data != nullptr) {
+        AppendFixedDwordSnapshot(
+            &message,
+            L"after_template_data",
+            after_templates.sidl_data,
+            kTemplateDataOffsets,
+            std::size(kTemplateDataOffsets));
+    }
+    monomyth::logger::Log(message);
+}
+
+void* MONOMYTH_FASTCALL PetInfoWindowBaseSidlCtorCallsiteHook(
+    void* this_context,
+    void*,
+    void* ctor_arg0,
+    void* name_cxstr,
+    std::uint32_t style_mask_like,
+    std::uint32_t one_like,
+    std::uint32_t zero_like) noexcept {
+    const std::uint64_t count = ++g_pet_info_window_base_sidl_ctor_trace_count;
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const std::uint32_t caller_rva = CallerRvaFromReturnAddress(caller_return_address);
+
+    std::string name_value = {};
+    void* name_internal = nullptr;
+    const char* name_text = nullptr;
+    const bool name_copied = TryReadCxStrAsciiValue(
+        name_cxstr,
+        128,
+        &name_value,
+        &name_internal,
+        &name_text);
+
+    void* before_template_data = nullptr;
+    const bool before_template_data_copied =
+        TryReadSidlScreenWndTemplateDataPointer(
+            this_context,
+            &before_template_data);
+
+    void* result = nullptr;
+    if (g_original_pet_info_window_base_sidl_ctor != nullptr) {
+        result = g_original_pet_info_window_base_sidl_ctor(
+            this_context,
+            ctor_arg0,
+            name_cxstr,
+            style_mask_like,
+            one_like,
+            zero_like);
+    }
+
+    void* after_template_data = nullptr;
+    const bool after_template_data_copied =
+        TryReadSidlScreenWndTemplateDataPointer(
+            this_context,
+            &after_template_data);
+
+    std::wstring message = L"PetInfoWindowBaseSidlCtorTrace count=";
+    message += std::to_wstring(count);
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" result=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(result));
+    message += L" ctor_arg0=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(ctor_arg0));
+    message += L" name_cxstr=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(name_cxstr));
+    message += L" name_internal=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(name_internal));
+    message += L" name_text=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(name_text));
+    message += L" name_copied=";
+    message += name_copied ? L"true" : L"false";
+    if (name_copied) {
+        message += L" name=\"";
+        message += WidenAsciiLossy(name_value);
+        message += L"\"";
+    }
+    message += L" style_mask_like=";
+    message += Hex32(style_mask_like);
+    message += L" one_like=";
+    message += Hex32(one_like);
+    message += L" zero_like=";
+    message += Hex32(zero_like);
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" callsite_rva=";
+    message += Hex32(kPetInfoWindowBaseSidlCtorCallsiteRva);
+    message += L" original_target_rva=";
+    message += Hex32(kPetInfoWindowBaseSidlCtorTargetRva);
+    message += L" before_template_data_copied=";
+    message += before_template_data_copied ? L"true" : L"false";
+    message += L" before_template_data=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(before_template_data));
+    message += L" after_template_data_copied=";
+    message += after_template_data_copied ? L"true" : L"false";
+    message += L" after_template_data=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(after_template_data));
+    monomyth::logger::Log(message);
+    return result;
+}
+
+void MONOMYTH_FASTCALL SidlCreateChildrenFromSidlTraceHook(
+    void* this_context,
+    void*) noexcept {
+    const std::uint64_t count = ++g_sidl_create_children_from_sidl_trace_count;
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const std::uint32_t caller_rva = CallerRvaFromReturnAddress(caller_return_address);
+
+    void* pet_info_window = nullptr;
+    const bool pet_info_pointer_copied =
+        TryReadPetInfoWindowPointer(&pet_info_window);
+    const bool matches_pet_info =
+        pet_info_pointer_copied && pet_info_window == this_context;
+
+    CxWndStateSnapshot before = {};
+    TryReadCxWndStateSnapshot(this_context, &before);
+
+    if (g_original_sidl_create_children_from_sidl != nullptr) {
+        g_original_sidl_create_children_from_sidl(this_context);
+    }
+
+    CxWndStateSnapshot after = {};
+    TryReadCxWndStateSnapshot(this_context, &after);
+
+    if (!matches_pet_info && count > 120 && (count % 500) != 0) {
+        return;
+    }
+
+    std::wstring message = L"SidlCreateChildrenFromSidlTrace count=";
+    message += std::to_wstring(count);
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" pet_info_pointer_copied=";
+    message += pet_info_pointer_copied ? L"true" : L"false";
+    message += L" pet_info_window=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(pet_info_window));
+    message += L" matches_pet_info=";
+    message += matches_pet_info ? L"true" : L"false";
+    AppendCxWndStateSnapshot(&message, L"before", before);
+    AppendCxWndStateSnapshot(&message, L"after", after);
+    monomyth::logger::Log(message);
+}
+
+bool TemplateTraceStringAlreadySeen(
+    const std::array<std::string, 8>& seen,
+    std::size_t seen_count,
+    const std::string& value) noexcept {
+    for (std::size_t i = 0; i < seen_count; ++i) {
+        if (seen[i] == value) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void AppendTemplateTraceStringCandidate(
+    std::wstring* message,
+    std::array<std::string, 8>* seen,
+    std::size_t* seen_count,
+    std::size_t offset,
+    const wchar_t* kind,
+    const std::string& value) noexcept {
+    if (message == nullptr || seen == nullptr || seen_count == nullptr ||
+        kind == nullptr || *seen_count >= seen->size() ||
+        !LooksLikeUsefulAsciiTraceString(value) ||
+        TemplateTraceStringAlreadySeen(*seen, *seen_count, value)) {
+        return;
+    }
+
+    (*seen)[*seen_count] = value;
+    const std::size_t candidate_index = *seen_count;
+    ++(*seen_count);
+
+    *message += L" template_string";
+    *message += std::to_wstring(candidate_index);
+    *message += L"_offset=";
+    *message += Hex32(static_cast<std::uint32_t>(offset));
+    *message += L" template_string";
+    *message += std::to_wstring(candidate_index);
+    *message += L"_kind=\"";
+    *message += kind;
+    *message += L"\" template_string";
+    *message += std::to_wstring(candidate_index);
+    *message += L"=\"";
+    *message += WidenAsciiLossy(value);
+    *message += L"\"";
+}
+
+void AppendSidlTemplateProbe(
+    std::wstring* message,
+    void* template_like) noexcept {
+    if (message == nullptr || template_like == nullptr) {
+        return;
+    }
+
+    constexpr std::array<std::size_t, 8> kHeaderOffsets = {
+        0x00, 0x04, 0x08, 0x0c, 0x10, 0x14, 0x18, 0x1c};
+    for (std::size_t offset : kHeaderOffsets) {
+        std::uint32_t value = 0;
+        const bool copied = TryCopyObject(
+            reinterpret_cast<const std::uint8_t*>(template_like) + offset,
+            &value);
+        *message += L" template_dword_";
+        *message += Hex32(static_cast<std::uint32_t>(offset));
+        *message += L"_copied=";
+        *message += copied ? L"true" : L"false";
+        if (copied) {
+            *message += L" template_dword_";
+            *message += Hex32(static_cast<std::uint32_t>(offset));
+            *message += L"=";
+            *message += Hex32(value);
+        }
+    }
+
+    constexpr std::array<std::size_t, 32> kCandidateOffsets = {
+        0x00, 0x04, 0x08, 0x0c, 0x10, 0x14, 0x18, 0x1c,
+        0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38, 0x3c,
+        0x40, 0x44, 0x48, 0x4c, 0x50, 0x54, 0x58, 0x5c,
+        0x60, 0x64, 0x68, 0x6c, 0x70, 0x74, 0x78, 0x7c};
+    std::array<std::string, 8> seen = {};
+    std::size_t seen_count = 0;
+    for (std::size_t offset : kCandidateOffsets) {
+        if (seen_count >= seen.size()) {
+            break;
+        }
+
+        const auto* const field_address =
+            reinterpret_cast<const std::uint8_t*>(template_like) + offset;
+        std::string value = {};
+        if (TryReadAsciiCString(field_address, 96, &value)) {
+            AppendTemplateTraceStringCandidate(
+                message,
+                &seen,
+                &seen_count,
+                offset,
+                L"direct_ascii",
+                value);
+        }
+
+        void* pointer_value = nullptr;
+        if (!TryCopyObject(field_address, &pointer_value) || pointer_value == nullptr) {
+            continue;
+        }
+        if (TryReadAsciiCString(pointer_value, 96, &value)) {
+            AppendTemplateTraceStringCandidate(
+                message,
+                &seen,
+                &seen_count,
+                offset,
+                L"pointer_ascii",
+                value);
+        }
+        if (TryReadAsciiCString(
+                reinterpret_cast<const std::uint8_t*>(pointer_value) +
+                    kCXStrInternalTextOffset,
+                96,
+                &value)) {
+            AppendTemplateTraceStringCandidate(
+                message,
+                &seen,
+                &seen_count,
+                offset,
+                L"pointer_plus_0x14_ascii",
+                value);
+        }
+        if (TryReadCxStrAsciiValue(field_address, 96, &value)) {
+            AppendTemplateTraceStringCandidate(
+                message,
+                &seen,
+                &seen_count,
+                offset,
+                L"cxstr_like",
+                value);
+        }
+    }
+
+    *message += L" template_string_count=";
+    *message += std::to_wstring(seen_count);
+}
+
+void* MONOMYTH_FASTCALL SidlCreateChildFromTemplateTraceHook(
+    void* this_context,
+    void*,
+    void* parent_window,
+    void* template_like) noexcept {
+    constexpr std::uint32_t kTemplateLikeOffsets[] = {
+        0x00, 0x04, 0x08, 0x0c, 0x10, 0x14, 0x18, 0x1c, 0x20};
+    void* result = nullptr;
+    if (g_original_sidl_create_child_from_template != nullptr) {
+        result = g_original_sidl_create_child_from_template(
+            this_context,
+            parent_window,
+            template_like);
+    }
+
+    void* pet_info_window = nullptr;
+    const bool pet_info_pointer_copied =
+        TryReadPetInfoWindowPointer(&pet_info_window);
+    const bool parent_matches_pet_info =
+        pet_info_pointer_copied && pet_info_window == parent_window;
+    const std::uintptr_t active_pet_info_create_window =
+        g_active_pet_info_create_children_window.load();
+    const std::uintptr_t parent_window_value =
+        reinterpret_cast<std::uintptr_t>(parent_window);
+    const bool parent_matches_active_pet_info_create =
+        active_pet_info_create_window != 0 &&
+        active_pet_info_create_window == parent_window_value;
+    const std::uint32_t parent_created_child_depth =
+        FindActivePetInfoCreatedChildDepth(parent_window_value);
+    const bool parent_matches_active_pet_info_descendant =
+        parent_created_child_depth != std::numeric_limits<std::uint32_t>::max();
+    const std::uint64_t count = ++g_sidl_create_child_from_template_trace_count;
+    std::uint64_t pet_info_count = 0;
+    if (parent_matches_active_pet_info_create ||
+        parent_matches_active_pet_info_descendant ||
+        parent_matches_pet_info) {
+        pet_info_count = ++g_sidl_create_child_from_template_pet_info_trace_count;
+    } else {
+        return result;
+    }
+
+    std::uint32_t result_created_child_depth = 0;
+    if (parent_matches_active_pet_info_create) {
+        result_created_child_depth = 1;
+    } else if (parent_matches_active_pet_info_descendant) {
+        result_created_child_depth = parent_created_child_depth + 1;
+    }
+    RecordActivePetInfoCreatedChild(
+        reinterpret_cast<std::uintptr_t>(result),
+        result_created_child_depth);
+
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const std::uint32_t caller_rva = CallerRvaFromReturnAddress(caller_return_address);
+    CxWndStateSnapshot result_state = {};
+    TryReadCxWndStateSnapshot(result, &result_state);
+    if (result_state.eqtype_0x1d8_copied &&
+        IsMultiPetExtraPetEqType(result_state.eqtype_0x1d8)) {
+        const int slot = MultiPetSlotFromEqType(result_state.eqtype_0x1d8);
+        if (slot >= 0 &&
+            slot < static_cast<int>(g_multipet_extra_pet_gauge_windows.size())) {
+            g_multipet_extra_pet_gauge_windows[static_cast<std::size_t>(slot)].store(
+                reinterpret_cast<std::uintptr_t>(result));
+        }
+    }
+    std::wstring message = L"SidlCreateChildFromTemplateTrace count=";
+    message += std::to_wstring(count);
+    message += L" pet_info_count=";
+    message += std::to_wstring(pet_info_count);
+    message += L" manager=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" parent=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(parent_window));
+    message += L" template=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(template_like));
+    message += L" result=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(result));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" target_rva=";
+    message += Hex32(kSidlCreateChildFromTemplateTargetRva);
+    message += L" pet_info_pointer_copied=";
+    message += pet_info_pointer_copied ? L"true" : L"false";
+    message += L" pet_info_window=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(pet_info_window));
+    message += L" parent_matches_pet_info=";
+    message += parent_matches_pet_info ? L"true" : L"false";
+    message += L" active_pet_info_create_window=";
+    message += HexPtr(active_pet_info_create_window);
+    message += L" parent_matches_active_pet_info_create=";
+    message += parent_matches_active_pet_info_create ? L"true" : L"false";
+    message += L" parent_matches_active_pet_info_descendant=";
+    message += parent_matches_active_pet_info_descendant ? L"true" : L"false";
+    message += L" parent_created_child_depth=";
+    if (parent_matches_active_pet_info_descendant) {
+        message += std::to_wstring(parent_created_child_depth);
+    } else {
+        message += L"0";
+    }
+    message += L" result_created_child_depth=";
+    message += std::to_wstring(result_created_child_depth);
+    if (template_like != nullptr) {
+        AppendFixedDwordSnapshot(
+            &message,
+            L"template",
+            template_like,
+            kTemplateLikeOffsets,
+            std::size(kTemplateLikeOffsets));
+    }
+    AppendCxWndStateSnapshot(&message, L"result", result_state);
+    monomyth::logger::Log(message);
+    return result;
+}
+
+bool ShouldLogInterestingSidlTemplateLookupName(
+    std::string_view name) noexcept {
+    return name == "PetInfoWindow" ||
+        name == "MMPIW_ExtraPet0_Gauge" ||
+        name == "MMPIW_ExtraPet1_Gauge" ||
+        name == "PIW_BuffWindow" ||
+        name == "PIW_Buttons";
+}
+
+void* MONOMYTH_FASTCALL SidlFindScreenPieceTemplateByNameTraceHook(
+    void* this_context,
+    void*,
+    void* name_cxstr) noexcept {
+    std::string lookup_name = {};
+    void* lookup_name_internal_string = nullptr;
+    const char* lookup_name_text = nullptr;
+    const bool lookup_name_copied = TryReadCxStrAsciiValue(
+        name_cxstr,
+        128,
+        &lookup_name,
+        &lookup_name_internal_string,
+        &lookup_name_text);
+
+    void* result = nullptr;
+    if (g_original_sidl_find_screen_piece_template_by_name != nullptr) {
+        result = g_original_sidl_find_screen_piece_template_by_name(
+            this_context,
+            name_cxstr);
+    }
+
+    if (!lookup_name_copied ||
+        !ShouldLogInterestingSidlTemplateLookupName(lookup_name)) {
+        return result;
+    }
+
+    const std::uint64_t count =
+        ++g_sidl_find_screen_piece_template_by_name_trace_count;
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const std::uint32_t caller_rva =
+        CallerRvaFromReturnAddress(caller_return_address);
+
+    void* pet_info_window = nullptr;
+    const bool pet_info_window_copied =
+        TryReadPetInfoWindowPointer(&pet_info_window);
+    void* pet_info_sidl_data = nullptr;
+    const bool pet_info_sidl_data_copied =
+        TryReadSidlScreenWndTemplateDataPointer(
+            pet_info_window,
+            &pet_info_sidl_data);
+
+    std::wstring message = L"SidlFindScreenPieceTemplateByNameTrace count=";
+    message += std::to_wstring(count);
+    message += L" manager=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" name_cxstr=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(name_cxstr));
+    message += L" lookup_name_internal=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(lookup_name_internal_string));
+    message += L" lookup_name_text=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(lookup_name_text));
+    message += L" lookup_name=\"";
+    message += WidenAsciiLossy(lookup_name);
+    message += L"\" result=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(result));
+    message += L" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" target_rva=";
+    message += Hex32(kSidlFindScreenPieceTemplateByNameTargetRva);
+    message += L" pet_info_window_copied=";
+    message += pet_info_window_copied ? L"true" : L"false";
+    message += L" pet_info_window=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(pet_info_window));
+    message += L" pet_info_sidl_data_copied=";
+    message += pet_info_sidl_data_copied ? L"true" : L"false";
+    message += L" pet_info_sidl_data=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(pet_info_sidl_data));
+    monomyth::logger::Log(message);
+    return result;
+}
+
+int MONOMYTH_FASTCALL PetInfoWindowWndNotificationHook(
+    void* this_context,
+    void*,
+    void* sender_window,
+    std::uint32_t notification_code,
+    void* payload_like) noexcept {
+    const std::uint64_t count =
+        ++g_pet_info_window_wnd_notification_trace_count;
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const std::uintptr_t module_base = GetHostModuleBase();
+
+    if (ShouldLogPetInfoWindowNotification(count)) {
+        std::wstring message =
+            L"PetInfoWindowWndNotificationTrace count=";
+        message += std::to_wstring(count);
+        message += L" this=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+        message += L" sender=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(sender_window));
+        message += L" notification_code=";
+        message += Hex32(notification_code);
+        message += L" payload=";
+        message += HexPtr(reinterpret_cast<std::uintptr_t>(payload_like));
+        message += L" caller_return=";
+        message += HexPtr(caller_return_address);
+        message += L" caller_return_rva=";
+        message += Hex32(
+            caller_return_address >= module_base
+                ? static_cast<std::uint32_t>(caller_return_address - module_base)
+                : 0);
+        monomyth::logger::Log(message);
+    }
+
+    if (notification_code == 1 &&
+        TryTargetMultiPetAuxiliarySlotFromPetInfoClick(
+            sender_window,
+            notification_code)) {
+        return 0;
+    }
+
+    if (g_original_pet_info_window_wnd_notification == nullptr) {
+        return 0;
+    }
+    return g_original_pet_info_window_wnd_notification(
+        this_context,
+        sender_window,
+        notification_code,
+        payload_like);
+}
+
+int MONOMYTH_FASTCALL PetInfoWindowPostCreateRegistrationHook(
+    void* this_context,
+    void*,
+    void* global_pointer_arg,
+    void* registration_callback_arg,
+    void* zero_arg_a,
+    void* zero_arg_b) noexcept {
+    int result = 0;
+    if (g_original_pet_info_window_post_create_registration != nullptr) {
+        result = g_original_pet_info_window_post_create_registration(
+            this_context,
+            global_pointer_arg,
+            registration_callback_arg,
+            zero_arg_a,
+            zero_arg_b);
+    }
+
+    void* pet_info_window = nullptr;
+    const bool pointer_copied = TryReadPetInfoWindowPointer(&pet_info_window);
+    CxWndStateSnapshot pet_info_snapshot = {};
+    if (pet_info_window != nullptr) {
+        TryReadCxWndStateSnapshot(pet_info_window, &pet_info_snapshot);
+    }
+
+    std::wstring message = L"PetInfoWindowPostCreateTrace";
+    message += L" registration_context=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" global_pointer_arg=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(global_pointer_arg));
+    message += L" registration_callback_arg=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(registration_callback_arg));
+    message += L" zero_arg_a=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(zero_arg_a));
+    message += L" zero_arg_b=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(zero_arg_b));
+    message += L" original_result=";
+    message += std::to_wstring(result);
+    message += L" pointer_copied=";
+    message += pointer_copied ? L"true" : L"false";
+    message += L" pet_info_window=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(pet_info_window));
+    AppendCxWndStateSnapshot(&message, L"pet_info", pet_info_snapshot);
+    AppendPetInfoChildProbe(
+        &message,
+        pet_info_window,
+        "Pet0_Button",
+        L"stock_pet0_button");
+    AppendPetInfoChildProbe(
+        &message,
+        pet_info_window,
+        "MMPIW_ExtraPet0_Gauge",
+        L"custom_extra_pet0_gauge");
+    AppendPetInfoChildProbe(
+        &message,
+        pet_info_window,
+        "MMPIW_ExtraPet1_Gauge",
+        L"custom_extra_pet1_gauge");
+    monomyth::logger::Log(message);
+    return result;
+}
+
+const wchar_t* DescribePetInfoWindowGetChildItemCallsite(
+    std::uint32_t caller_rva) noexcept {
+    switch (caller_rva) {
+        case kPetInfoWindowGetChildItemStandardCallsiteRva + kJmpPatchBytes:
+            return L"standard_14_loop";
+        case kPetInfoWindowGetChildItemPetGaugeCallsiteRva + kJmpPatchBytes:
+            return L"pet_gauge_control";
+        case kPetInfoWindowGetChildItemBuffCallsiteRva + kJmpPatchBytes:
+            return L"buff_97_loop";
+        default:
+            return L"unknown";
+    }
+}
+
+void* MONOMYTH_FASTCALL PetInfoWindowGetChildItemCallsiteHook(
+    void* this_context,
+    void*,
+    void* name_cxstr,
+    int required_like) noexcept {
+    CxWndStateSnapshot before = {};
+    TryReadCxWndStateSnapshot(this_context, &before);
+
+    void* result = nullptr;
+    if (g_original_pet_info_window_get_child_item != nullptr) {
+        result = g_original_pet_info_window_get_child_item(
+            this_context,
+            name_cxstr,
+            required_like);
+    }
+
+    const std::uint64_t count = ++g_pet_info_window_get_child_item_trace_count;
+    if (count > 160 && (count % 100) != 0) {
+        return result;
+    }
+
+    const std::uintptr_t caller_return_address = GetCallerReturnAddress();
+    const std::uint32_t caller_rva = CallerRvaFromReturnAddress(caller_return_address);
+
+    CxWndStateSnapshot after = {};
+    TryReadCxWndStateSnapshot(this_context, &after);
+
+    std::string child_name;
+    void* child_name_internal_string = nullptr;
+    const char* child_name_text = nullptr;
+    const bool child_name_copied =
+        TryReadCxStrAsciiValue(
+            name_cxstr,
+            128,
+            &child_name,
+            &child_name_internal_string,
+            &child_name_text);
+
+    std::wstring message = L"PetInfoWindowGetChildItemTrace count=";
+    message += std::to_wstring(count);
+    message += L" callsite=\"";
+    message += DescribePetInfoWindowGetChildItemCallsite(caller_rva);
+    message += L"\" caller_return=";
+    message += HexPtr(caller_return_address);
+    message += L" caller_rva=";
+    message += Hex32(caller_rva);
+    message += L" this=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(this_context));
+    message += L" name_cxstr=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(name_cxstr));
+    message += L" child_name_internal=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(child_name_internal_string));
+    message += L" child_name_text=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(child_name_text));
+    message += L" child_name_copied=";
+    message += child_name_copied ? L"true" : L"false";
+    if (child_name_copied) {
+        message += L" child_name=\"";
+        message += WidenAsciiLossy(child_name);
+        message += L"\"";
+    }
+    message += L" required_like=";
+    message += std::to_wstring(required_like);
+    message += L" result=";
+    message += HexPtr(reinterpret_cast<std::uintptr_t>(result));
+    AppendCxWndStateSnapshot(&message, L"before", before);
+    AppendCxWndStateSnapshot(&message, L"after", after);
+    monomyth::logger::Log(message);
+    return result;
+}
+
 void MONOMYTH_FASTCALL InventorySummaryRefreshCandidateAHook(
     void* this_context,
     void*) noexcept {
@@ -28034,6 +29962,10 @@ bool InstallLocalManaHooks(const monomyth::runtime::Manifest& manifest) noexcept
         0xe7, 0x03, 0x00, 0x00, 0x89, 0x44, 0x24, 0x30, 0x89, 0x5c, 0x24,
         0x18, 0x89, 0x5c, 0x24, 0x1c,
     };
+    constexpr std::array<std::uint8_t, 24> kGetGaugeValueFromEQEntryBytes = {
+        0xa1, 0x1c, 0x26, 0xdd, 0x00, 0x81, 0xec, 0x48, 0x01, 0x00, 0x00, 0x53,
+        0x8b, 0x9c, 0x24, 0x50, 0x01, 0x00, 0x00, 0x55, 0x56, 0x8d, 0x4b, 0xff,
+    };
     constexpr std::array<std::uint8_t, 5> kPlayerWndManaGaugeHideCallsiteBytes = {
         0xe8, 0xa6, 0xae, 0x44, 0x00,
     };
@@ -28117,6 +30049,8 @@ bool InstallLocalManaHooks(const monomyth::runtime::Manifest& manifest) noexcept
         module_base + kPlayerWndManaVisibilityTargetRva;
     const std::uintptr_t player_mana_eqtype_resolver_address =
         module_base + kPlayerManaEqTypeResolverRva;
+    const std::uintptr_t get_gauge_value_from_eq_address =
+        module_base + kGetGaugeValueFromEQRva;
     const std::uintptr_t player_wnd_constructor_address =
         module_base + kPlayerWndConstructorRva;
     const std::uintptr_t player_wnd_mana_producer_a_address =
@@ -28141,6 +30075,8 @@ bool InstallLocalManaHooks(const monomyth::runtime::Manifest& manifest) noexcept
         reinterpret_cast<CXWndVisibilityTwoArgFn>(player_wnd_mana_visibility_target_address);
     g_original_player_mana_eqtype_resolver =
         reinterpret_cast<PlayerManaEqTypeResolverFn>(player_mana_eqtype_resolver_address);
+    g_original_get_gauge_value_from_eq =
+        reinterpret_cast<GetGaugeValueFromEQFn>(get_gauge_value_from_eq_address);
     g_original_player_wnd_constructor = nullptr;
     g_original_player_wnd_mana_producer_a = nullptr;
     g_original_player_wnd_mana_producer_b = nullptr;
@@ -28163,6 +30099,8 @@ bool InstallLocalManaHooks(const monomyth::runtime::Manifest& manifest) noexcept
         live_player_wnd_mana_refresh_helper_callsite = {};
     std::array<std::uint8_t, kPlayerManaEqTypeResolverEntryBytes.size()>
         live_player_mana_eqtype_resolver = {};
+    std::array<std::uint8_t, kGetGaugeValueFromEQEntryBytes.size()>
+        live_get_gauge_value_from_eq = {};
     std::array<std::uint8_t, kPlayerWndConstructorEntryBytes.size()> live_player_wnd_ctor = {};
     std::array<std::uint8_t, kPlayerWndManaProducerAEntryBytes.size()>
         live_player_wnd_mana_producer_a = {};
@@ -28254,6 +30192,15 @@ bool InstallLocalManaHooks(const monomyth::runtime::Manifest& manifest) noexcept
             live_player_mana_eqtype_resolver.data(),
             kPlayerManaEqTypeResolverEntryBytes.data(),
             kPlayerManaEqTypeResolverEntryBytes.size()) == 0;
+    const bool get_gauge_value_from_eq_entry_ok =
+        TryCopyBytes(
+            reinterpret_cast<const void*>(get_gauge_value_from_eq_address),
+            live_get_gauge_value_from_eq.size(),
+            live_get_gauge_value_from_eq.data()) &&
+        std::memcmp(
+            live_get_gauge_value_from_eq.data(),
+            kGetGaugeValueFromEQEntryBytes.data(),
+            kGetGaugeValueFromEQEntryBytes.size()) == 0;
     const bool player_wnd_constructor_entry_ok =
         TryCopyBytes(
             reinterpret_cast<const void*>(player_wnd_constructor_address),
@@ -28475,6 +30422,36 @@ bool InstallLocalManaHooks(const monomyth::runtime::Manifest& manifest) noexcept
             L"hook_manager: player mana eqtype hook install failed target=PlayerManaEqTypeResolver");
     }
 
+    bool get_gauge_value_from_eq_installed = false;
+    if (!get_gauge_value_from_eq_entry_ok) {
+        std::wstring message =
+            L"hook_manager: multipet gauge eqtype hook denied target=__GetGaugeValueFromEQ expected=\"";
+        message += HexBytes(
+            kGetGaugeValueFromEQEntryBytes.data(),
+            kGetGaugeValueFromEQEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(
+            live_get_gauge_value_from_eq.data(),
+            live_get_gauge_value_from_eq.size());
+        message += L"\" address=";
+        message += HexPtr(get_gauge_value_from_eq_address);
+        message += L" target_rva=";
+        message += Hex32(kGetGaugeValueFromEQRva);
+        monomyth::logger::Log(message);
+    } else if (InstallInlineDetour(
+                   reinterpret_cast<void*>(get_gauge_value_from_eq_address),
+                   reinterpret_cast<void*>(&GetGaugeValueFromEQHook),
+                   &g_get_gauge_value_from_eq_detour,
+                   reinterpret_cast<void**>(&g_original_get_gauge_value_from_eq),
+                   L"__GetGaugeValueFromEQ multipet gauge eqtype")) {
+        get_gauge_value_from_eq_installed = true;
+    } else {
+        RemoveInlineDetour(&g_get_gauge_value_from_eq_detour);
+        g_original_get_gauge_value_from_eq = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: multipet gauge eqtype hook install failed target=__GetGaugeValueFromEQ");
+    }
+
     bool player_wnd_constructor_installed = false;
     bool player_wnd_mana_producer_a_installed = false;
     bool player_wnd_mana_producer_b_installed = false;
@@ -28613,7 +30590,8 @@ bool InstallLocalManaHooks(const monomyth::runtime::Manifest& manifest) noexcept
         !max_mana_installed &&
         !mana_regen_installed &&
         player_mana_visibility_callsites_installed == 0 &&
-        !player_mana_eqtype_resolver_installed) {
+        !player_mana_eqtype_resolver_installed &&
+        !get_gauge_value_from_eq_installed) {
         g_original_character_zone_client_cur_mana = nullptr;
         g_player_wnd_mana_refresh_helper = nullptr;
         g_original_player_wnd_mana_producer_a = nullptr;
@@ -28622,6 +30600,7 @@ bool InstallLocalManaHooks(const monomyth::runtime::Manifest& manifest) noexcept
         g_original_player_wnd_mana_selection_writer = nullptr;
         g_original_player_wnd_mana_visibility_target = nullptr;
         g_original_player_mana_eqtype_resolver = nullptr;
+        g_original_get_gauge_value_from_eq = nullptr;
         return false;
     }
 
@@ -28650,6 +30629,11 @@ bool InstallLocalManaHooks(const monomyth::runtime::Manifest& manifest) noexcept
     g_multiclass_mana_regen_trace_count = 0;
     g_multiclass_mana_regen_override_count = 0;
     g_player_window_pointer.store(0);
+    g_multipet_extra_pet_eqtype_trace_count = 0;
+    g_pet_info_stock_gauge_eqtype_trace_count = 0;
+    for (auto& gauge_window : g_multipet_extra_pet_gauge_windows) {
+        gauge_window.store(0);
+    }
 
     std::wstring message =
         L"hook_manager: local mana hooks installed cur_mana_address=";
@@ -28682,6 +30666,12 @@ bool InstallLocalManaHooks(const monomyth::runtime::Manifest& manifest) noexcept
     message += Hex32(kPlayerManaEqTypeResolverRva);
     message += L" player_mana_eqtype_installed=";
     message += player_mana_eqtype_resolver_installed ? L"true" : L"false";
+    message += L" get_gauge_value_eqtype_address=";
+    message += HexPtr(get_gauge_value_from_eq_address);
+    message += L" get_gauge_value_eqtype_rva=";
+    message += Hex32(kGetGaugeValueFromEQRva);
+    message += L" get_gauge_value_eqtype_installed=";
+    message += get_gauge_value_from_eq_installed ? L"true" : L"false";
     message += L" player_wnd_ctor_address=";
     message += HexPtr(player_wnd_constructor_address);
     message += L" player_wnd_ctor_rva=";
@@ -32117,6 +34107,14 @@ bool RemoveInventoryClassTitleDisplayHook() noexcept {
 bool RemoveGetSpellLevelNeededTrace() noexcept {
     bool mana_ok = true;
     bool removed_any_mana_hook = false;
+    if (g_get_gauge_value_from_eq_detour.installed) {
+        removed_any_mana_hook = true;
+        if (RemoveInlineDetour(&g_get_gauge_value_from_eq_detour)) {
+            g_original_get_gauge_value_from_eq = nullptr;
+        } else {
+            mana_ok = false;
+        }
+    }
     if (g_player_mana_eqtype_resolver_detour.installed) {
         removed_any_mana_hook = true;
         if (RemoveInlineDetour(&g_player_mana_eqtype_resolver_detour)) {
@@ -32208,7 +34206,11 @@ bool RemoveGetSpellLevelNeededTrace() noexcept {
         g_original_player_wnd_mana_selection_writer = nullptr;
         g_original_player_wnd_mana_visibility_target = nullptr;
         g_original_player_mana_eqtype_resolver = nullptr;
+        g_original_get_gauge_value_from_eq = nullptr;
         g_player_window_pointer.store(0);
+        for (auto& gauge_window : g_multipet_extra_pet_gauge_windows) {
+            gauge_window.store(0);
+        }
         g_multiclass_cur_mana_trace_count = 0;
         g_multiclass_cur_mana_override_count = 0;
         g_multiclass_cur_mana_callsite_override_count = 0;
@@ -32231,6 +34233,8 @@ bool RemoveGetSpellLevelNeededTrace() noexcept {
         g_multiclass_max_mana_override_count = 0;
         g_multiclass_mana_regen_trace_count = 0;
         g_multiclass_mana_regen_override_count = 0;
+        g_multipet_extra_pet_eqtype_trace_count = 0;
+        g_pet_info_stock_gauge_eqtype_trace_count = 0;
         monomyth::logger::Log(
             L"hook_manager: local mana hooks removed target=CharacterZoneClient::Cur_Mana/Max_Mana/GetManaRegen");
     }
@@ -33092,6 +35096,348 @@ bool RemoveMemorizeSendTrace() noexcept {
     return false;
 }
 
+bool InstallPetInfoWindowTraceForMultiPet(const monomyth::runtime::Manifest& manifest) noexcept {
+    if (!IsMultiPetWindowFeatureRequested()) {
+        return false;
+    }
+    const std::uintptr_t module_base = manifest.runtime_module_base;
+    if (module_base == 0) {
+        monomyth::logger::Log(
+            L"hook_manager: PetInfoWindow WndNotification trace denied target=PetInfoWindowWndNotification reason=missing_module_base");
+        return false;
+    }
+
+    const wchar_t* create_children_evidence_source = L"unresolved";
+    void* const create_children_target =
+        ResolveCSidlScreenWndCreateChildrenFromSidl(
+            &create_children_evidence_source);
+    if (create_children_target != nullptr &&
+        InstallInlineDetour(
+            create_children_target,
+            reinterpret_cast<void*>(&SidlCreateChildrenFromSidlTraceHook),
+            &g_sidl_create_children_from_sidl_detour,
+            reinterpret_cast<void**>(&g_original_sidl_create_children_from_sidl),
+            L"CSidlScreenWnd::CreateChildrenFromSidl trace")) {
+        std::wstring sidl_message =
+            L"hook_manager: SIDL create-children trace installed target=CSidlScreenWnd::CreateChildrenFromSidl address=";
+        sidl_message += HexPtr(reinterpret_cast<std::uintptr_t>(create_children_target));
+        sidl_message += L" evidence_source=\"";
+        sidl_message += create_children_evidence_source;
+        sidl_message += L"\"";
+        sidl_message += L" source=\"MONOMYTH_ENABLE_MULTIPET_WINDOW\"";
+        monomyth::logger::Log(sidl_message);
+    } else {
+        g_original_sidl_create_children_from_sidl = nullptr;
+        std::wstring sidl_failure =
+            create_children_target == nullptr
+                ? L"hook_manager: SIDL create-children trace skipped target=CSidlScreenWnd::CreateChildrenFromSidl reason=export_unresolved"
+                : L"hook_manager: SIDL create-children trace install failed target=CSidlScreenWnd::CreateChildrenFromSidl";
+        sidl_failure += L" evidence_source=\"";
+        sidl_failure += create_children_evidence_source;
+        sidl_failure += L"\"";
+        monomyth::logger::Log(sidl_failure);
+    }
+
+    void* const child_from_template_target =
+        reinterpret_cast<void*>(module_base + kSidlCreateChildFromTemplateTargetRva);
+    if (InstallInlineDetour(
+            child_from_template_target,
+            reinterpret_cast<void*>(&SidlCreateChildFromTemplateTraceHook),
+            &g_sidl_create_child_from_template_detour,
+            reinterpret_cast<void**>(&g_original_sidl_create_child_from_template),
+            L"CSidlManager::CreateChildFromTemplate trace")) {
+        std::wstring child_template_message =
+            L"hook_manager: SIDL child-template trace installed target=CSidlManager::CreateChildFromTemplate address=";
+        child_template_message += HexPtr(
+            reinterpret_cast<std::uintptr_t>(child_from_template_target));
+        child_template_message += L" target_rva=";
+        child_template_message += Hex32(kSidlCreateChildFromTemplateTargetRva);
+        child_template_message +=
+            L" evidence_source=\"petinfo-sidl-seams-2026-06-06\"";
+        child_template_message += L" source=\"MONOMYTH_ENABLE_MULTIPET_WINDOW\"";
+        monomyth::logger::Log(child_template_message);
+    } else {
+        g_original_sidl_create_child_from_template = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: SIDL child-template trace install failed target=CSidlManager::CreateChildFromTemplate");
+    }
+
+    void* const find_screen_piece_template_target =
+        reinterpret_cast<void*>(module_base + kSidlFindScreenPieceTemplateByNameTargetRva);
+    if (InstallInlineDetour(
+            find_screen_piece_template_target,
+            reinterpret_cast<void*>(&SidlFindScreenPieceTemplateByNameTraceHook),
+            &g_sidl_find_screen_piece_template_by_name_detour,
+            reinterpret_cast<void**>(
+                &g_original_sidl_find_screen_piece_template_by_name),
+            L"CSidlManager::FindScreenPieceTemplateByName trace")) {
+        std::wstring lookup_message =
+            L"hook_manager: SIDL screen-piece lookup trace installed target=CSidlManager::FindScreenPieceTemplateByName address=";
+        lookup_message += HexPtr(
+            reinterpret_cast<std::uintptr_t>(find_screen_piece_template_target));
+        lookup_message += L" target_rva=";
+        lookup_message += Hex32(kSidlFindScreenPieceTemplateByNameTargetRva);
+        lookup_message +=
+            L" evidence_source=\"petinfo-sidl-seams-2026-06-06\"";
+        lookup_message += L" source=\"MONOMYTH_ENABLE_MULTIPET_WINDOW\"";
+        monomyth::logger::Log(lookup_message);
+    } else {
+        g_original_sidl_find_screen_piece_template_by_name = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: SIDL screen-piece lookup trace install failed target=CSidlManager::FindScreenPieceTemplateByName");
+    }
+
+    constexpr std::array<std::uint8_t, 12> kPetInfoWndNotificationEntryBytes = {
+        0x6a, 0xff, 0x64, 0xa1, 0x00, 0x00,
+        0x00, 0x00, 0x68, 0x58, 0x1e, 0x99};
+    std::array<std::uint8_t, kPetInfoWndNotificationEntryBytes.size()>
+        live_entry = {};
+    const bool entry_copied = TryCopyBytes(
+        reinterpret_cast<const void*>(
+            module_base + kPetInfoWindowWndNotificationTargetRva),
+        live_entry.size(),
+        live_entry.data());
+    const bool entry_matches =
+        entry_copied &&
+        BytesMatchWithModuleRelocation(
+            live_entry.data(),
+            kPetInfoWndNotificationEntryBytes.data(),
+            kPetInfoWndNotificationEntryBytes.size(),
+            module_base);
+    if (!entry_matches) {
+        std::wstring message =
+            L"hook_manager: PetInfoWindow WndNotification trace denied target=PetInfoWindowWndNotification validation=entry_bytes_mismatch expected=\"";
+        message += HexBytes(
+            kPetInfoWndNotificationEntryBytes.data(),
+            kPetInfoWndNotificationEntryBytes.size());
+        message += L"\" live=\"";
+        message += HexBytes(live_entry.data(), live_entry.size());
+        message += L"\" address=";
+        message += HexPtr(module_base + kPetInfoWindowWndNotificationTargetRva);
+        message += L" target_rva=";
+        message += Hex32(kPetInfoWindowWndNotificationTargetRva);
+        monomyth::logger::Log(message);
+        return false;
+    }
+
+    if (!InstallInlineDetour(
+            reinterpret_cast<void*>(
+                module_base + kPetInfoWindowWndNotificationTargetRva),
+            reinterpret_cast<void*>(&PetInfoWindowWndNotificationHook),
+            &g_pet_info_window_wnd_notification_detour,
+            reinterpret_cast<void**>(&g_original_pet_info_window_wnd_notification),
+            L"PetInfoWindow WndNotification trace")) {
+        RemoveInlineDetour(&g_pet_info_window_wnd_notification_detour);
+        g_original_pet_info_window_wnd_notification = nullptr;
+        return false;
+    }
+
+    std::wstring message =
+        L"hook_manager: PetInfoWindow WndNotification trace installed target=PetInfoWindowWndNotification address=";
+    message += HexPtr(module_base + kPetInfoWindowWndNotificationTargetRva);
+    message += L" target_rva=";
+    message += Hex32(kPetInfoWindowWndNotificationTargetRva);
+    message += L" source=\"MONOMYTH_ENABLE_MULTIPET_WINDOW\"";
+    monomyth::logger::Log(message);
+
+    g_original_pet_info_window_base_sidl_ctor =
+        reinterpret_cast<PetInfoWindowBaseSidlCtorFn>(
+            module_base + kPetInfoWindowBaseSidlCtorTargetRva);
+    if (InstallCallsitePatch(
+            reinterpret_cast<void*>(
+                module_base + kPetInfoWindowBaseSidlCtorCallsiteRva),
+            reinterpret_cast<void*>(&PetInfoWindowBaseSidlCtorCallsiteHook),
+            module_base + kPetInfoWindowBaseSidlCtorTargetRva,
+            &g_pet_info_window_base_sidl_ctor_callsite_patch,
+            L"PetInfoWindowBaseSidlCtorCallsite")) {
+        std::wstring base_ctor_message =
+            L"hook_manager: PetInfoWindow base SIDL ctor trace installed target=PetInfoWindowBaseSidlCtorCallsite address=";
+        base_ctor_message += HexPtr(
+            module_base + kPetInfoWindowBaseSidlCtorCallsiteRva);
+        base_ctor_message += L" callsite_rva=";
+        base_ctor_message += Hex32(kPetInfoWindowBaseSidlCtorCallsiteRva);
+        base_ctor_message += L" original_target=";
+        base_ctor_message += HexPtr(
+            module_base + kPetInfoWindowBaseSidlCtorTargetRva);
+        base_ctor_message += L" original_target_rva=";
+        base_ctor_message += Hex32(kPetInfoWindowBaseSidlCtorTargetRva);
+        base_ctor_message +=
+            L" evidence_source=\"petinfo-sidl-seams-2026-06-06\"";
+        base_ctor_message += L" source=\"MONOMYTH_ENABLE_MULTIPET_WINDOW\"";
+        monomyth::logger::Log(base_ctor_message);
+    } else {
+        g_original_pet_info_window_base_sidl_ctor = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: PetInfoWindow base SIDL ctor trace install failed target=PetInfoWindowBaseSidlCtorCallsite");
+    }
+
+    g_original_pet_info_window_create_children_from_sidl =
+        reinterpret_cast<CSidlScreenWndCreateChildrenFromSidlFn>(
+            module_base + kSidlCreateChildrenEquivalentTargetRva);
+    if (InstallCallsitePatch(
+            reinterpret_cast<void*>(
+                module_base + kPetInfoWindowCreateChildrenCallsiteRva),
+            reinterpret_cast<void*>(&PetInfoWindowCreateChildrenCallsiteHook),
+            module_base + kSidlCreateChildrenEquivalentTargetRva,
+            &g_pet_info_window_create_children_callsite_patch,
+            L"PetInfoWindowCreateChildrenCallsite")) {
+        std::wstring create_children_message =
+            L"hook_manager: PetInfoWindow create-children trace installed target=PetInfoWindowCreateChildrenCallsite address=";
+        create_children_message += HexPtr(
+            module_base + kPetInfoWindowCreateChildrenCallsiteRva);
+        create_children_message += L" callsite_rva=";
+        create_children_message += Hex32(kPetInfoWindowCreateChildrenCallsiteRva);
+        create_children_message += L" original_target=";
+        create_children_message += HexPtr(
+            module_base + kSidlCreateChildrenEquivalentTargetRva);
+        create_children_message += L" original_target_rva=";
+        create_children_message += Hex32(kSidlCreateChildrenEquivalentTargetRva);
+        create_children_message +=
+            L" evidence_source=\"petinfo-sidl-seams-2026-06-06\"";
+        create_children_message += L" source=\"MONOMYTH_ENABLE_MULTIPET_WINDOW\"";
+        monomyth::logger::Log(create_children_message);
+    } else {
+        g_original_pet_info_window_create_children_from_sidl = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: PetInfoWindow create-children trace install failed target=PetInfoWindowCreateChildrenCallsite");
+    }
+
+    g_original_pet_info_window_post_create_registration =
+        reinterpret_cast<PetInfoWindowPostCreateRegistrationFn>(
+            module_base + kPetInfoWindowPostCreateRegistrationTargetRva);
+    if (InstallCallsitePatch(
+            reinterpret_cast<void*>(
+                module_base + kPetInfoWindowPostCreateRegistrationCallsiteRva),
+            reinterpret_cast<void*>(&PetInfoWindowPostCreateRegistrationHook),
+            module_base + kPetInfoWindowPostCreateRegistrationTargetRva,
+            &g_pet_info_window_post_create_registration_callsite_patch,
+            L"PetInfoWindowPostCreateRegistrationCallsite")) {
+        std::wstring post_create_message =
+            L"hook_manager: PetInfoWindow post-create trace installed target=PetInfoWindowPostCreateRegistrationCallsite address=";
+        post_create_message += HexPtr(
+            module_base + kPetInfoWindowPostCreateRegistrationCallsiteRva);
+        post_create_message += L" callsite_rva=";
+        post_create_message += Hex32(kPetInfoWindowPostCreateRegistrationCallsiteRva);
+        post_create_message += L" original_target=";
+        post_create_message += HexPtr(
+            module_base + kPetInfoWindowPostCreateRegistrationTargetRva);
+        post_create_message += L" original_target_rva=";
+        post_create_message += Hex32(kPetInfoWindowPostCreateRegistrationTargetRva);
+        post_create_message += L" source=\"MONOMYTH_ENABLE_MULTIPET_WINDOW\"";
+        monomyth::logger::Log(post_create_message);
+    } else {
+        g_original_pet_info_window_post_create_registration = nullptr;
+        monomyth::logger::Log(
+            L"hook_manager: PetInfoWindow post-create trace install failed target=PetInfoWindowPostCreateRegistrationCallsite");
+    }
+
+    g_original_pet_info_window_get_child_item =
+        reinterpret_cast<CSidlScreenWndGetChildItemFn>(
+            module_base + kPetInfoWindowGetChildItemTargetRva);
+    int child_lookup_installed_count = 0;
+    if (InstallCallsitePatch(
+            reinterpret_cast<void*>(
+                module_base + kPetInfoWindowGetChildItemStandardCallsiteRva),
+            reinterpret_cast<void*>(&PetInfoWindowGetChildItemCallsiteHook),
+            module_base + kPetInfoWindowGetChildItemTargetRva,
+            &g_pet_info_window_get_child_item_standard_callsite_patch,
+            L"PetInfoWindowGetChildItemStandardCallsite")) {
+        ++child_lookup_installed_count;
+    }
+    if (InstallCallsitePatch(
+            reinterpret_cast<void*>(
+                module_base + kPetInfoWindowGetChildItemPetGaugeCallsiteRva),
+            reinterpret_cast<void*>(&PetInfoWindowGetChildItemCallsiteHook),
+            module_base + kPetInfoWindowGetChildItemTargetRva,
+            &g_pet_info_window_get_child_item_pet_gauge_callsite_patch,
+            L"PetInfoWindowGetChildItemPetGaugeCallsite")) {
+        ++child_lookup_installed_count;
+    }
+    if (InstallCallsitePatch(
+            reinterpret_cast<void*>(
+                module_base + kPetInfoWindowGetChildItemBuffCallsiteRva),
+            reinterpret_cast<void*>(&PetInfoWindowGetChildItemCallsiteHook),
+            module_base + kPetInfoWindowGetChildItemTargetRva,
+            &g_pet_info_window_get_child_item_buff_callsite_patch,
+            L"PetInfoWindowGetChildItemBuffCallsite")) {
+        ++child_lookup_installed_count;
+    }
+    std::wstring child_lookup_message =
+        L"hook_manager: PetInfoWindow child lookup trace install summary target=PetInfoWindowGetChildItem callsites_installed=";
+    child_lookup_message += std::to_wstring(child_lookup_installed_count);
+    child_lookup_message += L" target_address=";
+    child_lookup_message += HexPtr(module_base + kPetInfoWindowGetChildItemTargetRva);
+    child_lookup_message += L" target_rva=";
+    child_lookup_message += Hex32(kPetInfoWindowGetChildItemTargetRva);
+    child_lookup_message += L" source=\"MONOMYTH_ENABLE_MULTIPET_WINDOW\"";
+    monomyth::logger::Log(child_lookup_message);
+    if (child_lookup_installed_count == 0) {
+        g_original_pet_info_window_get_child_item = nullptr;
+    }
+    return true;
+}
+
+bool RemovePetInfoWindowTraceForMultiPet() noexcept {
+    if (g_pet_info_window_get_child_item_buff_callsite_patch.installed &&
+        !RemoveCallsitePatch(&g_pet_info_window_get_child_item_buff_callsite_patch)) {
+        return false;
+    }
+    if (g_pet_info_window_get_child_item_pet_gauge_callsite_patch.installed &&
+        !RemoveCallsitePatch(&g_pet_info_window_get_child_item_pet_gauge_callsite_patch)) {
+        return false;
+    }
+    if (g_pet_info_window_get_child_item_standard_callsite_patch.installed &&
+        !RemoveCallsitePatch(&g_pet_info_window_get_child_item_standard_callsite_patch)) {
+        return false;
+    }
+    g_original_pet_info_window_get_child_item = nullptr;
+    g_pet_info_window_get_child_item_trace_count = 0;
+    if (g_pet_info_window_base_sidl_ctor_callsite_patch.installed &&
+        !RemoveCallsitePatch(&g_pet_info_window_base_sidl_ctor_callsite_patch)) {
+        return false;
+    }
+    g_original_pet_info_window_base_sidl_ctor = nullptr;
+    g_pet_info_window_base_sidl_ctor_trace_count = 0;
+    if (g_pet_info_window_post_create_registration_callsite_patch.installed &&
+        !RemoveCallsitePatch(&g_pet_info_window_post_create_registration_callsite_patch)) {
+        return false;
+    }
+    g_original_pet_info_window_post_create_registration = nullptr;
+    if (g_pet_info_window_create_children_callsite_patch.installed &&
+        !RemoveCallsitePatch(&g_pet_info_window_create_children_callsite_patch)) {
+        return false;
+    }
+    g_original_pet_info_window_create_children_from_sidl = nullptr;
+    g_pet_info_window_create_children_trace_count = 0;
+    if (g_pet_info_window_wnd_notification_detour.installed &&
+        !RemoveInlineDetour(&g_pet_info_window_wnd_notification_detour)) {
+        return false;
+    }
+    g_original_pet_info_window_wnd_notification = nullptr;
+    g_pet_info_window_wnd_notification_trace_count = 0;
+    if (g_sidl_create_children_from_sidl_detour.installed &&
+        !RemoveInlineDetour(&g_sidl_create_children_from_sidl_detour)) {
+        return false;
+    }
+    g_original_sidl_create_children_from_sidl = nullptr;
+    g_sidl_create_children_from_sidl_trace_count = 0;
+    if (g_sidl_create_child_from_template_detour.installed &&
+        !RemoveInlineDetour(&g_sidl_create_child_from_template_detour)) {
+        return false;
+    }
+    g_original_sidl_create_child_from_template = nullptr;
+    g_sidl_create_child_from_template_trace_count = 0;
+    g_sidl_create_child_from_template_pet_info_trace_count = 0;
+    if (g_sidl_find_screen_piece_template_by_name_detour.installed &&
+        !RemoveInlineDetour(&g_sidl_find_screen_piece_template_by_name_detour)) {
+        return false;
+    }
+    g_original_sidl_find_screen_piece_template_by_name = nullptr;
+    g_sidl_find_screen_piece_template_by_name_trace_count = 0;
+    g_active_pet_info_create_children_window.store(0);
+    return true;
+}
+
 bool TryResyncLocalCombatAbilityArrayFromLastSource(
     const monomyth::server_auth_stats::Snapshot& snapshot) noexcept {
     void* destination = nullptr;
@@ -33421,6 +35767,14 @@ bool RemoveSpellbookMemorizeSendPathTrace() noexcept {
 }
 
 bool RemoveMemorizeSendTrace() noexcept {
+    return true;
+}
+
+bool InstallPetInfoWindowTraceForMultiPet(const monomyth::runtime::Manifest&) noexcept {
+    return false;
+}
+
+bool RemovePetInfoWindowTraceForMultiPet() noexcept {
     return true;
 }
 
@@ -33768,6 +36122,9 @@ bool Initialize(const monomyth::runtime::Manifest& manifest) noexcept {
             move_item_send_trace_active ||
             activated_skill_send_trace_active);
 
+    monomyth::multipet_window::Initialize(manifest.runtime_module_base);
+    InstallPetInfoWindowTraceForMultiPet(manifest);
+
     g_initialized = true;
     if (receive_hook_active || spell_trace_active || scroll_scribe_trace_active ||
         memorize_send_trace_active || spell_behavior_active || item_behavior_active ||
@@ -33919,6 +36276,13 @@ void Shutdown() noexcept {
     if (!g_initialized) {
         return;
     }
+
+    if (!RemovePetInfoWindowTraceForMultiPet()) {
+        monomyth::logger::Log(
+            L"hook_manager: shutdown deferred because PetInfoWindow WndNotification trace removal failed");
+        return;
+    }
+    monomyth::multipet_window::Shutdown();
 
     if (!RemoveReceiveDispatchHook()) {
         monomyth::logger::Log(L"hook_manager: shutdown deferred because receive hook removal failed");

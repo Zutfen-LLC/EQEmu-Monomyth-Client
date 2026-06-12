@@ -483,9 +483,9 @@
 			<EndCapRight>A_GaugeEndCapRight</EndCapRight>
 		</GaugeDrawTemplate>
 		<AutoStretch>true</AutoStretch>
-		<TopAnchorOffset>45</TopAnchorOffset>
-		<BottomAnchorOffset>55</BottomAnchorOffset>
-		<LeftAnchorOffset>2</LeftAnchorOffset>
+		<TopAnchorOffset>-200</TopAnchorOffset>
+		<BottomAnchorOffset>-190</BottomAnchorOffset>
+		<LeftAnchorOffset>-200</LeftAnchorOffset>
 		<RightAnchorToLeft>false</RightAnchorToLeft>
 	</Gauge>
 	<Label item="Player_ManaLabel">
@@ -502,9 +502,9 @@
 		<NoWrap>true</NoWrap>
 		<AlignCenter>true</AlignCenter>
 		<AutoStretch>true</AutoStretch>
-		<TopAnchorOffset>45</TopAnchorOffset>
-		<BottomAnchorOffset>55</BottomAnchorOffset>
-		<LeftAnchorOffset>2</LeftAnchorOffset>
+		<TopAnchorOffset>-200</TopAnchorOffset>
+		<BottomAnchorOffset>-190</BottomAnchorOffset>
+		<LeftAnchorOffset>-200</LeftAnchorOffset>
 		<RightAnchorToLeft>false</RightAnchorToLeft>
 		<Style_Tooltip>false</Style_Tooltip>
 	</Label>
@@ -519,9 +519,9 @@
 		</TextColor>
 		<AlignCenter>true</AlignCenter>
 		<AutoStretch>true</AutoStretch>
-		<TopAnchorOffset>45</TopAnchorOffset>
-		<BottomAnchorOffset>55</BottomAnchorOffset>
-		<LeftAnchorOffset>24</LeftAnchorOffset>
+		<TopAnchorOffset>-200</TopAnchorOffset>
+		<BottomAnchorOffset>-190</BottomAnchorOffset>
+		<LeftAnchorOffset>-178</LeftAnchorOffset>
 		<RightAnchorToLeft>false</RightAnchorToLeft>
 		<Style_Tooltip>false</Style_Tooltip>
 	</Label>
@@ -793,11 +793,14 @@
 		<Escapable>false</Escapable>
 		<Pieces>Player_HP</Pieces>
 		<Pieces>Pet_HP</Pieces>
+		<Pieces>Player_Mana</Pieces>
 		<Pieces>MM_Player_Mana</Pieces>
 		<Pieces>Player_Fatigue</Pieces>
 		<Pieces>Player_CombatTimer</Pieces>
 		<Pieces>Player_HPLabel</Pieces>
 		<Pieces>Player_HPPercLabel</Pieces>
+		<Pieces>Player_ManaLabel</Pieces>
+		<Pieces>Player_ManaPercLabel</Pieces>
 		<Pieces>MM_Player_ManaLabel</Pieces>
 		<Pieces>MM_Player_ManaPercLabel</Pieces>
 		<Pieces>Player_FatigueLabel</Pieces>

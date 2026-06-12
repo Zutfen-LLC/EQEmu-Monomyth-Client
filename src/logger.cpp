@@ -14,6 +14,49 @@ std::mutex g_log_mutex;
 HANDLE g_log_file = INVALID_HANDLE_VALUE;
 bool g_log_path_attempted = false;
 
+bool StartsWith(std::wstring_view text, std::wstring_view prefix) noexcept {
+    return text.size() >= prefix.size() &&
+           text.substr(0, prefix.size()) == prefix;
+}
+
+bool Contains(std::wstring_view text, std::wstring_view needle) noexcept {
+    return text.find(needle) != std::wstring_view::npos;
+}
+
+bool ShouldWriteMessage(std::wstring_view message) noexcept {
+    if (message.empty()) {
+        return false;
+    }
+
+    if (StartsWith(message, L"dllmain:") ||
+        StartsWith(message, L"bootstrap:") ||
+        StartsWith(message, L"proxy:")) {
+        return true;
+    }
+
+    if (StartsWith(message, L"hook_manager:")) {
+        return Contains(message, L"initialized") ||
+               Contains(message, L"initialization failed") ||
+               Contains(message, L"install failed") ||
+               Contains(message, L"denied") ||
+               Contains(message, L"skipped") ||
+               Contains(message, L"shutdown deferred") ||
+               Contains(message, L"shutdown");
+    }
+
+    if (StartsWith(message, L"runtime_capabilities:")) {
+        return true;
+    }
+
+    if (Contains(message, L"failed") ||
+        Contains(message, L"denied") ||
+        Contains(message, L"skipped")) {
+        return true;
+    }
+
+    return false;
+}
+
 std::wstring BuildLocalLogPath() noexcept {
     wchar_t module_path[MAX_PATH] = {};
     const DWORD length = GetModuleFileNameW(reinterpret_cast<HMODULE>(&__ImageBase), module_path, MAX_PATH);
@@ -150,6 +193,10 @@ void WriteLine(std::wstring_view line) noexcept {
 
 }  // namespace
 void Log(std::wstring_view message) noexcept {
+    if (!ShouldWriteMessage(message)) {
+        return;
+    }
+
     std::lock_guard<std::mutex> guard(g_log_mutex);
     EnsureLogFile();
     WriteLine(message);

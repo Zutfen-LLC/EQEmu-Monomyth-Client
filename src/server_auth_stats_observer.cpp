@@ -22,6 +22,9 @@ namespace {
 constexpr std::uint32_t kStatClassesBitmaskKey = 1;
 constexpr std::uint32_t kStatActivatedSkillMaskLowKey = 2;
 constexpr std::uint32_t kStatActivatedSkillMaskHighKey = 3;
+constexpr std::uint32_t kStatExtraPet0Hp1000Key = 100;
+constexpr std::uint32_t kStatExtraPet1Hp1000Key = 101;
+constexpr std::uint32_t kStatFocusedPetIdKey = 102;
 constexpr std::uint32_t kHeaderBytes = 4;
 constexpr std::uint32_t kEntryBytes = 12;
 
@@ -31,6 +34,11 @@ std::atomic<bool> g_has_activated_skill_mask_low = false;
 std::atomic<std::uint64_t> g_activated_skill_mask_low = 0;
 std::atomic<bool> g_has_activated_skill_mask_high = false;
 std::atomic<std::uint64_t> g_activated_skill_mask_high = 0;
+std::array<std::atomic<bool>, 2> g_has_extra_pet_hp_1000 = {false, false};
+std::array<std::atomic<std::uint64_t>, 2> g_extra_pet_hp_1000 = {0, 0};
+std::atomic<bool> g_has_focused_pet_id = false;
+std::atomic<std::uint32_t> g_focused_pet_id = 0;
+std::atomic<std::uint64_t> g_valid_log_count = 0;
 
 struct ClassNameEntry {
     std::uint32_t bit;
@@ -158,6 +166,18 @@ void StoreActivatedSkillMasks(const ParseResult& result) noexcept {
     g_has_activated_skill_mask_high.store(result.has_activated_skill_mask_high);
 }
 
+void StoreExtraPetHp1000(const ParseResult& result) noexcept {
+    for (std::size_t slot = 0; slot < g_extra_pet_hp_1000.size(); ++slot) {
+        g_extra_pet_hp_1000[slot].store(result.extra_pet_hp_1000[slot]);
+        g_has_extra_pet_hp_1000[slot].store(result.has_extra_pet_hp_1000[slot]);
+    }
+}
+
+void StoreFocusedPetId(const ParseResult& result) noexcept {
+    g_focused_pet_id.store(result.focused_pet_id);
+    g_has_focused_pet_id.store(result.has_focused_pet_id);
+}
+
 void LogMalformed(std::uint32_t payload_length, const wchar_t* reason) {
     std::wstringstream message;
     message
@@ -178,10 +198,16 @@ void LogInvalidClassesBitmask(std::uint32_t count, std::uint64_t value) {
 }
 
 void LogValid(const ParseResult& result) {
+    const std::uint64_t log_index = g_valid_log_count.fetch_add(1) + 1;
+    if (log_index > 20 && (log_index % 100) != 0) {
+        return;
+    }
+
     std::wstringstream message;
     message
         << L"ServerAuthStats valid=true"
-        << L" count=" << result.count
+        << L" log_index=" << log_index
+        << L" entry_count=" << result.count
         << L" has_statClassesBitmask=" << (result.has_classes_bitmask ? L"true" : L"false");
     if (result.has_classes_bitmask) {
         message
@@ -212,6 +238,29 @@ void LogValid(const ParseResult& result) {
     }
     if (result.duplicate_activated_skill_mask_high) {
         message << L" duplicate_statActivatedSkillMaskHigh=true";
+    }
+    for (std::size_t slot = 0; slot < std::size(result.has_extra_pet_hp_1000); ++slot) {
+        message
+            << L" has_statExtraPet" << slot << L"Hp1000="
+            << (result.has_extra_pet_hp_1000[slot] ? L"true" : L"false");
+        if (result.has_extra_pet_hp_1000[slot]) {
+            message
+                << L" statExtraPet" << slot << L"Hp1000="
+                << result.extra_pet_hp_1000[slot];
+        }
+        if (result.duplicate_extra_pet_hp_1000[slot]) {
+            message
+                << L" duplicate_statExtraPet" << slot << L"Hp1000=true";
+        }
+    }
+    message
+        << L" has_statFocusedPetId="
+        << (result.has_focused_pet_id ? L"true" : L"false");
+    if (result.has_focused_pet_id) {
+        message << L" statFocusedPetId=" << result.focused_pet_id;
+    }
+    if (result.duplicate_focused_pet_id) {
+        message << L" duplicate_statFocusedPetId=true";
     }
     monomyth::logger::Log(message.str());
 }
@@ -300,6 +349,27 @@ ParseResult ParsePayload(const void* payload, std::uint32_t payload_length) noex
             result.has_activated_skill_mask_high = true;
             result.activated_skill_mask_high = stat_value;
             break;
+        case kStatExtraPet0Hp1000Key:
+        case kStatExtraPet1Hp1000Key: {
+            ++result.recognized_entry_count;
+            const std::size_t slot =
+                stat_key == kStatExtraPet0Hp1000Key ? 0u : 1u;
+            result.duplicate_extra_pet_hp_1000[slot] =
+                result.has_extra_pet_hp_1000[slot];
+            result.has_extra_pet_hp_1000[slot] = true;
+            result.extra_pet_hp_1000[slot] = stat_value;
+            break;
+        }
+        case kStatFocusedPetIdKey:
+            ++result.recognized_entry_count;
+            if (stat_value > std::numeric_limits<std::uint32_t>::max()) {
+                ++result.unknown_entry_count;
+                break;
+            }
+            result.duplicate_focused_pet_id = result.has_focused_pet_id;
+            result.has_focused_pet_id = true;
+            result.focused_pet_id = static_cast<std::uint32_t>(stat_value);
+            break;
         default:
             ++result.unknown_entry_count;
             break;
@@ -326,6 +396,8 @@ void ObserveReceivePayload(const void* payload, std::uint32_t payload_length) no
             StoreClassesBitmask(result.classes_bitmask);
         }
         StoreActivatedSkillMasks(result);
+        StoreExtraPetHp1000(result);
+        StoreFocusedPetId(result);
         LogValid(result);
     } catch (...) {
         monomyth::logger::Log(L"ServerAuthStats malformed=true reason=\"handler_exception\"");
@@ -340,6 +412,12 @@ Snapshot GetSnapshot() noexcept {
     snapshot.activated_skill_mask_low = g_activated_skill_mask_low.load();
     snapshot.has_activated_skill_mask_high = g_has_activated_skill_mask_high.load();
     snapshot.activated_skill_mask_high = g_activated_skill_mask_high.load();
+    for (std::size_t slot = 0; slot < g_extra_pet_hp_1000.size(); ++slot) {
+        snapshot.has_extra_pet_hp_1000[slot] = g_has_extra_pet_hp_1000[slot].load();
+        snapshot.extra_pet_hp_1000[slot] = g_extra_pet_hp_1000[slot].load();
+    }
+    snapshot.has_focused_pet_id = g_has_focused_pet_id.load();
+    snapshot.focused_pet_id = g_focused_pet_id.load();
     return snapshot;
 }
 
